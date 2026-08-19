@@ -1,0 +1,10 @@
+DormiNet Server Online: Core Module Ready (HTTP: 4282)
+2026/06/27 18:49:25 [Backup Scheduler] Next automatic backup scheduled at 2026-06-27 22:00:00 (in 3h10m34.496432s)
+LINE Push Receipt response: 200 OK {"sentMessages":[{"id":"620305499569258958","quoteToken":"183fdH0JA9U52FIOp1cKwsDTNd1FCK-NKhfhkby1btdKHfd6kF1qmZXnUvBqLebC9b2qVdDDqXjIvN1eei8ekqhO7TVeUH63JuTfKeUOwefgajXIwEIRxbXF-0WA_8zFr_srg0FbHjGzmgz9V_OFlQ"}]}
+LINE Push Receipt response: 200 OK {"sentMessages":[{"id":"620306002247680504","quoteToken":"NON4JdHZZFyWeL2c3FHw5cobxWtsVwxm3OI3XciMpjXHFKbjM_fpsFV7usWrgXGt2yH-zAEEGyQYM2ZeTKANUeLl8sR6fa-VEv6CHMirOU2_PyI02_Q8QBA3DBdet60YROvNKPG4QGgInKRrijJ5Gg"}]}
+LINE Push Receipt response: 200 OK {"sentMessages":[{"id":"620306370508095494","quoteToken":"jNYguwWANq4isZ3a0AjICmqKsgmFcS35R7lfia1Gds96oeieFYdcb33vurlrRw5JuEV_eJ0wvA8WaCipVsuFfV2Ck4dcyN8S0Og_DkjV4cej4bww5Kp8nZShZIcFDHjp5QOGM0GLiPO25r4rnj6g3g"}]}
+email sent: 78d8b4f8-5039-4cb0-bc84-3eb4e07d5bc0
+2026/06/27 23:06:41 [Backup Scheduler] Starting automatic backup...
+2026/06/27 23:06:42 [Backup Scheduler] ZIP backup saved to backups_zip/backup_2026-06-27_23-06-42.zip
+2026/06/27 23:06:42 [Backup Scheduler] Automatic ZIP backup completed successfully.
+2026/06/27 23:06:42 [Backup Scheduler] Next automatic backup scheduled at 2026-06-28 22:00:00 (in 22h53m17.209029s)
