@@ -11,6 +11,7 @@ import (
 
 func SetupDashboardRoutes(db *sql.DB) {
 	http.HandleFunc("/api/dashboard-stats", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

@@ -18,6 +18,7 @@ import (
 
 func SetupUserRoutes(db *sql.DB) {
 	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -299,6 +300,7 @@ func SetupUserRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/move-out", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -344,6 +346,7 @@ func SetupUserRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/users/unmask-id", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

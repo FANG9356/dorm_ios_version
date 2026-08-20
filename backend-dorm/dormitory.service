@@ -1,0 +1,14 @@
+[Unit]
+Description=Dormitory Go Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/dormitory
+ExecStart=/opt/dormitory/server_debian
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

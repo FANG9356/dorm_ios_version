@@ -28,6 +28,7 @@ func isNegative(s string) bool {
 
 func SetupPaymentRoutes(db *sql.DB) {
 	http.HandleFunc("/api/payments", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

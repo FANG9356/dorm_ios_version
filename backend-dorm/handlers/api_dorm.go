@@ -11,5 +11,7 @@ func SetupDormRoutes(db *sql.DB) {
 	SetupPaymentRoutes(db)
 	SetupRoomRoutes(db)
 	SetupUserRoutes(db)
-	SetupMaintenanceRoutes(db)
+	SetupMaintenanceRoutes(db) 
+	SetupSyncRoutes(db)
 }
+ 
