@@ -1,0 +1,9 @@
+#!/usr/bin/expect -f
+set timeout 10
+set password "2550"
+spawn ssh fang@202.29.232.28 "sqlite3 /opt/dormitory/dormitory.db 'SELECT username, email FROM admins WHERE username=\"FangA\" OR email=\"enoshimaj991@gmail.com\";'"
+expect {
+    "yes/no" { send "yes\r"; exp_continue }
+    "*?assword:*" { send "$password\r"; exp_continue }
+    eof
+}

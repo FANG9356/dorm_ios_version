@@ -186,6 +186,7 @@ func sendEmailOTP(toEmail string, otp string) error {
 
 func SetupAuthResetRoutes(db *sql.DB) {
 	http.HandleFunc("/api/forgot-password", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -249,6 +250,7 @@ func SetupAuthResetRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/verify-otp", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -299,6 +301,7 @@ func SetupAuthResetRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/reset-password", func(w http.ResponseWriter, r *http.Request) {
+		db = getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

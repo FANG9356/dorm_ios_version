@@ -1,0 +1,11 @@
+#!/usr/bin/expect -f
+set timeout 10
+set password "2550"
+set host "202.29.232.28"
+set user "fang"
+spawn ssh $user@$host "echo $password | sudo -S go version"
+expect {
+    "yes/no" { send "yes\r"; exp_continue }
+    "*?assword:*" { send "$password\r"; exp_continue }
+    eof
+}
