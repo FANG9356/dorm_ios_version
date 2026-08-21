@@ -1,0 +1,25 @@
+import SwiftUI
+
+struct MaintenanceTabView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+
+            
+            GlassCard {
+                VStack(spacing: 15) {
+                    Image(systemName: "wrench.adjustable.fill")
+                        .font(.custom("SukhumvitSet-Text", size: 50))
+                        .foregroundColor(.red.opacity(0.7))
+                    Text("ไม่มีรายการแจ้งซ่อมในขณะนี้")
+                        .font(.custom("SukhumvitSet-Bold", size: 17))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 200)
+                .padding()
+            }
+            .padding(.horizontal, 20)
+            Spacer()
+        }
+        .padding(.top, 110)
+    }
+}
