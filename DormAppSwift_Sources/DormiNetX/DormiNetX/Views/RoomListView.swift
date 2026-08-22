@@ -19,11 +19,7 @@ struct RoomListView: View {
     
     var body: some View {
         ZStack(alignment: .leading) {
-            // 1. Static Glass Background (Always covers full screen)
-            GlassBackgroundView()
-                .ignoresSafeArea()
             
-            // 2. Main Dashboard Content Area
             ZStack {
                 ScrollView(showsIndicators: false) {
                     Group {
@@ -63,10 +59,8 @@ struct RoomListView: View {
                 }
                 .scrollDisabled(selectedTab == .securityToken || selectedTab == .tenants)
                 
-                // Floating Transparent Header
                 VStack {
                     HStack {
-                        // Hamburger Menu Button
                         Button(action: {
                             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                                 isSidebarOpen = true
@@ -95,7 +89,6 @@ struct RoomListView: View {
                         HStack(spacing: 12) {
                             ThemeToggleButton()
                             
-                            // Sync Button
                             Button(action: syncData) {
                                 ZStack {
                                     Circle()
@@ -118,7 +111,6 @@ struct RoomListView: View {
                     Spacer()
                 }
             }
-            // ปุ่ม + ลอย (เฉพาะแท็บลูกบ้าน) — อยู่นอก ScrollView จึงยึดมุมขวาล่างของจอจริงเสมอ
             .overlay(alignment: .bottomTrailing) {
                 if selectedTab == .tenants {
                     Button {
@@ -150,7 +142,6 @@ struct RoomListView: View {
             .scaleEffect(isSidebarOpen ? 0.92 : 1)
             .disabled(isSidebarOpen)
             
-            // Overlay to close sidebar
             if isSidebarOpen {
                 Rectangle()
                     .fill(colorScheme == .dark ? Color.black.opacity(0.2) : Color.white.opacity(0.05))
@@ -164,13 +155,11 @@ struct RoomListView: View {
                     .transition(.opacity)
             }
             
-            // Sidebar View
             SidebarMenu(isOpen: $isSidebarOpen, isLoggedIn: $isLoggedIn, isSettingsMode: $isSettingsMode, selectedTab: $selectedTab, isLoggingOut: $isLoggingOut)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .offset(x: isSidebarOpen ? 0 : -(UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen.bounds.width }.first ?? 400))
                 .ignoresSafeArea()
         }
-        // MARK: - Sync Overlay
         .overlay {
             if showSyncOverlay {
                 SyncAnimationOverlay()
@@ -178,7 +167,28 @@ struct RoomListView: View {
                     .zIndex(999)
             }
         }
-        // Add Swipe Gesture for sidebar on the outermost view
+        .overlay {
+            if isLoggingOut {
+                ZStack {
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 30) {
+                        LogoutAnimationView(isLoggingOut: isLoggingOut)
+                            .frame(width: 86, height: 100)
+                            .scaleEffect(1.2)
+                        
+                        Text("ออกจากระบบ...")
+                            .font(.custom("SukhumvitSet-Bold", size: 16))
+                            .foregroundColor(.indigo)
+                    }
+                }
+                .transition(.opacity)
+                .zIndex(1000)
+            }
+        }
+        .animation(.easeInOut(duration: 0.4), value: isLoggingOut)
         .gesture(
             DragGesture(minimumDistance: 15)
                 .onEnded { value in
@@ -186,12 +196,10 @@ struct RoomListView: View {
                     let predicted = value.predictedEndTranslation.width
                     
                     if translation > 40 || predicted > 80 {
-                        // Swipe Right to open
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                             isSidebarOpen = true
                         }
                     } else if translation < -40 || predicted < -80 {
-                        // Swipe Left to close
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                             isSidebarOpen = false
                         }
@@ -203,17 +211,14 @@ struct RoomListView: View {
     private func syncData() {
         guard !showSyncOverlay else { return }
         
-        // ปุ่มยังหมุนเหมือนเดิม
         withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
             isSyncing = true
         }
         
-        // เปิด overlay อนิเมชั่น
         withAnimation(.easeInOut(duration: 0.4)) {
             showSyncOverlay = true
         }
         
-        // ปิด overlay หลัง 4 วินาที
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
             withAnimation(.easeInOut(duration: 0.5)) {
                 showSyncOverlay = false
@@ -225,54 +230,24 @@ struct RoomListView: View {
     }
 }
 
-// MARK: - Cloud Outline Shape (เส้นเดียวต่อเนื่องแบบ SplashView)
 struct CloudOutlineShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let w = rect.width
         let h = rect.height
         
-        // จุดเริ่มที่ฐานซ้ายล่างของก้อนเมฆ
         path.move(to: CGPoint(x: w * 0.15, y: h * 0.85))
-        
-        // ฐานล่าง
         path.addLine(to: CGPoint(x: w * 0.85, y: h * 0.85))
-        
-        // ส่วนโค้งขวาล่าง
-        path.addQuadCurve(
-            to: CGPoint(x: w * 0.92, y: h * 0.62),
-            control: CGPoint(x: w * 1.0, y: h * 0.85)
-        )
-        
-        // ส่วนโค้งขวาบน
-        path.addQuadCurve(
-            to: CGPoint(x: w * 0.72, y: h * 0.38),
-            control: CGPoint(x: w * 0.92, y: h * 0.38)
-        )
-        
-        // ยอดเมฆ
-        path.addQuadCurve(
-            to: CGPoint(x: w * 0.45, y: h * 0.22),
-            control: CGPoint(x: w * 0.65, y: h * 0.12)
-        )
-        
-        // ส่วนโค้งซ้ายบน
-        path.addQuadCurve(
-            to: CGPoint(x: w * 0.22, y: h * 0.42),
-            control: CGPoint(x: w * 0.25, y: h * 0.15)
-        )
-        
-        // ส่วนโค้งซ้ายล่าง กลับมาจุดเริ่ม
-        path.addQuadCurve(
-            to: CGPoint(x: w * 0.15, y: h * 0.85),
-            control: CGPoint(x: w * -0.02, y: h * 0.7)
-        )
+        path.addQuadCurve(to: CGPoint(x: w * 0.92, y: h * 0.62), control: CGPoint(x: w * 1.0, y: h * 0.85))
+        path.addQuadCurve(to: CGPoint(x: w * 0.72, y: h * 0.38), control: CGPoint(x: w * 0.92, y: h * 0.38))
+        path.addQuadCurve(to: CGPoint(x: w * 0.45, y: h * 0.22), control: CGPoint(x: w * 0.65, y: h * 0.12))
+        path.addQuadCurve(to: CGPoint(x: w * 0.22, y: h * 0.42), control: CGPoint(x: w * 0.25, y: h * 0.15))
+        path.addQuadCurve(to: CGPoint(x: w * 0.15, y: h * 0.85), control: CGPoint(x: w * -0.02, y: h * 0.7))
         
         return path
     }
 }
 
-// MARK: - Sync Animation Overlay
 struct SyncAnimationOverlay: View {
     @State private var cloudProgress: CGFloat = 0.0
     @State private var arrowOffset: CGFloat = -40
@@ -302,16 +277,13 @@ struct SyncAnimationOverlay: View {
     
     var body: some View {
         ZStack {
-            // พื้นหลัง Glass
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea()
                 .opacity(bgOpacity)
             
             VStack(spacing: 24) {
-                // ก้อนเมฆ + ลูกศร
                 ZStack {
-                    // จุดข้อมูล 6 จุด
                     ForEach(0..<6, id: \.self) { i in
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.indigo.opacity(0.8))
@@ -320,7 +292,6 @@ struct SyncAnimationOverlay: View {
                             .opacity(dotOpacities[i])
                     }
                     
-                    // เส้นโครงเมฆ (วาดต่อเนื่องเหมือน SplashView)
                     CloudOutlineShape()
                         .trim(from: 0, to: cloudProgress)
                         .stroke(
@@ -329,7 +300,6 @@ struct SyncAnimationOverlay: View {
                         )
                         .frame(width: 140, height: 110)
                     
-                    // ลูกศรชี้ลง
                     VStack(spacing: 2) {
                         Image(systemName: "arrow.down")
                             .font(.system(size: 28, weight: .bold))
@@ -341,7 +311,6 @@ struct SyncAnimationOverlay: View {
                 }
                 .frame(width: 140, height: 110)
                 
-                // ข้อความสถานะ
                 Text(statusText)
                     .font(.custom("SukhumvitSet-Bold", size: 16))
                     .foregroundColor(.indigo)
@@ -354,12 +323,10 @@ struct SyncAnimationOverlay: View {
     }
     
     private func startSyncAnimation() {
-        // เฟส 0: แสดงพื้นหลัง
         withAnimation(.easeIn(duration: 0.3)) {
             bgOpacity = 1.0
         }
         
-        // เฟส 1: จุดข้อมูลบินเข้ามารวมตัว (เหมือน SplashView)
         for i in 0..<6 {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(Double(i) * 0.08)) {
                 dotOffsets[i] = .zero
@@ -367,14 +334,12 @@ struct SyncAnimationOverlay: View {
             }
         }
         
-        // เฟส 2: วาดเส้นก้อนเมฆ (trim stroke เหมือน TwinBuildingsOutline)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             withAnimation(.easeInOut(duration: 1.2)) {
                 cloudProgress = 1.0
             }
         }
         
-        // เฟส 3: ลูกศร drop ลงมา + ข้อความ
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                 arrowOffset = 12
@@ -383,22 +348,18 @@ struct SyncAnimationOverlay: View {
             withAnimation(.easeIn(duration: 0.4)) {
                 statusOpacity = 1.0
             }
-            // ลูกศร pulse ขึ้นลง
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true).delay(0.3)) {
                 pulseArrow = true
             }
         }
         
-        // เฟส 3.5: เปลี่ยนข้อความสถานะ
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
             withAnimation(.easeInOut(duration: 0.3)) {
                 statusText = "ซิงค์ข้อมูลสำเร็จ"
             }
         }
         
-        // เฟส 4: ย้อนกลับ — ลูกศรหายไป, เส้นลบย้อน, จุดบินออก (เหมือน SplashView)
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            // หยุด pulse
             pulseArrow = false
             
             withAnimation(.easeOut(duration: 0.3)) {
@@ -481,7 +442,6 @@ struct SidebarMenu: View {
                 }
             
             VStack(alignment: .leading, spacing: 0) {
-                // Sidebar Header
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10)
@@ -524,7 +484,6 @@ struct SidebarMenu: View {
                 
                 Spacer()
                 
-                // User Profile & Logout at bottom
                 VStack(spacing: 15) {
                     Divider()
                         .background(Color.secondary.opacity(0.3))
@@ -534,7 +493,7 @@ struct SidebarMenu: View {
                         let displayName = userName.isEmpty ? "Admin" : userName
                         
                         ZStack {
-                            let _ = profileImageUpdateToken // trigger re-render on change
+                            let _ = profileImageUpdateToken
                             if let localURL = APIService.shared.getLocalProfileImageURL(adminID: adminID),
                                let uiImage = UIImage(contentsOfFile: localURL.path) {
                                 Image(uiImage: uiImage)
@@ -566,7 +525,6 @@ struct SidebarMenu: View {
                             let generator = UIImpactFeedbackGenerator(style: .medium)
                             generator.impactOccurred()
                             
-                            // Spin gear animation
                             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                                 gearRotation += 90
                             }
@@ -604,7 +562,6 @@ struct SidebarMenu: View {
                             let generator = UINotificationFeedbackGenerator()
                             generator.notificationOccurred(.success)
                         }) {
-                            // เปลี่ยนเป็นรูป seal.fill ที่ดูคล้ายคุกกี้แบบมินิมอ
                             Image(systemName: "clock.badge.xmark")
                                 .font(.custom("SukhumvitSet-Bold", size: 18))
                                 .foregroundColor(.orange)
@@ -617,20 +574,23 @@ struct SidebarMenu: View {
                             let generator = UIImpactFeedbackGenerator(style: .heavy)
                             generator.impactOccurred()
                             
-                            // Trigger reverse-splash logout animation
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            isOpen = false
+                            
+                            withAnimation(.easeInOut(duration: 0.4)) {
                                 isLoggingOut = true
                             }
                             
-                            // Clear API state
                             APIService.shared.authToken = nil
                             APIService.shared.currentEmail = nil
                             APIService.shared.userRole = nil
                             
-                            // Delay the actual logout to let animation play
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
-                                withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                // ปรับเวลาให้เท่ากับของ ContentView (0.8 วิ) จะได้ละลายสลับหน้าแบบพอดีกัน
+                                withAnimation(.easeInOut(duration: 0.8)) {
                                     isLoggedIn = false
+                                }
+                                
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                     isLoggingOut = false
                                 }
                             }
@@ -651,8 +611,6 @@ struct SidebarMenu: View {
         }
         .sheet(item: $currentEditingAdmin) { admin in
             EditAdminSheet(admin: admin, onSuccess: {
-                // If they change their name/email, we might want to update AppStorage.
-                // But for now, they can log out and log in again or it updates on next sync.
             })
         }
         .onChange(of: showingEditProfile) { _, newValue in
@@ -666,36 +624,10 @@ struct SidebarMenu: View {
                     } catch {
                         print("Failed to fetch admin data: \(error)")
                     }
-                    showingEditProfile = false // Reset the trigger
+                    showingEditProfile = false
                 }
             }
         }
-        // Logout animation overlay
-        .overlay {
-            if isLoggingOut {
-                ZStack {
-                    // Frosted glass background that fades in
-                    Color(UIColor.systemBackground)
-                        .opacity(isLoggingOut ? 0.95 : 0)
-                        .ignoresSafeArea()
-                    
-                    VStack(spacing: 30) {
-                        // Building animation from splash screen
-                        LogoutAnimationView(isLoggingOut: isLoggingOut)
-                            .frame(width: 86, height: 100)
-                            .scaleEffect(isLoggingOut ? 1.2 : 0.5)
-                            .opacity(isLoggingOut ? 1 : 0)
-                        
-                        Text("ออกจากระบบ...")
-                            .font(.custom("SukhumvitSet-Medium", size: 16))
-                            .foregroundColor(.secondary)
-                            .opacity(isLoggingOut ? 1 : 0)
-                    }
-                }
-                .transition(.opacity)
-            }
-        }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isLoggingOut)
     }
 }
 
@@ -736,7 +668,6 @@ struct SidebarItem: View {
 struct LogoutAnimationView: View {
     var isLoggingOut: Bool
     
-    // ตึกใหญ่ฝั่งซ้าย (8 จุด)
     let scatteredOffsets: [CGSize] = [
         CGSize(width: -200, height: -250),
         CGSize(width: -100, height: -300),
@@ -750,7 +681,6 @@ struct LogoutAnimationView: View {
     @State private var dotOffsets: [CGSize]
     @State private var dotOpacities: [Double] = Array(repeating: 0.0, count: 8)
     
-    // ตึกเล็กฝั่งขวา (3 จุด)
     let scatteredOffsets2: [CGSize] = [
         CGSize(width: 250, height: -200),
         CGSize(width: 200, height: 50),
@@ -769,7 +699,6 @@ struct LogoutAnimationView: View {
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // 1. หน้าต่างตึกใหญ่ 8 บาน
             LazyVGrid(columns: [GridItem(.fixed(16)), GridItem(.fixed(16))], spacing: 10) {
                 ForEach(0..<8, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 3)
@@ -780,9 +709,8 @@ struct LogoutAnimationView: View {
                 }
             }
             .frame(width: 38, height: 86)
-            .offset(x: 7, y: -7) // Padding 7px
+            .offset(x: 7, y: -7)
             
-            // 2. หน้าต่างตึกเล็ก 3 บาน
             LazyVGrid(columns: [GridItem(.fixed(16))], spacing: 10) {
                 ForEach(0..<3, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 3)
@@ -795,7 +723,6 @@ struct LogoutAnimationView: View {
             .frame(width: 14, height: 62)
             .offset(x: 65, y: -7)
             
-            // 3. เส้นเดียววาดต่อเนื่องรอบ 2 ตึก
             TwinBuildingsOutline()
                 .trim(from: 0, to: outlineProgress)
                 .stroke(Color.indigo, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
@@ -803,7 +730,6 @@ struct LogoutAnimationView: View {
         }
         .onAppear {
             if isLoggingOut {
-                // เฟส 1: วาดเส้นและดึงชิ้นส่วนเข้ามารวมกัน
                 withAnimation(.easeInOut(duration: 0.8)) {
                     outlineProgress = 1.0
                 }
@@ -822,7 +748,6 @@ struct LogoutAnimationView: View {
                     }
                 }
                 
-                // เฟส 2: แยกชิ้นส่วนและลบเส้น (ทำหลังจากรวมเสร็จ)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
                     withAnimation(.easeInOut(duration: 0.8)) {
                         outlineProgress = 0.0

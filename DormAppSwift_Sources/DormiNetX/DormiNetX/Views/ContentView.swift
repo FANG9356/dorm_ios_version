@@ -6,20 +6,20 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
+            // วางพื้นหลังกระจกไว้ชั้นนอกสุด ทะลุขอบจอ 100%
+            GlassBackgroundView()
+                .ignoresSafeArea(.all)
+            
             if isLoggedIn {
                 RoomListView()
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.96)),
-                        removal: .opacity
-                    ))
+                    // ใช้แค่การเฟดเพียวๆ ไม่ต้องมีการย่อขยาย จะได้สมูทที่สุด
+                    .transition(.opacity)
             } else {
                 LoginView()
-                    .transition(.asymmetric(
-                        insertion: .opacity,
-                        removal: .opacity.combined(with: .scale(scale: 1.04))
-                    ))
+                    .transition(.opacity)
             }
         }
-        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isLoggedIn)
+        // ปรับเป็น easeInOut 0.8 วินาที ให้ภาพค่อยๆ ละลายเปลี่ยนหน้าเนียนๆ
+        .animation(.easeInOut(duration: 0.8), value: isLoggedIn)
     }
 }
