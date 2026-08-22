@@ -5,8 +5,9 @@ struct LoginView: View {
     @State private var password: String = ""
     @State private var isPasswordVisible: Bool = false
     
-    // สำหรับโหมดสมัครสมาชิก
+    // Authentication modes
     @State private var isSignUpMode: Bool = false
+    @State private var isForgotPasswordMode: Bool = false
     @State private var name: String = ""
     @State private var confirmPassword: String = ""
     @State private var isConfirmPasswordVisible: Bool = false
@@ -28,12 +29,12 @@ struct LoginView: View {
     @State private var savedAccounts: [SavedAccount] = []
     @Environment(\.colorScheme) var colorScheme
     
-    // ตัวแปรควบคุมการเฟดอิน
+    // Controls fade-in
     @State private var isScreenReady = false
     
     var body: some View {
         ZStack {
-            // ห่อ UI ด้านในทั้งหมด แล้วค่อยสั่งเฟดแค่ก้อนนี้
+            // Keep the inner UI grouped so the whole screen can fade together
             ZStack {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 35) {
@@ -44,24 +45,25 @@ struct LoginView: View {
                             .foregroundColor(colorScheme == .dark ? .white : .indigo)
                             .shadow(color: (colorScheme == .dark ? Color.white : Color.indigo).opacity(0.3), radius: 10, x: 0, y: 5)
                             .padding(.top, 130)
-                        
                         ZStack {
                             Text("DormiNet")
                                 .font(.custom("SukhumvitSet-Bold", size: 38))
                                 .foregroundColor(.primary)
-                                .opacity(isSignUpMode ? 0 : 1)
+                                .opacity(!isSignUpMode && !isForgotPasswordMode ? 1 : 0)
                                 .rotation3DEffect(
-                                    .degrees(isSignUpMode ? -90 : 0),
+                                    .degrees(!isSignUpMode && !isForgotPasswordMode ? 0 : -90),
                                     axis: (x: 1, y: 0, z: 0),
                                     perspective: 0.5
                                 )
-                                .offset(y: isSignUpMode ? -20 : 0)
-                                .blur(radius: isSignUpMode ? 5 : 0)
-                            
+                                .offset(y: isSignUpMode || isForgotPasswordMode ? -20 : 0)
+                                .blur(radius: isSignUpMode || isForgotPasswordMode ? 5 : 0)
+
                             HStack(spacing: 8) {
-                                Text("Create Account")
-                                Image(systemName: "sparkles")
-                                    .font(.custom("SukhumvitSet-Bold", size: 28))
+                                Text(isForgotPasswordMode ? "Reset Password" : "Create Account")
+                                if !isForgotPasswordMode {
+                                    Image(systemName: "sparkles")
+                                        .font(.custom("SukhumvitSet-Bold", size: 28))
+                                }
                             }
                             .font(.custom("SukhumvitSet-Bold", size: 36))
                             .foregroundStyle(
@@ -71,16 +73,16 @@ struct LoginView: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .opacity(isSignUpMode ? 1 : 0)
+                            .opacity(isSignUpMode || isForgotPasswordMode ? 1 : 0)
                             .rotation3DEffect(
-                                .degrees(isSignUpMode ? 0 : 90),
+                                .degrees(isSignUpMode || isForgotPasswordMode ? 0 : 90),
                                 axis: (x: 1, y: 0, z: 0),
                                 perspective: 0.5
                             )
-                            .offset(y: isSignUpMode ? 0 : 20)
-                            .blur(radius: isSignUpMode ? 0 : 5)
+                            .offset(y: isSignUpMode || isForgotPasswordMode ? 0 : 20)
+                            .blur(radius: isSignUpMode || isForgotPasswordMode ? 0 : 5)
                         }
-                        
+
                         VStack(spacing: 20) {
                             if isSignUpMode {
                                 HStack {
@@ -88,6 +90,8 @@ struct LoginView: View {
                                         .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .indigo)
                                         .frame(width: 20)
                                     TextField("Name", text: $name)
+                                        .textInputAutocapitalization(.words)
+                                        .disableAutocorrection(true)
                                         .foregroundColor(.primary)
                                 }
                                 .padding()
@@ -97,7 +101,7 @@ struct LoginView: View {
                                     RoundedRectangle(cornerRadius: 15)
                                         .stroke(colorScheme == .dark ? Color.white.opacity(0.2) : Color.white, lineWidth: 1.5)
                                 )
-                                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                                .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 3)
                                 .transition(.asymmetric(
                                     insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
                                     removal: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top))
@@ -109,7 +113,8 @@ struct LoginView: View {
                                     .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .indigo)
                                     .frame(width: 20)
                                 TextField("Email", text: $email)
-                                    .autocapitalization(.none)
+                                    .textInputAutocapitalization(.never)
+                                    .disableAutocorrection(true)
                                     .keyboardType(.emailAddress)
                                     .foregroundColor(.primary)
                             }
@@ -120,15 +125,18 @@ struct LoginView: View {
                                 RoundedRectangle(cornerRadius: 15)
                                     .stroke(colorScheme == .dark ? Color.white.opacity(0.2) : Color.white, lineWidth: 1.5)
                             )
-                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 3)
                             
-                            HStack {
-                                Image(systemName: "lock.fill")
+                            if !isForgotPasswordMode {
+                                HStack {
+                                    Image(systemName: "lock.fill")
                                     .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .indigo)
                                     .frame(width: 20)
                                 
                                 if isPasswordVisible {
                                     TextField("Password", text: $password)
+                                        .textInputAutocapitalization(.never)
+                                        .disableAutocorrection(true)
                                         .foregroundColor(.primary)
                                 } else {
                                     SecureField("Password", text: $password)
@@ -149,7 +157,8 @@ struct LoginView: View {
                                 RoundedRectangle(cornerRadius: 15)
                                     .stroke(colorScheme == .dark ? Color.white.opacity(0.2) : Color.white, lineWidth: 1.5)
                             )
-                            .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                            .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 3)
+                            }
                             
                             if isSignUpMode {
                                 HStack {
@@ -159,6 +168,8 @@ struct LoginView: View {
                                     
                                     if isConfirmPasswordVisible {
                                         TextField("Confirm Password", text: $confirmPassword)
+                                            .textInputAutocapitalization(.never)
+                                            .disableAutocorrection(true)
                                             .foregroundColor(.primary)
                                     } else {
                                         SecureField("Confirm Password", text: $confirmPassword)
@@ -179,21 +190,47 @@ struct LoginView: View {
                                     RoundedRectangle(cornerRadius: 15)
                                         .stroke(colorScheme == .dark ? Color.white.opacity(0.2) : Color.white, lineWidth: 1.5)
                                 )
-                                .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
+                                .shadow(color: .black.opacity(0.045), radius: 6, x: 0, y: 3)
                                 .transition(.asymmetric(
                                     insertion: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top)),
                                     removal: .scale(scale: 0.9).combined(with: .opacity).combined(with: .move(edge: .top))
                                 ))
                             }
-                            
                             if let errorMessage = errorMessage {
                                 Text(errorMessage)
                                     .foregroundColor(.red)
                                     .font(.custom("SukhumvitSet-Text", size: 12))
                                     .multilineTextAlignment(.center)
-                                    .transition(.opacity.combined(with: .scale))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .transition(
+                                        .asymmetric(
+                                            insertion: .opacity.combined(with: .offset(y: -6)).combined(with: .scale(scale: 0.97)),
+                                            removal: .opacity.combined(with: .offset(y: -4)).combined(with: .scale(scale: 0.98))
+                                        )
+                                    )
                             }
-                            
+
+                            if !isSignUpMode && !isForgotPasswordMode && errorMessage != nil {
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+                                        isForgotPasswordMode = true
+                                        isSignUpMode = false
+                                        clearError()
+                                        password = ""
+                                        confirmPassword = ""
+                                        name = ""
+                                        isPasswordVisible = false
+                                        isConfirmPasswordVisible = false
+                                    }
+                                }) {
+                                    Text("Forgot your password?")
+                                        .font(.custom("SukhumvitSet-Medium", size: 13))
+                                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.85) : .indigo)
+                                }
+                                .buttonStyle(PressableButtonStyle())
+                                .padding(.top, -8)
+                            }
+
                             Button(action: {
                                 Task { await handleAuth() }
                             }) {
@@ -202,16 +239,17 @@ struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: colorScheme == .dark ? .white : .indigo))
                                     } else {
-                                        Text(isSignUpMode ? "Sign Up" : "Sign In")
+                                        Text(isForgotPasswordMode ? "Send Reset Link" : (isSignUpMode ? "Sign Up" : "Sign In"))
                                             .font(.custom("SukhumvitSet-Bold", size: 17))
-                                            .id(isSignUpMode)
+                                            .id(isForgotPasswordMode ? "forgot" : (isSignUpMode ? "signup" : "login"))
                                             .transition(.asymmetric(
-                                                insertion: .opacity.combined(with: .move(edge: .trailing)),
-                                                removal: .opacity.combined(with: .move(edge: .leading))
+                                                insertion: .opacity.combined(with: .offset(x: 8)),
+                                                removal: .opacity.combined(with: .offset(x: -8))
                                             ))
                                     }
                                 }
                                 .foregroundColor(colorScheme == .dark ? .white : .indigo)
+                                .animation(.easeInOut(duration: 0.3), value: isLoading)
                                 .frame(maxWidth: .infinity)
                                 .padding()
                                 .background(colorScheme == .dark ? Color.white.opacity(0.15) : Color.white.opacity(0.7))
@@ -223,17 +261,23 @@ struct LoginView: View {
                                 .shadow(color: .indigo.opacity(0.15), radius: 10, x: 0, y: 5)
                             }
                             .buttonStyle(PressableButtonStyle())
-                            .disabled(isLoading || email.isEmpty || password.isEmpty || (isSignUpMode && (name.isEmpty || confirmPassword.isEmpty)))
+                            .disabled(isLoading || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!isForgotPasswordMode && password.isEmpty) || (isSignUpMode && (name.isEmpty || confirmPassword.isEmpty)))
                         }
                         .padding(.horizontal, 30)
+                        .animation(.easeInOut(duration: 0.42), value: errorMessage)
                         
                         Button(action: {
                             withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
-                                isSignUpMode.toggle()
-                                errorMessage = nil
+                                if isForgotPasswordMode {
+                                    resetToSignIn()
+                                } else if isSignUpMode {
+                                    resetToSignIn()
+                                } else {
+                                    resetToSignUp()
+                                }
                             }
                         }) {
-                            Text(isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up")
+                            Text(isForgotPasswordMode ? "Back to Sign In" : (isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up"))
                                 .font(.custom("SukhumvitSet-Text", size: 15))
                                 .foregroundColor(.indigo)
                                 .id(isSignUpMode)
@@ -247,7 +291,11 @@ struct LoginView: View {
                         .padding(.bottom, 40)
                     }
                 }
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.interactively)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    dismissKeyboard()
+                }
                 
                 VStack {
                     if !showingPasscodeModal {
@@ -262,6 +310,11 @@ struct LoginView: View {
                                             password = account.password
                                             name = account.name
                                             isSignUpMode = false
+                                            isForgotPasswordMode = false
+                                            errorMessage = nil
+                                            name = ""
+                                            confirmPassword = ""
+                                            isConfirmPasswordVisible = false
                                             Task { await handleAuth() }
                                         }) {
                                             Text(account.name.isEmpty ? account.email : "\(account.name) (\(account.email))")
@@ -313,10 +366,10 @@ struct LoginView: View {
                                     }
                                     
                                     VStack(spacing: 4) {
-                                        Text("ยืนยันรหัสความปลอดภัย 6 หลัก")
+                                        Text("Enter 6-Digit Security Code")
                                             .font(.custom("SukhumvitSet-Bold", size: 17))
                                             .foregroundColor(.primary)
-                                        Text("กรุณากรอกรหัสผ่าน 6 หลักเพื่อเข้าใช้งานระบบ")
+                                        Text("Enter your 6-digit security code to continue")
                                             .font(.custom("SukhumvitSet-Medium", size: 13))
                                             .foregroundColor(.secondary)
                                             .multilineTextAlignment(.center)
@@ -369,7 +422,7 @@ struct LoginView: View {
                                                 showingPasscodeModal = false
                                             }
                                         }) {
-                                            Text("ยกเลิก")
+                                            Text("Cancel")
                                                 .font(.custom("SukhumvitSet-Medium", size: 14))
                                                 .foregroundColor(.secondary)
                                                 .frame(maxWidth: .infinity)
@@ -379,7 +432,7 @@ struct LoginView: View {
                                         Button(action: {
                                             verifyPasscode()
                                         }) {
-                                            Text("ยืนยัน")
+                                            Text("Confirm")
                                                 .font(.custom("SukhumvitSet-Bold", size: 14))
                                                 .foregroundColor(.white)
                                                 .frame(maxWidth: .infinity)
@@ -414,27 +467,75 @@ struct LoginView: View {
                 }
             }
         }
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        }
         .animation(.easeInOut(duration: 0.8), value: colorScheme)
     }
     
+    private func showError(_ message: String) {
+        withAnimation(.easeInOut(duration: 0.45)) {
+            errorMessage = message
+        }
+    }
+
+    private func clearError() {
+        guard errorMessage != nil else { return }
+        withAnimation(.easeOut(duration: 0.25)) {
+            errorMessage = nil
+        }
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
+    }
+
+    private func resetToSignIn() {
+        isSignUpMode = false
+        isForgotPasswordMode = false
+        clearError()
+        password = ""
+        confirmPassword = ""
+        name = ""
+        isPasswordVisible = false
+        isConfirmPasswordVisible = false
+    }
+
+    private func resetToSignUp() {
+        isSignUpMode = true
+        isForgotPasswordMode = false
+        clearError()
+        password = ""
+        confirmPassword = ""
+        name = ""
+        isPasswordVisible = false
+        isConfirmPasswordVisible = false
+    }
+
     private func handleAuth() async {
+        clearError()
+
+        if isForgotPasswordMode {
+            await handleForgotPassword()
+            return
+        }
+
         if isSignUpMode {
             if name.count <= 4 {
-                errorMessage = "ชื่อต้องมีความยาวมากกว่า 4 ตัวอักษร"
+                showError("Name must be at least 5 characters long")
                 return
             }
             
             let emailRegex = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$"
             if email.range(of: emailRegex, options: .regularExpression) == nil {
-                errorMessage = "รูปแบบอีเมลไม่ถูกต้อง"
+                showError("Invalid email format")
                 return
             }
             
             if password.count < 8 {
-                errorMessage = "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร"
+                showError("Password must be at least 8 characters long")
                 return
             }
             
@@ -444,18 +545,18 @@ struct LoginView: View {
             let hasSpecial = password.contains(where: { !$0.isLetter && !$0.isNumber })
             
             if !hasUppercase || !hasLowercase || !hasNumber || !hasSpecial {
-                errorMessage = "รหัสผ่านต้องประกอบด้วยตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ"
+                showError("Password must contain uppercase, lowercase, number, and special character")
                 return
             }
             
             guard password == confirmPassword else {
-                errorMessage = "รหัสผ่านไม่ตรงกัน"
+                showError("Passwords do not match")
                 return
             }
         }
         
         isLoading = true
-        errorMessage = nil
+        clearError()
         
         do {
             let success: Bool
@@ -497,12 +598,12 @@ struct LoginView: View {
                             }
                         }
                     } else {
-                        // 🌟 ปิดไฟมืดสนิท! สั่งให้หน้า LoginView เฟดตัวเองทิ้งไปก่อนเลย
-                        withAnimation(.easeOut(duration: 0.3)) {
+                        // Fade out LoginView before switching screens
+                        withAnimation(.easeOut(duration: 0.2)) {
                             isScreenReady = false
                         }
                         
-                        // 🌟 พอปุ่มและข้อความหายเกลี้ยง ค่อยสลับไปหน้า Dashboard แบบสวยๆ
+                        // Switch to Dashboard after the login UI has faded out
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             withAnimation(.easeInOut(duration: 0.6)) {
                                 isLoggedIn = true
@@ -512,16 +613,33 @@ struct LoginView: View {
                     }
                 }
             } else {
-                errorMessage = isSignUpMode ? (backendErrorMsg ?? "การสมัครสมาชิกล้มเหลว") : "การเข้าสู่ระบบล้มเหลว กรุณาตรวจสอบอีเมลและรหัสผ่าน"
+                showError(isSignUpMode ? (backendErrorMsg ?? "Sign up failed") : "Sign in failed. Please check your email and password.")
             }
         } catch {
-            errorMessage = "เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย หรือเซิร์ฟเวอร์อาจไม่ตอบสนอง"
+            showError("A network error occurred, or the server is not responding.")
             print("Auth Error: \(error)")
         }
         
         isLoading = false
     }
     
+    private func handleForgotPassword() async {
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let emailRegex = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$"
+
+        guard normalizedEmail.range(of: emailRegex, options: .regularExpression) != nil else {
+            await MainActor.run { showError("Please enter a valid email address.") }
+            return
+        }
+
+        await MainActor.run { isLoading = true; clearError() }
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        await MainActor.run {
+            isLoading = false
+            showError("Reset password is not connected to the backend yet.")
+        }
+    }
+
     private func loadSavedAccounts() {
         if let data = UserDefaults.standard.data(forKey: "savedAccountsHistory"),
            let decoded = try? JSONDecoder().decode([SavedAccount].self, from: data) {
@@ -558,12 +676,12 @@ struct LoginView: View {
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                // 🌟 ปิดไฟมืดสนิท! สั่งให้หน้า LoginView เฟดตัวเองทิ้งไปก่อนเลย
+                // Fade out LoginView before switching screens
                 withAnimation(.easeOut(duration: 0.3)) {
                     isScreenReady = false
                 }
                 
-                // 🌟 พอปุ่มและข้อความหายเกลี้ยง ค่อยสลับไปหน้า Dashboard แบบสวยๆ
+                // Switch to Dashboard after the login UI has faded out
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     withAnimation(.easeInOut(duration: 0.6)) {
                         isLoggedIn = true
@@ -573,7 +691,7 @@ struct LoginView: View {
             }
         } else {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                passcodeError = "รหัสผ่าน 6 หลักไม่ถูกต้อง"
+                passcodeError = "Incorrect 6-digit security code"
                 passcodeInput = ""
             }
         }
