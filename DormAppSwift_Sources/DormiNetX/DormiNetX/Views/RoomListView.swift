@@ -604,7 +604,8 @@ struct SidebarMenu: View {
                             let generator = UINotificationFeedbackGenerator()
                             generator.notificationOccurred(.success)
                         }) {
-                            Image(systemName: "trash.fill")
+                            // เปลี่ยนเป็นรูป seal.fill ที่ดูคล้ายคุกกี้แบบมินิมอ
+                            Image(systemName: "clock.badge.xmark")
                                 .font(.custom("SukhumvitSet-Bold", size: 18))
                                 .foregroundColor(.orange)
                                 .padding(10)
