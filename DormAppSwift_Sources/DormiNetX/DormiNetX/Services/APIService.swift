@@ -30,6 +30,56 @@ class APIService {
             }
         }
     }
+
+    func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil) {
+        authToken = token
+        currentEmail = email
+
+        if let role = jwtStringClaim("role", from: token), !role.isEmpty {
+            userRole = role
+        } else if let fallbackRole, !fallbackRole.isEmpty {
+            userRole = fallbackRole
+        } else if userRole == nil {
+            userRole = "admin"
+        }
+
+        if let adminID = jwtIntClaim("admin_id", from: token), adminID > 0 {
+            UserDefaults.standard.set(adminID, forKey: "adminID")
+        }
+    }
+
+    private func jwtStringClaim(_ key: String, from token: String) -> String? {
+        jwtPayload(from: token)?[key] as? String
+    }
+
+    private func jwtIntClaim(_ key: String, from token: String) -> Int? {
+        guard let value = jwtPayload(from: token)?[key] else { return nil }
+        if let intValue = value as? Int { return intValue }
+        if let numberValue = value as? NSNumber { return numberValue.intValue }
+        if let doubleValue = value as? Double { return Int(doubleValue) }
+        return nil
+    }
+
+    private func jwtPayload(from token: String) -> [String: Any]? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+
+        var payload = String(parts[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+
+        let padding = payload.count % 4
+        if padding != 0 {
+            payload += String(repeating: "=", count: 4 - padding)
+        }
+
+        guard let data = Data(base64Encoded: payload),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let dictionary = object as? [String: Any] else {
+            return nil
+        }
+        return dictionary
+    }
     
     func login(email: String, password: String) async throws -> (Bool, String?) {
         guard let url = URL(string: "\(baseURL)/auth/login") else { return (false, nil) }
@@ -179,6 +229,43 @@ class APIService {
     
     func fetchMaintenancesData() async throws -> Data {
         return try await performGetRequest(path: "/maintenances")
+    }
+
+    func fetchLatestSyncSnapshot() async throws -> Data {
+        return try await performGetRequest(path: "/sync/latest")
+    }
+
+    func fetchSyncMetadata() async throws -> Data {
+        return try await performGetRequest(path: "/sync/meta")
+    }
+
+    func pushSyncSnapshot(payload: Data, deviceID: String) async throws -> Data {
+        guard let url = URL(string: "\(baseURL)/sync/push") else { throw URLError(.badURL) }
+        guard let payloadObject = try JSONSerialization.jsonObject(with: payload) as? [String: Any] else {
+            throw URLError(.cannotParseResponse)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "payload": payloadObject,
+            "device_id": deviceID,
+            "client_updated_at": ISO8601DateFormatter().string(from: Date())
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        if httpResponse.statusCode != 200 {
+            let errorMsg = String(data: data, encoding: .utf8) ?? "Server Error"
+            throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+        return data
     }
     
     private func performGetRequest(path: String) async throws -> Data {

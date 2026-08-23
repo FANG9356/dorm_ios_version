@@ -3,9 +3,11 @@ package core
 import (
 	"database/sql"
 	"dorm_os/handlers"
+	"dorm_os/p2p"
 	"dorm_os/utils"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	"io"
 	"log"
 	"net/http"
@@ -18,8 +20,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"dorm_os/p2p"
-	"github.com/joho/godotenv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -104,12 +104,12 @@ func RunServer() {
 	})
 	http.HandleFunc("/api/admins/ping", handlers.PingAdminHandler(db))
 	http.HandleFunc("/api/logout", handlers.LogoutAdminHandler(db))
-	
+
 	http.Handle("/api/admins/invite/generate", handlers.AuthMiddleware(db, handlers.GenerateInviteTokenHandler(db)))
 	http.HandleFunc("/api/admins/invite/register", handlers.RegisterWithInviteHandler(db))
-	
+
 	http.HandleFunc("/api/register", handlers.RegisterHandler(db))
-	
+
 	http.Handle("/api/admins/login-qr/generate", handlers.AuthMiddleware(db, handlers.GenerateLoginTokenHandler(db)))
 	http.HandleFunc("/api/login/qr", handlers.LoginWithQRHandler(db))
 
@@ -389,18 +389,18 @@ func RunServer() {
 			http.Error(w, "Reset failed", http.StatusInternalServerError)
 			return
 		}
-		
+
 		// Preserve admin profiles during reset
 		err = os.Rename("./uploads/profiles", "./profiles_temp")
-		
+
 		os.RemoveAll("./uploads")
 		os.MkdirAll("./uploads", os.ModePerm)
-		
+
 		if err == nil {
 			os.MkdirAll("./uploads/profiles", os.ModePerm)
 			os.Rename("./profiles_temp", "./uploads/profiles")
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -460,7 +460,7 @@ func setupStaticHandler() {
 
 func InitializeDatabase(db *sql.DB) {
 	// Master Database: Only stores Auth (admins, password_resets, etc.)
-	
+
 	// [เพิ่มใหม่] ตารางสำหรับแอดมินและรีเซ็ตรหัสผ่าน
 	db.Exec(`CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT, role TEXT DEFAULT 'services', profile_image TEXT DEFAULT '')`)
 	// Migrate existing admins table
@@ -484,5 +484,18 @@ func InitializeDatabase(db *sql.DB) {
 		token TEXT UNIQUE,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
-}
 
+	db.Exec(`CREATE TABLE IF NOT EXISTS sync_snapshots (
+		snapshot_id TEXT PRIMARY KEY,
+		account_id INTEGER NOT NULL,
+		version INTEGER NOT NULL,
+		payload TEXT NOT NULL,
+		checksum TEXT NOT NULL,
+		size INTEGER NOT NULL,
+		device_id TEXT DEFAULT '',
+		created_at DATETIME NOT NULL,
+		created_by_admin_id INTEGER NOT NULL,
+		UNIQUE(account_id, version)
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_sync_snapshots_latest ON sync_snapshots (account_id, version DESC)`)
+}

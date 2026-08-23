@@ -28,7 +28,7 @@ func isNegative(s string) bool {
 
 func SetupPaymentRoutes(db *sql.DB) {
 	http.HandleFunc("/api/payments", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -107,7 +107,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 				} else {
 					_, err = db.Exec("UPDATE payments SET amount=?, slip_path=?, slip_path_array=?, payment_status='paid' WHERE payment_id=?", amountVal, firstFileName, slipPathArrayStr, existingID)
 				}
-				
+
 				if err != nil {
 					http.Error(w, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล", http.StatusInternalServerError)
 					return
@@ -157,7 +157,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 				(user_id, room_number, rent_fee, water_fee, electric_fee, common_fee, late_fee, appliance_fee, amount, month, payment_date, method, slip_path, water_meter_prev, water_meter_curr, electric_meter_prev, electric_meter_curr, payment_plan, installment_phase, due_date, payment_status, slip_path_array, paid_amount) 
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 				userID, r.FormValue("room_number"), r.FormValue("rent_fee"), r.FormValue("water_fee"), r.FormValue("electric_fee"), r.FormValue("common_fee"), r.FormValue("late_fee"), r.FormValue("appliance_fee"), r.FormValue("amount"), month, r.FormValue("date"), r.FormValue("method"), firstFileName, r.FormValue("water_meter_prev"), r.FormValue("water_meter_curr"), r.FormValue("electric_meter_prev"), r.FormValue("electric_meter_curr"), r.FormValue("payment_plan"), r.FormValue("installment_phase"), r.FormValue("due_date"), r.FormValue("payment_status"), slipPathArrayStr, r.FormValue("paid_amount"))
-			
+
 			if err != nil {
 				if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 					http.Error(w, "มีบิลของเดือนนี้สำหรับผู้เช่าท่านนี้อยู่แล้ว ไม่สามารถสร้างซ้ำได้", http.StatusConflict)
@@ -370,7 +370,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 				http.Error(w, "Invalid data", http.StatusBadRequest)
 				return
 			}
-			
+
 			if payload.PaymentStatus == "paid" {
 				currentDate := time.Now().Format("2006-01-02")
 				_, err := db.Exec("UPDATE payments SET payment_status = 'paid', payment_date = ? WHERE payment_id = ?", currentDate, payload.PaymentID)
@@ -378,7 +378,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 					http.Error(w, "Update failed", http.StatusInternalServerError)
 					return
 				}
-				
+
 				var roomNumber, monthStr, lineUserID, slipPathStr string
 				var amount float64
 				errScan := db.QueryRow("SELECT COALESCE(p.room_number, ''), COALESCE(p.month, ''), COALESCE(p.amount, 0), COALESCE(p.slip_path, ''), COALESCE(u.line_user_id, '') FROM payments p LEFT JOIN users u ON p.room_number = u.room_number WHERE p.payment_id = ?", payload.PaymentID).Scan(&roomNumber, &monthStr, &amount, &slipPathStr, &lineUserID)
@@ -406,15 +406,15 @@ func SetupPaymentRoutes(db *sql.DB) {
 					http.Error(w, "Update failed", http.StatusInternalServerError)
 					return
 				}
-				
+
 				var roomNumber, lineUserID string
 				errScan := db.QueryRow("SELECT COALESCE(p.room_number, ''), COALESCE(u.line_user_id, '') FROM payments p LEFT JOIN users u ON p.room_number = u.room_number WHERE p.payment_id = ?", payload.PaymentID).Scan(&roomNumber, &lineUserID)
-				
+
 				if errScan == nil && lineUserID != "" {
 					msg := fmt.Sprintf("สลิปโอนเงินสำหรับบิลห้อง %s ไม่ถูกต้องค่ะ\nกรุณากดเมนู 'การเงิน' เพื่อตรวจสอบบิล และอัปโหลดรูปสลิปที่ถูกต้องเข้ามาใหม่อีกครั้งนะคะ", roomNumber)
 					go PushLineMessage(lineUserID, msg)
 				}
-				
+
 				db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES ('Reject Slip', 'ปฏิเสธสลิปบิล ' || ?, ?)", payload.PaymentID, time.Now().Format("2006-01-02 15:04:05"))
 			} else {
 				if payload.Amount < 0 {

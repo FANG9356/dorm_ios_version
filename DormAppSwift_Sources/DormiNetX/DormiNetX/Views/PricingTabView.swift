@@ -5,6 +5,8 @@ struct PricingTabView: View {
     @Binding var showAddRoomType: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
+    @State private var editingRoomType: RoomType?
+    @State private var roomTypeToDelete: RoomType?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -31,6 +33,31 @@ struct PricingTabView: View {
                                 .font(.custom("SukhumvitSet-Text", size: 11)).foregroundStyle(.secondary)
                         }
                     }
+                    .contextMenu {
+                        Button {
+                            editingRoomType = roomType
+                        } label: {
+                            Label("แก้ไข", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            roomTypeToDelete = roomType
+                        } label: {
+                            Label("ลบ", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            roomTypeToDelete = roomType
+                        } label: {
+                            Label("ลบ", systemImage: "trash")
+                        }
+                        Button {
+                            editingRoomType = roomType
+                        } label: {
+                            Label("แก้ไข", systemImage: "pencil")
+                        }
+                        .tint(.indigo)
+                    }
                 }
             }
         }
@@ -39,9 +66,48 @@ struct PricingTabView: View {
             RoomTypeEditor { roomType in
                 modelContext.insert(roomType)
                 try? modelContext.save()
+                Task {
+                    await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext)
+                }
             }
             .iphoneSheetStyle()
         }
+        .sheet(item: $editingRoomType) { roomType in
+            RoomTypeEditor(roomType: roomType) { updated in
+                roomType.name = updated.name
+                roomType.price = updated.price
+                roomType.waterFee = updated.waterFee
+                roomType.electricFee = updated.electricFee
+                roomType.commonFee = updated.commonFee
+                roomType.lateFee = updated.lateFee
+                roomType.lastUpdated = Date()
+                roomType.isDirty = true
+                try? modelContext.save()
+                Task {
+                    await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext)
+                }
+            }
+            .iphoneSheetStyle()
+        }
+        .confirmationDialog("ลบประเภทห้องนี้หรือไม่", isPresented: deleteDialogBinding) {
+            Button("ลบ \(roomTypeToDelete?.name ?? "")", role: .destructive) {
+                guard let roomType = roomTypeToDelete else { return }
+                modelContext.delete(roomType)
+                try? modelContext.save()
+                Task {
+                    await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext)
+                }
+                roomTypeToDelete = nil
+            }
+            Button("ยกเลิก", role: .cancel) { }
+        }
+    }
+
+    private var deleteDialogBinding: Binding<Bool> {
+        Binding(
+            get: { roomTypeToDelete != nil },
+            set: { if !$0 { roomTypeToDelete = nil } }
+        )
     }
 }
 
@@ -54,6 +120,15 @@ private struct RoomTypeEditor: View {
     @State private var water = ""
     @State private var electric = ""
     @State private var common = ""
+
+    init(roomType: RoomType? = nil, onSave: @escaping (RoomType) -> Void) {
+        self.onSave = onSave
+        _name = State(initialValue: roomType?.name ?? "")
+        _price = State(initialValue: roomType.map { String(format: "%.0f", $0.price) } ?? "")
+        _water = State(initialValue: roomType.map { String(format: "%.0f", $0.waterFee) } ?? "")
+        _electric = State(initialValue: roomType.map { String(format: "%.0f", $0.electricFee) } ?? "")
+        _common = State(initialValue: roomType.map { String(format: "%.0f", $0.commonFee) } ?? "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -73,7 +148,7 @@ private struct RoomTypeEditor: View {
                         .keyboardType(.decimalPad)
                 }
             }
-            .navigationTitle("เพิ่มประเภทห้อง")
+            .navigationTitle("ประเภทห้อง")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

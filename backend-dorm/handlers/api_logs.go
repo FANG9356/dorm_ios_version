@@ -7,11 +7,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-) 
+)
 
 func SetupLogRoutes(db *sql.DB) {
 	http.HandleFunc("/api/logs", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -43,7 +43,7 @@ func SetupLogRoutes(db *sql.DB) {
 			}
 			// Log Rotation: Keep only the latest 1000 logs to prevent database bloat
 			db.Exec("DELETE FROM system_logs WHERE log_id NOT IN (SELECT log_id FROM system_logs ORDER BY log_id DESC LIMIT 1000)")
-			
+
 			w.WriteHeader(http.StatusCreated)
 		}
 	})

@@ -293,9 +293,9 @@ struct LoginView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .contentShape(Rectangle())
-                .onTapGesture {
+                .simultaneousGesture(TapGesture().onEnded {
                     dismissKeyboard()
-                }
+                })
                 
                 VStack {
                     if !showingPasscodeModal {
@@ -307,15 +307,29 @@ struct LoginView: View {
                                     ForEach(savedAccounts) { account in
                                         Button(action: {
                                             email = account.email
-                                            password = account.password
+                                            password = ""
                                             name = account.name
                                             isSignUpMode = false
                                             isForgotPasswordMode = false
                                             errorMessage = nil
-                                            name = ""
-                                            confirmPassword = ""
-                                            isConfirmPasswordVisible = false
-                                            Task { await handleAuth() }
+	                                            confirmPassword = ""
+	                                            isConfirmPasswordVisible = false
+	                                            if let token = account.token, !token.isEmpty {
+	                                                APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
+	                                                userEmail = account.email
+	                                                userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "User") : account.name
+	                                                if securityTokenEnabled && !securityPasscode.isEmpty {
+                                                    passcodeInput = ""
+                                                    passcodeError = nil
+                                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                                                        showingPasscodeModal = true
+                                                    }
+                                                } else {
+                                                    withAnimation(.easeInOut(duration: 0.6)) {
+                                                        isLoggedIn = true
+                                                    }
+                                                }
+                                            }
                                         }) {
                                             Text(account.name.isEmpty ? account.email : "\(account.name) (\(account.email))")
                                         }
@@ -648,11 +662,12 @@ struct LoginView: View {
         }
     }
     
-    private func saveAccount() {
-        var accounts = savedAccounts
-        accounts.removeAll(where: { $0.email == email })
-        let currentToken = APIService.shared.authToken ?? ""
-        accounts.insert(SavedAccount(name: userName, email: email, password: password, token: currentToken), at: 0)
+	    private func saveAccount() {
+	        var accounts = savedAccounts
+	        accounts.removeAll(where: { $0.email == email })
+	        let currentToken = APIService.shared.authToken ?? ""
+	        let currentRole = APIService.shared.userRole
+	        accounts.insert(SavedAccount(name: userName, email: email, token: currentToken, role: currentRole), at: 0)
         
         if accounts.count > 5 {
             accounts = Array(accounts.prefix(5))
@@ -703,6 +718,6 @@ struct SavedAccount: Identifiable, Codable {
     var id: String { email }
     let name: String
     let email: String
-    let password: String
     var token: String?
+    var role: String?
 }

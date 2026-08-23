@@ -172,10 +172,10 @@ struct TenantsTabView: View {
                     Spacer().frame(height: 120) // ดันให้เนื้อหาพ้นปุ่มลอยด้านล่าง
                 }
             }
-            .scrollDismissesKeyboard(.immediately)
-            .onTapGesture {
+            .scrollDismissesKeyboard(.interactively)
+            .simultaneousGesture(TapGesture().onEnded {
                 hideKeyboard()
-            }
+            })
             // บังคับ ScrollView ให้เต็มจอ ป้องกันการหดตัว
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .refreshable { await viewModel.fetchUsers(modelContext: modelContext) }
@@ -702,10 +702,7 @@ struct TenantFormSheet: View {
                     .disabled(isSubmitting)
                 }
             }
-            .scrollDismissesKeyboard(.immediately)
-            .onTapGesture {
-                hideKeyboard()
-            }
+            .scrollDismissesKeyboard(.interactively)
             .environment(\.locale, Locale(identifier: "th_TH"))
             .environment(\.calendar, Calendar(identifier: .buddhist))
             .navigationTitle(isEditing ? "แก้ไขลูกบ้าน" : "เพิ่มลูกบ้านใหม่")
@@ -747,6 +744,11 @@ struct TenantFormSheet: View {
 
     
     private func submitForm() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        errorText = nil
+        defer { isSubmitting = false }
+
         guard !firstName.isEmpty, !lastName.isEmpty, !roomNumber.isEmpty else {
             errorText = "กรุณากรอกชื่อ นามสกุล และเลขห้อง"
             return
@@ -785,6 +787,7 @@ struct TenantFormSheet: View {
             user.lastUpdated = Date()
             user.isDirty = true
             try modelContext.save()
+            await SyncManager.shared.autoPushLocalChanges(modelContext: modelContext)
             await viewModel.fetchUsers(modelContext: modelContext)
             dismiss()
         } catch {

@@ -18,7 +18,7 @@ import (
 
 func SetupUserRoutes(db *sql.DB) {
 	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -38,7 +38,7 @@ func SetupUserRoutes(db *sql.DB) {
 				if slipsStr != "" {
 					json.Unmarshal([]byte(slipsStr), &u.BookingSlips)
 				}
-				
+
 				// Mask National ID for PDPA compliance on frontend delivery
 				if len(u.NationalID) >= 13 {
 					u.NationalID = "X-XXXX-XXXXX-" + u.NationalID[len(u.NationalID)-3:]
@@ -113,7 +113,7 @@ func SetupUserRoutes(db *sql.DB) {
 				http.Error(w, "จำนวนเงินห้ามติดลบ", 400)
 				return
 			}
-			
+
 			// Remove masking string from ID if it wasn't edited, by retrieving original ID
 			if r.Method == "PUT" && strings.Contains(strings.ToUpper(u.NationalID), "X") {
 				var originalID string
@@ -300,7 +300,7 @@ func SetupUserRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/move-out", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -346,7 +346,7 @@ func SetupUserRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/users/unmask-id", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

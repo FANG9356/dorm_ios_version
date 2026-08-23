@@ -1,0 +1,37 @@
+# OS/editor
+.DS_Store
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Backend runtime data
+backend-dorm/.env
+backend-dorm/*.db
+backend-dorm/*.db-shm
+backend-dorm/*.db-wal
+backend-dorm/dorm_data/
+backend-dorm/uploads/
+backend-dorm/profiles_temp/
+backend-dorm/backups/
+backend-dorm/backups_zip/
+backend-dorm/*.log
+backend-dorm/panic_log.txt
+
+# Build artifacts and local binaries
+backend-dorm/main
+backend-dorm/server
+backend-dorm/server_mac
+backend-dorm/server_debian
+backend-dorm/dorm_os
+backend-dorm/dorm_backend_linux
+backend-dorm/test_build
+backend-dorm/test_db
+backend-dorm/mytest
+backend-dorm/*.deb
+
+# Xcode local state
+**/xcuserdata/
+**/*.xcuserstate
+DerivedData/
