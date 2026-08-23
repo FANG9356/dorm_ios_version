@@ -23,7 +23,7 @@ struct RoomListView: View {
     @State private var showAddMaintenance = false
     @State private var addButtonRotation = 0.0
     @State private var showSyncOverlay = false
-    @State private var isSyncButtonSpinning = false
+    @State private var syncButtonRotation = 0.0
     @State private var lastAutoPullCheck: Date?
     
     var body: some View {
@@ -120,8 +120,7 @@ struct RoomListView: View {
                                     Image(systemName: "arrow.triangle.2.circlepath")
                                         .font(.custom("SukhumvitSet-Medium", size: 18))
                                         .foregroundColor(colorScheme == .dark ? .white : .indigo)
-                                        .rotationEffect(Angle(degrees: (isSyncButtonSpinning || syncManager.isSyncing) ? 360 : 0))
-                                        .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: isSyncButtonSpinning || syncManager.isSyncing)
+                                        .rotationEffect(.degrees(syncButtonRotation))
                                 }
                             }
                             .buttonStyle(PressableButtonStyle())
@@ -249,8 +248,8 @@ struct RoomListView: View {
 
         Task {
             let startedAt = Date()
-            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
-                isSyncButtonSpinning = true
+            withAnimation(.linear(duration: 5)) {
+                syncButtonRotation += 1080
             }
             withAnimation(.easeInOut(duration: 0.25)) {
                 showSyncOverlay = true
@@ -263,9 +262,6 @@ struct RoomListView: View {
             try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             withAnimation(.easeInOut(duration: 0.5)) {
                 showSyncOverlay = false
-            }
-            withAnimation {
-                isSyncButtonSpinning = false
             }
         }
     }
