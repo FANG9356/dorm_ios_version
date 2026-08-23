@@ -53,7 +53,33 @@ struct TwinBuildingsOutline: Shape {
     }
 }
 
+private struct SplashPalette {
+    let backgroundTop: Color
+    let backgroundBottom: Color
+    let primaryStroke: Color
+    let windowFill: Color
+    let glow: Color
+
+    init(isDark: Bool) {
+        if isDark {
+            backgroundTop = Color(red: 0.10, green: 0.10, blue: 0.14)
+            backgroundBottom = Color(red: 0.15, green: 0.14, blue: 0.19)
+            primaryStroke = .white
+            windowFill = Color(red: 0.32, green: 0.32, blue: 0.36)
+            glow = Color.white.opacity(0.22)
+        } else {
+            backgroundTop = Color(red: 0.95, green: 0.96, blue: 0.98)
+            backgroundBottom = Color(red: 0.88, green: 0.91, blue: 0.97)
+            primaryStroke = .indigo
+            windowFill = .indigo
+            glow = Color.indigo.opacity(0.18)
+        }
+    }
+}
+
 struct SplashView: View {
+    @AppStorage("appTheme") private var appTheme: Int = AppTheme.system.rawValue
+    @Environment(\.colorScheme) private var colorScheme
     @State private var isActive = false
     
     // ตึกใหญ่ฝั่งซ้าย (8 จุด)
@@ -91,6 +117,14 @@ struct SplashView: View {
         _dotOffsets = State(initialValue: scatteredOffsets)
         _dotOffsets2 = State(initialValue: scatteredOffsets2)
     }
+
+    private var resolvedColorScheme: ColorScheme {
+        (AppTheme(rawValue: appTheme)?.colorScheme) ?? colorScheme
+    }
+
+    private var palette: SplashPalette {
+        SplashPalette(isDark: resolvedColorScheme == .dark)
+    }
     
     var body: some View {
         ZStack {
@@ -100,7 +134,12 @@ struct SplashView: View {
             } else {
                 ZStack {
                     // พื้นหลัง
-                    Color(red: 0.95, green: 0.96, blue: 0.98).ignoresSafeArea()
+                    LinearGradient(
+                        colors: [palette.backgroundTop, palette.backgroundBottom],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
                     
                     
                     VStack(spacing: 24) {
@@ -111,7 +150,7 @@ struct SplashView: View {
                             LazyVGrid(columns: [GridItem(.fixed(16)), GridItem(.fixed(16))], spacing: 10) {
                                 ForEach(0..<8, id: \.self) { index in
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.indigo)
+                                        .fill(palette.windowFill)
                                         .frame(width: 14, height: 14)
                                         .offset(dotOffsets[index])
                                         .opacity(dotOpacities[index])
@@ -124,7 +163,7 @@ struct SplashView: View {
                             LazyVGrid(columns: [GridItem(.fixed(16))], spacing: 10) {
                                 ForEach(0..<3, id: \.self) { index in
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.indigo)
+                                        .fill(palette.windowFill)
                                         .frame(width: 14, height: 14)
                                         .offset(dotOffsets2[index])
                                         .opacity(dotOpacities2[index])
@@ -136,16 +175,18 @@ struct SplashView: View {
                             // 3. เส้นเดียววาดต่อเนื่องรอบ 2 ตึก
                             TwinBuildingsOutline()
                                 .trim(from: 0, to: outlineProgress)
-                                .stroke(Color.indigo, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                                .stroke(palette.primaryStroke, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                                 .frame(width: 86, height: 100)
+                                .shadow(color: palette.glow, radius: 12, x: 0, y: 4)
                         }
                         
                         // 4. ชื่อแอพ DormiNet แบบลากเส้นเดียว (Continuous Line)
                         ContinuousDormiNetShape()
                             .trim(from: 0, to: textOutlineProgress)
-                            .stroke(Color.indigo, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                            .stroke(palette.primaryStroke, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                             .frame(width: 160, height: 26)
                             .opacity(textOpacity)
+                            .shadow(color: palette.glow, radius: 8, x: 0, y: 3)
                     }
                 }
                 .transition(.opacity)
@@ -175,8 +216,8 @@ struct SplashView: View {
                         }
                     }
                     
-                    // เฟส 3: เส้นย้อนกลับ และจุดบินกลับที่เดิม (ค้างไว้ให้ดูนานขึ้น แล้วค่อยคลายออกช้าๆ)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+                    // เฟส 3: เส้นย้อนกลับ และจุดบินกลับที่เดิมหลังข้อความวาดครบแล้ว
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.2) {
                         // วาดลบเส้นย้อนกลับแบบช้าๆ
                         withAnimation(.easeInOut(duration: 1.2)) {
                             outlineProgress = 0.0
@@ -205,7 +246,7 @@ struct SplashView: View {
                     }
                     
                     // เฟส 4: สลับเข้าสู่แอพหลัก
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.8) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
                         isActive = true
                     }
                 }

@@ -7,7 +7,8 @@ import Charts
 struct RoomListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var rooms: [Room]
-    @State private var isSyncing = false
+    @StateObject private var syncManager = SyncManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var isSidebarOpen = false
     @State private var isSettingsMode = false
     @State private var selectedTab: DashboardTab = .overview
@@ -16,8 +17,14 @@ struct RoomListView: View {
     @State private var isLoggingOut = false
     @State private var showAddTenantSheet = false
     @State private var showAddRoomType = false
+    @State private var showAddRoom = false
+    @State private var showAddPayment = false
+    @State private var showAddBill = false
+    @State private var showAddMaintenance = false
     @State private var addButtonRotation = 0.0
     @State private var showSyncOverlay = false
+    @State private var isSyncButtonSpinning = false
+    @State private var lastAutoPullCheck: Date?
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -38,17 +45,17 @@ struct RoomListView: View {
                         case .tenants:
                             TenantsTabView(showAddSheet: $showAddTenantSheet)
                         case .finance:
-                            FinanceTabView()
+                            FinanceTabView(showingPaymentEditor: $showAddPayment)
                         case .bills:
-                            BillsTabView()
+                            BillsTabView(showingEditor: $showAddBill)
                         case .rooms:
-                            RoomsTabView()
+                            RoomsTabView(showingEditor: $showAddRoom)
                         case .pricing:
                             PricingTabView(showAddRoomType: $showAddRoomType)
                         case .transfers:
                             TransfersTabView()
                         case .maintenance:
-                            MaintenanceTabView()
+                            MaintenanceTabView(showingEditor: $showAddMaintenance)
                         case .adminManagement:
                             AdminManagementTabView()
                         case .securityToken:
@@ -67,11 +74,11 @@ struct RoomListView: View {
                     .animation(.easeInOut(duration: 0.25), value: selectedTab)
                 }
                 .scrollDisabled(selectedTab == .securityToken || selectedTab == .tenants)
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.interactively)
                 .contentShape(Rectangle())
-                .onTapGesture {
+                .simultaneousGesture(TapGesture().onEnded {
                     hideKeyboard()
-                }
+                })
                 
                 VStack {
                     HStack {
@@ -113,10 +120,12 @@ struct RoomListView: View {
                                     Image(systemName: "arrow.triangle.2.circlepath")
                                         .font(.custom("SukhumvitSet-Medium", size: 18))
                                         .foregroundColor(colorScheme == .dark ? .white : .indigo)
-                                        .rotationEffect(Angle(degrees: isSyncing ? 360 : 0))
+                                        .rotationEffect(Angle(degrees: (isSyncButtonSpinning || syncManager.isSyncing) ? 360 : 0))
+                                        .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: isSyncButtonSpinning || syncManager.isSyncing)
                                 }
                             }
                             .buttonStyle(PressableButtonStyle())
+                            .disabled(syncManager.isSyncing)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -126,16 +135,12 @@ struct RoomListView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if selectedTab == .tenants || selectedTab == .pricing {
+                if showsFloatingAddButton {
                     FloatingGlassAddButton(action: {
                         withAnimation(.spring(response: 0.42, dampingFraction: 0.68)) {
                             addButtonRotation += 180
                         }
-                        if selectedTab == .tenants {
-                            showAddTenantSheet = true
-                        } else {
-                            showAddRoomType = true
-                        }
+                        openAddSheetForSelectedTab()
                     }, rotation: addButtonRotation)
                     .padding(.trailing, 16)
                     .padding(.bottom, 0)
@@ -217,26 +222,79 @@ struct RoomListView: View {
                     }
                 }
         )
+        .onAppear {
+            scheduleAutoPullCheck()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                scheduleAutoPullCheck()
+            }
+        }
+    }
+
+    private func scheduleAutoPullCheck() {
+        if let lastAutoPullCheck, Date().timeIntervalSince(lastAutoPullCheck) < 20 {
+            return
+        }
+        lastAutoPullCheck = Date()
+        Task {
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !syncManager.isSyncing else { return }
+            await syncManager.autoPullRecentRemoteIfNeeded(modelContext: modelContext)
+        }
     }
     
     private func syncData() {
-        guard !showSyncOverlay else { return }
-        
-        withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) {
-            isSyncing = true
-        }
-        
-        withAnimation(.easeInOut(duration: 0.4)) {
-            showSyncOverlay = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+        guard !showSyncOverlay, !syncManager.isSyncing else { return }
+
+        Task {
+            let startedAt = Date()
+            withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) {
+                isSyncButtonSpinning = true
+            }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showSyncOverlay = true
+            }
+
+            await syncManager.pullLatestSnapshot(modelContext: modelContext)
+
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let remaining = max(0, 4.0 - elapsed)
+            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
             withAnimation(.easeInOut(duration: 0.5)) {
                 showSyncOverlay = false
             }
             withAnimation {
-                isSyncing = false
+                isSyncButtonSpinning = false
             }
+        }
+    }
+
+    private var showsFloatingAddButton: Bool {
+        switch selectedTab {
+        case .tenants, .finance, .bills, .rooms, .pricing, .maintenance:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func openAddSheetForSelectedTab() {
+        switch selectedTab {
+        case .tenants:
+            showAddTenantSheet = true
+        case .finance:
+            showAddPayment = true
+        case .bills:
+            showAddBill = true
+        case .rooms:
+            showAddRoom = true
+        case .pricing:
+            showAddRoomType = true
+        case .maintenance:
+            showAddMaintenance = true
+        default:
+            break
         }
     }
 }
@@ -276,7 +334,7 @@ struct SyncAnimationOverlay: View {
     @State private var statusOpacity: Double = 0.0
     @State private var pulseArrow = false
     @State private var bgOpacity: Double = 0.0
-    
+
     private let scatteredOffsets: [CGSize] = [
         CGSize(width: -120, height: -180),
         CGSize(width: 150, height: -160),
@@ -302,7 +360,7 @@ struct SyncAnimationOverlay: View {
                             .offset(dotOffsets[i])
                             .opacity(dotOpacities[i])
                     }
-                    
+
                     CloudOutlineShape()
                         .trim(from: 0, to: cloudProgress)
                         .stroke(
@@ -337,20 +395,20 @@ struct SyncAnimationOverlay: View {
         withAnimation(.easeIn(duration: 0.3)) {
             bgOpacity = 1.0
         }
-        
+
         for i in 0..<6 {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.7).delay(Double(i) * 0.08)) {
                 dotOffsets[i] = .zero
                 dotOpacities[i] = 1.0
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
             withAnimation(.easeInOut(duration: 1.2)) {
                 cloudProgress = 1.0
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.6)) {
                 arrowOffset = 12
@@ -363,33 +421,33 @@ struct SyncAnimationOverlay: View {
                 pulseArrow = true
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
             withAnimation(.easeInOut(duration: 0.3)) {
                 statusText = "ซิงค์ข้อมูลสำเร็จ"
             }
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             pulseArrow = false
-            
+
             withAnimation(.easeOut(duration: 0.3)) {
                 arrowOpacity = 0.0
                 arrowOffset = 20
                 statusOpacity = 0.0
             }
-            
+
             withAnimation(.easeInOut(duration: 0.8)) {
                 cloudProgress = 0.0
             }
-            
+
             for i in 0..<6 {
                 withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(Double(5 - i) * 0.05)) {
                     dotOffsets[i] = scatteredOffsets[i]
                     dotOpacities[i] = 0.0
                 }
             }
-            
+
             withAnimation(.easeOut(duration: 0.4).delay(0.6)) {
                 bgOpacity = 0.0
             }
@@ -458,9 +516,11 @@ struct SidebarMenu: View {
                         RoundedRectangle(cornerRadius: 10)
                             .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
                             .frame(width: 35, height: 35)
-                        Text("S")
-                            .font(.custom("SukhumvitSet-Bold", size: 16))
-                            .foregroundColor(.white)
+                        Image("DormiNetLogo")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 35, height: 35)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     
                     Text(isSettingsMode ? "MAINTENANCE" : "DORMINET ADMIN")

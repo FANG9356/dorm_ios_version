@@ -111,8 +111,11 @@ class TenantsViewModel: ObservableObject {
             do {
                 let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
                 if let user = localUsers.first(where: { ($0.serverId ?? Int(truncatingIfNeeded: $0.id.hashValue)) == id }) {
-                    modelContext.delete(user)
+                    user.isDeletedLocally = true
+                    user.isDirty = true
+                    user.lastUpdated = Date()
                     try modelContext.save()
+                    await SyncManager.shared.autoPushLocalChanges(modelContext: modelContext)
                     users.removeAll { $0.id == id }
                     return true
                 }

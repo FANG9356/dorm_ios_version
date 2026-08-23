@@ -14,7 +14,7 @@ import (
 
 func SetupRoomRoutes(db *sql.DB) {
 	http.HandleFunc("/api/rooms", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -122,7 +122,7 @@ func SetupRoomRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/rooms/available", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -143,7 +143,7 @@ func SetupRoomRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/room-types", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -252,7 +252,7 @@ func SetupRoomRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/evidence/room-conditions", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return

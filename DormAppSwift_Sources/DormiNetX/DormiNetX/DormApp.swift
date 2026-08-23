@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 /// Owns the local SwiftData container for the currently authenticated account.
 ///
@@ -212,9 +213,14 @@ struct AccountScopedRootView: View {
 struct DormApp: App {
     @AppStorage("appTheme") private var appTheme: Int = AppTheme.system.rawValue
 
+    init() {
+        UIScrollView.appearance().keyboardDismissMode = .interactive
+    }
+
     var body: some Scene {
         WindowGroup {
             AccountScopedRootView()
+                .globalKeyboardDismiss()
                 .preferredColorScheme(AppTheme(rawValue: appTheme)?.colorScheme)
         }
     }

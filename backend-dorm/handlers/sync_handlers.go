@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -18,6 +21,133 @@ type SyncAuthRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role,omitempty"`
+}
+
+type SyncSnapshotRequest struct {
+	Payload         json.RawMessage `json:"payload"`
+	DeviceID        string          `json:"device_id,omitempty"`
+	ClientUpdatedAt string          `json:"client_updated_at,omitempty"`
+}
+
+func resolveSyncAccount(db *sql.DB, r *http.Request) (int, int, string, error) {
+	adminIDValue := r.Context().Value("admin_id")
+	adminID, ok := adminIDValue.(int)
+	if !ok || adminID <= 0 {
+		return 0, 0, "", fmt.Errorf("missing admin id")
+	}
+
+	var email string
+	if err := db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", adminID).Scan(&email); err != nil {
+		return 0, 0, "", err
+	}
+
+	email = strings.ToLower(strings.TrimSpace(email))
+	accountID := adminID
+	if email != "" {
+		var ownerID int
+		err := db.QueryRow("SELECT id FROM admins WHERE email = ? AND role = 'superadmin' ORDER BY id ASC LIMIT 1", email).Scan(&ownerID)
+		if err == nil && ownerID > 0 {
+			accountID = ownerID
+		}
+	}
+
+	return adminID, accountID, email, nil
+}
+
+func writeLatestSnapshot(db *sql.DB, w http.ResponseWriter, accountID int, email string) {
+	var snapshotID string
+	var version int
+	var payload string
+	var checksum string
+	var size int
+	var deviceID string
+	var createdAt string
+	var createdBy int
+
+	err := db.QueryRow(`
+		SELECT snapshot_id, version, payload, checksum, size, COALESCE(device_id, ''), created_at, created_by_admin_id
+		FROM sync_snapshots
+		WHERE account_id = ?
+		ORDER BY version DESC
+		LIMIT 1
+	`, accountID).Scan(&snapshotID, &version, &payload, &checksum, &size, &deviceID, &createdAt, &createdBy)
+	if err == sql.ErrNoRows {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":       "empty",
+			"has_snapshot": false,
+			"account_id":   accountID,
+			"email":        email,
+		})
+		return
+	}
+	if err != nil {
+		http.Error(w, "Sync latest failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":              "success",
+		"has_snapshot":        true,
+		"snapshot_id":         snapshotID,
+		"account_id":          accountID,
+		"email":               email,
+		"version":             version,
+		"created_at":          createdAt,
+		"created_by_admin_id": createdBy,
+		"device_id":           deviceID,
+		"checksum":            checksum,
+		"size":                size,
+		"payload":             json.RawMessage(payload),
+	})
+}
+
+func writeLatestSnapshotMeta(db *sql.DB, w http.ResponseWriter, accountID int, email string) {
+	var snapshotID string
+	var version int
+	var checksum string
+	var size int
+	var deviceID string
+	var createdAt string
+	var createdBy int
+
+	err := db.QueryRow(`
+		SELECT snapshot_id, version, checksum, size, COALESCE(device_id, ''), created_at, created_by_admin_id
+		FROM sync_snapshots
+		WHERE account_id = ?
+		ORDER BY version DESC
+		LIMIT 1
+	`, accountID).Scan(&snapshotID, &version, &checksum, &size, &deviceID, &createdAt, &createdBy)
+	if err == sql.ErrNoRows {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":       "empty",
+			"has_snapshot": false,
+			"account_id":   accountID,
+			"email":        email,
+		})
+		return
+	}
+	if err != nil {
+		http.Error(w, "Sync meta failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":              "success",
+		"has_snapshot":        true,
+		"snapshot_id":         snapshotID,
+		"account_id":          accountID,
+		"email":               email,
+		"version":             version,
+		"created_at":          createdAt,
+		"created_by_admin_id": createdBy,
+		"device_id":           deviceID,
+		"checksum":            checksum,
+		"size":                size,
+	})
 }
 
 func SetupSyncRoutes(db *sql.DB) {
@@ -128,9 +258,9 @@ func SetupSyncRoutes(db *sql.DB) {
 		} else {
 			// Option A (Public Signup): New Superadmin and New Dorm
 			roleToInsert = "superadmin"
-			primaryEmail = req.Email
+			primaryEmail = strings.ToLower(strings.TrimSpace(req.Email))
 			backupEmail = ""
-			
+
 			// Ensure primary email doesn't already exist for any admin
 			var emailExists bool
 			db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE email = ? OR backup_email = ?)", primaryEmail, primaryEmail).Scan(&emailExists)
@@ -212,7 +342,7 @@ func SetupSyncRoutes(db *sql.DB) {
 		var username string
 		var role string
 		err := db.QueryRow("SELECT id, password, username, COALESCE(NULLIF(role, ''), 'superadmin') FROM admins WHERE email = ? OR username = ? OR backup_email = ?", req.Email, req.Email, req.Email).Scan(&adminID, &dbPassword, &username, &role)
-		
+
 		if err != nil {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 			return
@@ -241,41 +371,112 @@ func SetupSyncRoutes(db *sql.DB) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"email":  req.Email,
-			"name":   username,
-			"role":   role,
+			"status":   "success",
+			"email":    req.Email,
+			"name":     username,
+			"role":     role,
 			"admin_id": adminID,
-			"token":  tokenString,
+			"token":    tokenString,
 		})
 	})
 
 	// ตัวอย่าง API สำหรับให้ Swift App ดึงข้อมูลล่าสุดไปอัพเดทในเครื่อง
-	http.HandleFunc("/api/sync/pull", func(w http.ResponseWriter, r *http.Request) {
+	latestHandler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		// TODO: Query ฐานข้อมูล (เช่นตาราง users, rooms) แล้วส่งกลับเป็น JSON
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"rooms": []interface{}{},
-			"users": []interface{}{},
-		})
+		_, accountID, email, err := resolveSyncAccount(db, r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		writeLatestSnapshot(db, w, accountID, email)
+	}
+
+	http.HandleFunc("/api/sync/latest", latestHandler)
+	http.HandleFunc("/api/sync/pull", latestHandler)
+	http.HandleFunc("/api/sync/meta", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		_, accountID, email, err := resolveSyncAccount(db, r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		writeLatestSnapshotMeta(db, w, accountID, email)
 	})
 
-	// ตัวอย่าง API สำหรับรับข้อมูลจาก Swift App (Push) มาบันทึกลงฐานข้อมูล
 	http.HandleFunc("/api/sync/push", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		// TODO: รับ JSON จาก Swift App แล้ว UPDATE ลงฐานข้อมูล
+		adminID, accountID, email, err := resolveSyncAccount(db, r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var req SyncSnapshotRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		if len(req.Payload) == 0 || string(req.Payload) == "null" || !json.Valid(req.Payload) {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+
+		var nextVersion int
+		if err := db.QueryRow("SELECT COALESCE(MAX(version), 0) + 1 FROM sync_snapshots WHERE account_id = ?", accountID).Scan(&nextVersion); err != nil {
+			http.Error(w, "Sync push failed", http.StatusInternalServerError)
+			return
+		}
+
+		var canonicalPayload interface{}
+		if err := json.Unmarshal(req.Payload, &canonicalPayload); err != nil {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+		canonicalBytes, err := json.Marshal(canonicalPayload)
+		if err != nil {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+
+		payload := string(canonicalBytes)
+		sum := sha256.Sum256(canonicalBytes)
+		checksum := hex.EncodeToString(sum[:])
+		createdAt := time.Now().UTC().Format(time.RFC3339Nano)
+		snapshotID := fmt.Sprintf("acct-%d-v%d-%s", accountID, nextVersion, checksum[:12])
+
+		_, err = db.Exec(`
+			INSERT INTO sync_snapshots (snapshot_id, account_id, version, payload, checksum, size, device_id, created_at, created_by_admin_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, snapshotID, accountID, nextVersion, payload, checksum, len(canonicalBytes), req.DeviceID, createdAt, adminID)
+		if err != nil {
+			http.Error(w, "Sync push failed", http.StatusInternalServerError)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "synced successfully",
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":      "success",
+			"snapshot_id": snapshotID,
+			"account_id":  accountID,
+			"email":       email,
+			"version":     nextVersion,
+			"created_at":  createdAt,
+			"checksum":    checksum,
+			"size":        len(canonicalBytes),
 		})
 	})
 }

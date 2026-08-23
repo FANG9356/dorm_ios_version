@@ -16,7 +16,7 @@ import (
 
 func SetupMaintenanceRoutes(db *sql.DB) {
 	http.HandleFunc("/api/maintenances", func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -47,7 +47,7 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				return
 			}
 			db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES ('Create', 'รับแจ้งซ่อมห้อง ' || ? || ' (' || ? || ')', ?)", m.RoomNumber, m.Issue, time.Now().Format("2006-01-02 15:04:05"))
-			
+
 			// Push to all admins
 			go func() {
 				rows, _ := db.Query("SELECT line_user_id FROM admins WHERE line_user_id != ''")
@@ -87,12 +87,12 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 						return
 					}
 				}
-				
+
 				if m.Status == "เสร็จสิ้น" && prevStatus != "เสร็จสิ้น" && prevStatus != "รอตรวจสอบชำระเงิน" {
 					go func() {
 						// แจ้งเตือนสถานะซ่อมเสร็จก่อน
 						notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
-						
+
 						// ตามด้วยส่งบิล
 						var roomNumber, issue, lineUserID string
 						db.QueryRow("SELECT m.room_number, m.issue, u.line_user_id FROM maintenances m LEFT JOIN users u ON m.room_number = u.room_number WHERE m.id = ?", m.ID).Scan(&roomNumber, &issue, &lineUserID)
@@ -141,12 +141,12 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 					http.Error(w, "Database error", http.StatusInternalServerError)
 					return
 				}
-				
+
 				if status == "เสร็จสิ้น" && prevStatus != "เสร็จสิ้น" && prevStatus != "รอตรวจสอบชำระเงิน" {
 					go func() {
 						// แจ้งเตือนสถานะซ่อมเสร็จก่อน
 						notifyMaintenanceStatus(db, fmt.Sprintf("%v", id), status)
-						
+
 						// ตามด้วยส่งบิล
 						var roomNumber, issue, lineUserID string
 						db.QueryRow("SELECT m.room_number, m.issue, u.line_user_id FROM maintenances m LEFT JOIN users u ON m.room_number = u.room_number WHERE m.id = ?", id).Scan(&roomNumber, &issue, &lineUserID)
@@ -176,14 +176,14 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				} else {
 					go notifyMaintenanceStatus(db, id, status)
 				}
-				
+
 				w.WriteHeader(http.StatusOK)
 			}
 		}
 		if r.Method == "DELETE" {
 			id := r.URL.Query().Get("id")
 			filename := r.URL.Query().Get("filename")
-			
+
 			// ดึงชื่อไฟล์จาก DB เพื่อป้องกัน IDOR และ Path Traversal
 			var expectedFilename string
 			db.QueryRow("SELECT COALESCE(slip_path, '') FROM maintenances WHERE id = ?", id).Scan(&expectedFilename)

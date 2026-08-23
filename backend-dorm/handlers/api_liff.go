@@ -17,7 +17,7 @@ type LiffLinkRequest struct {
 
 func HandleLiffRooms(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -61,7 +61,7 @@ type LiffVerifyRequest struct {
 
 func HandleLiffVerify(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -126,7 +126,7 @@ func HandleLiffVerify(db *sql.DB) http.HandlerFunc {
 
 func HandleLiffLink(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db = getTenantDB(r, db)
+		db := getTenantDB(r, db)
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -161,7 +161,7 @@ func HandleLiffLink(db *sql.DB) http.HandlerFunc {
 		if resp != nil && resp.Body != nil {
 			resp.Body.Close()
 		}
-		
+
 		// Get User Profile from LINE API
 		reqProfile, _ := http.NewRequest("GET", "https://api.line.me/v2/profile", nil)
 		reqProfile.Header.Set("Authorization", "Bearer "+req.AccessToken)
