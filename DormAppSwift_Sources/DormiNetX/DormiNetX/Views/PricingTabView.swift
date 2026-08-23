@@ -135,17 +135,22 @@ private struct RoomTypeEditor: View {
             Form {
                 Section("ข้อมูลประเภทห้อง") {
                     TextField("ชื่อประเภทห้อง", text: $name)
+                        .limitedText($name, maxLength: 40, trimNewlines: true)
                     TextField("ค่าเช่ารายเดือน", text: $price)
                         .keyboardType(.decimalPad)
+                        .decimalInput($price, maxIntegerDigits: 8, maxFractionDigits: 2)
                 }
 
                 Section("ค่าใช้จ่ายเพิ่มเติม") {
                     TextField("ค่าน้ำ", text: $water)
                         .keyboardType(.decimalPad)
+                        .decimalInput($water, maxIntegerDigits: 8, maxFractionDigits: 2)
                     TextField("ค่าไฟ", text: $electric)
                         .keyboardType(.decimalPad)
+                        .decimalInput($electric, maxIntegerDigits: 8, maxFractionDigits: 2)
                     TextField("ค่าส่วนกลาง", text: $common)
                         .keyboardType(.decimalPad)
+                        .decimalInput($common, maxIntegerDigits: 8, maxFractionDigits: 2)
                 }
             }
             .navigationTitle("ประเภทห้อง")

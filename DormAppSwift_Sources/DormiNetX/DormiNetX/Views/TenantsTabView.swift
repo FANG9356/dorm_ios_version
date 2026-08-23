@@ -558,77 +558,77 @@ struct TenantDetailSheet: View {
     let viewModel: TenantsViewModel
     let onEdit: () -> Void
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var showEditSheet = false
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
-                    VStack(spacing: 10) {
-                        Text(user.room_number ?? "-")
-                            .font(.system(size: 48, weight: .bold, design: .monospaced))
+                VStack(spacing: 18) {
+                    VStack(spacing: 12) {
+                        Text(displayUser.room_number ?? "-")
+                            .font(.system(size: 56, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(viewModel.statusColor(user.status))
-                                .frame(width: 8, height: 8)
-                            Text(user.status ?? "-")
-                                .font(.custom("SukhumvitSet-Bold", size: 14))
+                                .fill(viewModel.statusColor(displayUser.status))
+                                .frame(width: 7, height: 7)
+                            Text(displayUser.status ?? "-")
+                                .font(.custom("SukhumvitSet-Bold", size: 13))
                         }
-                        .foregroundColor(viewModel.statusColor(user.status))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(viewModel.statusColor(user.status).opacity(0.1))
-                        .cornerRadius(12)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(statusFillColor))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.top, 20)
+                    .padding(.top, 28)
                     
                     Button {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            onEdit()
-                        }
+                        showEditSheet = true
                     } label: {
-                        Label("แก้ไขข้อมูลลูกบ้าน", systemImage: "pencil")
-                            .font(.custom("SukhumvitSet-Bold", size: 14))
-                            .foregroundColor(.blue)
+                        Label("แก้ไขข้อมูล", systemImage: "pencil")
+                            .font(.custom("SukhumvitSet-Bold", size: 13))
+                            .foregroundColor(.primary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                            .padding(.vertical, 11)
                             .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(.ultraThinMaterial)
+                                Capsule()
+                                    .fill(actionFillColor)
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                Capsule()
+                                    .stroke(actionBorderColor, lineWidth: 1)
                             )
                     }
                     .padding(.horizontal, 20)
                     
                     VStack(spacing: 14) {
                         DetailSection(title: "ข้อมูลส่วนตัว") {
-                            DetailRow(icon: "person.fill", label: "ชื่อ-นามสกุล", value: "\(user.prefix ?? "")\(user.first_name ?? "") \(user.last_name ?? "")")
-                            DetailRow(icon: "phone.fill", label: "เบอร์โทรศัพท์", value: viewModel.formatPhone(user.phone))
-                            DetailRow(icon: "creditcard.fill", label: "เลขบัตรประชาชน", value: maskNationalID(user.national_id))
-                            DetailRow(icon: "map.fill", label: "ที่อยู่", value: user.address ?? "-")
+                            DetailRow(icon: "person.fill", label: "ชื่อ-นามสกุล", value: "\(displayUser.prefix ?? "")\(displayUser.first_name ?? "") \(displayUser.last_name ?? "")")
+                            DetailRow(icon: "phone.fill", label: "เบอร์โทรศัพท์", value: viewModel.formatPhone(displayUser.phone))
+                            DetailRow(icon: "creditcard.fill", label: "เลขบัตรประชาชน", value: maskNationalID(displayUser.national_id))
+                            DetailRow(icon: "map.fill", label: "ที่อยู่", value: displayUser.address ?? "-")
                         }
                         
                         DetailSection(title: "ข้อมูลสัญญา") {
-                            DetailRow(icon: "calendar", label: "วันเข้าอยู่", value: formatDate(user.move_in_date))
-                            DetailRow(icon: "calendar.badge.clock", label: "วันหมดสัญญา", value: user.indefinite_contract == 1 ? "ไม่กำหนดระยะเวลา" : formatDate(user.contract_end_date))
-                            DetailRow(icon: "banknote.fill", label: "เงินมัดจำ", value: String(format: "฿%.0f", user.deposit ?? 0))
-                            DetailRow(icon: "creditcard.circle.fill", label: "วิธีชำระเงิน", value: paymentMethodText(user.payment_method))
+                            DetailRow(icon: "calendar", label: "วันเข้าอยู่", value: formatDate(displayUser.move_in_date))
+                            DetailRow(icon: "calendar.badge.clock", label: "วันหมดสัญญา", value: displayUser.indefinite_contract == 1 ? "ไม่กำหนดระยะเวลา" : formatDate(displayUser.contract_end_date))
+                            DetailRow(icon: "banknote.fill", label: "เงินมัดจำ", value: String(format: "฿%.0f", displayUser.deposit ?? 0))
+                            DetailRow(icon: "creditcard.circle.fill", label: "วิธีชำระเงิน", value: paymentMethodText(displayUser.payment_method))
                         }
                         
-                        if let appliances = user.additional_appliances, !appliances.isEmpty {
+                        if let appliances = displayUser.additional_appliances, !appliances.isEmpty {
                             DetailSection(title: "เครื่องใช้ไฟฟ้าเพิ่มเติม") {
                                 DetailRow(icon: "bolt.fill", label: "รายการ", value: appliances)
-                                DetailRow(icon: "banknote.fill", label: "ค่าใช้จ่ายเพิ่ม", value: String(format: "฿%.0f/เดือน", user.additional_appliance_fee ?? 0))
+                                DetailRow(icon: "banknote.fill", label: "ค่าใช้จ่ายเพิ่ม", value: String(format: "฿%.0f/เดือน", displayUser.additional_appliance_fee ?? 0))
                             }
                         }
                         
-                        if let details = user.additional_details, !details.isEmpty {
+                        if let details = displayUser.additional_details, !details.isEmpty {
                             DetailSection(title: "หมายเหตุ") {
                                 Text(details)
                                     .font(.custom("SukhumvitSet-Text", size: 14))
@@ -650,6 +650,26 @@ struct TenantDetailSheet: View {
                 }
             }
         }
+        .sheet(isPresented: $showEditSheet) {
+            TenantFormSheet(viewModel: viewModel, editUser: displayUser)
+                .iphoneFullSheetStyle()
+        }
+    }
+
+    private var displayUser: APIUser {
+        viewModel.users.first(where: { $0.id == user.id }) ?? user
+    }
+
+    private var statusFillColor: Color {
+        colorScheme == .dark ? viewModel.statusColor(displayUser.status).opacity(0.16) : Color.black.opacity(0.045)
+    }
+
+    private var actionFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.28)
+    }
+
+    private var actionBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.22)
     }
     
     private func maskNationalID(_ id: String?) -> String {
@@ -718,17 +738,23 @@ struct TenantFormSheet: View {
                     .tint(.primary)
                     
                     TextField("ชื่อ", text: $firstName)
+                        .limitedText($firstName, maxLength: 60, trimNewlines: true)
                     TextField("นามสกุล", text: $lastName)
+                        .limitedText($lastName, maxLength: 60, trimNewlines: true)
                     TextField("เบอร์โทรศัพท์", text: $phone)
                         .keyboardType(.phonePad)
+                        .digitsOnly($phone, maxLength: 10)
                     TextField("เลขบัตรประชาชน", text: $nationalID)
                         .keyboardType(.numberPad)
+                        .digitsOnly($nationalID, maxLength: 13)
                     TextField("ที่อยู่", text: $address)
+                        .limitedText($address, maxLength: 180, trimNewlines: true)
                 }
                 
                 Section(header: Text("ข้อมูลห้องพัก")) {
                     TextField("เลขห้อง", text: $roomNumber)
                         .keyboardType(.numberPad)
+                        .digitsOnly($roomNumber, maxLength: 6)
                     
                     Picker("สถานะ", selection: $status) {
                         Text("กำลังพักอาศัย").tag("กำลังพักอาศัย")
@@ -753,6 +779,7 @@ struct TenantFormSheet: View {
                     }
                     TextField("เงินมัดจำ (บาท)", text: $deposit)
                         .keyboardType(.decimalPad)
+                        .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
                 }
                 
                 if let err = errorText {
@@ -880,34 +907,38 @@ struct TenantFormSheet: View {
 struct DetailSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text(title)
-                .font(.custom("SukhumvitSet-Bold", size: 14))
-                .foregroundColor(.blue)
+                .font(.custom("SukhumvitSet-Bold", size: 15))
+                .foregroundColor(.primary)
             
-            VStack(spacing: 10) {
+            VStack(spacing: 0) {
                 content
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 15)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(sectionFillColor)
+                .shadow(color: colorScheme == .dark ? .black.opacity(0.05) : .clear, radius: 12, x: 0, y: 5)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.3), .white.opacity(0.05)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .stroke(sectionBorderColor, lineWidth: 1)
         )
+    }
+
+    private var sectionFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.24)
+    }
+
+    private var sectionBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.1) : Color.white.opacity(0.2)
     }
 }
 
@@ -916,23 +947,36 @@ struct DetailRow: View {
     let icon: String
     let label: String
     let value: String
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(.blue.opacity(0.7))
-                .frame(width: 20)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(iconColor)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(iconFillColor))
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.custom("SukhumvitSet-Text", size: 11))
+                    .font(.custom("SukhumvitSet-Text", size: 12))
                     .foregroundColor(.secondary)
                 Text(value)
                     .font(.custom("SukhumvitSet-Bold", size: 14))
                     .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
         }
+        .padding(.vertical, 10)
+    }
+
+    private var iconColor: Color {
+        colorScheme == .dark ? .white.opacity(0.72) : .primary.opacity(0.62)
+    }
+
+    private var iconFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.035)
     }
 }
 

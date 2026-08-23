@@ -246,6 +246,7 @@ private struct MaintenanceEditor: View {
                 Section("รายการซ่อม") {
                     if rooms.isEmpty {
                         TextField("เลขห้อง", text: $roomNumber)
+                            .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
                     } else {
                         Picker("ห้อง", selection: $roomNumber) {
                             ForEach(rooms) { room in
@@ -255,6 +256,7 @@ private struct MaintenanceEditor: View {
                     }
                     TextField("อาการ/รายละเอียด", text: $issue, axis: .vertical)
                         .lineLimit(3...6)
+                        .limitedText($issue, maxLength: 300)
                     Picker("สถานะ", selection: $status) {
                         ForEach(statuses, id: \.self) { Text($0).tag($0) }
                     }
@@ -263,9 +265,13 @@ private struct MaintenanceEditor: View {
                 Section("ค่าใช้จ่ายและหลักฐาน") {
                     TextField("ค่าใช้จ่าย", text: $cost)
                         .keyboardType(.decimalPad)
+                        .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
                     TextField("ช่องทางชำระเงิน", text: $paymentMethod)
+                        .limitedText($paymentMethod, maxLength: 60, trimNewlines: true)
                     TextField("ลิงก์/ชื่อไฟล์สลิป", text: $slipPath)
+                        .limitedText($slipPath, maxLength: 200, trimNewlines: true)
                     TextField("ลิงก์/ชื่อไฟล์รูปอาการเสีย", text: $issueImage)
+                        .limitedText($issueImage, maxLength: 200, trimNewlines: true)
                 }
             }
             .navigationTitle("งานซ่อม")

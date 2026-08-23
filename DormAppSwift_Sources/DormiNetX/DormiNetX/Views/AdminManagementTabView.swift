@@ -217,11 +217,13 @@ struct AddAdminSheet: View {
                     TextField("ชื่อผู้ดูแลระบบ", text: $name)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .autocapitalization(.none)
+                        .limitedText($name, maxLength: 60, trimNewlines: true)
                     
                     TextField("อีเมลหลัก", text: $primaryEmail)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+                        .normalizedEmail($primaryEmail)
                         .disabled(true)
                         .foregroundColor(.secondary)
                     
@@ -229,9 +231,11 @@ struct AddAdminSheet: View {
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+                        .normalizedEmail($backupEmail)
                     
                     SecureField("รหัสผ่านชั่วคราว", text: $password)
                         .font(.custom("SukhumvitSet-Text", size: 16))
+                        .limitedText($password, maxLength: 64, trimNewlines: true)
                         
                     HStack {
                         Text("สิทธิ์การใช้งาน")
@@ -373,11 +377,13 @@ struct EditAdminSheet: View {
                     TextField("ชื่อผู้ดูแลระบบ", text: $username)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .limitedText($username, maxLength: 60, trimNewlines: true)
                     
                     TextField("อีเมลหลัก", text: $email)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .normalizedEmail($email)
                         .disabled(true)
                         .foregroundColor(.secondary)
                     
@@ -386,11 +392,14 @@ struct EditAdminSheet: View {
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .foregroundColor(.secondary)
+                        .normalizedEmail($backupEmail)
                 }
                 
                 Section(header: Text("เปลี่ยนรหัสผ่าน"), footer: Text("หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้")) {
                     SecureField("รหัสผ่านเดิม", text: $oldPassword)
+                        .limitedText($oldPassword, maxLength: 64, trimNewlines: true)
                     SecureField("รหัสผ่านใหม่", text: $newPassword)
+                        .limitedText($newPassword, maxLength: 64, trimNewlines: true)
                 }
                 
                 if let errorMessage = errorMessage {

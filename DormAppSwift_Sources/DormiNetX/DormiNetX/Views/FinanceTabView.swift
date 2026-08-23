@@ -422,6 +422,7 @@ struct PaymentEditor: View {
                 Section("รอบบิล") {
                     if rooms.isEmpty {
                         TextField("เลขห้อง", text: $roomNumber)
+                            .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
                     } else {
                         Picker("ห้อง", selection: $roomNumber) {
                             ForEach(rooms) { room in
@@ -434,8 +435,10 @@ struct PaymentEditor: View {
                     }
                     TextField("เดือน เช่น 2026-08", text: $month)
                         .keyboardType(.numbersAndPunctuation)
+                        .dateKeyInput($month, maxLength: 7)
                     TextField("วันครบกำหนด เช่น 2026-08-31", text: $dueDate)
                         .keyboardType(.numbersAndPunctuation)
+                        .dateKeyInput($dueDate)
                 }
 
                 Section("ค่าใช้จ่าย") {
@@ -461,10 +464,14 @@ struct PaymentEditor: View {
                     }
                     TextField("ยอดที่ชำระแล้ว", text: $paidAmount)
                         .keyboardType(.decimalPad)
+                        .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
                     TextField("ช่องทางชำระเงิน", text: $method)
+                        .limitedText($method, maxLength: 60, trimNewlines: true)
                     TextField("วันที่ชำระ เช่น 2026-08-23", text: $paymentDate)
                         .keyboardType(.numbersAndPunctuation)
+                        .dateKeyInput($paymentDate)
                     TextField("ลิงก์/ชื่อไฟล์สลิป", text: $slipPath)
+                        .limitedText($slipPath, maxLength: 200, trimNewlines: true)
                 }
             }
             .navigationTitle("รายการชำระเงิน")
@@ -511,6 +518,7 @@ struct PaymentEditor: View {
     private func moneyField(_ title: String, text: Binding<String>) -> some View {
         TextField(title, text: text)
             .keyboardType(.decimalPad)
+            .decimalInput(text, maxIntegerDigits: 9, maxFractionDigits: 2)
     }
 
     private func applyRoomTypeDefaults() {
