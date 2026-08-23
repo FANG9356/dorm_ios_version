@@ -12,9 +12,9 @@ class APIService {
     // เก็บ Token สำหรับยืนยันตัวตน
     var authToken: String? {
         get { UserDefaults.standard.string(forKey: "authToken") }
-        set { 
+        set {
             if let newValue = newValue {
-                UserDefaults.standard.set(newValue, forKey: "authToken") 
+                UserDefaults.standard.set(newValue, forKey: "authToken")
             } else {
                 UserDefaults.standard.removeObject(forKey: "authToken")
             }
@@ -22,9 +22,9 @@ class APIService {
     }
     var userRole: String? {
         get { UserDefaults.standard.string(forKey: "userRole") }
-        set { 
+        set {
             if let newValue = newValue {
-                UserDefaults.standard.set(newValue, forKey: "userRole") 
+                UserDefaults.standard.set(newValue, forKey: "userRole")
             } else {
                 UserDefaults.standard.removeObject(forKey: "userRole")
             }
@@ -93,6 +93,9 @@ class APIService {
                 }
                 if let role = json["role"] as? String {
                     self.userRole = role
+                }
+                if let adminId = json["admin_id"] as? Int {
+                    UserDefaults.standard.set(adminId, forKey: "adminID")
                 }
                 let returnedName = json["name"] as? String
                 return (true, returnedName, nil)
