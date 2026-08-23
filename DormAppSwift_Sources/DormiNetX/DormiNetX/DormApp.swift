@@ -16,28 +16,21 @@ enum AccountModelContainer {
         LocalSystemLog.self
     ])
 
+    private static let legacyMigrationKey = "DormiNet.didMigrateLegacySharedStore.v1"
+
     static func make(for accountID: Int) throws -> ModelContainer {
         guard accountID > 0 else {
             throw AccountStoreError.invalidAccountID
         }
 
-        let fileManager = FileManager.default
-        let applicationSupport = try fileManager.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = applicationSupport
-            .appendingPathComponent("DormiNet", isDirectory: true)
-            .appendingPathComponent("Accounts", isDirectory: true)
-
-        try fileManager.createDirectory(
-            at: directory,
-            withIntermediateDirectories: true
-        )
-
+        let directory = try accountDirectory()
         let storeURL = directory.appendingPathComponent("account_\(accountID).store")
+
+        // The first account opened after this architecture change receives the
+        // old shared store. The legacy package is then renamed to a backup so a
+        // second account can never inherit the first account's local data.
+        try migrateLegacyStoreIfNeeded(to: storeURL)
+
         let configuration = ModelConfiguration(
             "account_\(accountID)",
             schema: schema,
@@ -85,6 +78,138 @@ enum AccountModelContainer {
             return accountID
         }
         return nil
+    }
+
+    private static func accountDirectory() throws -> URL {
+        let fileManager = FileManager.default
+        let applicationSupport = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let directory = applicationSupport
+            .appendingPathComponent("DormiNet", isDirectory: true)
+            .appendingPathComponent("Accounts", isDirectory: true)
+
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory
+    }
+
+    private static func migrateLegacyStoreIfNeeded(to targetURL: URL) throws {
+        let defaults = UserDefaults.standard
+        let fileManager = FileManager.default
+
+        guard !defaults.bool(forKey: legacyMigrationKey) else {
+            return
+        }
+
+        // Never overwrite an account store that already exists.
+        if fileManager.fileExists(atPath: targetURL.path) {
+            defaults.set(true, forKey: legacyMigrationKey)
+            return
+        }
+
+        // ModelConfiguration exposes the same default store URL that the old
+        // DormApp used when it created its shared SwiftData container.
+        let legacyConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false
+        )
+        let legacyURL = legacyConfiguration.url
+
+        guard fileManager.fileExists(atPath: legacyURL.path) else {
+            defaults.set(true, forKey: legacyMigrationKey)
+            return
+        }
+
+        let legacyPackage = persistentStorePackage(for: legacyURL)
+        let targetPackage = persistentStorePackage(for: targetURL)
+        var copiedTargets: [URL] = []
+
+        do {
+            for sourceURL in legacyPackage {
+                guard fileManager.fileExists(atPath: sourceURL.path) else {
+                    continue
+                }
+
+                let target = targetPackage.first {
+                    $0.lastPathComponent == targetName(for: sourceURL, legacyURL: legacyURL, targetURL: targetURL)
+                } ?? targetURL
+
+                if sourceURL.hasDirectoryPath {
+                    try fileManager.copyItem(at: sourceURL, to: target)
+                } else {
+                    try fileManager.copyItem(at: sourceURL, to: target)
+                }
+                copiedTargets.append(target)
+            }
+
+            // Keep a rollback copy. Renaming the legacy package prevents any
+            // later account from accidentally reopening the old shared store.
+            let backupSuffix = ".legacy-backup"
+            for sourceURL in legacyPackage {
+                guard fileManager.fileExists(atPath: sourceURL.path) else {
+                    continue
+                }
+
+                let backupURL = sourceURL.deletingLastPathComponent()
+                    .appendingPathComponent(sourceURL.lastPathComponent + backupSuffix)
+
+                if fileManager.fileExists(atPath: backupURL.path) {
+                    try fileManager.removeItem(at: backupURL)
+                }
+                try fileManager.moveItem(at: sourceURL, to: backupURL)
+            }
+
+            defaults.set(true, forKey: legacyMigrationKey)
+            print("✅ Migrated legacy local store into account store: \(targetURL.lastPathComponent)")
+        } catch {
+            // Roll back any partial target copies so the next launch can retry.
+            for target in copiedTargets where fileManager.fileExists(atPath: target.path) {
+                try? fileManager.removeItem(at: target)
+            }
+            throw error
+        }
+    }
+
+    private static func persistentStorePackage(for storeURL: URL) -> [URL] {
+        let directory = storeURL.deletingLastPathComponent()
+        let stem = storeURL.deletingPathExtension().lastPathComponent
+
+        return [
+            storeURL,
+            directory.appendingPathComponent(storeURL.lastPathComponent + "-shm"),
+            directory.appendingPathComponent(storeURL.lastPathComponent + "-wal"),
+            directory.appendingPathComponent(".\(stem)_SUPPORT", isDirectory: true),
+            directory.appendingPathComponent("\(stem)_ckAssets", isDirectory: true)
+        ]
+    }
+
+    private static func targetName(for sourceURL: URL, legacyURL: URL, targetURL: URL) -> String {
+        let legacyStem = legacyURL.deletingPathExtension().lastPathComponent
+        let targetStem = targetURL.deletingPathExtension().lastPathComponent
+        let name = sourceURL.lastPathComponent
+
+        if name == legacyURL.lastPathComponent {
+            return targetURL.lastPathComponent
+        }
+        if name == legacyURL.lastPathComponent + "-shm" {
+            return targetURL.lastPathComponent + "-shm"
+        }
+        if name == legacyURL.lastPathComponent + "-wal" {
+            return targetURL.lastPathComponent + "-wal"
+        }
+        if name == ".\(legacyStem)_SUPPORT" {
+            return ".\(targetStem)_SUPPORT"
+        }
+        if name == "\(legacyStem)_ckAssets" {
+            return "\(targetStem)_ckAssets"
+        }
+        return name
     }
 
     private static func jwtPayload(_ token: String) -> [String: Any]? {
