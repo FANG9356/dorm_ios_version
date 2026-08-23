@@ -15,12 +15,21 @@ struct RoomListView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoggingOut = false
     @State private var showAddTenantSheet = false
+    @State private var showAddRoomType = false
+    @State private var addButtonRotation = 0.0
     @State private var showSyncOverlay = false
     
     var body: some View {
         ZStack(alignment: .leading) {
             
             ZStack {
+                Color.clear
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        hideKeyboard()
+                    }
+
                 ScrollView(showsIndicators: false) {
                     Group {
                         switch selectedTab {
@@ -35,7 +44,7 @@ struct RoomListView: View {
                         case .rooms:
                             RoomsTabView()
                         case .pricing:
-                            PricingTabView()
+                            PricingTabView(showAddRoomType: $showAddRoomType)
                         case .transfers:
                             TransfersTabView()
                         case .maintenance:
@@ -58,6 +67,11 @@ struct RoomListView: View {
                     .animation(.easeInOut(duration: 0.25), value: selectedTab)
                 }
                 .scrollDisabled(selectedTab == .securityToken || selectedTab == .tenants)
+                .scrollDismissesKeyboard(.immediately)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    hideKeyboard()
+                }
                 
                 VStack {
                     HStack {
@@ -112,30 +126,26 @@ struct RoomListView: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                if selectedTab == .tenants {
-                    Button {
-                        showAddTenantSheet = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white)
-                            .frame(width: 58, height: 58)
-                            .background(
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [Color.blue, Color.indigo],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .shadow(color: .blue.opacity(0.4), radius: 12, x: 0, y: 6)
-                            )
-                    }
+                if selectedTab == .tenants || selectedTab == .pricing {
+                    FloatingGlassAddButton(action: {
+                        withAnimation(.spring(response: 0.42, dampingFraction: 0.68)) {
+                            addButtonRotation += 180
+                        }
+                        if selectedTab == .tenants {
+                            showAddTenantSheet = true
+                        } else {
+                            showAddRoomType = true
+                        }
+                    }, rotation: addButtonRotation)
                     .padding(.trailing, 16)
                     .padding(.bottom, 0)
                     .ignoresSafeArea(.all, edges: .bottom)
-                    .transition(.scale.combined(with: .opacity))
+                    .transition(
+                        .asymmetric(
+                            insertion: .scale(scale: 0.72).combined(with: .opacity).combined(with: .offset(y: 18)),
+                            removal: .scale(scale: 0.2).combined(with: .opacity).combined(with: .offset(y: 28))
+                        )
+                    )
                 }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.75), value: selectedTab)
@@ -189,6 +199,7 @@ struct RoomListView: View {
             }
         }
         .animation(.easeInOut(duration: 0.4), value: isLoggingOut)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .gesture(
             DragGesture(minimumDistance: 15)
                 .onEnded { value in
@@ -612,6 +623,7 @@ struct SidebarMenu: View {
         .sheet(item: $currentEditingAdmin) { admin in
             EditAdminSheet(admin: admin, onSuccess: {
             })
+            .iphoneFullSheetStyle()
         }
         .onChange(of: showingEditProfile) { _, newValue in
             if newValue {

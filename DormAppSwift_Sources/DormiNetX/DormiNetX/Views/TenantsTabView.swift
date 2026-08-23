@@ -1,6 +1,8 @@
 import SwiftUI
+import SwiftData
 
 struct TenantsTabView: View {
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = TenantsViewModel()
     @State private var selectedUser: APIUser? = nil
     @State private var showDeleteAlert = false
@@ -176,26 +178,29 @@ struct TenantsTabView: View {
             }
             // บังคับ ScrollView ให้เต็มจอ ป้องกันการหดตัว
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .refreshable { await viewModel.fetchUsers() }
-            .onAppear { Task { await viewModel.fetchUsers() } }
+            .refreshable { await viewModel.fetchUsers(modelContext: modelContext) }
+            .onAppear { Task { await viewModel.fetchUsers(modelContext: modelContext) } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing) // ล็อกกรอบใหญ่สุดอีกชั้น พร้อมยึดมุมขวาล่าง
         .sheet(item: $selectedUser) { user in
             TenantDetailSheet(user: user, viewModel: viewModel) {
                 editingUser = user
             }
+            .iphoneFullSheetStyle()
         }
         .sheet(isPresented: $showAddSheet) {
             TenantFormSheet(viewModel: viewModel, editUser: nil)
+                .iphoneFullSheetStyle()
         }
         .sheet(item: $editingUser) { user in
             TenantFormSheet(viewModel: viewModel, editUser: user)
+                .iphoneFullSheetStyle()
         }
         .alert("ยืนยันการลบ", isPresented: $showDeleteAlert) {
             Button("ยกเลิก", role: .cancel) { }
             Button("ลบ", role: .destructive) {
                 if let u = userToDelete {
-                    Task { let _ = await viewModel.deleteUser(id: u.id) }
+                    Task { let _ = await viewModel.deleteUser(id: u.id, modelContext: modelContext) }
                 }
             }
         } message: {
@@ -602,6 +607,7 @@ struct TenantFormSheet: View {
     @ObservedObject var viewModel: TenantsViewModel
     let editUser: APIUser?
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     
     @State private var prefix = "นาย"
     @State private var firstName = ""
@@ -745,69 +751,46 @@ struct TenantFormSheet: View {
             errorText = "กรุณากรอกชื่อ นามสกุล และเลขห้อง"
             return
         }
-        
-        isSubmitting = true
-        errorText = nil
-        
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
-        df.locale = Locale(identifier: "en_US_POSIX")
-        df.calendar = Calendar(identifier: .gregorian)
-        
-        var body: [String: Any] = [
-            "prefix": prefix,
-            "first_name": firstName,
-            "last_name": lastName,
-            "room_number": roomNumber,
-            "phone": phone,
-            "national_id": nationalID,
-            "address": address,
-            "status": status,
-            "move_in_date": df.string(from: moveInDate),
-            "contract_end_date": indefiniteContract ? "" : df.string(from: contractEndDate),
-            "deposit": Double(deposit) ?? 0,
-            "indefinite_contract": indefiniteContract ? 1 : 0,
-            "payment_method": "full_payment"
-        ]
-        
-        let urlStr: String
-        let method: String
-        if let u = editUser {
-            urlStr = "\(APIService.shared.baseURL)/users?id=\(u.id)"
-            method = "PUT"
-            body["id"] = u.id
-        } else {
-            urlStr = "\(APIService.shared.baseURL)/users"
-            method = "POST"
-        }
-        
-        guard let url = URL(string: urlStr) else {
-            errorText = "URL ไม่ถูกต้อง"
-            isSubmitting = false
-            return
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let token = APIService.shared.authToken {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, (200...201).contains(http.statusCode) {
-                await viewModel.fetchUsers()
-                dismiss()
+            let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
+            let user: DormUser
+            if let editUser,
+               let existing = localUsers.first(where: { ($0.serverId ?? Int(truncatingIfNeeded: $0.id.hashValue)) == editUser.id }) {
+                user = existing
             } else {
-                errorText = "เซิร์ฟเวอร์ตอบกลับผิดพลาด"
+                user = DormUser(firstName: firstName, lastName: lastName)
+                user.serverId = Int(truncatingIfNeeded: user.id.hashValue)
+                modelContext.insert(user)
             }
+
+            user.prefix = prefix
+            user.firstName = firstName
+            user.lastName = lastName
+            user.roomNumber = roomNumber
+            user.phone = phone
+            user.nationalID = nationalID
+            user.address = address
+            user.status = status
+            user.moveInDate = dateFormatter.string(from: moveInDate)
+            user.contractEndDate = indefiniteContract ? "" : dateFormatter.string(from: contractEndDate)
+            user.deposit = Double(deposit) ?? 0
+            user.indefiniteContract = indefiniteContract ? 1 : 0
+            user.paymentMethod = "full_payment"
+            user.lastUpdated = Date()
+            user.isDirty = true
+            try modelContext.save()
+            await viewModel.fetchUsers(modelContext: modelContext)
+            dismiss()
         } catch {
-            errorText = "ไม่สามารถบันทึกข้อมูลได้: \(error.localizedDescription)"
+            errorText = "ไม่สามารถบันทึกข้อมูลลงเครื่องได้"
         }
-        
-        isSubmitting = false
+        return
     }
 }
 

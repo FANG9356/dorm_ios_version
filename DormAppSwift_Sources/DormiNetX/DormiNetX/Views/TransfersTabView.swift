@@ -1,25 +1,57 @@
 import SwiftUI
+import SwiftData
 
 struct TransfersTabView: View {
-    var body: some View {
-        VStack(spacing: 20) {
+    @Query(sort: \Payment.lastUpdated, order: .reverse) private var payments: [Payment]
 
-            
-            GlassCard {
-                VStack(spacing: 15) {
-                    Image(systemName: "photo.stack.fill")
-                        .font(.custom("SukhumvitSet-Text", size: 50))
-                        .foregroundColor(.teal.opacity(0.7))
-                    Text("ไม่มีหลักฐานการโอนในขณะนี้")
-                        .font(.custom("SukhumvitSet-Bold", size: 17))
-                        .foregroundColor(.secondary)
+    private var paymentsWithEvidence: [Payment] {
+        payments.filter { !$0.slipPath.isEmpty || !$0.slipPathArray.isEmpty }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("หลักฐานการโอน")
+                .font(.custom("SukhumvitSet-Bold", size: 24))
+            Text("หลักฐานที่บันทึกไว้ในเครื่อง")
+                .font(.custom("SukhumvitSet-Text", size: 12))
+                .foregroundStyle(.secondary)
+
+            if paymentsWithEvidence.isEmpty {
+                GlassCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.stack.fill")
+                            .font(.system(size: 34))
+                            .foregroundStyle(.secondary)
+                        Text("ยังไม่มีหลักฐานการโอน")
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
                 }
-                .frame(maxWidth: .infinity, minHeight: 200)
-                .padding()
+            } else {
+                ForEach(paymentsWithEvidence) { payment in
+                    GlassCard {
+                        HStack {
+                            Image(systemName: "photo.fill")
+                                .foregroundStyle(.teal)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("ห้อง \(payment.roomNumber)")
+                                    .font(.custom("SukhumvitSet-Bold", size: 15))
+                                Text("รอบบิล \(payment.month)")
+                                    .font(.custom("SukhumvitSet-Text", size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(payment.paymentStatus == "paid" ? "ตรวจแล้ว" : "รอตรวจ")
+                                .font(.custom("SukhumvitSet-Medium", size: 10))
+                                .foregroundStyle(payment.paymentStatus == "paid" ? .green : .orange)
+                        }
+                    }
+                }
             }
-            .padding(.horizontal, 20)
-            Spacer()
         }
-        .padding(.top, 110)
+        .padding(.top, 106)
+        .padding(.horizontal, 20)
     }
 }

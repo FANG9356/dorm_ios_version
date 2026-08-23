@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import SwiftData
 
 struct APIDashboardStats: Codable {
     var total_residents: Int
@@ -96,6 +97,70 @@ class DashboardViewModel: ObservableObject {
     
     @Published var isLoading = true
     @Published var errorMessage: String?
+
+    func fetchLocalData(modelContext: ModelContext) {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let users = try modelContext.fetch(FetchDescriptor<DormUser>())
+            let rooms = try modelContext.fetch(FetchDescriptor<Room>())
+            let payments = try modelContext.fetch(FetchDescriptor<Payment>())
+            let maintenances = try modelContext.fetch(FetchDescriptor<Maintenance>())
+
+            let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
+            let currentMonth = monthKey(for: Date())
+            let currentPayments = payments.filter { $0.month == currentMonth }
+            let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
+            let pending = currentPayments.filter { $0.paymentStatus != "paid" }
+
+            stats = APIDashboardStats(
+                total_residents: activeUsers.count,
+                empty_rooms: max(rooms.count - activeUsers.count, 0),
+                income_this_month: received,
+                billing_cycle_income: currentPayments.reduce(0) { $0 + $1.amount },
+                pending_bills: pending.count
+            )
+            pendingUsers = activeUsers.filter { user in
+                !currentPayments.contains { payment in
+                    payment.userId == (user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)) && payment.paymentStatus == "paid"
+                }
+            }.map { user in
+                APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone)
+            }
+            pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
+            inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count
+            completedMaints = maintenances.filter { $0.status == "เสร็จสิ้น" }.count
+            depositThisMonth = users.filter { $0.moveInDate.hasPrefix(currentMonth) }.reduce(0) { $0 + $1.deposit }
+            financialStats = financialStatsFrom(payments: payments)
+            moveInStats = moveInStatsFrom(users: users)
+        } catch {
+            errorMessage = "ไม่สามารถโหลดข้อมูลจากเครื่องได้"
+        }
+
+        isLoading = false
+    }
+
+    private func monthKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: date)
+    }
+
+    private func financialStatsFrom(payments: [Payment]) -> [FinancialStat] {
+        let grouped = Dictionary(grouping: payments, by: { $0.month })
+        return grouped.keys.sorted().suffix(6).map { month in
+            let monthPayments = grouped[month] ?? []
+            return FinancialStat(month: month, name: month, income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
+        }
+    }
+
+    private func moveInStatsFrom(users: [DormUser]) -> [MoveInStat] {
+        let grouped = Dictionary(grouping: users.filter { !$0.moveInDate.isEmpty }, by: { String($0.moveInDate.prefix(7)) })
+        return grouped.keys.sorted().suffix(6).map { month in
+            MoveInStat(name: month, monthKey: month, newResidents: grouped[month]?.count ?? 0)
+        }
+    }
     
     func fetchAllData() async {
         isLoading = true

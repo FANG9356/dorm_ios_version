@@ -93,11 +93,13 @@ struct AdminManagementTabView: View {
                     await loadAdmins(showLoadingSpinner: false)
                 }
             })
+            .iphoneSheetStyle()
         }
         .sheet(item: $editingAdmin) { admin in
             EditAdminSheet(admin: admin, onSuccess: {
                 Task { await loadAdmins(showLoadingSpinner: false) }
             })
+            .iphoneFullSheetStyle()
         }
     }
     
@@ -231,11 +233,51 @@ struct AddAdminSheet: View {
                     SecureField("รหัสผ่านชั่วคราว", text: $password)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         
-                    Picker("สิทธิ์การใช้งาน", selection: $selectedRole) {
-                        Text("ผู้ดูแลทั่วไป").tag("admin")
-                        Text("ผู้ดูแลระบบสูงสุด").tag("superadmin")
+                    HStack {
+                        Text("สิทธิ์การใช้งาน")
+                            .font(.custom("SukhumvitSet-Text", size: 16))
+                        Spacer()
+                        Menu {
+                            Button("ผู้ดูแลทั่วไป") {
+                                withTransaction(Transaction(animation: nil)) {
+                                    selectedRole = "admin"
+                                }
+                            }
+
+                            Button("ผู้ดูแลระบบสูงสุด") {
+                                withTransaction(Transaction(animation: nil)) {
+                                    selectedRole = "superadmin"
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(selectedRole == "superadmin" ? "ผู้ดูแลระบบสูงสุด" : "ผู้ดูแลทั่วไป")
+                                    .font(.custom("SukhumvitSet-Text", size: 16))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                    .minimumScaleFactor(0.72)
+                                    .allowsTightening(true)
+                                    .frame(width: 148, alignment: .trailing)
+                                    .transaction { transaction in
+                                        transaction.animation = nil
+                                    }
+
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 14, height: 18)
+                            }
+                            .frame(width: 168, height: 24, alignment: .trailing)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 168, height: 24, alignment: .trailing)
+                        .animation(nil, value: selectedRole)
+                        .transaction { transaction in
+                            transaction.animation = nil
+                        }
                     }
-                    .font(.custom("SukhumvitSet-Text", size: 16))
                 }
                 
                 if let error = errorMessage {
@@ -248,6 +290,7 @@ struct AddAdminSheet: View {
             }
             .navigationTitle("เพิ่มผู้ดูแลระบบใหม่")
             .navigationBarTitleDisplayMode(.inline)
+            .dismissKeyboardOnTap()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("ยกเลิก") {
@@ -360,6 +403,7 @@ struct EditAdminSheet: View {
             }
             .navigationTitle("แก้ไขข้อมูล")
             .navigationBarTitleDisplayMode(.inline)
+            .dismissKeyboardOnTap()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("ยกเลิก") {

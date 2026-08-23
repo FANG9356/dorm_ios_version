@@ -203,6 +203,7 @@ struct SecurityTokenTabView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 110)
+                .dismissKeyboardOnTap()
                 .padding(.bottom, 20)
                 .offset(y: isCustomInputFocused ? -330 : 0)
                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isCustomInputFocused)

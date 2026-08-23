@@ -10,7 +10,9 @@ struct DormApp: App {
             DormUser.self,
             Payment.self,
             Room.self,
-            Maintenance.self
+            Maintenance.self,
+            RoomType.self,
+            LocalSystemLog.self
         ])
         
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
