@@ -18,9 +18,9 @@ struct BillsTabView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("บิลค่าใช้จ่าย")
+                    Text("รายการบิล")
                         .font(.custom("SukhumvitSet-Bold", size: 24))
-                    Text("สร้างและจัดการบิลจากข้อมูลในเครื่อง")
+                    Text("รวมบิลเข้าออกและประวัติที่บันทึกไว้ในเครื่อง")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }

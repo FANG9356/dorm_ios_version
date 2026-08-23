@@ -267,6 +267,69 @@ class APIService {
         }
         return data
     }
+
+    // MARK: - Backup & Restore APIs
+
+    func createServerBackup() async throws {
+        _ = try await performEmptyResponseRequest(path: "/system/backup/zip", method: "GET")
+    }
+
+    func fetchServerBackups() async throws -> [ServerBackupItem] {
+        let data = try await performGetRequest(path: "/system/backups")
+        return try JSONDecoder().decode([ServerBackupItem].self, from: data)
+    }
+
+    func deleteServerBackup(name: String) async throws {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        _ = try await performEmptyResponseRequest(path: "/system/backups?name=\(encodedName)", method: "DELETE")
+    }
+
+    func deleteAllServerBackups() async throws {
+        _ = try await performEmptyResponseRequest(path: "/system/backups/all", method: "DELETE")
+    }
+
+    func restoreServerBackup(name: String) async throws {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        _ = try await performEmptyResponseRequest(path: "/system/backups/restore?name=\(encodedName)", method: "POST")
+    }
+
+    func downloadServerBackup(name: String) async throws -> URL {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        let data = try await performGetRequest(path: "/system/backups/download?name=\(encodedName)")
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        try data.write(to: fileURL, options: .atomic)
+        return fileURL
+    }
+
+    func restoreServerFromZip(fileURL: URL) async throws {
+        guard let url = URL(string: "\(baseURL)/system/restore/zip") else { throw URLError(.badURL) }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let fileData = try Data(contentsOf: fileURL)
+        var body = Data()
+        body.appendString("--\(boundary)\r\n")
+        body.appendString("Content-Disposition: form-data; name=\"backup_file\"; filename=\"\(fileURL.lastPathComponent)\"\r\n")
+        body.appendString("Content-Type: application/zip\r\n\r\n")
+        body.append(fileData)
+        body.appendString("\r\n--\(boundary)--\r\n")
+        request.httpBody = body
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Restore failed"
+            throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: message])
+        }
+    }
+
+    func resetServerSystem() async throws {
+        _ = try await performEmptyResponseRequest(path: "/system/reset", method: "POST")
+    }
     
     private func performGetRequest(path: String) async throws -> Data {
         guard let url = URL(string: "\(baseURL)\(path)") else { throw URLError(.badURL) }
@@ -284,6 +347,21 @@ class APIService {
             throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server Error"])
         }
         
+        return data
+    }
+
+    private func performEmptyResponseRequest(path: String, method: String) async throws -> Data {
+        guard let url = URL(string: "\(baseURL)\(path)") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "Server Error"
+            throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: message])
+        }
         return data
     }
     
@@ -366,6 +444,22 @@ class APIService {
 }
 
 // MARK: - Models
+struct ServerBackupItem: Identifiable, Codable {
+    let name: String
+    let type: String
+    let size: Int64
+    let createdAt: String
+
+    var id: String { name }
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case type
+        case size
+        case createdAt = "created_at"
+    }
+}
+
 struct Admin: Identifiable, Codable {
     let id: Int
     let username: String
@@ -381,5 +475,13 @@ struct Admin: Identifiable, Codable {
         self.email = email
         self.profile_image = profile_image
         self.backup_email = backup_email
+    }
+}
+
+private extension Data {
+    mutating func appendString(_ string: String) {
+        if let data = string.data(using: .utf8) {
+            append(data)
+        }
     }
 }

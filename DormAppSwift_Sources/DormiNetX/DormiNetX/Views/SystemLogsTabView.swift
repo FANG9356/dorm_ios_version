@@ -6,15 +6,15 @@ struct SystemLogsTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("บันทึกระบบ")
+            Text("ประวัติการทำงาน")
                 .font(.custom("SukhumvitSet-Bold", size: 24))
-            Text("ประวัติการทำงานที่จัดเก็บไว้ในเครื่อง")
+            Text("ตรวจดูเหตุการณ์ล่าสุดที่แอปบันทึกไว้ในเครื่อง")
                 .font(.custom("SukhumvitSet-Text", size: 12))
                 .foregroundStyle(.secondary)
 
             if logs.isEmpty {
                 GlassCard {
-                    Text("ยังไม่มีบันทึกระบบ")
+                    Text("ยังไม่มีประวัติการทำงาน")
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)

@@ -28,7 +28,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
         case .maintenance: return "wrench.and.screwdriver.fill"
         case .adminManagement: return "person.badge.key.fill"
         case .securityToken: return "lock.shield.fill"
-        case .backup: return "externaldrive.badge.icloud.fill"
+        case .backup: return "archivebox.fill"
         case .systemLogs: return "doc.text.magnifyingglass"
         }
     }

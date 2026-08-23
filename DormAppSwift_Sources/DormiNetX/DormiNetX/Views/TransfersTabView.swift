@@ -16,9 +16,9 @@ struct TransfersTabView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("หลักฐานการโอน")
+            Text("ตรวจสอบสลิป")
                 .font(.custom("SukhumvitSet-Bold", size: 24))
-            Text("ตรวจสลิปและอัปเดตสถานะจากข้อมูลในเครื่อง")
+            Text("อนุมัติ แก้ไข หรือส่งกลับรายการชำระเงินที่แนบหลักฐาน")
                 .font(.custom("SukhumvitSet-Text", size: 12))
                 .foregroundStyle(.secondary)
 

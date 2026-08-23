@@ -12,8 +12,8 @@ struct PricingTabView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("ตั้งค่าราคา").font(.custom("SukhumvitSet-Bold", size: 24))
-                    Text("จัดเก็บประเภทห้องและค่าใช้จ่ายไว้ในเครื่อง")
+                    Text("เรตราคาและค่าบริการ").font(.custom("SukhumvitSet-Bold", size: 24))
+                    Text("กำหนดค่าเช่า ค่าน้ำ ค่าไฟ และส่วนกลางของแต่ละประเภทห้อง")
                         .font(.custom("SukhumvitSet-Text", size: 12)).foregroundStyle(.secondary)
                 }
             }

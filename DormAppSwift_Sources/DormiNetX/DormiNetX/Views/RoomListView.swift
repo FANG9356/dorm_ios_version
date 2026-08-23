@@ -37,48 +37,31 @@ struct RoomListView: View {
                         hideKeyboard()
                     }
 
-                ScrollView(showsIndicators: false) {
-                    Group {
-                        switch selectedTab {
-                        case .overview:
-                            OverviewTabView()
-                        case .tenants:
-                            TenantsTabView(showAddSheet: $showAddTenantSheet)
-                        case .finance:
-                            FinanceTabView(showingPaymentEditor: $showAddPayment)
-                        case .bills:
-                            BillsTabView(showingEditor: $showAddBill)
-                        case .rooms:
-                            RoomsTabView(showingEditor: $showAddRoom)
-                        case .pricing:
-                            PricingTabView(showAddRoomType: $showAddRoomType)
-                        case .transfers:
-                            TransfersTabView()
-                        case .maintenance:
-                            MaintenanceTabView(showingEditor: $showAddMaintenance)
-                        case .adminManagement:
-                            AdminManagementTabView()
-                        case .securityToken:
-                            SecurityTokenTabView()
-                        case .backup:
-                            BackupTabView()
-                        case .systemLogs:
-                            SystemLogsTabView()
-                        }
+                if selectedTab == .tenants {
+                    currentTabView
+                        .id(selectedTab)
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                            removal: .opacity
+                        ))
+                        .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        currentTabView
+                            .id(selectedTab)
+                            .transition(.asymmetric(
+                                insertion: .opacity.combined(with: .scale(scale: 0.98)),
+                                removal: .opacity
+                            ))
+                            .animation(.easeInOut(duration: 0.25), value: selectedTab)
                     }
-                    .id(selectedTab)
-                    .transition(.asymmetric(
-                        insertion: .opacity.combined(with: .scale(scale: 0.98)),
-                        removal: .opacity
-                    ))
-                    .animation(.easeInOut(duration: 0.25), value: selectedTab)
+                    .scrollDisabled(selectedTab == .securityToken)
+                    .scrollDismissesKeyboard(.interactively)
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(TapGesture().onEnded {
+                        hideKeyboard()
+                    })
                 }
-                .scrollDisabled(selectedTab == .securityToken || selectedTab == .tenants)
-                .scrollDismissesKeyboard(.interactively)
-                .contentShape(Rectangle())
-                .simultaneousGesture(TapGesture().onEnded {
-                    hideKeyboard()
-                })
                 
                 VStack {
                     HStack {
@@ -228,6 +211,36 @@ struct RoomListView: View {
             if phase == .active {
                 scheduleAutoPullCheck()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var currentTabView: some View {
+        switch selectedTab {
+        case .overview:
+            OverviewTabView()
+        case .tenants:
+            TenantsTabView(showAddSheet: $showAddTenantSheet)
+        case .finance:
+            FinanceTabView(showingPaymentEditor: $showAddPayment)
+        case .bills:
+            BillsTabView(showingEditor: $showAddBill)
+        case .rooms:
+            RoomsTabView(showingEditor: $showAddRoom)
+        case .pricing:
+            PricingTabView(showAddRoomType: $showAddRoomType)
+        case .transfers:
+            TransfersTabView()
+        case .maintenance:
+            MaintenanceTabView(showingEditor: $showAddMaintenance)
+        case .adminManagement:
+            AdminManagementTabView()
+        case .securityToken:
+            SecurityTokenTabView()
+        case .backup:
+            BackupTabView()
+        case .systemLogs:
+            SystemLogsTabView()
         }
     }
 

@@ -21,10 +21,10 @@ struct AdminManagementTabView: View {
             HStack {
                 // Left side: Summary
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("รายชื่อบัญชีผู้ดูแล")
+                    Text("บัญชีที่เข้าถึงระบบได้")
                         .font(.custom("SukhumvitSet-Bold", size: 18))
                         .foregroundColor(.primary)
-                    Text("ทั้งหมด \(admins.count) บัญชี")
+                    Text("ดูแลสิทธิ์และข้อมูลเข้าสู่ระบบของผู้ใช้งาน \(admins.count) บัญชี")
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                         .foregroundColor(.secondary)
                 }
