@@ -93,6 +93,7 @@ struct LoginView: View {
                                         .textInputAutocapitalization(.words)
                                         .disableAutocorrection(true)
                                         .foregroundColor(.primary)
+                                        .limitedText($name, maxLength: 60, trimNewlines: true)
                                 }
                                 .padding()
                                 .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.6))
@@ -117,6 +118,7 @@ struct LoginView: View {
                                     .disableAutocorrection(true)
                                     .keyboardType(.emailAddress)
                                     .foregroundColor(.primary)
+                                    .normalizedEmail($email)
                             }
                             .padding()
                             .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.6))
@@ -138,9 +140,11 @@ struct LoginView: View {
                                         .textInputAutocapitalization(.never)
                                         .disableAutocorrection(true)
                                         .foregroundColor(.primary)
+                                        .limitedText($password, maxLength: 64, trimNewlines: true)
                                 } else {
                                     SecureField("Password", text: $password)
                                         .foregroundColor(.primary)
+                                        .limitedText($password, maxLength: 64, trimNewlines: true)
                                 }
                                 
                                 Button(action: {
@@ -171,9 +175,11 @@ struct LoginView: View {
                                             .textInputAutocapitalization(.never)
                                             .disableAutocorrection(true)
                                             .foregroundColor(.primary)
+                                            .limitedText($confirmPassword, maxLength: 64, trimNewlines: true)
                                     } else {
                                         SecureField("Confirm Password", text: $confirmPassword)
                                             .foregroundColor(.primary)
+                                            .limitedText($confirmPassword, maxLength: 64, trimNewlines: true)
                                     }
                                     
                                     Button(action: {

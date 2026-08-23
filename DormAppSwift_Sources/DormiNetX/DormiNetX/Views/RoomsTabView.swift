@@ -171,8 +171,10 @@ private struct RoomEditor: View {
                 Section("ข้อมูลห้อง") {
                     TextField("เลขห้อง", text: $roomNumber)
                         .keyboardType(.numbersAndPunctuation)
+                        .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
                     if roomTypes.isEmpty {
                         TextField("ประเภทห้อง", text: $roomType)
+                            .limitedText($roomType, maxLength: 40, trimNewlines: true)
                     } else {
                         Picker("ประเภทห้อง", selection: $roomType) {
                             Text("ไม่ระบุ").tag("")
