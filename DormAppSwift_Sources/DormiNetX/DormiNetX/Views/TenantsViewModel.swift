@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import SwiftData
 
 @MainActor
 class TenantsViewModel: ObservableObject {
@@ -65,9 +66,35 @@ class TenantsViewModel: ObservableObject {
     var bookingCount: Int { users.filter { $0.status == "จอง" }.count }
     var inactiveCount: Int { users.filter { $0.status == "ย้ายออกแล้ว" }.count }
     
-    func fetchUsers() async {
+    func fetchUsers(modelContext: ModelContext? = nil) async {
         isLoading = true
         errorMessage = nil
+        if let modelContext {
+            do {
+                let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
+                self.users = localUsers.map { user in
+                    APIUser(
+                        id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue),
+                        prefix: user.prefix,
+                        first_name: user.firstName,
+                        last_name: user.lastName,
+                        room_number: user.roomNumber,
+                        status: user.status,
+                        national_id: user.nationalID,
+                        phone: user.phone,
+                        address: user.address,
+                        move_in_date: user.moveInDate,
+                        contract_end_date: user.contractEndDate,
+                        deposit: user.deposit,
+                        indefinite_contract: user.indefiniteContract
+                    )
+                }
+            } catch {
+                self.errorMessage = "ไม่สามารถโหลดข้อมูลลูกบ้านในเครื่องได้"
+            }
+            isLoading = false
+            return
+        }
         do {
             let data = try await APIService.shared.fetchUsersData()
             let decoded = try JSONDecoder().decode([APIUser].self, from: data)
@@ -79,7 +106,21 @@ class TenantsViewModel: ObservableObject {
         isLoading = false
     }
     
-    func deleteUser(id: Int) async -> Bool {
+    func deleteUser(id: Int, modelContext: ModelContext? = nil) async -> Bool {
+        if let modelContext {
+            do {
+                let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
+                if let user = localUsers.first(where: { ($0.serverId ?? Int(truncatingIfNeeded: $0.id.hashValue)) == id }) {
+                    modelContext.delete(user)
+                    try modelContext.save()
+                    users.removeAll { $0.id == id }
+                    return true
+                }
+            } catch {
+                print("Delete local user error: \(error)")
+            }
+            return false
+        }
         guard let url = URL(string: "\(APIService.shared.baseURL)/users?id=\(id)") else { return false }
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"

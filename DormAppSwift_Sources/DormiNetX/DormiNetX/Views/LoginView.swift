@@ -457,6 +457,7 @@ struct LoginView: View {
                 }
             }
             .opacity(isScreenReady ? 1.0 : 0.0) // 💡 ควบคุมให้ทุกอย่างเฟดเข้า/ออกพร้อมกันทั้งหมด
+            .dismissKeyboardOnTap()
         }
         .animation(.spring(response: 0.38, dampingFraction: 0.8), value: showingPasscodeModal)
         .onAppear {

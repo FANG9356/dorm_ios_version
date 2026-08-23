@@ -1,25 +1,48 @@
 import SwiftUI
+import SwiftData
 
 struct MaintenanceTabView: View {
-    var body: some View {
-        VStack(spacing: 20) {
+    @Query(sort: \Maintenance.lastUpdated, order: .reverse) private var maintenances: [Maintenance]
 
-            
-            GlassCard {
-                VStack(spacing: 15) {
-                    Image(systemName: "wrench.adjustable.fill")
-                        .font(.custom("SukhumvitSet-Text", size: 50))
-                        .foregroundColor(.red.opacity(0.7))
-                    Text("ไม่มีรายการแจ้งซ่อมในขณะนี้")
-                        .font(.custom("SukhumvitSet-Bold", size: 17))
-                        .foregroundColor(.secondary)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("แจ้งซ่อม")
+                .font(.custom("SukhumvitSet-Bold", size: 24))
+            Text("รายการแจ้งซ่อมจากข้อมูลในเครื่อง")
+                .font(.custom("SukhumvitSet-Text", size: 12))
+                .foregroundStyle(.secondary)
+
+            if maintenances.isEmpty {
+                GlassCard {
+                    Text("ยังไม่มีรายการแจ้งซ่อม")
+                        .font(.custom("SukhumvitSet-Medium", size: 14))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
                 }
-                .frame(maxWidth: .infinity, minHeight: 200)
-                .padding()
+            } else {
+                ForEach(maintenances) { maintenance in
+                    GlassCard {
+                        HStack {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .foregroundStyle(.orange)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("ห้อง \(maintenance.roomNumber)")
+                                    .font(.custom("SukhumvitSet-Bold", size: 15))
+                                Text(maintenance.issue)
+                                    .font(.custom("SukhumvitSet-Text", size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(maintenance.status.isEmpty ? "รอดำเนินการ" : maintenance.status)
+                                .font(.custom("SukhumvitSet-Medium", size: 10))
+                                .foregroundStyle(.orange)
+                        }
+                }
+                }
             }
-            .padding(.horizontal, 20)
-            Spacer()
         }
-        .padding(.top, 110)
+        .padding(.top, 106)
+        .padding(.horizontal, 20)
     }
 }

@@ -1,8 +1,10 @@
 import SwiftUI
 import Charts
+import SwiftData
 // MARK: - Overview Tab View
 struct OverviewTabView: View {
     @StateObject private var viewModel = DashboardViewModel()
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -215,9 +217,7 @@ struct OverviewTabView: View {
         }
         .background(Color("AppBackground").ignoresSafeArea())
         .onAppear {
-            Task {
-                await viewModel.fetchAllData()
-            }
+            viewModel.fetchLocalData(modelContext: modelContext)
         }
     }
 }
