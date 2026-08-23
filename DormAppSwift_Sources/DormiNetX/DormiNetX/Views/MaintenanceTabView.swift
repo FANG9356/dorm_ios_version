@@ -21,9 +21,9 @@ struct MaintenanceTabView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("แจ้งซ่อม")
+                    Text("งานซ่อมที่ต้องติดตาม")
                         .font(.custom("SukhumvitSet-Bold", size: 24))
-                    Text("เพิ่มงานซ่อมและอัปเดตสถานะจากข้อมูลในเครื่อง")
+                    Text("บันทึกปัญหา ค่าใช้จ่าย และสถานะของแต่ละห้อง")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }

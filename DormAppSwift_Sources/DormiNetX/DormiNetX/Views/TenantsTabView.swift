@@ -3,6 +3,7 @@ import SwiftData
 
 struct TenantsTabView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = TenantsViewModel()
     @State private var selectedUser: APIUser? = nil
     @State private var showDeleteAlert = false
@@ -15,7 +16,7 @@ struct TenantsTabView: View {
         ZStack(alignment: .bottomTrailing) {
             
             // 1. ล็อกพื้นหลังให้เต็มจอ เพื่อดันให้ ZStack ไม่หดตัว
-            Color("AppBackground")
+            Color.clear
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -25,15 +26,27 @@ struct TenantsTabView: View {
             // 2. เนื้อหาหลัก
             ScrollView {
                 VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("ทะเบียนลูกบ้าน")
+                            .font(.custom("SukhumvitSet-Bold", size: 28))
+                            .foregroundColor(.primary)
+                        Text("ค้นหา ตรวจสถานะ และจัดการข้อมูลผู้พักอาศัย")
+                            .font(.custom("SukhumvitSet-Text", size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 112)
+                    .padding(.bottom, 16)
                     
                     // MARK: - Liquid Glass Control Bar
                     VStack(spacing: 0) {
                         // Search + Sort in one row
-                        HStack(spacing: 10) {
+                        HStack(spacing: 12) {
                             HStack(spacing: 8) {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(.secondary)
-                                    .font(.system(size: 14))
+                                    .font(.system(size: 15, weight: .medium))
                                 TextField("ค้นหาห้อง, ชื่อ, เบอร์โทร...", text: $viewModel.searchText)
                                     .font(.custom("SukhumvitSet-Text", size: 14))
                                 if !viewModel.searchText.isEmpty {
@@ -51,6 +64,7 @@ struct TenantsTabView: View {
                             
                             Divider()
                                 .frame(height: 24)
+                                .opacity(colorScheme == .dark ? 0.35 : 0.16)
                             
                             // Sort Menu
                             Menu {
@@ -68,37 +82,36 @@ struct TenantsTabView: View {
                                     Label("ย้ายออกก่อน", systemImage: viewModel.sortBy == "status_inactive" ? "checkmark" : "arrow.right.circle")
                                 }
                             } label: {
-                                Image(systemName: "arrow.up.arrow.down")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.blue)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 10)
+                                ZStack {
+                                    Image(systemName: "arrow.up.arrow.down")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.primary.opacity(0.85))
+                                }
+                                .frame(width: 42, height: 40, alignment: .center)
+                                .offset(x: -5)
+                                .contentShape(Rectangle())
                             }
                         }
+                        .frame(height: 48)
                         
-                        Divider().padding(.horizontal, 12)
+                        Divider()
+                            .opacity(colorScheme == .dark ? 0.35 : 0.12)
+                            .padding(.horizontal, 12)
                         
                         // Filter Tabs
                         LoupeFilterTabs(viewModel: viewModel)
                     }
                     .background(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 8)
+                            .fill(controlFillColor)
+                            .shadow(color: colorScheme == .dark ? .black.opacity(0.08) : .clear, radius: 18, x: 0, y: 8)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.4), .white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
+                            .stroke(controlBorderColor, lineWidth: 1)
                     )
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .padding(.horizontal, 16)
-                    .padding(.top, 115) // ดันให้พ้นขอบบน
                     .padding(.bottom, 12)
                     
                     // MARK: - Error
@@ -143,18 +156,25 @@ struct TenantsTabView: View {
                     } else {
                         // Results count
                         HStack {
-                            Text("พบ \(viewModel.filteredUsers.count) รายการ")
-                                .font(.custom("SukhumvitSet-Text", size: 12))
-                                .foregroundColor(.secondary)
+                            Text("รายการลูกบ้าน")
+                                .font(.custom("SukhumvitSet-Bold", size: 16))
+                                .foregroundColor(.primary)
                             Spacer()
+                            Text("\(viewModel.filteredUsers.count) รายการ")
+                                .font(.custom("SukhumvitSet-Medium", size: 12))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Capsule().fill(countPillFillColor))
                             if viewModel.isLoading {
                                 ProgressView().scaleEffect(0.7)
                             }
                         }
-                        .padding(.horizontal, 22)
-                        .padding(.bottom, 4)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
+                        .padding(.bottom, 8)
                         
-                        LazyVStack(spacing: 10) {
+                        LazyVStack(spacing: 12) {
                             ForEach(viewModel.filteredUsers) { user in
                                 PremiumTenantCard(user: user, viewModel: viewModel) {
                                     selectedUser = user
@@ -178,7 +198,6 @@ struct TenantsTabView: View {
             })
             // บังคับ ScrollView ให้เต็มจอ ป้องกันการหดตัว
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .refreshable { await viewModel.fetchUsers(modelContext: modelContext) }
             .onAppear { Task { await viewModel.fetchUsers(modelContext: modelContext) } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing) // ล็อกกรอบใหญ่สุดอีกชั้น พร้อมยึดมุมขวาล่าง
@@ -209,6 +228,18 @@ struct TenantsTabView: View {
             }
         }
     }
+
+    private var controlBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.18)
+    }
+
+    private var controlFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.34)
+    }
+
+    private var countPillFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.28)
+    }
 }
 
 // MARK: - Loupe Filter Tabs (เพิ่มความสมูทละมุนตา)
@@ -221,10 +252,10 @@ struct LoupeFilterTabs: View {
     @State private var tabFrames: [String: CGRect] = [:]
     
     let tabs = [
-        ("all", "ทั้งหมด", Color.blue),
-        ("active", "พักอาศัย", Color.green),
-        ("booking", "จอง", Color.orange),
-        ("inactive", "ย้ายออก", Color.red)
+        ("all", "ทั้งหมด", Color.primary),
+        ("active", "พักอาศัย", Color.primary),
+        ("booking", "จอง", Color.primary),
+        ("inactive", "ย้ายออก", Color.primary)
     ]
     
     var body: some View {
@@ -265,7 +296,8 @@ struct LoupeFilterTabs: View {
             }
         }
         .padding(.horizontal, 4)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
+        .frame(height: 52)
         .coordinateSpace(name: "TabBarSpace")
         .overlay(
             GeometryReader { geo in
@@ -284,8 +316,8 @@ struct LoupeFilterTabs: View {
                                 .background(Capsule().fill(tabData.2.opacity(0.2)))
                         }
                         .foregroundColor(tabData.2)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
                         .background(
                             Capsule()
                                 .fill(.ultraThickMaterial)
@@ -293,15 +325,7 @@ struct LoupeFilterTabs: View {
                         )
                         .overlay(
                             Capsule()
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [.red.opacity(0.6), .cyan.opacity(0.4), .yellow.opacity(0.4), .blue.opacity(0.6)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1.5
-                                )
-                                .blur(radius: 0.5)
+                                .stroke(Color.primary.opacity(0.18), lineWidth: 1)
                         )
                         .position(x: dragX, y: geo.size.height / 2)
                         // ให้ตัวแว่นขยายสไลด์ตามนิ้วแบบติดสปริงนุ่มๆ
@@ -357,34 +381,55 @@ struct LiquidFilterTab: View {
     let count: Int
     let isActive: Bool
     let color: Color
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 4) {
             Text(title)
-                .font(.custom("SukhumvitSet-Bold", size: 14))
+                .font(.custom("SukhumvitSet-Bold", size: 13))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             
             Text("\(count)")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .padding(.horizontal, 5)
-                .padding(.vertical, 2)
+                .padding(.vertical, 1)
                 .background(
                     Capsule()
-                        .fill(isActive ? color.opacity(0.15) : Color.gray.opacity(0.15))
+                        .fill(isActive ? countActiveFill : countInactiveFill)
                 )
         }
-        .foregroundColor(isActive ? color : .secondary)
+        .foregroundColor(isActive ? .primary : .secondary)
         .padding(.horizontal, 8)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity)
         .background(
             Capsule()
-                .fill(isActive ? Color.gray.opacity(0.12) : Color.clear)
+                .fill(isActive ? tabActiveFill : Color.clear)
+        )
+        .overlay(
+            Capsule()
+                .stroke(isActive ? activeBorderColor : Color.clear, lineWidth: 1)
         )
         .contentShape(Rectangle())
         // ทำให้เวลาเฟดเปลี่ยนสีมันนุ่มและดูเป็นธรรมชาติมากขึ้น
         .animation(.easeInOut(duration: 0.25), value: isActive)
+    }
+
+    private var activeBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.14)
+    }
+
+    private var tabActiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.08) : Color.white.opacity(0.46)
+    }
+
+    private var countActiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.black.opacity(0.045)
+    }
+
+    private var countInactiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.07) : Color.black.opacity(0.028)
     }
 }
 
@@ -396,45 +441,62 @@ struct PremiumTenantCard: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     @State private var isPressed = false
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
-                Text(user.room_number ?? "-")
-                    .font(.system(size: 20, weight: .bold, design: .monospaced))
-                    .foregroundColor(user.status == "ย้ายออกแล้ว" ? .orange : .primary)
-                    .frame(width: 54, height: 54)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(viewModel.statusColor(user.status).opacity(0.1))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(viewModel.statusColor(user.status).opacity(0.2), lineWidth: 1)
-                    )
+                VStack(spacing: 2) {
+                    Text(user.room_number ?? "-")
+                        .font(.system(size: 21, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    Text("ห้อง")
+                        .font(.custom("SukhumvitSet-Medium", size: 10))
+                        .foregroundColor(.secondary)
+                }
+                .frame(width: 58, height: 58)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(roomBadgeFillColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(roomBadgeBorderColor, lineWidth: 1)
+                )
                 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text("\(user.prefix ?? "")\(user.first_name ?? "") \(user.last_name ?? "")")
-                        .font(.custom("SukhumvitSet-Bold", size: 15))
+                        .font(.custom("SukhumvitSet-Bold", size: 16))
                         .foregroundColor(.primary)
                         .lineLimit(1)
                     
-                    Label(viewModel.formatPhone(user.phone), systemImage: "phone.fill")
-                        .font(.custom("SukhumvitSet-Text", size: 12))
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text(viewModel.formatPhone(user.phone))
+                            .font(.custom("SukhumvitSet-Text", size: 12))
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    HStack(spacing: 3) {
+                VStack(alignment: .trailing, spacing: 8) {
+                    HStack(spacing: 6) {
                         Circle()
                             .fill(viewModel.statusColor(user.status))
-                            .frame(width: 6, height: 6)
+                            .frame(width: 7, height: 7)
                         Text(user.status ?? "-")
                             .font(.custom("SukhumvitSet-Bold", size: 11))
-                            .foregroundColor(viewModel.statusColor(user.status))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
                     }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(statusChipFill))
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
@@ -444,19 +506,12 @@ struct PremiumTenantCard: View {
             .padding(14)
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 4)
+                    .fill(cardFillColor)
+                    .shadow(color: cardShadowColor, radius: 12, x: 0, y: 5)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.35), .white.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    .stroke(cardBorderColor, lineWidth: 1)
             )
             .scaleEffect(isPressed ? 0.97 : 1)
         }
@@ -470,6 +525,30 @@ struct PremiumTenantCard: View {
                 Label("ลบลูกบ้าน", systemImage: "trash")
             }
         }
+    }
+
+    private var cardBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.1) : Color.white.opacity(0.2)
+    }
+
+    private var roomBadgeBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.18)
+    }
+
+    private var cardShadowColor: Color {
+        colorScheme == .dark ? Color.black.opacity(0.05) : Color.clear
+    }
+
+    private var statusChipFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.07) : Color.black.opacity(0.035)
+    }
+
+    private var cardFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.24)
+    }
+
+    private var roomBadgeFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.18)
     }
 }
 

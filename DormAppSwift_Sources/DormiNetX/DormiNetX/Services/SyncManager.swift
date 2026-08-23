@@ -306,6 +306,19 @@ class SyncManager: ObservableObject {
         }
     }
 
+    func exportLocalBackupData(modelContext: ModelContext) throws -> Data {
+        try encoded(buildSnapshot(modelContext: modelContext))
+    }
+
+    func restoreLocalBackupData(_ data: Data, modelContext: ModelContext) throws {
+        let snapshot = try decoder().decode(SyncEnvelope.self, from: data)
+        try applySnapshot(snapshot, modelContext: modelContext)
+        UserDefaults.standard.set(snapshot.version, forKey: "lastSyncVersion")
+        lastSyncTime = Date()
+        state = .completed
+        message = "กู้คืนข้อมูลในเครื่องเรียบร้อยแล้ว"
+    }
+
     private func hasDirtyLocalChanges() -> Bool {
         UserDefaults.standard.bool(forKey: pendingLocalChangesKey)
     }

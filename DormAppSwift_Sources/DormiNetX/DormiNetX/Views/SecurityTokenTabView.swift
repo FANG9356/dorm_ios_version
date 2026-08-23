@@ -29,10 +29,10 @@ struct SecurityTokenTabView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("โทเคนยืนยันการเข้าสู่ระบบ")
+                                Text("ยืนยันตัวตนหลัง Sign In")
                                     .font(.custom("SukhumvitSet-Bold", size: 18))
                                     .foregroundColor(.primary)
-                                Text("เพิ่มความปลอดภัยด้วยรหัสผ่าน 6 หลัก หลังกดปุ่ม Sign In")
+                                Text("เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบ")
                                     .font(.custom("SukhumvitSet-Medium", size: 13))
                                     .foregroundColor(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -45,7 +45,7 @@ struct SecurityTokenTabView: View {
                     GlassCard {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("เปิดใช้งานรหัสผ่าน 6 หลัก")
+                                Text("ขอรหัสก่อนเข้าแอป")
                                     .font(.custom("SukhumvitSet-Bold", size: 16))
                                     .foregroundColor(.primary)
                                 Text(securityTokenEnabled ? "เปิดใช้งานอยู่" : "ปิดการใช้งานอยู่")
@@ -65,7 +65,7 @@ struct SecurityTokenTabView: View {
                     if securityTokenEnabled {
                         GlassCard {
                             VStack(spacing: 20) {
-                                Text("รหัสยืนยัน 6 หลักปัจจุบัน")
+                                Text("รหัสที่ใช้อยู่ตอนนี้")
                                     .font(.custom("SukhumvitSet-Bold", size: 15))
                                     .foregroundColor(.secondary)
                                 

@@ -67,11 +67,11 @@ struct FinanceTabView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("การเงินและชำระเงิน")
-                    .font(.custom("SukhumvitSet-Bold", size: 24))
+                Text("สรุปยอดเดือนนี้")
+                    .font(.custom("SukhumvitSet-Bold", size: 28))
                     .foregroundStyle(.primary)
-                Text("สร้างบิล รับชำระ และซิงค์ข้อมูลล่าสุด")
-                    .font(.custom("SukhumvitSet-Text", size: 12))
+                Text("ติดตามยอดรับแล้ว ค้างชำระ และรายการที่ต้องดูแล")
+                    .font(.custom("SukhumvitSet-Text", size: 13))
                     .foregroundStyle(.secondary)
             }
 

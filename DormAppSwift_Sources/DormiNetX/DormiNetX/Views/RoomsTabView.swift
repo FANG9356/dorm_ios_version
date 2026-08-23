@@ -17,9 +17,9 @@ struct RoomsTabView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("ห้องพัก")
+                    Text("ทะเบียนห้องพัก")
                         .font(.custom("SukhumvitSet-Bold", size: 24))
-                    Text("เพิ่ม แก้ไข และลบข้อมูลห้องพักในเครื่อง")
+                    Text("ดูสถานะห้อง ประเภทห้อง และแก้ไขข้อมูลที่บันทึกไว้")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }

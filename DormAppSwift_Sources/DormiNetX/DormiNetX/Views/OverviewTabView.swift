@@ -11,15 +11,21 @@ struct OverviewTabView: View {
         ScrollView {
             VStack(spacing: 20) {
                 // Header
-                HStack {
-                    Text("ข้อมูลเชิงลึกและสถานะการดำเนินงานของระบบ")
-                        .font(.custom("SukhumvitSet-Medium", size: 14))
-                        .foregroundColor(.secondary)
-                    
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("แดชบอร์ดวันนี้")
+                            .font(.custom("SukhumvitSet-Bold", size: 28))
+                            .foregroundColor(.primary)
+                        Text("ข้อมูลเชิงลึกและสถานะการดำเนินงานของระบบ")
+                            .font(.custom("SukhumvitSet-Text", size: 13))
+                            .foregroundColor(.secondary)
+                    }
+
                     Spacer()
                     
                     if viewModel.isLoading {
                         ProgressView()
+                            .padding(.top, 6)
                     }
                 }
                 .padding(.horizontal, 20)
