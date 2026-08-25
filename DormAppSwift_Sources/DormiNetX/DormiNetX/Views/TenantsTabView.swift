@@ -204,6 +204,8 @@ struct TenantsTabView: View {
         .sheet(item: $selectedUser) { user in
             TenantDetailSheet(user: user, viewModel: viewModel) {
                 editingUser = user
+            } onDelete: {
+                selectedUser = nil
             }
             .iphoneFullSheetStyle()
         }
@@ -557,9 +559,12 @@ struct TenantDetailSheet: View {
     let user: APIUser
     let viewModel: TenantsViewModel
     let onEdit: () -> Void
+    let onDelete: () -> Void
     @Environment(\.dismiss) var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @State private var showEditSheet = false
+    @State private var showDeleteAlert = false
     
     var body: some View {
         NavigationView {
@@ -602,6 +607,25 @@ struct TenantDetailSheet: View {
                             .overlay(
                                 Capsule()
                                     .stroke(actionBorderColor, lineWidth: 1)
+                            )
+                    }
+                    .padding(.horizontal, 20)
+
+                    Button {
+                        showDeleteAlert = true
+                    } label: {
+                        Label("ลบลูกบ้าน", systemImage: "trash")
+                            .font(.custom("SukhumvitSet-Bold", size: 13))
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(
+                                Capsule()
+                                    .fill(deleteFillColor)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(deleteBorderColor, lineWidth: 1)
                             )
                     }
                     .padding(.horizontal, 20)
@@ -654,6 +678,20 @@ struct TenantDetailSheet: View {
             TenantFormSheet(viewModel: viewModel, editUser: displayUser)
                 .iphoneFullSheetStyle()
         }
+        .alert("ยืนยันการลบ", isPresented: $showDeleteAlert) {
+            Button("ยกเลิก", role: .cancel) { }
+            Button("ลบ", role: .destructive) {
+                Task {
+                    let deleted = await viewModel.deleteUser(id: displayUser.id, modelContext: modelContext)
+                    if deleted {
+                        onDelete()
+                        dismiss()
+                    }
+                }
+            }
+        } message: {
+            Text("ต้องการลบลูกบ้านห้อง \(displayUser.room_number ?? "-") จริงหรือไม่?")
+        }
     }
 
     private var displayUser: APIUser {
@@ -670,6 +708,14 @@ struct TenantDetailSheet: View {
 
     private var actionBorderColor: Color {
         colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.22)
+    }
+
+    private var deleteFillColor: Color {
+        colorScheme == .dark ? Color.red.opacity(0.12) : Color.red.opacity(0.08)
+    }
+
+    private var deleteBorderColor: Color {
+        colorScheme == .dark ? Color.red.opacity(0.25) : Color.red.opacity(0.18)
     }
     
     private func maskNationalID(_ id: String?) -> String {
@@ -707,6 +753,9 @@ struct TenantFormSheet: View {
     let editUser: APIUser?
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Room.roomNumber) private var rooms: [Room]
+    @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
+    @Query(sort: \DormUser.roomNumber) private var localUsers: [DormUser]
     
     @State private var prefix = "นาย"
     @State private var firstName = ""
@@ -716,6 +765,7 @@ struct TenantFormSheet: View {
     @State private var nationalID = ""
     @State private var address = ""
     @State private var status = "กำลังพักอาศัย"
+    @State private var roomType = ""
     @State private var moveInDate = Date()
     @State private var contractEndDate = Date()
     @State private var deposit = ""
@@ -752,9 +802,48 @@ struct TenantFormSheet: View {
                 }
                 
                 Section(header: Text("ข้อมูลห้องพัก")) {
-                    TextField("เลขห้อง", text: $roomNumber)
-                        .keyboardType(.numberPad)
-                        .digitsOnly($roomNumber, maxLength: 6)
+                    if selectableRooms.isEmpty {
+                        Text("ยังไม่มีห้องว่างให้เลือก กรุณาสร้างประเภทห้องในหน้าตั้งราคา แล้วเพิ่มห้องในหน้าจัดการห้องพักก่อน")
+                            .font(.custom("SukhumvitSet-Text", size: 13))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("ห้อง", selection: $roomNumber) {
+                            Text("เลือกห้อง").tag("")
+                            if selectedRoom == nil && !roomNumber.isEmpty {
+                                Text("ห้องเดิม \(roomNumber)").tag(roomNumber)
+                            }
+                            ForEach(selectableRooms) { room in
+                                Text(roomLabel(room)).tag(room.roomNumber)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(.primary)
+                        .onChange(of: roomNumber) { _, _ in
+                            applyExistingRoomTypeIfNeeded()
+                        }
+                    }
+
+                    if let room = selectedRoom {
+                        HStack {
+                            Text("ประเภทห้อง")
+                            Spacer()
+                            Text(room.roomType.isEmpty ? "-" : room.roomType)
+                                .fontWeight(.semibold)
+                        }
+                        .font(.custom("SukhumvitSet-Text", size: 14))
+                        .foregroundStyle(.secondary)
+
+                        if let selectedType = selectedRoomType {
+                            HStack {
+                                Text("ค่าเช่าตั้งต้น")
+                                Spacer()
+                                Text(selectedType.price.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                                    .fontWeight(.semibold)
+                            }
+                            .font(.custom("SukhumvitSet-Text", size: 14))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
                     
                     Picker("สถานะ", selection: $status) {
                         Text("กำลังพักอาศัย").tag("กำลังพักอาศัย")
@@ -828,6 +917,7 @@ struct TenantFormSheet: View {
                     nationalID = u.national_id ?? ""
                     address = u.address ?? ""
                     status = u.status ?? "กำลังพักอาศัย"
+                    roomType = existingRoom(for: u.room_number ?? "")?.roomType ?? ""
                     deposit = u.deposit != nil ? String(format: "%.0f", u.deposit!) : ""
                     indefiniteContract = (u.indefinite_contract ?? 0) == 1
                     
@@ -837,6 +927,8 @@ struct TenantFormSheet: View {
                     df.calendar = Calendar(identifier: .gregorian)
                     if let d = u.move_in_date, let date = df.date(from: d) { moveInDate = date }
                     if let d = u.contract_end_date, let date = df.date(from: d) { contractEndDate = date }
+                } else {
+                    applyExistingRoomTypeIfNeeded()
                 }
             }
             .transaction { transaction in
@@ -856,7 +948,12 @@ struct TenantFormSheet: View {
         defer { isSubmitting = false }
 
         guard !firstName.isEmpty, !lastName.isEmpty, !roomNumber.isEmpty else {
-            errorText = "กรุณากรอกชื่อ นามสกุล และเลขห้อง"
+            errorText = "กรุณากรอกชื่อ นามสกุล และเลือกห้อง"
+            return
+        }
+
+        guard selectedRoom != nil else {
+            errorText = "กรุณาเลือกห้องจากรายการที่สร้างไว้ในหน้าจัดการห้องพัก"
             return
         }
 
@@ -869,7 +966,7 @@ struct TenantFormSheet: View {
             let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
             let user: DormUser
             if let editUser,
-               let existing = localUsers.first(where: { ($0.serverId ?? Int(truncatingIfNeeded: $0.id.hashValue)) == editUser.id }) {
+               let existing = localUsers.first(where: { matches($0, editUser: editUser) }) {
                 user = existing
             } else {
                 user = DormUser(firstName: firstName, lastName: lastName)
@@ -877,13 +974,14 @@ struct TenantFormSheet: View {
                 modelContext.insert(user)
             }
 
-            user.prefix = prefix
-            user.firstName = firstName
-            user.lastName = lastName
-            user.roomNumber = roomNumber
-            user.phone = phone
-            user.nationalID = nationalID
-            user.address = address
+            let cleanedRoomNumber = clean(roomNumber)
+            user.prefix = clean(prefix)
+            user.firstName = clean(firstName)
+            user.lastName = clean(lastName)
+            user.roomNumber = cleanedRoomNumber
+            user.phone = clean(phone)
+            user.nationalID = clean(nationalID)
+            user.address = clean(address)
             user.status = status
             user.moveInDate = dateFormatter.string(from: moveInDate)
             user.contractEndDate = indefiniteContract ? "" : dateFormatter.string(from: contractEndDate)
@@ -900,6 +998,59 @@ struct TenantFormSheet: View {
             errorText = "ไม่สามารถบันทึกข้อมูลลงเครื่องได้"
         }
         return
+    }
+
+    private var selectedRoomType: RoomType? {
+        guard let room = selectedRoom else { return nil }
+        return roomTypes.first { clean($0.name) == clean(room.roomType) }
+    }
+
+    private var selectedRoom: Room? {
+        existingRoom(for: roomNumber)
+    }
+
+    private var selectableRooms: [Room] {
+        let currentRoom = clean(editUser?.room_number ?? "")
+        let occupied = Set(localUsers.filter { user in
+            guard !user.isDeletedLocally, user.status != "ย้ายออกแล้ว" else { return false }
+            let userRoom = clean(user.roomNumber)
+            if userRoom.isEmpty || userRoom == currentRoom { return false }
+            if let editUser, matches(user, editUser: editUser) { return false }
+            return true
+        }.map { clean($0.roomNumber) })
+
+        return rooms.filter { room in
+            let roomNumber = clean(room.roomNumber)
+            return !room.isDeletedLocally && !roomNumber.isEmpty && !occupied.contains(roomNumber)
+        }
+    }
+
+    private func existingRoom(for roomNumber: String) -> Room? {
+        let cleanedRoom = clean(roomNumber)
+        return rooms.first { !$0.isDeletedLocally && clean($0.roomNumber) == cleanedRoom }
+    }
+
+    private func applyExistingRoomTypeIfNeeded() {
+        guard let room = existingRoom(for: roomNumber), roomType != room.roomType else { return }
+        roomType = room.roomType
+    }
+
+    private func roomLabel(_ room: Room) -> String {
+        let type = clean(room.roomType)
+        if type.isEmpty { return "ห้อง \(room.roomNumber)" }
+        return "ห้อง \(room.roomNumber) • \(type)"
+    }
+
+    private func matches(_ user: DormUser, editUser: APIUser) -> Bool {
+        let localID = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        if localID == editUser.id { return true }
+        return clean(user.roomNumber) == clean(editUser.room_number ?? "") &&
+            clean(user.firstName) == clean(editUser.first_name ?? "") &&
+            clean(user.lastName) == clean(editUser.last_name ?? "")
+    }
+
+    private func clean(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

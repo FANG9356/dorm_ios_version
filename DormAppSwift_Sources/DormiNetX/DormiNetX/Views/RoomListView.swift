@@ -119,10 +119,12 @@ struct RoomListView: View {
             .overlay(alignment: .bottomTrailing) {
                 if showsFloatingAddButton {
                     FloatingGlassAddButton(action: {
-                        withAnimation(.spring(response: 0.42, dampingFraction: 0.68)) {
-                            addButtonRotation += 180
+                        withAnimation(.easeInOut(duration: 0.42)) {
+                            addButtonRotation += 360
                         }
-                        openAddSheetForSelectedTab()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                            openAddSheetForSelectedTab()
+                        }
                     }, rotation: addButtonRotation)
                     .padding(.trailing, 16)
                     .padding(.bottom, 0)
@@ -281,7 +283,7 @@ struct RoomListView: View {
 
     private var showsFloatingAddButton: Bool {
         switch selectedTab {
-        case .tenants, .finance, .bills, .rooms, .pricing, .maintenance:
+        case .tenants, .finance, .bills, .pricing, .maintenance:
             return true
         default:
             return false
@@ -296,8 +298,6 @@ struct RoomListView: View {
             showAddPayment = true
         case .bills:
             showAddBill = true
-        case .rooms:
-            showAddRoom = true
         case .pricing:
             showAddRoomType = true
         case .maintenance:

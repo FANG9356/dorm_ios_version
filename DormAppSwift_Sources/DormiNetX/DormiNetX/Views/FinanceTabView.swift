@@ -429,6 +429,9 @@ struct PaymentEditor: View {
                                 Text(room.roomNumber).tag(room.roomNumber)
                             }
                         }
+                        .onChange(of: roomNumber) { _, _ in
+                            applyRoomTypeDefaults(onlyWhenEmpty: true)
+                        }
                         Button("ใช้ราคาตามประเภทห้อง") {
                             applyRoomTypeDefaults()
                         }
@@ -484,7 +487,11 @@ struct PaymentEditor: View {
                     Button("บันทึก") {
                         let item = Payment(month: clean(month), amount: totalAmount)
                         item.roomNumber = clean(roomNumber)
-                        item.userId = users.first { $0.roomNumber == item.roomNumber }?.serverId ?? 0
+                        if let tenant = users.first(where: { $0.roomNumber == item.roomNumber }) {
+                            item.userId = tenant.serverId ?? Int(truncatingIfNeeded: tenant.id.hashValue)
+                        } else {
+                            item.userId = 0
+                        }
                         item.rentFee = money(rentFee)
                         item.waterFee = money(waterFee)
                         item.electricFee = money(electricFee)
@@ -506,6 +513,9 @@ struct PaymentEditor: View {
             }
             .dismissKeyboardOnTap()
             .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                applyRoomTypeDefaults(onlyWhenEmpty: true)
+            }
         }
         .presentationDetents([.medium, .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
@@ -521,7 +531,12 @@ struct PaymentEditor: View {
             .decimalInput(text, maxIntegerDigits: 9, maxFractionDigits: 2)
     }
 
-    private func applyRoomTypeDefaults() {
+    private func applyRoomTypeDefaults(onlyWhenEmpty: Bool = false) {
+        if onlyWhenEmpty {
+            let hasAnyManualFee = !rentFee.isEmpty || !waterFee.isEmpty || !electricFee.isEmpty || !commonFee.isEmpty
+            guard !hasAnyManualFee else { return }
+        }
+
         guard let room = rooms.first(where: { $0.roomNumber == roomNumber }),
               let type = roomTypes.first(where: { $0.name == room.roomType }) else { return }
         rentFee = String(format: "%.0f", type.price)
