@@ -509,6 +509,7 @@ struct SidebarMenu: View {
     @AppStorage("userRole") var userRole: String = "admin"
     @AppStorage("adminID") var adminID: Int = 0
     @AppStorage("profileImageUpdateToken") var profileImageUpdateToken: Double = 0
+    @AppStorage("selectedHomeIconName") private var selectedHomeIconName: String = "default"
     @State private var showingEditProfile = false
     @State private var currentEditingAdmin: Admin? = nil
     @State private var gearRotation: Double = 0
@@ -525,16 +526,16 @@ struct SidebarMenu: View {
             
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .frame(width: 35, height: 35)
-                        Image("DormiNetLogo")
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 35, height: 35)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
+                    Image(selectedSidebarIconAssetName)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 35, height: 35)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(Color.white.opacity(colorScheme == .dark ? 0.18 : 0.42), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 8, x: 0, y: 4)
                     
                     Text(isSettingsMode ? "MAINTENANCE" : "DORMINET ADMIN")
                         .font(.custom("SukhumvitSet-Bold", size: 14))
@@ -712,6 +713,19 @@ struct SidebarMenu: View {
                     showingEditProfile = false
                 }
             }
+        }
+    }
+
+    private var selectedSidebarIconAssetName: String {
+        switch selectedHomeIconName {
+        case "light":
+            return "AppIconPreviewLight"
+        case "dark":
+            return "AppIconPreviewDark"
+        case "minimal":
+            return "AppIconPreviewMinimal"
+        default:
+            return "AppIconPreviewDefault"
         }
     }
 }
