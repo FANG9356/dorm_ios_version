@@ -5,9 +5,8 @@ struct RoomsTabView: View {
     @Binding var showingEditor: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
-    @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
-    @State private var editingRoom: Room?
-    @State private var roomToDelete: Room?
+    @Query(sort: \DormUser.roomNumber) private var users: [DormUser]
+    @State private var movingTenant: DormUser?
 
     private var rooms: [Room] {
         allRooms.filter { !$0.isDeletedLocally }
@@ -30,55 +29,23 @@ struct RoomsTabView: View {
                 emptyState
             } else {
                 ForEach(rooms) { room in
-                    RoomManagementRow(room: room, onEdit: {
-                        editingRoom = room
-                    }, onDelete: {
-                        roomToDelete = room
-                    })
+                    RoomManagementRow(room: room, tenant: tenant(for: room)) {
+                        movingTenant = tenant(for: room)
+                    }
                 }
             }
         }
         .padding(.top, 106)
         .padding(.horizontal, 20)
-        .sheet(isPresented: $showingEditor) {
-            RoomEditor(roomTypes: roomTypes) { roomNumber, roomType in
-                let room = Room(roomNumber: roomNumber, roomType: roomType)
-                room.ownerAccountID = UserDefaults.standard.integer(forKey: "adminID")
-                room.isDirty = true
-                room.lastUpdated = Date()
-                modelContext.insert(room)
+        .sheet(item: $movingTenant) { tenant in
+            MoveTenantRoomSheet(tenant: tenant, rooms: vacantRooms(including: tenant.roomNumber)) { newRoomNumber in
+                tenant.roomNumber = newRoomNumber
+                tenant.isDirty = true
+                tenant.lastUpdated = Date()
                 saveAndPush()
             }
             .iphoneSheetStyle()
         }
-        .sheet(item: $editingRoom) { room in
-            RoomEditor(room: room, roomTypes: roomTypes) { roomNumber, roomType in
-                room.roomNumber = roomNumber
-                room.roomType = roomType
-                room.isDirty = true
-                room.lastUpdated = Date()
-                saveAndPush()
-            }
-            .iphoneSheetStyle()
-        }
-        .confirmationDialog("ลบห้องพักนี้หรือไม่", isPresented: deleteDialogBinding) {
-            Button("ลบห้อง \(roomToDelete?.roomNumber ?? "")", role: .destructive) {
-                guard let room = roomToDelete else { return }
-                room.isDeletedLocally = true
-                room.isDirty = true
-                room.lastUpdated = Date()
-                saveAndPush()
-                roomToDelete = nil
-            }
-            Button("ยกเลิก", role: .cancel) { }
-        }
-    }
-
-    private var deleteDialogBinding: Binding<Bool> {
-        Binding(
-            get: { roomToDelete != nil },
-            set: { if !$0 { roomToDelete = nil } }
-        )
     }
 
     private var emptyState: some View {
@@ -106,12 +73,29 @@ struct RoomsTabView: View {
             print("Room save error: \(error)")
         }
     }
+
+    private var activeUsers: [DormUser] {
+        users.filter { !$0.isDeletedLocally && $0.status != "ย้ายออกแล้ว" && !$0.roomNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    private func tenant(for room: Room) -> DormUser? {
+        activeUsers.first { clean($0.roomNumber) == clean(room.roomNumber) }
+    }
+
+    private func vacantRooms(including currentRoomNumber: String) -> [Room] {
+        let occupied = Set(activeUsers.map { clean($0.roomNumber) }.filter { $0 != clean(currentRoomNumber) })
+        return rooms.filter { !occupied.contains(clean($0.roomNumber)) }
+    }
+
+    private func clean(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 private struct RoomManagementRow: View {
     let room: Room
-    let onEdit: () -> Void
-    let onDelete: () -> Void
+    let tenant: DormUser?
+    let onMove: () -> Void
 
     var body: some View {
         GlassCard {
@@ -124,68 +108,75 @@ private struct RoomManagementRow: View {
                     Text(room.roomType.isEmpty ? "ยังไม่ระบุประเภท" : room.roomType)
                         .font(.custom("SukhumvitSet-Text", size: 11))
                         .foregroundStyle(.secondary)
+                    if let tenant {
+                        Text("\(tenant.firstName) \(tenant.lastName)")
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
-                Image(systemName: room.isDirty ? "arrow.triangle.2.circlepath" : "checkmark.circle.fill")
-                    .foregroundStyle(room.isDirty ? .orange : .green)
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(tenant == nil ? Color.green : Color.orange)
+                        .frame(width: 7, height: 7)
+                    Text(tenant == nil ? "ว่าง" : "มีผู้พัก")
+                        .font(.custom("SukhumvitSet-Bold", size: 12))
+                }
+                .foregroundStyle(.secondary)
             }
         }
         .contextMenu {
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
-            }
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
+            if tenant != nil {
+                Button(action: onMove) {
+                    Label("ย้ายห้อง", systemImage: "arrow.left.arrow.right")
+                }
             }
         }
         .swipeActions(edge: .trailing) {
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
+            if tenant != nil {
+                Button(action: onMove) {
+                    Label("ย้าย", systemImage: "arrow.left.arrow.right")
+                }
+                .tint(.orange)
             }
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
-            }
-            .tint(.indigo)
         }
     }
 }
 
-private struct RoomEditor: View {
+private struct MoveTenantRoomSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let roomTypes: [RoomType]
-    let onSave: (String, String) -> Void
-    @State private var roomNumber: String
-    @State private var roomType: String
+    let tenant: DormUser
+    let rooms: [Room]
+    let onSave: (String) -> Void
+    @State private var selectedRoom: String
     @State private var selectedDetent: PresentationDetent = .medium
 
-    init(room: Room? = nil, roomTypes: [RoomType], onSave: @escaping (String, String) -> Void) {
-        self.roomTypes = roomTypes
+    init(tenant: DormUser, rooms: [Room], onSave: @escaping (String) -> Void) {
+        self.tenant = tenant
+        self.rooms = rooms
         self.onSave = onSave
-        _roomNumber = State(initialValue: room?.roomNumber ?? "")
-        _roomType = State(initialValue: room?.roomType ?? roomTypes.first?.name ?? "")
+        _selectedRoom = State(initialValue: tenant.roomNumber)
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("ข้อมูลห้อง") {
-                    TextField("เลขห้อง", text: $roomNumber)
-                        .keyboardType(.numbersAndPunctuation)
-                        .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
-                    if roomTypes.isEmpty {
-                        TextField("ประเภทห้อง", text: $roomType)
-                            .limitedText($roomType, maxLength: 40, trimNewlines: true)
-                    } else {
-                        Picker("ประเภทห้อง", selection: $roomType) {
-                            Text("ไม่ระบุ").tag("")
-                            ForEach(roomTypes) { type in
-                                Text(type.name).tag(type.name)
-                            }
+                Section("ลูกบ้าน") {
+                    Text("\(tenant.firstName) \(tenant.lastName)")
+                    Text("ห้องปัจจุบัน \(tenant.roomNumber)")
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("ย้ายไปห้อง") {
+                    Picker("ห้อง", selection: $selectedRoom) {
+                        ForEach(rooms) { room in
+                            Text("ห้อง \(room.roomNumber) • \(room.roomType)").tag(room.roomNumber)
                         }
                     }
+                    .pickerStyle(.menu)
                 }
             }
-            .navigationTitle("ข้อมูลห้องพัก")
+            .navigationTitle("ย้ายห้อง")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -193,21 +184,15 @@ private struct RoomEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
-                        onSave(clean(roomNumber), clean(roomType))
+                        onSave(selectedRoom)
                         dismiss()
                     }
                     .fontWeight(.semibold)
-                    .disabled(clean(roomNumber).isEmpty)
+                    .disabled(selectedRoom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-            .dismissKeyboardOnTap()
-            .scrollDismissesKeyboard(.interactively)
         }
         .presentationDetents([.medium, .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
-    }
-
-    private func clean(_ value: String) -> String {
-        value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
