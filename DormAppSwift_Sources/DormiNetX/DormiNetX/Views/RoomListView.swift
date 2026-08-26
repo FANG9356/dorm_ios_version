@@ -189,7 +189,7 @@ struct RoomListView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: isLoggingOut)
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .gesture(
+        .simultaneousGesture(
             DragGesture(minimumDistance: 15)
                 .onEnded { value in
                     let translation = value.translation.width
@@ -287,7 +287,7 @@ struct RoomListView: View {
 
     private var showsFloatingAddButton: Bool {
         switch selectedTab {
-        case .tenants, .finance, .bills, .pricing, .maintenance:
+        case .tenants, .bills, .pricing, .maintenance:
             return true
         default:
             return false
@@ -298,8 +298,6 @@ struct RoomListView: View {
         switch selectedTab {
         case .tenants:
             showAddTenantSheet = true
-        case .finance:
-            showAddPayment = true
         case .bills:
             showAddBill = true
         case .pricing:

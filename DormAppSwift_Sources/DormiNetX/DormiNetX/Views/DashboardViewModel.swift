@@ -25,11 +25,66 @@ struct APIUser: Codable, Identifiable {
     var contract_end_date: String?
     var deposit: Double?
     var booking_status: String?
+    var booking_end_date: String?
     var payment_method: String?
+    var payment_channel: String?
+    var installment_months: Int?
+    var installment_amount: Double?
     var indefinite_contract: Int?
+    var booking_slips: [String]?
     var additional_appliances: String?
     var additional_appliance_fee: Double?
     var additional_details: String?
+
+    init(
+        id: Int,
+        prefix: String? = nil,
+        first_name: String? = nil,
+        last_name: String? = nil,
+        room_number: String? = nil,
+        status: String? = nil,
+        national_id: String? = nil,
+        phone: String? = nil,
+        address: String? = nil,
+        move_in_date: String? = nil,
+        contract_end_date: String? = nil,
+        deposit: Double? = nil,
+        booking_status: String? = nil,
+        booking_end_date: String? = nil,
+        payment_method: String? = nil,
+        payment_channel: String? = nil,
+        installment_months: Int? = nil,
+        installment_amount: Double? = nil,
+        indefinite_contract: Int? = nil,
+        booking_slips: [String]? = nil,
+        additional_appliances: String? = nil,
+        additional_appliance_fee: Double? = nil,
+        additional_details: String? = nil
+    ) {
+        self.id = id
+        self.prefix = prefix
+        self.first_name = first_name
+        self.last_name = last_name
+        self.room_number = room_number
+        self.status = status
+        self.national_id = national_id
+        self.phone = phone
+        self.address = address
+        self.move_in_date = move_in_date
+        self.contract_end_date = contract_end_date
+        self.deposit = deposit
+        self.booking_status = booking_status
+        self.booking_end_date = booking_end_date
+        self.payment_method = payment_method
+        self.payment_channel = payment_channel
+        self.installment_months = installment_months
+        self.installment_amount = installment_amount
+        self.indefinite_contract = indefinite_contract
+        self.booking_slips = booking_slips
+        self.additional_appliances = additional_appliances
+        self.additional_appliance_fee = additional_appliance_fee
+        self.additional_details = additional_details
+    }
 }
 
 struct APIPayment: Codable, Identifiable {
@@ -126,7 +181,7 @@ class DashboardViewModel: ObservableObject {
                     payment.userId == (user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)) && payment.paymentStatus == "paid"
                 }
             }.map { user in
-                APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone)
+                APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
             }
             pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
             inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count

@@ -18,7 +18,11 @@ final class DormUser: Identifiable {
     var contractEndDate: String = ""
     var deposit: Double = 0.0
     var bookingStatus: String = ""
+    var bookingEndDate: String = ""
     var paymentMethod: String = ""
+    var paymentChannel: String = ""
+    var installmentMonths: Int = 0
+    var installmentAmount: Double = 0.0
     var indefiniteContract: Int = 0
     var bookingSlips: [String] = []
     var additionalAppliances: String = ""

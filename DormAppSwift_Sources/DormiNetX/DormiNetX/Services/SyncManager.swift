@@ -58,7 +58,11 @@ struct TenantSnapshot: Codable {
     var contractEndDate: String
     var deposit: Double
     var bookingStatus: String
+    var bookingEndDate: String?
     var paymentMethod: String
+    var paymentChannel: String?
+    var installmentMonths: Int?
+    var installmentAmount: Double?
     var indefiniteContract: Int
     var bookingSlips: [String]
     var additionalAppliances: String
@@ -368,7 +372,7 @@ class SyncManager: ObservableObject {
                 RoomSnapshot(id: $0.id, serverId: $0.serverId, roomNumber: $0.roomNumber, roomType: $0.roomType, lastUpdated: $0.lastUpdated)
             },
             tenants: try modelContext.fetch(FetchDescriptor<DormUser>()).filter { !$0.isDeletedLocally }.map {
-                TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, paymentMethod: $0.paymentMethod, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
+                TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, bookingEndDate: $0.bookingEndDate, paymentMethod: $0.paymentMethod, paymentChannel: $0.paymentChannel, installmentMonths: $0.installmentMonths, installmentAmount: $0.installmentAmount, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
             },
             payments: try modelContext.fetch(FetchDescriptor<Payment>()).filter { !$0.isDeletedLocally }.map {
                 PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: $0.slipPathArray, paidAmount: $0.paidAmount, lastUpdated: $0.lastUpdated)
@@ -455,7 +459,11 @@ class SyncManager: ObservableObject {
             user.contractEndDate = item.contractEndDate
             user.deposit = item.deposit
             user.bookingStatus = item.bookingStatus
+            user.bookingEndDate = item.bookingEndDate ?? ""
             user.paymentMethod = item.paymentMethod
+            user.paymentChannel = item.paymentChannel ?? ""
+            user.installmentMonths = item.installmentMonths ?? 0
+            user.installmentAmount = item.installmentAmount ?? 0
             user.indefiniteContract = item.indefiniteContract
             user.bookingSlips = item.bookingSlips
             user.additionalAppliances = item.additionalAppliances

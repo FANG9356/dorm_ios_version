@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct TransfersTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -63,6 +64,7 @@ struct TransfersTabView: View {
                 payment.paymentDate = draft.paymentDate
                 payment.method = draft.method
                 payment.slipPath = draft.slipPath
+                payment.slipPathArray = draft.slipPathArray
                 payment.dueDate = draft.dueDate
                 payment.paymentStatus = draft.paymentStatus
                 payment.paidAmount = draft.paidAmount
@@ -117,7 +119,7 @@ private struct TransferEvidenceRow: View {
 
     var body: some View {
         GlassCard {
-            VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 HStack {
                     Image(systemName: "photo.fill")
                         .foregroundStyle(.teal)
@@ -134,8 +136,21 @@ private struct TransferEvidenceRow: View {
                         .foregroundStyle(payment.paymentStatus == "paid" ? .green : .orange)
                 }
 
+                if let slipImage {
+                    Image(uiImage: slipImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 170)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
+                }
+
                 HStack(spacing: 8) {
-                    Text(payment.slipPath.isEmpty ? "\(payment.slipPathArray.count) ไฟล์" : payment.slipPath)
+                    Text(evidenceLabel)
                         .font(.custom("SukhumvitSet-Text", size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -149,5 +164,20 @@ private struct TransferEvidenceRow: View {
                 .font(.custom("SukhumvitSet-Bold", size: 11))
             }
         }
+    }
+
+    private var evidenceLabel: String {
+        if slipImage != nil { return "มีรูปสลิปแนบแล้ว" }
+        if !payment.slipPath.isEmpty { return payment.slipPath }
+        return "\(payment.slipPathArray.count) ไฟล์"
+    }
+
+    private var slipImage: UIImage? {
+        guard let url = SlipImageManager.url(for: payment.slipPath),
+              FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: url.path)
     }
 }
