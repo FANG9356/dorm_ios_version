@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
+import UIKit
 
 struct TenantsTabView: View {
     @Environment(\.modelContext) private var modelContext
@@ -482,6 +484,13 @@ struct PremiumTenantCard: View {
                             .font(.custom("SukhumvitSet-Text", size: 12))
                             .foregroundColor(.secondary)
                     }
+
+                    if user.status == "จอง" {
+                        Text(bookingSummary)
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 
                 Spacer()
@@ -522,9 +531,11 @@ struct PremiumTenantCard: View {
             Button { onEdit() } label: {
                 Label("แก้ไขข้อมูล", systemImage: "pencil")
             }
-            Divider()
-            Button(role: .destructive) { onDelete() } label: {
-                Label("ลบลูกบ้าน", systemImage: "trash")
+            if user.status == "ย้ายออกแล้ว" {
+                Divider()
+                Button(role: .destructive) { onDelete() } label: {
+                    Label("ลบลูกบ้าน", systemImage: "trash")
+                }
             }
         }
     }
@@ -551,6 +562,27 @@ struct PremiumTenantCard: View {
 
     private var roomBadgeFillColor: Color {
         colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.18)
+    }
+
+    private var bookingSummary: String {
+        let moveIn = shortDate(user.move_in_date)
+        let end = shortDate(user.booking_end_date)
+        if end != "-" {
+            return "เข้าอยู่ \(moveIn) • หมดเขต \(end)"
+        }
+        return "เข้าอยู่ \(moveIn)"
+    }
+
+    private func shortDate(_ dateStr: String?) -> String {
+        guard let dateStr, !dateStr.isEmpty else { return "-" }
+        let parts = dateStr.split(separator: "-")
+        if parts.count == 3, let month = Int(parts[1]), let day = Int(parts[2]) {
+            let monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+            if month >= 1 && month <= 12 {
+                return "\(day) \(monthNames[month - 1])"
+            }
+        }
+        return dateStr
     }
 }
 
@@ -611,24 +643,26 @@ struct TenantDetailSheet: View {
                     }
                     .padding(.horizontal, 20)
 
-                    Button {
-                        showDeleteAlert = true
-                    } label: {
-                        Label("ลบลูกบ้าน", systemImage: "trash")
-                            .font(.custom("SukhumvitSet-Bold", size: 13))
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(
-                                Capsule()
-                                    .fill(deleteFillColor)
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(deleteBorderColor, lineWidth: 1)
-                            )
+                    if displayUser.status == "ย้ายออกแล้ว" {
+                        Button {
+                            showDeleteAlert = true
+                        } label: {
+                            Label("ลบลูกบ้าน", systemImage: "trash")
+                                .font(.custom("SukhumvitSet-Bold", size: 13))
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 11)
+                                .background(
+                                    Capsule()
+                                        .fill(deleteFillColor)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(deleteBorderColor, lineWidth: 1)
+                                )
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                     
                     VStack(spacing: 14) {
                         DetailSection(title: "ข้อมูลส่วนตัว") {
@@ -640,9 +674,19 @@ struct TenantDetailSheet: View {
                         
                         DetailSection(title: "ข้อมูลสัญญา") {
                             DetailRow(icon: "calendar", label: "วันเข้าอยู่", value: formatDate(displayUser.move_in_date))
-                            DetailRow(icon: "calendar.badge.clock", label: "วันหมดสัญญา", value: displayUser.indefinite_contract == 1 ? "ไม่กำหนดระยะเวลา" : formatDate(displayUser.contract_end_date))
+                            if displayUser.status == "จอง" {
+                                DetailRow(icon: "calendar.badge.exclamationmark", label: "หมดเขตจอง", value: formatDate(displayUser.booking_end_date))
+                            } else {
+                                DetailRow(icon: "calendar.badge.clock", label: "วันหมดสัญญา", value: displayUser.indefinite_contract == 1 ? "ไม่กำหนดระยะเวลา" : formatDate(displayUser.contract_end_date))
+                            }
                             DetailRow(icon: "banknote.fill", label: "เงินมัดจำ", value: String(format: "฿%.0f", displayUser.deposit ?? 0))
                             DetailRow(icon: "creditcard.circle.fill", label: "วิธีชำระเงิน", value: paymentMethodText(displayUser.payment_method))
+                            DetailRow(icon: "building.columns.fill", label: "ช่องทางชำระ", value: paymentChannelText(displayUser.payment_channel))
+                            if displayUser.payment_method == "installment" {
+                                DetailRow(icon: "calendar.badge.clock", label: "จำนวนงวด", value: installmentText(displayUser.installment_months))
+                                DetailRow(icon: "banknote", label: "ยอดต่องวด", value: String(format: "฿%.0f", displayUser.installment_amount ?? 0))
+                            }
+                            DetailRow(icon: "photo.on.rectangle", label: "สลิปแนบ", value: (displayUser.booking_slips?.isEmpty == false) ? "\(displayUser.booking_slips?.count ?? 0) ไฟล์" : "-")
                         }
                         
                         if let appliances = displayUser.additional_appliances, !appliances.isEmpty {
@@ -745,6 +789,19 @@ struct TenantDetailSheet: View {
         default: return method ?? "-"
         }
     }
+
+    private func paymentChannelText(_ channel: String?) -> String {
+        switch channel {
+        case "cash": return "เงินสด"
+        case "bank_transfer": return "โอนผ่านธนาคาร"
+        default: return channel ?? "-"
+        }
+    }
+
+    private func installmentText(_ months: Int?) -> String {
+        guard let months, months > 0 else { return "-" }
+        return "\(months) งวด"
+    }
 }
 
 // MARK: - Add / Edit Tenant Form Sheet
@@ -767,11 +824,34 @@ struct TenantFormSheet: View {
     @State private var status = "กำลังพักอาศัย"
     @State private var roomType = ""
     @State private var moveInDate = Date()
+    @State private var bookingEndDate = Date()
     @State private var contractEndDate = Date()
     @State private var deposit = ""
+    @State private var paymentMethod = "full_payment"
+    @State private var paymentChannel = "bank_transfer"
+    @State private var installmentMonths = ""
+    @State private var installmentAmount = ""
+    @State private var bookingSlipPaths: [String] = []
+    @State private var selectedSlipItem: PhotosPickerItem?
+    @State private var isImportingSlip = false
+    @State private var slipImportMessage: String?
     @State private var indefiniteContract = false
     @State private var isSubmitting = false
     @State private var errorText: String?
+    @State private var depositWasEdited = false
+    @State private var installmentWasEdited = false
+    @State private var isApplyingSuggestedValues = false
+    @AppStorage("defaultDepositPercent") private var defaultDepositPercent = 5.0
+
+    private let paymentMethodOptions = [
+        ("full_payment", "ชำระเต็มจำนวน"),
+        ("installment", "ผ่อนชำระ")
+    ]
+
+    private let paymentChannelOptions = [
+        ("bank_transfer", "โอนผ่านธนาคาร"),
+        ("cash", "เงินสด")
+    ]
     
     var isEditing: Bool { editUser != nil }
     
@@ -820,6 +900,8 @@ struct TenantFormSheet: View {
                         .tint(.primary)
                         .onChange(of: roomNumber) { _, _ in
                             applyExistingRoomTypeIfNeeded()
+                            applySuggestedDepositIfNeeded()
+                            applySuggestedInstallmentIfNeeded()
                         }
                     }
 
@@ -855,20 +937,69 @@ struct TenantFormSheet: View {
                 }
                 
                 Section(header: Text("ข้อมูลสัญญา")) {
-                    DatePicker("วันเข้าอยู่", selection: $moveInDate, displayedComponents: .date)
+                    DatePicker(status == "จอง" ? "วันที่คาดว่าจะเข้าอยู่" : "วันเข้าอยู่", selection: $moveInDate, displayedComponents: .date)
                         .environment(\.locale, Locale(identifier: "th_TH"))
                         .environment(\.calendar, Calendar(identifier: .buddhist))
-                    
-                    Toggle("ไม่กำหนดระยะเวลาสัญญา", isOn: $indefiniteContract.animation(.easeInOut(duration: 0.2)))
-                    
-                    if !indefiniteContract {
-                        DatePicker("วันหมดสัญญา", selection: $contractEndDate, displayedComponents: .date)
+
+                    if status == "จอง" {
+                        DatePicker("หมดเขตจอง", selection: $bookingEndDate, displayedComponents: .date)
                             .environment(\.locale, Locale(identifier: "th_TH"))
                             .environment(\.calendar, Calendar(identifier: .buddhist))
                     }
-                    TextField("เงินมัดจำ (บาท)", text: $deposit)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
+                    
+                    if status != "จอง" {
+                        Toggle("ไม่กำหนดระยะเวลาสัญญา", isOn: $indefiniteContract.animation(.easeInOut(duration: 0.2)))
+                        
+                        if !indefiniteContract {
+                            DatePicker("วันหมดสัญญา", selection: $contractEndDate, displayedComponents: .date)
+                                .environment(\.locale, Locale(identifier: "th_TH"))
+                                .environment(\.calendar, Calendar(identifier: .buddhist))
+                        }
+
+                        TextField("เงินมัดจำ (บาท)", text: $deposit)
+                            .keyboardType(.decimalPad)
+                            .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
+                            .onChange(of: deposit) { _, _ in
+                                guard !isApplyingSuggestedValues else { return }
+                                depositWasEdited = true
+                                applySuggestedInstallmentIfNeeded()
+                            }
+                    } else {
+                        TextField("เงินจอง/มัดจำ (บาท)", text: $deposit)
+                            .keyboardType(.decimalPad)
+                            .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
+                            .onChange(of: deposit) { _, _ in
+                                guard !isApplyingSuggestedValues else { return }
+                                depositWasEdited = true
+                                applySuggestedInstallmentIfNeeded()
+                            }
+                    }
+
+                    moveInPaymentSummary
+                }
+
+                Section(header: Text("การชำระเงินตอนเข้าอยู่")) {
+                    paymentMethodSelector
+                    paymentChannelSelector
+                    if paymentMethod == "installment" {
+                        TextField("จำนวนงวด", text: $installmentMonths)
+                            .keyboardType(.numberPad)
+                            .digitsOnly($installmentMonths, maxLength: 2)
+                            .onChange(of: installmentMonths) { _, _ in
+                                applySuggestedInstallmentIfNeeded()
+                            }
+                        TextField("ยอดชำระต่องวด (บาท)", text: $installmentAmount)
+                            .keyboardType(.decimalPad)
+                            .decimalInput($installmentAmount, maxIntegerDigits: 8, maxFractionDigits: 2)
+                            .onChange(of: installmentAmount) { _, _ in
+                                guard !isApplyingSuggestedValues else { return }
+                                installmentWasEdited = true
+                            }
+                        installmentSummary
+                    }
+                    if paymentChannel == "bank_transfer" {
+                        tenantSlipPickerContent
+                    }
                 }
                 
                 if let err = errorText {
@@ -919,6 +1050,13 @@ struct TenantFormSheet: View {
                     status = u.status ?? "กำลังพักอาศัย"
                     roomType = existingRoom(for: u.room_number ?? "")?.roomType ?? ""
                     deposit = u.deposit != nil ? String(format: "%.0f", u.deposit!) : ""
+                    depositWasEdited = true
+                    paymentMethod = u.payment_method ?? "full_payment"
+                    paymentChannel = u.payment_channel ?? "bank_transfer"
+                    installmentMonths = (u.installment_months ?? 0) > 0 ? "\(u.installment_months ?? 0)" : ""
+                    installmentAmount = u.installment_amount != nil ? String(format: "%.0f", u.installment_amount!) : ""
+                    installmentWasEdited = true
+                    bookingSlipPaths = u.booking_slips ?? []
                     indefiniteContract = (u.indefinite_contract ?? 0) == 1
                     
                     let df = DateFormatter()
@@ -926,9 +1064,12 @@ struct TenantFormSheet: View {
                     df.locale = Locale(identifier: "en_US_POSIX")
                     df.calendar = Calendar(identifier: .gregorian)
                     if let d = u.move_in_date, let date = df.date(from: d) { moveInDate = date }
+                    if let d = u.booking_end_date, let date = df.date(from: d) { bookingEndDate = date }
                     if let d = u.contract_end_date, let date = df.date(from: d) { contractEndDate = date }
                 } else {
                     applyExistingRoomTypeIfNeeded()
+                    applySuggestedDepositIfNeeded()
+                    applySuggestedInstallmentIfNeeded()
                 }
             }
             .transaction { transaction in
@@ -936,11 +1077,284 @@ struct TenantFormSheet: View {
             }
         }
     }
-    
 
-    
+    private var paymentMethodSelector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("วิธีชำระเงิน")
+                .font(.custom("SukhumvitSet-Medium", size: 13))
+                .foregroundStyle(.secondary)
 
-    
+            VStack(spacing: 10) {
+                ForEach(paymentMethodOptions, id: \.0) { value, title in
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            paymentMethod = value
+                            if value == "installment" {
+                                if installmentMonths.isEmpty {
+                                    installmentMonths = "2"
+                                }
+                                installmentWasEdited = false
+                                applySuggestedInstallmentIfNeeded()
+                            }
+                        }
+                    } label: {
+                        PaymentMethodOptionRow(
+                            title: title,
+                            subtitle: paymentMethodSubtitle(for: value),
+                            icon: paymentMethodIcon(for: value),
+                            isSelected: paymentMethod == value
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var moveInPaymentSummary: some View {
+        if selectedRoomType != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("สรุปยอดแรกเข้า", systemImage: "sum")
+                        .font(.custom("SukhumvitSet-Bold", size: 14))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("มัดจำ \(defaultDepositPercent.formatted(.number.precision(.fractionLength(0))))%")
+                        .font(.custom("SukhumvitSet-Medium", size: 12))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(Color.primary.opacity(0.06)))
+                }
+
+                VStack(spacing: 8) {
+                    summaryLine("ค่าเช่าห้องเดือนแรก", amount: moveInBaseTotal)
+                    summaryLine(status == "จอง" ? "เงินจอง/มัดจำ" : "เงินมัดจำ", amount: depositValue)
+                    Divider()
+                    summaryLine("ยอดรวม", amount: moveInGrandTotal, emphasized: true)
+                }
+
+                Text("ค่าน้ำ ค่าไฟ และค่าส่วนกลางจะแยกไปคิดในบิลรายเดือนตามรอบใช้งาน")
+                    .font(.custom("SukhumvitSet-Text", size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var installmentSummary: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            summaryLine("ยอดรวมที่นำไปผ่อน", amount: moveInGrandTotal)
+            summaryLine("ค่างวดโดยประมาณ", amount: installmentAmountValue, emphasized: true)
+            if let months = Int(installmentMonths), months > 0 {
+                Text("\(months) งวด × \(currency(installmentAmountValue))")
+                    .font(.custom("SukhumvitSet-Text", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func summaryLine(_ title: String, amount: Double, emphasized: Bool = false) -> some View {
+        HStack {
+            Text(title)
+                .font(.custom(emphasized ? "SukhumvitSet-Bold" : "SukhumvitSet-Text", size: emphasized ? 14 : 13))
+                .foregroundStyle(emphasized ? .primary : .secondary)
+            Spacer()
+            Text(currency(amount))
+                .font(.custom("SukhumvitSet-Bold", size: emphasized ? 15 : 13))
+                .foregroundStyle(emphasized ? Color.indigo : .primary)
+        }
+    }
+
+    private var paymentChannelSelector: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("ช่องทางชำระ")
+                .font(.custom("SukhumvitSet-Medium", size: 13))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 10) {
+                ForEach(paymentChannelOptions, id: \.0) { value, title in
+                    Button {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            paymentChannel = value
+                            if value == "cash" {
+                                bookingSlipPaths = []
+                                selectedSlipItem = nil
+                            }
+                        }
+                    } label: {
+                        PaymentMethodOptionRow(
+                            title: title,
+                            subtitle: paymentChannelSubtitle(for: value),
+                            icon: paymentChannelIcon(for: value),
+                            isSelected: paymentChannel == value
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func paymentMethodSubtitle(for value: String) -> String {
+        switch value {
+        case "installment":
+            return "บันทึกเป็นรายการค้างบางส่วนและติดตามต่อในหน้าการเงิน"
+        default:
+            return "เหมาะกับลูกบ้านที่ชำระครบตอนเข้าอยู่"
+        }
+    }
+
+    private func paymentMethodIcon(for value: String) -> String {
+        value == "installment" ? "clock.badge.checkmark" : "checkmark.seal"
+    }
+
+    private func paymentChannelSubtitle(for value: String) -> String {
+        value == "cash" ? "บันทึกรับเงินสด ไม่ต้องแนบสลิป" : "แนบสลิปไว้เป็นหลักฐานในเครื่อง"
+    }
+
+    private func paymentChannelIcon(for value: String) -> String {
+        value == "cash" ? "banknote" : "building.columns"
+    }
+
+    private var moveInBaseTotal: Double {
+        guard let type = selectedRoomType else { return 0 }
+        return type.price
+    }
+
+    private var suggestedDeposit: Double {
+        roundedMoney(moveInBaseTotal * defaultDepositPercent / 100)
+    }
+
+    private var depositValue: Double {
+        Double(deposit) ?? 0
+    }
+
+    private var moveInGrandTotal: Double {
+        moveInBaseTotal + depositValue
+    }
+
+    private var installmentAmountValue: Double {
+        Double(installmentAmount) ?? suggestedInstallmentAmount
+    }
+
+    private var suggestedInstallmentAmount: Double {
+        guard let months = Int(installmentMonths), months > 0 else { return 0 }
+        return roundedMoney(moveInGrandTotal / Double(months))
+    }
+
+    private func applySuggestedDepositIfNeeded() {
+        guard !isEditing, !depositWasEdited, moveInBaseTotal > 0 else { return }
+        isApplyingSuggestedValues = true
+        deposit = moneyInput(suggestedDeposit)
+        DispatchQueue.main.async {
+            isApplyingSuggestedValues = false
+        }
+    }
+
+    private func applySuggestedInstallmentIfNeeded() {
+        guard paymentMethod == "installment",
+              let months = Int(installmentMonths),
+              months > 0,
+              !installmentWasEdited else { return }
+        isApplyingSuggestedValues = true
+        installmentAmount = moneyInput(roundedMoney(moveInGrandTotal / Double(months)))
+        DispatchQueue.main.async {
+            isApplyingSuggestedValues = false
+        }
+    }
+
+    private func roundedMoney(_ amount: Double) -> Double {
+        (amount * 100).rounded() / 100
+    }
+
+    private func moneyInput(_ amount: Double) -> String {
+        if amount.truncatingRemainder(dividingBy: 1) == 0 {
+            return String(format: "%.0f", amount)
+        }
+        return String(format: "%.2f", amount)
+    }
+
+    private func currency(_ amount: Double) -> String {
+        "฿" + amount.formatted(.number.precision(.fractionLength(amount.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2)))
+    }
+
+    @ViewBuilder
+    private var tenantSlipPickerContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let image = firstBookingSlipImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+            }
+
+            PhotosPicker(selection: $selectedSlipItem, matching: .images, photoLibrary: .shared()) {
+                HStack(spacing: 10) {
+                    if isImportingSlip {
+                        ProgressView()
+                            .scaleEffect(0.82)
+                    } else {
+                        Image(systemName: bookingSlipPaths.isEmpty ? "photo.badge.plus" : "photo.on.rectangle")
+                            .font(.system(size: 17, weight: .bold))
+                    }
+
+                    Text(bookingSlipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เปลี่ยนรูปสลิป")
+                        .font(.custom("SukhumvitSet-Bold", size: 15))
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(.blue)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isImportingSlip)
+
+            if !bookingSlipPaths.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(slipImportMessage ?? "มีรูปสลิปแนบแล้ว")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            } else if let slipImportMessage {
+                Text(slipImportMessage)
+                    .font(.custom("SukhumvitSet-Text", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onChange(of: selectedSlipItem) { _, newItem in
+            importBookingSlip(newItem)
+        }
+    }
+
+    private var firstBookingSlipImage: UIImage? {
+        guard let firstPath = bookingSlipPaths.first,
+              let url = SlipImageManager.url(for: firstPath),
+              FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: url.path)
+    }
+
     private func submitForm() async {
         guard !isSubmitting else { return }
         isSubmitting = true
@@ -955,6 +1369,18 @@ struct TenantFormSheet: View {
         guard selectedRoom != nil else {
             errorText = "กรุณาเลือกห้องจากรายการที่สร้างไว้ในหน้าจัดการห้องพัก"
             return
+        }
+
+        if paymentMethod == "installment" {
+            guard (Int(installmentMonths) ?? 0) > 0 else {
+                errorText = "กรุณาระบุจำนวนงวด"
+                return
+            }
+
+            guard (Double(installmentAmount) ?? 0) > 0 else {
+                errorText = "กรุณาระบุยอดชำระต่องวด"
+                return
+            }
         }
 
         let dateFormatter = DateFormatter()
@@ -984,12 +1410,19 @@ struct TenantFormSheet: View {
             user.address = clean(address)
             user.status = status
             user.moveInDate = dateFormatter.string(from: moveInDate)
-            user.contractEndDate = indefiniteContract ? "" : dateFormatter.string(from: contractEndDate)
+            user.contractEndDate = (status == "จอง" || indefiniteContract) ? "" : dateFormatter.string(from: contractEndDate)
             user.deposit = Double(deposit) ?? 0
-            user.indefiniteContract = indefiniteContract ? 1 : 0
-            user.paymentMethod = "full_payment"
+            user.bookingStatus = status == "จอง" ? "reserved" : ""
+            user.bookingEndDate = status == "จอง" ? dateFormatter.string(from: bookingEndDate) : ""
+            user.indefiniteContract = status == "จอง" ? 0 : (indefiniteContract ? 1 : 0)
+            user.paymentMethod = paymentMethod
+            user.paymentChannel = paymentChannel
+            user.installmentMonths = Int(installmentMonths) ?? 0
+            user.installmentAmount = Double(installmentAmount) ?? 0
+            user.bookingSlips = paymentChannel == "bank_transfer" ? bookingSlipPaths : []
             user.lastUpdated = Date()
             user.isDirty = true
+            try ensureCurrentMonthPayment(for: user)
             try modelContext.save()
             await SyncManager.shared.autoPushLocalChanges(modelContext: modelContext)
             await viewModel.fetchUsers(modelContext: modelContext)
@@ -998,6 +1431,105 @@ struct TenantFormSheet: View {
             errorText = "ไม่สามารถบันทึกข้อมูลลงเครื่องได้"
         }
         return
+    }
+
+    private func importBookingSlip(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+
+        isImportingSlip = true
+        slipImportMessage = nil
+
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw CocoaError(.fileReadUnknown)
+                }
+
+                let fileName = try SlipImageManager.saveImageData(data)
+                await MainActor.run {
+                    bookingSlipPaths = [fileName]
+                    isImportingSlip = false
+                    slipImportMessage = "เพิ่มรูปสลิปแล้ว"
+                }
+            } catch {
+                await MainActor.run {
+                    isImportingSlip = false
+                    slipImportMessage = "เพิ่มรูปสลิปไม่สำเร็จ"
+                }
+            }
+        }
+    }
+
+    private func ensureCurrentMonthPayment(for user: DormUser) throws {
+        guard user.status != "ย้ายออกแล้ว", let room = selectedRoom else { return }
+
+        let month = monthKey(for: moveInDate)
+        let userID = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        let localPayments = try modelContext.fetch(FetchDescriptor<Payment>())
+        let existingPayment = localPayments.first {
+            !$0.isDeletedLocally &&
+            $0.month == month &&
+            ($0.userId == userID || clean($0.roomNumber) == clean(user.roomNumber))
+        }
+        let payment = existingPayment ?? Payment(month: month)
+
+        if existingPayment == nil {
+            modelContext.insert(payment)
+        }
+
+        let type = roomTypes.first { clean($0.name) == clean(room.roomType) }
+        let firstMonthRent = type?.price ?? 0
+        let isBooking = user.status == "จอง"
+        let amountDue = isBooking ? user.deposit : firstMonthRent + user.deposit
+        let channelText = paymentChannelText(user.paymentChannel)
+        payment.userId = userID
+        payment.roomNumber = user.roomNumber
+        payment.month = month
+        payment.rentFee = isBooking ? user.deposit : firstMonthRent
+        payment.waterFee = 0
+        payment.electricFee = 0
+        payment.commonFee = 0
+        payment.lateFee = 0
+        payment.applianceFee = 0
+        payment.amount = amountDue
+        payment.method = "\(paymentMethodText(user.paymentMethod)) • \(channelText)"
+        payment.slipPath = user.bookingSlips.first ?? payment.slipPath
+        payment.slipPathArray = user.bookingSlips
+        payment.paymentPlan = user.paymentMethod
+        payment.installmentPhase = user.installmentMonths
+        payment.paymentStatus = user.paymentMethod == "installment" ? "partial" : "paid"
+        payment.paidAmount = user.paymentMethod == "installment" ? user.installmentAmount : amountDue
+        payment.dueDate = dueDateKey(for: moveInDate)
+        payment.lastUpdated = Date()
+        payment.isDirty = true
+    }
+
+    private func monthKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        return formatter.string(from: date)
+    }
+
+    private func dueDateKey(for date: Date) -> String {
+        var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
+        components.month = (components.month ?? 1) + 1
+        components.day = 0
+        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        return formatter.string(from: dueDate)
+    }
+
+    private func paymentMethodText(_ value: String) -> String {
+        value == "installment" ? "ผ่อนชำระ" : "ชำระเต็มจำนวน"
+    }
+
+    private func paymentChannelText(_ value: String) -> String {
+        value == "cash" ? "เงินสด" : "โอนผ่านธนาคาร"
     }
 
     private var selectedRoomType: RoomType? {
@@ -1128,6 +1660,91 @@ struct DetailRow: View {
 
     private var iconFillColor: Color {
         colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.035)
+    }
+}
+
+private struct PaymentMethodOptionRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let isSelected: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(iconFillColor)
+                    .frame(width: 38, height: 38)
+
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(iconColor)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.custom("SukhumvitSet-Bold", size: 14))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.custom("SukhumvitSet-Text", size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+
+            ZStack {
+                Circle()
+                    .stroke(isSelected ? Color.indigo.opacity(0.7) : Color.secondary.opacity(0.22), lineWidth: 1.4)
+                    .frame(width: 24, height: 24)
+
+                if isSelected {
+                    Circle()
+                        .fill(Color.indigo)
+                        .frame(width: 18, height: 18)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(rowFillColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(rowBorderColor, lineWidth: 1)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private var rowFillColor: Color {
+        if isSelected {
+            return colorScheme == .dark ? Color.indigo.opacity(0.18) : Color.indigo.opacity(0.08)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.045) : Color.black.opacity(0.025)
+    }
+
+    private var rowBorderColor: Color {
+        if isSelected {
+            return colorScheme == .dark ? Color.indigo.opacity(0.32) : Color.indigo.opacity(0.18)
+        }
+        return colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.045)
+    }
+
+    private var iconFillColor: Color {
+        isSelected ? Color.indigo.opacity(colorScheme == .dark ? 0.24 : 0.12) : Color.primary.opacity(0.055)
+    }
+
+    private var iconColor: Color {
+        isSelected ? .indigo : .secondary
     }
 }
 

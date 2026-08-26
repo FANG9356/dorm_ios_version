@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct FinanceTabView: View {
     @Binding var showingPaymentEditor: Bool
@@ -386,6 +387,9 @@ struct PaymentEditor: View {
     @State private var dueDate: String
     @State private var paymentDate: String
     @State private var paymentStatus: String
+    @State private var selectedSlipItem: PhotosPickerItem?
+    @State private var isImportingSlip = false
+    @State private var slipImportMessage: String?
     @State private var selectedDetent: PresentationDetent = .large
 
     private let statusOptions = [
@@ -460,11 +464,7 @@ struct PaymentEditor: View {
                 }
 
                 Section("การชำระเงิน") {
-                    Picker("สถานะ", selection: $paymentStatus) {
-                        ForEach(statusOptions, id: \.0) { value, title in
-                            Text(title).tag(value)
-                        }
-                    }
+                    statusSelector
                     TextField("ยอดที่ชำระแล้ว", text: $paidAmount)
                         .keyboardType(.decimalPad)
                         .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
@@ -473,8 +473,7 @@ struct PaymentEditor: View {
                     TextField("วันที่ชำระ เช่น 2026-08-23", text: $paymentDate)
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($paymentDate)
-                    TextField("ลิงก์/ชื่อไฟล์สลิป", text: $slipPath)
-                        .limitedText($slipPath, maxLength: 200, trimNewlines: true)
+                    slipPickerContent
                 }
             }
             .navigationTitle("รายการชำระเงิน")
@@ -521,6 +520,109 @@ struct PaymentEditor: View {
         .presentationDragIndicator(.visible)
     }
 
+    private var statusSelector: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("สถานะ")
+                .font(.custom("SukhumvitSet-Medium", size: 13))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                ForEach(statusOptions, id: \.0) { value, title in
+                    Button {
+                        paymentStatus = value
+                        if value == "paid", money(paidAmount) == 0 {
+                            paidAmount = String(format: "%.0f", totalAmount)
+                        } else if value == "pending" {
+                            paidAmount = "0"
+                        }
+                    } label: {
+                        Text(title)
+                            .font(.custom("SukhumvitSet-Bold", size: 12))
+                            .foregroundStyle(paymentStatus == value ? Color.white : Color.primary.opacity(0.72))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 38)
+                            .background(
+                                Capsule()
+                                    .fill(paymentStatus == value ? Color.indigo : Color.primary.opacity(0.07))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var slipPickerContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let image = selectedSlipImage {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 170)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                    )
+            }
+
+            PhotosPicker(selection: $selectedSlipItem, matching: .images, photoLibrary: .shared()) {
+                HStack(spacing: 10) {
+                    if isImportingSlip {
+                        ProgressView()
+                            .scaleEffect(0.82)
+                    } else {
+                        Image(systemName: selectedSlipImage == nil ? "photo.badge.plus" : "photo.on.rectangle")
+                            .font(.system(size: 17, weight: .bold))
+                    }
+
+                    Text(selectedSlipImage == nil ? "เพิ่มรูปสลิป" : "เปลี่ยนรูปสลิป")
+                        .font(.custom("SukhumvitSet-Bold", size: 15))
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(.blue)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isImportingSlip)
+
+            if !slipPath.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Text(slipImportMessage ?? "มีรูปสลิปแนบแล้ว")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            } else if let slipImportMessage {
+                Text(slipImportMessage)
+                    .font(.custom("SukhumvitSet-Text", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onChange(of: selectedSlipItem) { _, newItem in
+            importSlipImage(newItem)
+        }
+    }
+
+    private var selectedSlipImage: UIImage? {
+        guard let url = SlipImageManager.url(for: slipPath),
+              FileManager.default.fileExists(atPath: url.path) else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: url.path)
+    }
+
     private var totalAmount: Double {
         money(rentFee) + money(waterFee) + money(electricFee) + money(commonFee) + money(lateFee) + money(applianceFee)
     }
@@ -529,6 +631,33 @@ struct PaymentEditor: View {
         TextField(title, text: text)
             .keyboardType(.decimalPad)
             .decimalInput(text, maxIntegerDigits: 9, maxFractionDigits: 2)
+    }
+
+    private func importSlipImage(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+
+        isImportingSlip = true
+        slipImportMessage = nil
+
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    throw CocoaError(.fileReadUnknown)
+                }
+
+                let fileName = try SlipImageManager.saveImageData(data)
+                await MainActor.run {
+                    slipPath = fileName
+                    isImportingSlip = false
+                    slipImportMessage = "เพิ่มรูปสลิปแล้ว"
+                }
+            } catch {
+                await MainActor.run {
+                    isImportingSlip = false
+                    slipImportMessage = "เพิ่มรูปสลิปไม่สำเร็จ"
+                }
+            }
+        }
     }
 
     private func applyRoomTypeDefaults(onlyWhenEmpty: Bool = false) {

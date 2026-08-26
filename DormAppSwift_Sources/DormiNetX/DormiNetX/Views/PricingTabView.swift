@@ -4,6 +4,7 @@ import SwiftData
 struct PricingTabView: View {
     @Binding var showAddRoomType: Bool
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("defaultDepositPercent") private var defaultDepositPercent = 5.0
     @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
     @Query(sort: \DormUser.roomNumber) private var users: [DormUser]
@@ -115,6 +116,8 @@ struct PricingTabView: View {
                 }
             }
 
+            depositPercentSettings
+
             sectionHeader("ประเภทห้อง")
             if roomTypes.isEmpty {
                 GlassCard { Text("ยังไม่มีประเภทห้อง").foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 28) }
@@ -209,6 +212,52 @@ struct PricingTabView: View {
         Text(title)
             .font(.custom("SukhumvitSet-Bold", size: 17))
             .foregroundStyle(.primary)
+    }
+
+    private var depositPercentSettings: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("เงินมัดจำเริ่มต้น")
+                            .font(.custom("SukhumvitSet-Bold", size: 16))
+                        Text("ใช้คำนวณอัตโนมัติในหน้าเพิ่มลูกบ้าน")
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("\(clampedDepositPercent.formatted(.number.precision(.fractionLength(0))))%")
+                        .font(.custom("SukhumvitSet-Bold", size: 20))
+                        .foregroundStyle(.indigo)
+                }
+
+                Stepper(value: depositPercentBinding, in: 5...100, step: 1) {
+                    Text("ขั้นต่ำ 5%")
+                        .font(.custom("SukhumvitSet-Medium", size: 13))
+                        .foregroundStyle(.secondary)
+                }
+
+                if defaultDepositPercent != clampedDepositPercent {
+                    Text("ระบบปรับค่าให้ไม่ต่ำกว่า 5% แล้ว")
+                        .font(.custom("SukhumvitSet-Text", size: 11))
+                        .foregroundStyle(.secondary)
+                        .onAppear {
+                            defaultDepositPercent = clampedDepositPercent
+                        }
+                }
+            }
+        }
+    }
+
+    private var depositPercentBinding: Binding<Double> {
+        Binding(
+            get: { clampedDepositPercent },
+            set: { defaultDepositPercent = max(5, min(100, $0)) }
+        )
+    }
+
+    private var clampedDepositPercent: Double {
+        max(5, min(100, defaultDepositPercent))
     }
 
     private func tenant(for room: Room) -> DormUser? {

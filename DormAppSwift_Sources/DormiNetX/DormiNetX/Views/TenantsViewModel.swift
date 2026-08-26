@@ -86,7 +86,17 @@ class TenantsViewModel: ObservableObject {
                         move_in_date: user.moveInDate,
                         contract_end_date: user.contractEndDate,
                         deposit: user.deposit,
-                        indefinite_contract: user.indefiniteContract
+                        booking_status: user.bookingStatus,
+                        booking_end_date: user.bookingEndDate,
+                        payment_method: user.paymentMethod,
+                        payment_channel: user.paymentChannel,
+                        installment_months: user.installmentMonths,
+                        installment_amount: user.installmentAmount,
+                        indefinite_contract: user.indefiniteContract,
+                        booking_slips: user.bookingSlips,
+                        additional_appliances: user.additionalAppliances,
+                        additional_appliance_fee: user.additionalApplianceFee,
+                        additional_details: user.additionalDetails
                     )
                 }
             } catch {

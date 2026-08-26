@@ -106,6 +106,7 @@ struct BillsTabView: View {
         payment.paymentDate = draft.paymentDate
         payment.method = draft.method
         payment.slipPath = draft.slipPath
+        payment.slipPathArray = draft.slipPathArray
         payment.dueDate = draft.dueDate
         payment.paymentStatus = draft.paymentStatus
         payment.paidAmount = draft.paidAmount
