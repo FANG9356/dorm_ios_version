@@ -136,28 +136,66 @@ private struct BillRow: View {
     let payment: Payment
     let onEdit: () -> Void
     let onDelete: () -> Void
+    @State private var horizontalOffset: CGFloat = 0
+    @State private var isActionsOpen = false
+
+    private let actionWidth: CGFloat = 136
 
     var body: some View {
-        GlassCard {
-            HStack {
-                Image(systemName: "doc.text.fill")
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("ห้อง \(payment.roomNumber)")
-                        .font(.custom("SukhumvitSet-Bold", size: 15))
-                    Text("รอบบิล \(payment.month)")
-                        .font(.custom("SukhumvitSet-Text", size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
-                        .font(.custom("SukhumvitSet-Bold", size: 15))
-                    Text(statusText)
-                        .font(.custom("SukhumvitSet-Medium", size: 10))
-                        .foregroundStyle(statusColor)
+        ZStack(alignment: .trailing) {
+            GlassCard {
+                HStack {
+                    Image(systemName: "doc.text.fill")
+                        .foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("ห้อง \(payment.roomNumber)")
+                            .font(.custom("SukhumvitSet-Bold", size: 15))
+                        Text("รอบบิล \(payment.month)")
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                            .font(.custom("SukhumvitSet-Bold", size: 15))
+                        Text(statusText)
+                            .font(.custom("SukhumvitSet-Medium", size: 10))
+                            .foregroundStyle(statusColor)
+                    }
                 }
             }
+            .offset(x: horizontalOffset)
+            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .simultaneousGesture(swipeGesture)
+            .onTapGesture {
+                if isActionsOpen {
+                    closeActions()
+                }
+            }
+            .zIndex(0)
+
+            HStack(spacing: 10) {
+                Button {
+                    closeActions()
+                    onEdit()
+                } label: {
+                    actionButton(icon: "pencil", title: "แก้ไข", accent: .indigo)
+                }
+                .buttonStyle(.plain)
+
+                Button(role: .destructive) {
+                    closeActions()
+                    onDelete()
+                } label: {
+                    actionButton(icon: "trash", title: "ลบ", accent: .red)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.trailing, 4)
+            .opacity(actionRevealProgress)
+            .scaleEffect(0.94 + (0.06 * actionRevealProgress), anchor: .trailing)
+            .allowsHitTesting(isActionsOpen)
+            .zIndex(1)
         }
         .contextMenu {
             Button(action: onEdit) {
@@ -167,15 +205,53 @@ private struct BillRow: View {
                 Label("ลบ", systemImage: "trash")
             }
         }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
+    }
+
+    private var actionRevealProgress: CGFloat {
+        min(1, max(0, abs(horizontalOffset) / actionWidth))
+    }
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
+            .onChanged { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                let base = isActionsOpen ? -actionWidth : 0
+                horizontalOffset = max(-actionWidth, min(0, base + value.translation.width))
             }
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
+            .onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                let shouldOpen = horizontalOffset < -56 || value.predictedEndTranslation.width < -92
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                    isActionsOpen = shouldOpen
+                    horizontalOffset = shouldOpen ? -actionWidth : 0
+                }
             }
-            .tint(.indigo)
+    }
+
+    private func closeActions() {
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+            isActionsOpen = false
+            horizontalOffset = 0
         }
+    }
+
+    private func actionButton(icon: String, title: String, accent: Color) -> some View {
+        VStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+            Text(title)
+                .font(.custom("SukhumvitSet-Bold", size: 10))
+        }
+        .foregroundStyle(accent)
+        .frame(width: 58, height: 58)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.primary.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private var statusText: String {

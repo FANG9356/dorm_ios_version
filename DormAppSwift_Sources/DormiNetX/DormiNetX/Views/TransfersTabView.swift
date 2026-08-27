@@ -116,6 +116,7 @@ private struct TransferEvidenceRow: View {
     let onApprove: () -> Void
     let onReject: () -> Void
     let onEdit: () -> Void
+    @State private var showingSlipPreview = false
 
     var body: some View {
         GlassCard {
@@ -137,16 +138,31 @@ private struct TransferEvidenceRow: View {
                 }
 
                 if let slipImage {
-                    Image(uiImage: slipImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 170)
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                        )
+                    Button {
+                        showingSlipPreview = true
+                    } label: {
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(uiImage: slipImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 170)
+                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                                )
+
+                            Label("ดูเต็มจอ", systemImage: "arrow.up.left.and.arrow.down.right")
+                                .font(.custom("SukhumvitSet-Bold", size: 11))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(.black.opacity(0.46), in: Capsule())
+                                .padding(10)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 HStack(spacing: 8) {
@@ -155,13 +171,15 @@ private struct TransferEvidenceRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                     Spacer()
-                    Button("แก้ไข", action: onEdit)
-                    Button("ปฏิเสธ", action: onReject)
-                        .foregroundStyle(.orange)
-                    Button("อนุมัติ", action: onApprove)
-                        .foregroundStyle(.green)
+                    evidenceAction("แก้ไข", icon: "pencil", color: .blue, action: onEdit)
+                    evidenceAction("ปฏิเสธ", icon: "xmark", color: .orange, action: onReject)
+                    evidenceAction("อนุมัติ", icon: "checkmark", color: .green, action: onApprove)
                 }
-                .font(.custom("SukhumvitSet-Bold", size: 11))
+            }
+        }
+        .fullScreenCover(isPresented: $showingSlipPreview) {
+            if let slipImage {
+                SlipPreviewView(image: slipImage)
             }
         }
     }
@@ -172,12 +190,80 @@ private struct TransferEvidenceRow: View {
         return "\(payment.slipPathArray.count) ไฟล์"
     }
 
+    private func evidenceAction(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.custom("SukhumvitSet-Bold", size: 11))
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(color)
+                .padding(.horizontal, 9)
+                .frame(height: 30)
+                .background(color.opacity(0.12), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
     private var slipImage: UIImage? {
-        guard let url = SlipImageManager.url(for: payment.slipPath),
+        let path = payment.slipPath.isEmpty ? payment.slipPathArray.first ?? "" : payment.slipPath
+        guard let url = SlipImageManager.url(for: path),
               FileManager.default.fileExists(atPath: url.path) else {
             return nil
         }
 
         return UIImage(contentsOfFile: url.path)
+    }
+}
+
+private struct SlipPreviewView: View {
+    let image: UIImage
+    @Environment(\.dismiss) private var dismiss
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .topTrailing) {
+                Color.black.ignoresSafeArea()
+
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .scaleEffect(scale)
+                    .frame(
+                        width: max(1, proxy.size.width - 32),
+                        height: max(1, proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom - 64)
+                    )
+                    .position(
+                        x: proxy.size.width / 2,
+                        y: (proxy.size.height + proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom) / 2
+                    )
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                scale = min(3.5, max(1, value))
+                            }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            scale = scale > 1 ? 1 : 2
+                        }
+                    }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(.black.opacity(0.5), in: Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(.white.opacity(0.18), lineWidth: 1)
+                        )
+                }
+                .padding(.top, max(12, proxy.safeAreaInsets.top + 8))
+                .padding(.trailing, 18)
+            }
+        }
     }
 }

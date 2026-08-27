@@ -52,6 +52,18 @@ struct KeyboardDismissInstaller: UIViewRepresentable {
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             true
         }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            !isInteractiveInput(touch.view)
+        }
+
+        private func isInteractiveInput(_ view: UIView?) -> Bool {
+            guard let view else { return false }
+            if view is UIControl || view is UITextView {
+                return true
+            }
+            return isInteractiveInput(view.superview)
+        }
     }
 }
 
