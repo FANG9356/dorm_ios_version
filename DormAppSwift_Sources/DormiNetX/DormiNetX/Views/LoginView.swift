@@ -24,6 +24,8 @@ struct LoginView: View {
     @State private var showingPasscodeModal: Bool = false
     @State private var passcodeInput: String = ""
     @State private var passcodeError: String? = nil
+    @State private var pendingSavedAccount: SavedAccount?
+    @State private var isVerifyingPasscode = false
     @FocusState private var isPasscodeFocused: Bool
     
     @State private var savedAccounts: [SavedAccount] = []
@@ -312,30 +314,7 @@ struct LoginView: View {
                                 Menu {
                                     ForEach(savedAccounts) { account in
                                         Button(action: {
-                                            email = account.email
-                                            password = ""
-                                            name = account.name
-                                            isSignUpMode = false
-                                            isForgotPasswordMode = false
-                                            errorMessage = nil
-	                                            confirmPassword = ""
-	                                            isConfirmPasswordVisible = false
-	                                            if let token = account.token, !token.isEmpty {
-	                                                APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
-	                                                userEmail = account.email
-	                                                userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "User") : account.name
-	                                                if securityTokenEnabled && !securityPasscode.isEmpty {
-                                                    passcodeInput = ""
-                                                    passcodeError = nil
-                                                    withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
-                                                        showingPasscodeModal = true
-                                                    }
-                                                } else {
-                                                    withAnimation(.easeInOut(duration: 0.6)) {
-                                                        isLoggedIn = true
-                                                    }
-                                                }
-                                            }
+                                            selectSavedAccount(account)
                                         }) {
                                             Text(account.name.isEmpty ? account.email : "\(account.name) (\(account.email))")
                                         }
@@ -438,6 +417,10 @@ struct LoginView: View {
                                     HStack(spacing: 12) {
                                         Button(action: {
                                             isPasscodeFocused = false
+                                            pendingSavedAccount = nil
+                                            passcodeInput = ""
+                                            passcodeError = nil
+                                            isVerifyingPasscode = false
                                             withAnimation(.easeInOut(duration: 0.2)) {
                                                 showingPasscodeModal = false
                                             }
@@ -689,27 +672,77 @@ struct LoginView: View {
         UserDefaults.standard.removeObject(forKey: "savedAccountsHistory")
         savedAccounts = []
     }
+
+    private func selectSavedAccount(_ account: SavedAccount) {
+        email = account.email
+        password = ""
+        name = account.name
+        isSignUpMode = false
+        isForgotPasswordMode = false
+        errorMessage = nil
+        confirmPassword = ""
+        isConfirmPasswordVisible = false
+
+        guard let token = account.token, !token.isEmpty else {
+            showError("Saved session is missing. Please sign in again.")
+            return
+        }
+
+        if securityTokenEnabled && !securityPasscode.isEmpty {
+            pendingSavedAccount = account
+            passcodeInput = ""
+            passcodeError = nil
+            isVerifyingPasscode = false
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                showingPasscodeModal = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isPasscodeFocused = true
+            }
+        } else {
+            restoreSavedAccount(account, token: token)
+            completeLoginTransition()
+        }
+    }
+
+    private func restoreSavedAccount(_ account: SavedAccount, token: String) {
+        APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
+        userEmail = account.email
+        userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "User") : account.name
+    }
+
+    private func completeLoginTransition(shouldSaveAccount: Bool = true) {
+        withAnimation(.easeOut(duration: 0.3)) {
+            isScreenReady = false
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                isLoggedIn = true
+                if shouldSaveAccount {
+                    saveAccount()
+                }
+            }
+        }
+    }
     
     private func verifyPasscode() {
+        guard !isVerifyingPasscode else { return }
+
         if passcodeInput == securityPasscode {
+            isVerifyingPasscode = true
             isPasscodeFocused = false
             withAnimation(.easeInOut(duration: 0.2)) {
                 showingPasscodeModal = false
             }
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                // Fade out LoginView before switching screens
-                withAnimation(.easeOut(duration: 0.3)) {
-                    isScreenReady = false
+                if let account = pendingSavedAccount, let token = account.token, !token.isEmpty {
+                    restoreSavedAccount(account, token: token)
+                    pendingSavedAccount = nil
                 }
-                
-                // Switch to Dashboard after the login UI has faded out
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.easeInOut(duration: 0.6)) {
-                        isLoggedIn = true
-                        saveAccount()
-                    }
-                }
+
+                completeLoginTransition()
             }
         } else {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
