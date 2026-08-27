@@ -832,7 +832,7 @@ struct TenantFormSheet: View {
     @State private var installmentMonths = ""
     @State private var installmentAmount = ""
     @State private var bookingSlipPaths: [String] = []
-    @State private var selectedSlipItem: PhotosPickerItem?
+    @State private var selectedSlipItems: [PhotosPickerItem] = []
     @State private var isImportingSlip = false
     @State private var slipImportMessage: String?
     @State private var indefiniteContract = false
@@ -1183,7 +1183,7 @@ struct TenantFormSheet: View {
                             paymentChannel = value
                             if value == "cash" {
                                 bookingSlipPaths = []
-                                selectedSlipItem = nil
+                                selectedSlipItems = []
                             }
                         }
                     } label: {
@@ -1287,20 +1287,40 @@ struct TenantFormSheet: View {
     @ViewBuilder
     private var tenantSlipPickerContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let image = firstBookingSlipImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 160)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                    )
+            if !bookingSlipImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(bookingSlipImages.enumerated()), id: \.offset) { index, image in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 112, height: 138)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                    )
+
+                                Button {
+                                    removeBookingSlip(at: index)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 24, height: 24)
+                                        .background(.black.opacity(0.55), in: Circle())
+                                }
+                                .buttonStyle(.plain)
+                                .padding(6)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
 
-            PhotosPicker(selection: $selectedSlipItem, matching: .images, photoLibrary: .shared()) {
+            PhotosPicker(selection: $selectedSlipItems, maxSelectionCount: 10, matching: .images, photoLibrary: .shared()) {
                 HStack(spacing: 10) {
                     if isImportingSlip {
                         ProgressView()
@@ -1310,7 +1330,7 @@ struct TenantFormSheet: View {
                             .font(.system(size: 17, weight: .bold))
                     }
 
-                    Text(bookingSlipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เปลี่ยนรูปสลิป")
+                    Text(bookingSlipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
                         .font(.custom("SukhumvitSet-Bold", size: 15))
 
                     Spacer()
@@ -1330,7 +1350,7 @@ struct TenantFormSheet: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text(slipImportMessage ?? "มีรูปสลิปแนบแล้ว")
+                    Text(slipImportMessage ?? "มีรูปสลิปแนบ \(bookingSlipPaths.count) รูป")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -1340,19 +1360,19 @@ struct TenantFormSheet: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .onChange(of: selectedSlipItem) { _, newItem in
-            importBookingSlip(newItem)
+        .onChange(of: selectedSlipItems) { _, newItems in
+            importBookingSlips(newItems)
         }
     }
 
-    private var firstBookingSlipImage: UIImage? {
-        guard let firstPath = bookingSlipPaths.first,
-              let url = SlipImageManager.url(for: firstPath),
-              FileManager.default.fileExists(atPath: url.path) else {
-            return nil
+    private var bookingSlipImages: [UIImage] {
+        bookingSlipPaths.compactMap { path in
+            guard let url = SlipImageManager.url(for: path),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return nil
+            }
+            return UIImage(contentsOfFile: url.path)
         }
-
-        return UIImage(contentsOfFile: url.path)
     }
 
     private func submitForm() async {
@@ -1433,26 +1453,38 @@ struct TenantFormSheet: View {
         return
     }
 
-    private func importBookingSlip(_ item: PhotosPickerItem?) {
-        guard let item else { return }
+    private func removeBookingSlip(at index: Int) {
+        guard bookingSlipPaths.indices.contains(index) else { return }
+        bookingSlipPaths.remove(at: index)
+        slipImportMessage = bookingSlipPaths.isEmpty ? nil : "มีรูปสลิปแนบ \(bookingSlipPaths.count) รูป"
+    }
+
+    private func importBookingSlips(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
 
         isImportingSlip = true
         slipImportMessage = nil
 
         Task {
             do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
-                    throw CocoaError(.fileReadUnknown)
+                var imported: [String] = []
+                for item in items {
+                    guard let data = try await item.loadTransferable(type: Data.self) else {
+                        continue
+                    }
+                    imported.append(try SlipImageManager.saveImageData(data))
                 }
 
-                let fileName = try SlipImageManager.saveImageData(data)
+                guard !imported.isEmpty else { throw CocoaError(.fileReadUnknown) }
                 await MainActor.run {
-                    bookingSlipPaths = [fileName]
+                    bookingSlipPaths.append(contentsOf: imported)
+                    selectedSlipItems = []
                     isImportingSlip = false
-                    slipImportMessage = "เพิ่มรูปสลิปแล้ว"
+                    slipImportMessage = "เพิ่มรูปสลิปแล้ว \(imported.count) รูป"
                 }
             } catch {
                 await MainActor.run {
+                    selectedSlipItems = []
                     isImportingSlip = false
                     slipImportMessage = "เพิ่มรูปสลิปไม่สำเร็จ"
                 }

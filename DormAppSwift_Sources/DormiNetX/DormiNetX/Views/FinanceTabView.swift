@@ -521,7 +521,8 @@ struct PaymentEditor: View {
     @State private var dueDate: String
     @State private var paymentDate: String
     @State private var paymentStatus: String
-    @State private var selectedSlipItem: PhotosPickerItem?
+    @State private var slipPaths: [String]
+    @State private var selectedSlipItems: [PhotosPickerItem] = []
     @State private var isImportingSlip = false
     @State private var slipImportMessage: String?
     @State private var selectedDetent: PresentationDetent = .large
@@ -548,7 +549,9 @@ struct PaymentEditor: View {
         _applianceFee = State(initialValue: payment.map { String(format: "%.0f", $0.applianceFee) } ?? "")
         _paidAmount = State(initialValue: payment.map { String(format: "%.0f", $0.paidAmount) } ?? "")
         _method = State(initialValue: payment?.method ?? "")
-        _slipPath = State(initialValue: payment?.slipPath ?? "")
+        let initialSlipPaths = Self.normalizedSlipPaths(from: payment)
+        _slipPath = State(initialValue: initialSlipPaths.first ?? "")
+        _slipPaths = State(initialValue: initialSlipPaths)
         _dueDate = State(initialValue: payment?.dueDate ?? "")
         _paymentDate = State(initialValue: payment?.paymentDate ?? "")
         _paymentStatus = State(initialValue: payment?.paymentStatus.isEmpty == false ? payment?.paymentStatus ?? "pending" : "pending")
@@ -632,7 +635,8 @@ struct PaymentEditor: View {
                         item.applianceFee = money(applianceFee)
                         item.paidAmount = paymentStatus == "paid" && money(paidAmount) == 0 ? totalAmount : money(paidAmount)
                         item.method = clean(method)
-                        item.slipPath = clean(slipPath)
+                        item.slipPath = slipPaths.first ?? clean(slipPath)
+                        item.slipPathArray = slipPaths
                         item.dueDate = clean(dueDate)
                         item.paymentDate = clean(paymentDate)
                         item.paymentStatus = paymentStatus
@@ -688,30 +692,50 @@ struct PaymentEditor: View {
     @ViewBuilder
     private var slipPickerContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let image = selectedSlipImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 170)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
-                    )
+            if !slipImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(slipImages.enumerated()), id: \.offset) { index, image in
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 112, height: 140)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                    )
+
+                                Button {
+                                    removeSlip(at: index)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 24, height: 24)
+                                        .background(.black.opacity(0.55), in: Circle())
+                                }
+                                .buttonStyle(.plain)
+                                .padding(6)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
 
-            PhotosPicker(selection: $selectedSlipItem, matching: .images, photoLibrary: .shared()) {
+            PhotosPicker(selection: $selectedSlipItems, maxSelectionCount: 10, matching: .images, photoLibrary: .shared()) {
                 HStack(spacing: 10) {
                     if isImportingSlip {
                         ProgressView()
                             .scaleEffect(0.82)
                     } else {
-                        Image(systemName: selectedSlipImage == nil ? "photo.badge.plus" : "photo.on.rectangle")
+                        Image(systemName: slipPaths.isEmpty ? "photo.badge.plus" : "photo.on.rectangle")
                             .font(.system(size: 17, weight: .bold))
                     }
 
-                    Text(selectedSlipImage == nil ? "เพิ่มรูปสลิป" : "เปลี่ยนรูปสลิป")
+                    Text(slipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
                         .font(.custom("SukhumvitSet-Bold", size: 15))
 
                     Spacer()
@@ -727,11 +751,11 @@ struct PaymentEditor: View {
             .buttonStyle(.plain)
             .disabled(isImportingSlip)
 
-            if !slipPath.isEmpty {
+            if !slipPaths.isEmpty {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    Text(slipImportMessage ?? "มีรูปสลิปแนบแล้ว")
+                    Text(slipImportMessage ?? "มีรูปสลิปแนบ \(slipPaths.count) รูป")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -741,18 +765,19 @@ struct PaymentEditor: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .onChange(of: selectedSlipItem) { _, newItem in
-            importSlipImage(newItem)
+        .onChange(of: selectedSlipItems) { _, newItems in
+            importSlipImages(newItems)
         }
     }
 
-    private var selectedSlipImage: UIImage? {
-        guard let url = SlipImageManager.url(for: slipPath),
-              FileManager.default.fileExists(atPath: url.path) else {
-            return nil
+    private var slipImages: [UIImage] {
+        slipPaths.compactMap { path in
+            guard let url = SlipImageManager.url(for: path),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return nil
+            }
+            return UIImage(contentsOfFile: url.path)
         }
-
-        return UIImage(contentsOfFile: url.path)
     }
 
     private var totalAmount: Double {
@@ -794,26 +819,40 @@ struct PaymentEditor: View {
         .padding(.vertical, 6)
     }
 
-    private func importSlipImage(_ item: PhotosPickerItem?) {
-        guard let item else { return }
+    private func removeSlip(at index: Int) {
+        guard slipPaths.indices.contains(index) else { return }
+        slipPaths.remove(at: index)
+        slipPath = slipPaths.first ?? ""
+        slipImportMessage = slipPaths.isEmpty ? nil : "มีรูปสลิปแนบ \(slipPaths.count) รูป"
+    }
+
+    private func importSlipImages(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
 
         isImportingSlip = true
         slipImportMessage = nil
 
         Task {
             do {
-                guard let data = try await item.loadTransferable(type: Data.self) else {
-                    throw CocoaError(.fileReadUnknown)
+                var imported: [String] = []
+                for item in items {
+                    guard let data = try await item.loadTransferable(type: Data.self) else {
+                        continue
+                    }
+                    imported.append(try SlipImageManager.saveImageData(data))
                 }
 
-                let fileName = try SlipImageManager.saveImageData(data)
+                guard !imported.isEmpty else { throw CocoaError(.fileReadUnknown) }
                 await MainActor.run {
-                    slipPath = fileName
+                    slipPaths.append(contentsOf: imported)
+                    slipPath = slipPaths.first ?? ""
+                    selectedSlipItems = []
                     isImportingSlip = false
-                    slipImportMessage = "เพิ่มรูปสลิปแล้ว"
+                    slipImportMessage = "เพิ่มรูปสลิปแล้ว \(imported.count) รูป"
                 }
             } catch {
                 await MainActor.run {
+                    selectedSlipItems = []
                     isImportingSlip = false
                     slipImportMessage = "เพิ่มรูปสลิปไม่สำเร็จ"
                 }
@@ -841,5 +880,14 @@ struct PaymentEditor: View {
 
     private func clean(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func normalizedSlipPaths(from payment: Payment?) -> [String] {
+        guard let payment else { return [] }
+        var paths = payment.slipPathArray
+        if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
+            paths.insert(payment.slipPath, at: 0)
+        }
+        return paths
     }
 }
