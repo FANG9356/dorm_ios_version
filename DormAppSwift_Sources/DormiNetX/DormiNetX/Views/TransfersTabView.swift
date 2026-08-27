@@ -117,6 +117,7 @@ private struct TransferEvidenceRow: View {
     let onReject: () -> Void
     let onEdit: () -> Void
     @State private var showingSlipPreview = false
+    @State private var previewIndex = 0
 
     var body: some View {
         GlassCard {
@@ -137,32 +138,40 @@ private struct TransferEvidenceRow: View {
                         .foregroundStyle(payment.paymentStatus == "paid" ? .green : .orange)
                 }
 
-                if let slipImage {
-                    Button {
-                        showingSlipPreview = true
-                    } label: {
-                        ZStack(alignment: .bottomTrailing) {
-                            Image(uiImage: slipImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 170)
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                                )
+                if !slipImages.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(Array(slipImages.enumerated()), id: \.offset) { index, image in
+                                Button {
+                                    previewIndex = index
+                                    showingSlipPreview = true
+                                } label: {
+                                    ZStack(alignment: .bottomTrailing) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: slipImages.count == 1 ? nil : 190, height: 170)
+                                            .frame(maxWidth: slipImages.count == 1 ? .infinity : nil)
+                                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                                            )
 
-                            Label("ดูเต็มจอ", systemImage: "arrow.up.left.and.arrow.down.right")
-                                .font(.custom("SukhumvitSet-Bold", size: 11))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 7)
-                                .background(.black.opacity(0.46), in: Capsule())
-                                .padding(10)
+                                        Label(index == 0 ? "ดูเต็มจอ" : "\(index + 1)", systemImage: index == 0 ? "arrow.up.left.and.arrow.down.right" : "photo")
+                                            .font(.custom("SukhumvitSet-Bold", size: 11))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 7)
+                                            .background(.black.opacity(0.46), in: Capsule())
+                                            .padding(10)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.plain)
                 }
 
                 HStack(spacing: 8) {
@@ -178,14 +187,14 @@ private struct TransferEvidenceRow: View {
             }
         }
         .fullScreenCover(isPresented: $showingSlipPreview) {
-            if let slipImage {
-                SlipPreviewView(image: slipImage)
+            if !slipImages.isEmpty {
+                SlipPreviewView(images: slipImages, initialIndex: previewIndex)
             }
         }
     }
 
     private var evidenceLabel: String {
-        if slipImage != nil { return "มีรูปสลิปแนบแล้ว" }
+        if !slipImages.isEmpty { return "มีรูปสลิปแนบ \(slipImages.count) รูป" }
         if !payment.slipPath.isEmpty { return payment.slipPath }
         return "\(payment.slipPathArray.count) ไฟล์"
     }
@@ -203,50 +212,80 @@ private struct TransferEvidenceRow: View {
         .buttonStyle(.plain)
     }
 
-    private var slipImage: UIImage? {
-        let path = payment.slipPath.isEmpty ? payment.slipPathArray.first ?? "" : payment.slipPath
-        guard let url = SlipImageManager.url(for: path),
-              FileManager.default.fileExists(atPath: url.path) else {
-            return nil
+    private var slipImages: [UIImage] {
+        var paths = payment.slipPathArray
+        if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
+            paths.insert(payment.slipPath, at: 0)
         }
 
-        return UIImage(contentsOfFile: url.path)
+        return paths.compactMap { path in
+            guard let url = SlipImageManager.url(for: path),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return nil
+            }
+            return UIImage(contentsOfFile: url.path)
+        }
     }
 }
 
 private struct SlipPreviewView: View {
-    let image: UIImage
+    let images: [UIImage]
+    let initialIndex: Int
     @Environment(\.dismiss) private var dismiss
     @State private var scale: CGFloat = 1
+    @State private var selectedIndex: Int
+
+    init(images: [UIImage], initialIndex: Int = 0) {
+        self.images = images
+        self.initialIndex = initialIndex
+        _selectedIndex = State(initialValue: min(max(0, initialIndex), max(0, images.count - 1)))
+    }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topTrailing) {
                 Color.black.ignoresSafeArea()
 
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .scaleEffect(scale)
-                    .frame(
-                        width: max(1, proxy.size.width - 32),
-                        height: max(1, proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom - 64)
-                    )
-                    .position(
-                        x: proxy.size.width / 2,
-                        y: (proxy.size.height + proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom) / 2
-                    )
-                    .gesture(
-                        MagnificationGesture()
-                            .onChanged { value in
-                                scale = min(3.5, max(1, value))
+                TabView(selection: $selectedIndex) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, image in
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .scaleEffect(scale)
+                            .frame(
+                                width: max(1, proxy.size.width - 32),
+                                height: max(1, proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom - 84)
+                            )
+                            .tag(index)
+                            .gesture(
+                                MagnificationGesture()
+                                    .onChanged { value in
+                                        scale = min(3.5, max(1, value))
+                                    }
+                            )
+                            .onTapGesture(count: 2) {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                    scale = scale > 1 ? 1 : 2
+                                }
                             }
-                    )
-                    .onTapGesture(count: 2) {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            scale = scale > 1 ? 1 : 2
-                        }
                     }
+                }
+                .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .automatic : .never))
+                .frame(width: proxy.size.width, height: proxy.size.height)
+                .onChange(of: selectedIndex) { _, _ in
+                    scale = 1
+                }
+
+                if images.count > 1 {
+                    Text("\(selectedIndex + 1) / \(images.count)")
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .background(.black.opacity(0.45), in: Capsule())
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, max(12, proxy.safeAreaInsets.top + 13))
+                }
 
                 Button {
                     dismiss()
