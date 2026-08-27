@@ -651,12 +651,22 @@ struct LoginView: View {
         }
     }
     
-	    private func saveAccount() {
-	        var accounts = savedAccounts
-	        accounts.removeAll(where: { $0.email == email })
-	        let currentToken = APIService.shared.authToken ?? ""
-	        let currentRole = APIService.shared.userRole
-	        accounts.insert(SavedAccount(name: userName, email: email, token: currentToken, role: currentRole), at: 0)
+    private func saveAccount() {
+        var accounts = savedAccounts
+        accounts.removeAll(where: { $0.email == email })
+        let currentToken = APIService.shared.authToken ?? ""
+        let currentRole = APIService.shared.userRole
+        let currentAdminID = UserDefaults.standard.integer(forKey: "adminID")
+        accounts.insert(
+            SavedAccount(
+                name: userName,
+                email: email,
+                token: currentToken,
+                role: currentRole,
+                adminID: currentAdminID > 0 ? currentAdminID : nil
+            ),
+            at: 0
+        )
         
         if accounts.count > 5 {
             accounts = Array(accounts.prefix(5))
@@ -706,6 +716,9 @@ struct LoginView: View {
     }
 
     private func restoreSavedAccount(_ account: SavedAccount, token: String) {
+        if let adminID = account.adminID, adminID > 0 {
+            UserDefaults.standard.set(adminID, forKey: "adminID")
+        }
         APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
         userEmail = account.email
         userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "User") : account.name
@@ -759,4 +772,5 @@ struct SavedAccount: Identifiable, Codable {
     let email: String
     var token: String?
     var role: String?
+    var adminID: Int?
 }

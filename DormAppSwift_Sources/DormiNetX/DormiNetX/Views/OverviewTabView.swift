@@ -4,8 +4,20 @@ import SwiftData
 // MARK: - Overview Tab View
 struct OverviewTabView: View {
     @StateObject private var viewModel = DashboardViewModel()
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
+    @Query(sort: \DormUser.lastUpdated, order: .reverse) private var users: [DormUser]
+    @Query(sort: \Room.lastUpdated, order: .reverse) private var rooms: [Room]
+    @Query(sort: \Payment.lastUpdated, order: .reverse) private var payments: [Payment]
+    @Query(sort: \Maintenance.lastUpdated, order: .reverse) private var maintenances: [Maintenance]
+
+    private var dashboardDataKey: String {
+        [
+            "\(users.count):\(users.first?.lastUpdated.timeIntervalSince1970 ?? 0)",
+            "\(rooms.count):\(rooms.first?.lastUpdated.timeIntervalSince1970 ?? 0)",
+            "\(payments.count):\(payments.first?.lastUpdated.timeIntervalSince1970 ?? 0)",
+            "\(maintenances.count):\(maintenances.first?.lastUpdated.timeIntervalSince1970 ?? 0)"
+        ].joined(separator: "|")
+    }
     
     var body: some View {
         ScrollView {
@@ -221,8 +233,9 @@ struct OverviewTabView: View {
             }
             .padding(.top, 110)
         }
-        .onAppear {
-            viewModel.fetchLocalData(modelContext: modelContext)
+        .task(id: dashboardDataKey) {
+            await Task.yield()
+            viewModel.updateLocalData(users: users, rooms: rooms, payments: payments, maintenances: maintenances)
         }
     }
 }

@@ -99,17 +99,22 @@ struct AccountScopedRootView: View {
 
     init() {
         let initialContainer: ModelContainer
+        let initialStoreKey: String
 
         if UserDefaults.standard.bool(forKey: "isLoggedIn"),
            let accountID = Self.resolveAccountID(),
            let container = try? AccountScopedStore.makeContainer(accountID: accountID) {
             initialContainer = container
+            let token = UserDefaults.standard.string(forKey: "authToken") ?? ""
+            initialStoreKey = "account-\(accountID)-\(token)"
         } else {
             initialContainer = (try? AccountScopedStore.makeGuestContainer())
                 ?? Self.fallbackContainer()
+            initialStoreKey = "guest"
         }
 
         _modelContainer = State(initialValue: initialContainer)
+        _loadedStoreKey = State(initialValue: initialStoreKey)
     }
 
     private static func fallbackContainer() -> ModelContainer {
@@ -129,7 +134,13 @@ struct AccountScopedRootView: View {
     }
 
     var body: some View {
-        SplashView()
+        Group {
+            if isLoggedIn && loadedStoreKey != storeKey {
+                AccountStoreLoadingView()
+            } else {
+                SplashView()
+            }
+        }
             .modelContainer(modelContainer)
             .task(id: storeKey) {
                 reloadContainerIfNeeded()
@@ -152,7 +163,8 @@ struct AccountScopedRootView: View {
         }
 
         guard let accountID = Self.resolveAccountID() else {
-            print("⚠️ Logged in but no adminID is available; keeping current store")
+            print("⚠️ Logged in but no adminID is available; returning to login")
+            resetToGuestStore()
             return
         }
 
@@ -162,6 +174,22 @@ struct AccountScopedRootView: View {
             print("✅ Opened local SwiftData store for account \(accountID)")
         } catch {
             print("❌ Failed to open account-local SwiftData store: \(error)")
+            resetToGuestStore()
+        }
+    }
+
+    private func resetToGuestStore() {
+        APIService.shared.authToken = nil
+        APIService.shared.currentEmail = nil
+        APIService.shared.userRole = nil
+        UserDefaults.standard.removeObject(forKey: "adminID")
+        isLoggedIn = false
+
+        do {
+            modelContainer = try AccountScopedStore.makeGuestContainer()
+            loadedStoreKey = "guest"
+        } catch {
+            print("❌ Failed to recover guest SwiftData container: \(error)")
         }
     }
 
@@ -206,6 +234,36 @@ struct AccountScopedRootView: View {
 
         UserDefaults.standard.set(accountID, forKey: "adminID")
         return accountID
+    }
+}
+
+private struct AccountStoreLoadingView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            GlassBackgroundView()
+                .ignoresSafeArea()
+
+            VStack(spacing: 14) {
+                ProgressView()
+                    .tint(colorScheme == .dark ? .white : .indigo)
+                    .scaleEffect(1.1)
+                Text("กำลังเปิดข้อมูลของบัญชีนี้")
+                    .font(.custom("SukhumvitSet-Bold", size: 16))
+                    .foregroundStyle(.primary)
+                Text("เตรียมข้อมูลภายในเครื่อง")
+                    .font(.custom("SukhumvitSet-Text", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 22)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+        }
     }
 }
 

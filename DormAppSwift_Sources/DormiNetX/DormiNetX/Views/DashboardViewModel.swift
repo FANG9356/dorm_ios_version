@@ -162,37 +162,47 @@ class DashboardViewModel: ObservableObject {
             let rooms = try modelContext.fetch(FetchDescriptor<Room>())
             let payments = try modelContext.fetch(FetchDescriptor<Payment>())
             let maintenances = try modelContext.fetch(FetchDescriptor<Maintenance>())
-
-            let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
-            let currentMonth = monthKey(for: Date())
-            let currentPayments = payments.filter { $0.month == currentMonth }
-            let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
-            let pending = currentPayments.filter { $0.paymentStatus != "paid" }
-
-            stats = APIDashboardStats(
-                total_residents: activeUsers.count,
-                empty_rooms: max(rooms.count - activeUsers.count, 0),
-                income_this_month: received,
-                billing_cycle_income: currentPayments.reduce(0) { $0 + $1.amount },
-                pending_bills: pending.count
-            )
-            pendingUsers = activeUsers.filter { user in
-                !currentPayments.contains { payment in
-                    payment.userId == (user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)) && payment.paymentStatus == "paid"
-                }
-            }.map { user in
-                APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
-            }
-            pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
-            inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count
-            completedMaints = maintenances.filter { $0.status == "เสร็จสิ้น" }.count
-            depositThisMonth = users.filter { $0.moveInDate.hasPrefix(currentMonth) }.reduce(0) { $0 + $1.deposit }
-            financialStats = financialStatsFrom(payments: payments)
-            moveInStats = moveInStatsFrom(users: users)
+            updateLocalData(users: users, rooms: rooms, payments: payments, maintenances: maintenances)
         } catch {
             errorMessage = "ไม่สามารถโหลดข้อมูลจากเครื่องได้"
+            isLoading = false
         }
+    }
 
+    func updateLocalData(users rawUsers: [DormUser], rooms rawRooms: [Room], payments rawPayments: [Payment], maintenances rawMaintenances: [Maintenance]) {
+        isLoading = true
+        errorMessage = nil
+
+        let users = rawUsers.filter { !$0.isDeletedLocally }
+        let rooms = rawRooms.filter { !$0.isDeletedLocally }
+        let payments = rawPayments.filter { !$0.isDeletedLocally }
+        let maintenances = rawMaintenances.filter { !$0.isDeletedLocally }
+        let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
+        let currentMonth = monthKey(for: Date())
+        let currentPayments = payments.filter { $0.month == currentMonth }
+        let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
+        let pending = currentPayments.filter { $0.paymentStatus != "paid" }
+
+        stats = APIDashboardStats(
+            total_residents: activeUsers.count,
+            empty_rooms: max(rooms.count - activeUsers.count, 0),
+            income_this_month: received,
+            billing_cycle_income: currentPayments.reduce(0) { $0 + $1.amount },
+            pending_bills: pending.count
+        )
+        pendingUsers = activeUsers.filter { user in
+            !currentPayments.contains { payment in
+                payment.userId == (user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)) && payment.paymentStatus == "paid"
+            }
+        }.map { user in
+            APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
+        }
+        pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
+        inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count
+        completedMaints = maintenances.filter { $0.status == "เสร็จสิ้น" }.count
+        depositThisMonth = users.filter { $0.moveInDate.hasPrefix(currentMonth) }.reduce(0) { $0 + $1.deposit }
+        financialStats = financialStatsFrom(payments: payments)
+        moveInStats = moveInStatsFrom(users: users)
         isLoading = false
     }
 
@@ -225,19 +235,15 @@ class DashboardViewModel: ObservableObject {
             async let statsData = APIService.shared.fetchDashboardStats()
             async let usersData = APIService.shared.fetchUsersData()
             async let paymentsData = APIService.shared.fetchPaymentsData()
-            async let roomsData = APIService.shared.fetchRooms()
-            async let roomTypesData = APIService.shared.fetchRoomTypesData()
             async let logsData = APIService.shared.fetchLogsData()
             async let maintenancesData = APIService.shared.fetchMaintenancesData()
             
-            let (dStats, dUsers, dPayments, dRooms, dRoomTypes, dLogs, dMaints) = try await (statsData, usersData, paymentsData, roomsData, roomTypesData, logsData, maintenancesData)
+            let (dStats, dUsers, dPayments, dLogs, dMaints) = try await (statsData, usersData, paymentsData, logsData, maintenancesData)
             
             let decoder = JSONDecoder()
             let parsedStats = try? decoder.decode(APIDashboardStats.self, from: dStats)
             let users = (try? decoder.decode([APIUser].self, from: dUsers)) ?? []
             let payments = (try? decoder.decode([APIPayment].self, from: dPayments)) ?? []
-            let rooms = (try? decoder.decode([APIRoom].self, from: dRooms)) ?? []
-            let roomTypes = (try? decoder.decode([APIRoomType].self, from: dRoomTypes)) ?? []
             let logs = (try? decoder.decode([APILog].self, from: dLogs)) ?? []
             let maintenances = (try? decoder.decode([APIMaintenance].self, from: dMaints)) ?? []
             
