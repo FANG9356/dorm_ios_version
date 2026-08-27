@@ -194,12 +194,13 @@ struct RoomListView: View {
                 .onEnded { value in
                     let translation = value.translation.width
                     let predicted = value.predictedEndTranslation.width
+                    let startedNearLeadingEdge = value.startLocation.x <= 28
                     
-                    if translation > 40 || predicted > 80 {
+                    if !isSidebarOpen && startedNearLeadingEdge && (translation > 40 || predicted > 80) {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                             isSidebarOpen = true
                         }
-                    } else if translation < -40 || predicted < -80 {
+                    } else if isSidebarOpen && (translation < -40 || predicted < -80) {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                             isSidebarOpen = false
                         }
@@ -287,7 +288,7 @@ struct RoomListView: View {
 
     private var showsFloatingAddButton: Bool {
         switch selectedTab {
-        case .tenants, .bills, .pricing, .maintenance:
+        case .tenants, .pricing, .maintenance:
             return true
         default:
             return false
@@ -298,8 +299,6 @@ struct RoomListView: View {
         switch selectedTab {
         case .tenants:
             showAddTenantSheet = true
-        case .bills:
-            showAddBill = true
         case .pricing:
             showAddRoomType = true
         case .maintenance:

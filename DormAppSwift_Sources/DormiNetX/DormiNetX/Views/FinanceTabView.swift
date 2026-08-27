@@ -56,6 +56,12 @@ struct FinanceTabView: View {
             }
             Button("ยกเลิก", role: .cancel) { }
         }
+        .onAppear {
+            ensurePaymentsForSelectedMonth()
+        }
+        .onChange(of: selectedMonth) { _, _ in
+            ensurePaymentsForSelectedMonth()
+        }
     }
 
     private var deleteDialogBinding: Binding<Bool> {
@@ -241,6 +247,113 @@ struct FinanceTabView: View {
         }
     }
 
+    private func ensurePaymentsForSelectedMonth() {
+        let activeUsers = users.filter {
+            !$0.isDeletedLocally &&
+            !$0.roomNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            $0.status != "ย้ายออกแล้ว"
+        }
+        guard !activeUsers.isEmpty else { return }
+
+        var didCreate = false
+        for user in activeUsers {
+            guard shouldCreatePayment(for: user, month: monthKey),
+                  !payments.contains(where: { payment in
+                      payment.month == monthKey &&
+                      clean(payment.roomNumber) == clean(user.roomNumber)
+                  }) else {
+                continue
+            }
+
+            let payment = generatedPayment(for: user, month: monthKey)
+            modelContext.insert(payment)
+            didCreate = true
+        }
+
+        guard didCreate else { return }
+        saveAndPush()
+    }
+
+    private func shouldCreatePayment(for user: DormUser, month: String) -> Bool {
+        if user.status == "จอง" {
+            return month == moveInMonth(for: user)
+        }
+
+        let moveInMonth = moveInMonth(for: user)
+        guard !moveInMonth.isEmpty else { return true }
+        return month >= moveInMonth
+    }
+
+    private func generatedPayment(for user: DormUser, month: String) -> Payment {
+        let payment = Payment(month: month)
+        let roomType = roomType(for: user)
+        let rent = roomType?.price ?? 0
+        let isBooking = user.status == "จอง"
+        let isMoveInMonth = month == moveInMonth(for: user)
+        let amount = isBooking ? user.deposit : rent + (isMoveInMonth ? user.deposit : 0)
+
+        payment.userId = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        payment.roomNumber = user.roomNumber
+        payment.rentFee = isBooking ? user.deposit : rent
+        payment.waterFee = 0
+        payment.electricFee = 0
+        payment.commonFee = 0
+        payment.lateFee = 0
+        payment.applianceFee = 0
+        payment.amount = amount
+        payment.method = paymentMethodLabel(for: user)
+        payment.slipPath = user.bookingSlips.first ?? ""
+        payment.slipPathArray = user.bookingSlips
+        payment.paymentPlan = user.paymentMethod
+        payment.installmentPhase = user.installmentMonths
+        payment.dueDate = dueDateKey(for: month)
+        payment.paymentStatus = inferredPaymentStatus(for: user, isMoveInMonth: isMoveInMonth)
+        payment.paidAmount = payment.paymentStatus == "paid" ? amount : (payment.paymentStatus == "partial" ? user.installmentAmount : 0)
+        payment.lastUpdated = Date()
+        payment.isDirty = true
+        return payment
+    }
+
+    private func inferredPaymentStatus(for user: DormUser, isMoveInMonth: Bool) -> String {
+        guard isMoveInMonth else { return "pending" }
+        if user.paymentMethod == "installment" { return "partial" }
+        if user.paymentMethod == "full_payment" { return "paid" }
+        return "pending"
+    }
+
+    private func paymentMethodLabel(for user: DormUser) -> String {
+        let method = user.paymentMethod == "installment" ? "ผ่อนชำระ" : (user.paymentMethod == "full_payment" ? "ชำระเต็มจำนวน" : "รอระบุ")
+        let channel = user.paymentChannel == "cash" ? "เงินสด" : (user.paymentChannel == "bank_transfer" ? "โอนผ่านธนาคาร" : "ยังไม่ได้ระบุช่องทาง")
+        return "\(method) • \(channel)"
+    }
+
+    private func roomType(for user: DormUser) -> RoomType? {
+        guard let room = rooms.first(where: { clean($0.roomNumber) == clean(user.roomNumber) }) else { return nil }
+        return roomTypes.first { clean($0.name) == clean(room.roomType) }
+    }
+
+    private func moveInMonth(for user: DormUser) -> String {
+        String(user.moveInDate.prefix(7))
+    }
+
+    private func dueDateKey(for month: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        guard let date = formatter.date(from: "\(month)-01") else { return "" }
+
+        var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
+        components.month = (components.month ?? 1) + 1
+        components.day = 0
+        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
+        return formatter.string(from: dueDate)
+    }
+
+    private func clean(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func currentDateString() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
@@ -331,11 +444,32 @@ private struct PaymentRow: View {
 
                 HStack {
                     if payment.paymentStatus != "paid" {
-                        Button("รับชำระเต็มจำนวน", action: onMarkPaid)
-                            .font(.custom("SukhumvitSet-Bold", size: 10))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 7)
-                            .background(Color.green.opacity(0.16), in: Capsule())
+                        Button(action: onMarkPaid) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text("รับชำระเต็มจำนวน")
+                                    .font(.custom("SukhumvitSet-Bold", size: 12))
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .opacity(0.75)
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 13)
+                            .frame(height: 34)
+                            .background(
+                                Capsule()
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color.green, Color.green.opacity(0.78)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            )
+                            .shadow(color: Color.green.opacity(0.22), radius: 8, x: 0, y: 4)
+                        }
+                        .buttonStyle(.plain)
                     }
                     Spacer()
                     if payment.isDirty {
@@ -425,8 +559,7 @@ struct PaymentEditor: View {
             Form {
                 Section("รอบบิล") {
                     if rooms.isEmpty {
-                        TextField("เลขห้อง", text: $roomNumber)
-                            .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
+                        labeledTextField("เลขห้อง", placeholder: "เช่น 101", text: $roomNumber)
                     } else {
                         Picker("ห้อง", selection: $roomNumber) {
                             ForEach(rooms) { room in
@@ -440,10 +573,10 @@ struct PaymentEditor: View {
                             applyRoomTypeDefaults()
                         }
                     }
-                    TextField("เดือน เช่น 2026-08", text: $month)
+                    labeledTextField("รอบเดือน", placeholder: "เช่น 2026-08", text: $month)
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($month, maxLength: 7)
-                    TextField("วันครบกำหนด เช่น 2026-08-31", text: $dueDate)
+                    labeledTextField("วันครบกำหนด", placeholder: "เช่น 2026-08-31", text: $dueDate)
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($dueDate)
                 }
@@ -465,12 +598,12 @@ struct PaymentEditor: View {
 
                 Section("การชำระเงิน") {
                     statusSelector
-                    TextField("ยอดที่ชำระแล้ว", text: $paidAmount)
+                    labeledTextField("ยอดที่ชำระแล้ว", placeholder: "0", text: $paidAmount)
                         .keyboardType(.decimalPad)
                         .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
-                    TextField("ช่องทางชำระเงิน", text: $method)
+                    labeledTextField("ช่องทางชำระเงิน", placeholder: "เช่น เงินสด หรือ โอนผ่านธนาคาร", text: $method)
                         .limitedText($method, maxLength: 60, trimNewlines: true)
-                    TextField("วันที่ชำระ เช่น 2026-08-23", text: $paymentDate)
+                    labeledTextField("วันที่ชำระ", placeholder: "เช่น 2026-08-23", text: $paymentDate)
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($paymentDate)
                     slipPickerContent
@@ -510,7 +643,6 @@ struct PaymentEditor: View {
                     .disabled(clean(roomNumber).isEmpty || clean(month).isEmpty)
                 }
             }
-            .dismissKeyboardOnTap()
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
                 applyRoomTypeDefaults(onlyWhenEmpty: true)
@@ -628,9 +760,38 @@ struct PaymentEditor: View {
     }
 
     private func moneyField(_ title: String, text: Binding<String>) -> some View {
-        TextField(title, text: text)
+        labeledTextField(title, placeholder: "0", text: text)
             .keyboardType(.decimalPad)
             .decimalInput(text, maxIntegerDigits: 9, maxFractionDigits: 2)
+    }
+
+    private func labeledTextField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.custom("SukhumvitSet-Medium", size: 12))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "pencil")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary.opacity(0.8))
+            }
+
+            TextField(placeholder, text: text)
+                .font(.custom("SukhumvitSet-Text", size: 16))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .padding(.vertical, 6)
     }
 
     private func importSlipImage(_ item: PhotosPickerItem?) {
