@@ -560,6 +560,22 @@ struct PaymentEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    PaymentEditorContextCard(
+                        roomNumber: clean(roomNumber).isEmpty ? "-" : clean(roomNumber),
+                        tenantName: selectedTenantName,
+                        roomType: selectedRoomTypeName,
+                        month: clean(month).isEmpty ? defaultMonth : clean(month),
+                        amount: totalAmount,
+                        paidAmount: money(paidAmount),
+                        status: statusTitle(for: paymentStatus),
+                        statusColor: statusColor(for: paymentStatus),
+                        slipCount: slipPaths.count
+                    )
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+
                 Section("รอบบิล") {
                     if rooms.isEmpty {
                         labeledTextField("เลขห้อง", placeholder: "เช่น 101", text: $roomNumber)
@@ -572,9 +588,15 @@ struct PaymentEditor: View {
                         .onChange(of: roomNumber) { _, _ in
                             applyRoomTypeDefaults(onlyWhenEmpty: true)
                         }
-                        Button("ใช้ราคาตามประเภทห้อง") {
+                        Button {
                             applyRoomTypeDefaults()
+                        } label: {
+                            Label("เติมราคาจากประเภทห้อง", systemImage: "wand.and.stars")
+                                .font(.custom("SukhumvitSet-Bold", size: 14))
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.blue)
                     }
                     labeledTextField("รอบเดือน", placeholder: "เช่น 2026-08", text: $month)
                         .keyboardType(.numbersAndPunctuation)
@@ -687,6 +709,35 @@ struct PaymentEditor: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var selectedTenant: DormUser? {
+        users.first { clean($0.roomNumber) == clean(roomNumber) }
+    }
+
+    private var selectedTenantName: String {
+        guard let selectedTenant else { return "ยังไม่พบลูกบ้านของห้องนี้" }
+        let fullName = "\(selectedTenant.firstName) \(selectedTenant.lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
+        return fullName.isEmpty ? "ลูกบ้าน" : fullName
+    }
+
+    private var selectedRoomTypeName: String {
+        guard let room = rooms.first(where: { clean($0.roomNumber) == clean(roomNumber) }) else {
+            return "ยังไม่พบข้อมูลห้อง"
+        }
+        return room.roomType.isEmpty ? "ไม่ระบุประเภทห้อง" : room.roomType
+    }
+
+    private func statusTitle(for value: String) -> String {
+        statusOptions.first { $0.0 == value }?.1 ?? "รอชำระ"
+    }
+
+    private func statusColor(for value: String) -> Color {
+        switch value {
+        case "paid": return .green
+        case "partial": return .blue
+        default: return .orange
+        }
     }
 
     @ViewBuilder
@@ -889,5 +940,105 @@ struct PaymentEditor: View {
             paths.insert(payment.slipPath, at: 0)
         }
         return paths
+    }
+}
+
+private struct PaymentEditorContextCard: View {
+    let roomNumber: String
+    let tenantName: String
+    let roomType: String
+    let month: String
+    let amount: Double
+    let paidAmount: Double
+    let status: String
+    let statusColor: Color
+    let slipCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 3) {
+                    Text(roomNumber)
+                        .font(.custom("SukhumvitSet-Bold", size: 24))
+                        .foregroundStyle(.primary)
+                        .minimumScaleFactor(0.75)
+                        .lineLimit(1)
+                    Text("ห้อง")
+                        .font(.custom("SukhumvitSet-Text", size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 70, height: 62)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(tenantName)
+                        .font(.custom("SukhumvitSet-Bold", size: 18))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Label(roomType, systemImage: "door.left.hand.open")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                    Label("รอบบิล \(month)", systemImage: "calendar")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 8)
+            }
+
+            HStack(spacing: 10) {
+                contextPill(title: "ยอดรวม", value: currency(amount), color: .indigo)
+                contextPill(title: "ชำระแล้ว", value: currency(paidAmount), color: .green)
+            }
+
+            HStack(spacing: 8) {
+                Label(status, systemImage: "circle.fill")
+                    .font(.custom("SukhumvitSet-Bold", size: 12))
+                    .foregroundStyle(statusColor)
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(statusColor.opacity(0.12), in: Capsule())
+
+                Label("\(slipCount) รูปสลิป", systemImage: "photo.on.rectangle")
+                    .font(.custom("SukhumvitSet-Medium", size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(Color.primary.opacity(0.06), in: Capsule())
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func contextPill(title: String, value: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Text", size: 11))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.custom("SukhumvitSet-Bold", size: 15))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .frame(height: 58)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func currency(_ amount: Double) -> String {
+        amount.formatted(.currency(code: "THB").precision(.fractionLength(0)))
     }
 }
