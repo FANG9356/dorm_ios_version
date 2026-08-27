@@ -13,15 +13,39 @@ struct BillsTabView: View {
 
     private var payments: [Payment] { allPayments.filter { !$0.isDeletedLocally } }
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
+    private var billSections: [(title: String, subtitle: String, icon: String, payments: [Payment])] {
+        [
+            (
+                "รอรับชำระ",
+                "รายการที่ยังต้องติดตาม",
+                "clock.fill",
+                payments.filter { $0.paymentStatus == "pending" }
+            ),
+            (
+                "ผ่อนชำระ",
+                "รายการที่รับบางส่วนหรืออยู่ในแผนผ่อน",
+                "circle.lefthalf.filled",
+                payments.filter { $0.paymentStatus == "partial" || $0.paymentPlan == "installment" }
+            ),
+            (
+                "ชำระแล้ว",
+                "ประวัติรับเงินที่ปิดรายการแล้ว",
+                "checkmark.circle.fill",
+                payments.filter { $0.paymentStatus == "paid" && $0.paymentPlan != "installment" }
+            )
+        ].map { section in
+            (section.0, section.1, section.2, section.3.sorted { $0.lastUpdated > $1.lastUpdated })
+        }.filter { !$0.payments.isEmpty }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("รายการบิล")
-                        .font(.custom("SukhumvitSet-Bold", size: 24))
-                    Text("รวมบิลเข้าออกและประวัติที่บันทึกไว้ในเครื่อง")
-                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .font(.custom("SukhumvitSet-Bold", size: 30))
+                    Text("รวมบิลรายเดือน แรกเข้า และประวัติรับเงินจากข้อมูลในเครื่อง")
+                        .font(.custom("SukhumvitSet-Text", size: 13))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -30,12 +54,15 @@ struct BillsTabView: View {
             if payments.isEmpty {
                 emptyState(icon: "doc.text.magnifyingglass", title: "ยังไม่มีข้อมูลบิล")
             } else {
-                ForEach(payments) { payment in
-                    BillRow(payment: payment, onEdit: {
-                        editingPayment = payment
-                    }, onDelete: {
-                        deletingPayment = payment
-                    })
+                ForEach(billSections, id: \.title) { section in
+                    BillSectionView(
+                        title: section.title,
+                        subtitle: section.subtitle,
+                        icon: section.icon,
+                        payments: section.payments,
+                        onEdit: { editingPayment = $0 },
+                        onDelete: { deletingPayment = $0 }
+                    )
                 }
             }
         }
@@ -108,6 +135,8 @@ struct BillsTabView: View {
         payment.dueDate = draft.dueDate
         payment.paymentStatus = draft.paymentStatus
         payment.paidAmount = draft.paidAmount
+        payment.paymentPlan = draft.paymentPlan
+        payment.installmentPhase = draft.installmentPhase
         payment.lastUpdated = Date()
         payment.isDirty = true
     }
@@ -123,6 +152,53 @@ struct BillsTabView: View {
         }
     }
 
+}
+
+private struct BillSectionView: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let payments: [Payment]
+    let onEdit: (Payment) -> Void
+    let onDelete: (Payment) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
+                    .background(.ultraThinMaterial, in: Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.custom("SukhumvitSet-Bold", size: 17))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.custom("SukhumvitSet-Text", size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(payments.count)")
+                    .font(.custom("SukhumvitSet-Bold", size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 34, minHeight: 28)
+                    .background(.ultraThinMaterial, in: Capsule())
+            }
+            .padding(.top, 4)
+
+            ForEach(payments) { payment in
+                BillRow(
+                    payment: payment,
+                    onEdit: { onEdit(payment) },
+                    onDelete: { onDelete(payment) }
+                )
+            }
+        }
+    }
 }
 
 private struct BillRow: View {
@@ -143,7 +219,7 @@ private struct BillRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ห้อง \(payment.roomNumber)")
                             .font(.custom("SukhumvitSet-Bold", size: 15))
-                        Text("รอบบิล \(payment.month)")
+                        Text(detailText)
                             .font(.custom("SukhumvitSet-Text", size: 11))
                             .foregroundStyle(.secondary)
                     }
@@ -261,5 +337,19 @@ private struct BillRow: View {
         case "partial": return .blue
         default: return .orange
         }
+    }
+
+    private var detailText: String {
+        var parts = ["รอบบิล \(payment.month)"]
+        if payment.paymentPlan == "installment" {
+            let phase = payment.installmentPhase > 0 ? "งวด \(payment.installmentPhase)" : "ผ่อนชำระ"
+            parts.append(phase)
+        } else if !payment.paymentPlan.isEmpty {
+            parts.append(payment.paymentPlan)
+        }
+        if !payment.method.isEmpty {
+            parts.append(payment.method)
+        }
+        return parts.joined(separator: " • ")
     }
 }

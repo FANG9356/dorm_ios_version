@@ -1502,9 +1502,22 @@ struct TenantFormSheet: View {
         let month = monthKey(for: moveInDate)
         let userID = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
         let localPayments = try modelContext.fetch(FetchDescriptor<Payment>())
+        if user.paymentMethod == "installment" {
+            try ensureMoveInInstallmentPayments(
+                for: user,
+                userID: userID,
+                room: room,
+                existingPayments: localPayments
+            )
+            return
+        }
+
+        markInstallmentPaymentsDeleted(for: user, userID: userID, payments: localPayments)
+
         let existingPayment = localPayments.first {
             !$0.isDeletedLocally &&
             $0.month == month &&
+            $0.paymentPlan != "installment" &&
             ($0.userId == userID || clean($0.roomNumber) == clean(user.roomNumber))
         }
         let payment = existingPayment ?? Payment(month: month)
@@ -1540,6 +1553,100 @@ struct TenantFormSheet: View {
         payment.isDirty = true
     }
 
+    private func ensureMoveInInstallmentPayments(
+        for user: DormUser,
+        userID: Int,
+        room: Room,
+        existingPayments: [Payment]
+    ) throws {
+        let months = max(1, user.installmentMonths)
+        let type = roomTypes.first { clean($0.name) == clean(room.roomType) }
+        let firstMonthRent = user.status == "จอง" ? 0 : (type?.price ?? 0)
+        let totalDue = firstMonthRent + user.deposit
+        let preferredAmount = user.installmentAmount > 0 ? user.installmentAmount : roundedMoney(totalDue / Double(months))
+        let channelText = paymentChannelText(user.paymentChannel)
+        var remaining = totalDue
+
+        markRegularMoveInPaymentDeleted(for: user, userID: userID, month: monthKey(for: moveInDate), payments: existingPayments)
+        for stalePayment in existingPayments where isPayment(stalePayment, for: user, userID: userID) && stalePayment.paymentPlan == "installment" && stalePayment.installmentPhase > months {
+            stalePayment.isDeletedLocally = true
+            stalePayment.isDirty = true
+            stalePayment.lastUpdated = Date()
+        }
+
+        for phase in 1...months {
+            let dueDate = installmentDueDate(from: moveInDate, phase: phase)
+            let dueMonth = monthKey(for: dueDate)
+            let installmentAmount = phase == months ? roundedMoney(remaining) : min(preferredAmount, remaining)
+            remaining = roundedMoney(remaining - installmentAmount)
+
+            let existingPayment = existingPayments.first {
+                !$0.isDeletedLocally &&
+                $0.paymentPlan == "installment" &&
+                $0.installmentPhase == phase &&
+                ($0.userId == userID || clean($0.roomNumber) == clean(user.roomNumber))
+            }
+            let payment = existingPayment ?? Payment(month: dueMonth)
+
+            if existingPayment == nil {
+                modelContext.insert(payment)
+            }
+
+            payment.userId = userID
+            payment.roomNumber = user.roomNumber
+            payment.month = dueMonth
+            payment.rentFee = installmentAmount
+            payment.waterFee = 0
+            payment.electricFee = 0
+            payment.commonFee = 0
+            payment.lateFee = 0
+            payment.applianceFee = 0
+            payment.amount = installmentAmount
+            payment.method = "ผ่อนชำระ งวด \(phase)/\(months) • \(channelText)"
+            payment.slipPath = phase == 1 ? (user.bookingSlips.first ?? payment.slipPath) : payment.slipPath
+            payment.slipPathArray = phase == 1 ? user.bookingSlips : payment.slipPathArray
+            payment.paymentPlan = "installment"
+            payment.installmentPhase = phase
+            payment.paymentStatus = phase == 1 ? firstInstallmentStatus(for: user, amount: installmentAmount) : "pending"
+            payment.paidAmount = payment.paymentStatus == "paid" ? installmentAmount : 0
+            payment.dueDate = dateKey(for: dueDate)
+            payment.lastUpdated = Date()
+            payment.isDirty = true
+        }
+
+        modelContext.insert(LocalSystemLog(
+            action: "สร้างแผนผ่อนชำระ",
+            details: "\(user.firstName) \(user.lastName) ห้อง \(user.roomNumber) \(months) งวด รวม \(currency(totalDue))"
+        ))
+    }
+
+    private func markInstallmentPaymentsDeleted(for user: DormUser, userID: Int, payments: [Payment]) {
+        for payment in payments where isPayment(payment, for: user, userID: userID) && payment.paymentPlan == "installment" {
+            payment.isDeletedLocally = true
+            payment.isDirty = true
+            payment.lastUpdated = Date()
+        }
+    }
+
+    private func markRegularMoveInPaymentDeleted(for user: DormUser, userID: Int, month: String, payments: [Payment]) {
+        for payment in payments where isPayment(payment, for: user, userID: userID) && payment.month == month && payment.paymentPlan != "installment" {
+            payment.isDeletedLocally = true
+            payment.isDirty = true
+            payment.lastUpdated = Date()
+        }
+    }
+
+    private func isPayment(_ payment: Payment, for user: DormUser, userID: Int) -> Bool {
+        !payment.isDeletedLocally &&
+        (payment.userId == userID || clean(payment.roomNumber) == clean(user.roomNumber))
+    }
+
+    private func firstInstallmentStatus(for user: DormUser, amount: Double) -> String {
+        guard amount > 0 else { return "paid" }
+        if user.paymentChannel == "cash" { return "paid" }
+        return user.bookingSlips.isEmpty ? "pending" : "paid"
+    }
+
     private func monthKey(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
@@ -1549,15 +1656,22 @@ struct TenantFormSheet: View {
     }
 
     private func dueDateKey(for date: Date) -> String {
+        dateKey(for: installmentDueDate(from: date, phase: 1))
+    }
+
+    private func installmentDueDate(from date: Date, phase: Int) -> Date {
         var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
-        components.month = (components.month ?? 1) + 1
+        components.month = (components.month ?? 1) + max(1, phase)
         components.day = 0
-        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
+        return Calendar(identifier: .gregorian).date(from: components) ?? date
+    }
+
+    private func dateKey(for date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)
-        return formatter.string(from: dueDate)
+        return formatter.string(from: date)
     }
 
     private func paymentMethodText(_ value: String) -> String {
