@@ -34,6 +34,7 @@ struct FinanceTabView: View {
                 payment.isDirty = true
                 payment.lastUpdated = Date()
                 modelContext.insert(payment)
+                modelContext.insert(LocalSystemLog(action: "เพิ่มรายการชำระเงิน", details: "เพิ่มรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -41,6 +42,7 @@ struct FinanceTabView: View {
         .sheet(item: $editingPayment) { payment in
             PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: monthKey) { draft in
                 apply(draft, to: payment)
+                modelContext.insert(LocalSystemLog(action: "แก้ไขรายการชำระเงิน", details: "แก้ไขรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -51,6 +53,7 @@ struct FinanceTabView: View {
                 payment.isDeletedLocally = true
                 payment.isDirty = true
                 payment.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "ลบรายการชำระเงิน", details: "ลบรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
                 saveAndPush()
                 deletingPayment = nil
             }
@@ -205,6 +208,7 @@ struct FinanceTabView: View {
         payment.paymentDate = currentDateString()
         payment.lastUpdated = Date()
         payment.isDirty = true
+        modelContext.insert(LocalSystemLog(action: "รับชำระเงิน", details: "รับชำระเต็มจำนวน ห้อง \(payment.roomNumber) รอบ \(payment.month)"))
         saveAndPush()
     }
 
@@ -267,6 +271,7 @@ struct FinanceTabView: View {
 
             let payment = generatedPayment(for: user, month: monthKey)
             modelContext.insert(payment)
+            modelContext.insert(LocalSystemLog(action: "สร้างรายการชำระอัตโนมัติ", details: "สร้างรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
             didCreate = true
         }
 

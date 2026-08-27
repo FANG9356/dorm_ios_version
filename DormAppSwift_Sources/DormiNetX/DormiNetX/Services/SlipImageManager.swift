@@ -36,6 +36,18 @@ enum SlipImageManager {
         return fileName
     }
 
+    static func restoreImageData(_ data: Data, fileName: String) throws -> String {
+        let safeName = URL(fileURLWithPath: fileName).lastPathComponent
+        guard !safeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+
+        let directory = try slipsDirectory()
+        let url = directory.appendingPathComponent(safeName)
+        try data.write(to: url, options: .atomic)
+        return safeName
+    }
+
     private static func slipsDirectory() throws -> URL {
         let baseURL = try FileManager.default.url(
             for: .applicationSupportDirectory,

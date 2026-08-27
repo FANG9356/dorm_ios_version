@@ -221,7 +221,6 @@ struct OverviewTabView: View {
             }
             .padding(.top, 110)
         }
-        .background(Color("AppBackground").ignoresSafeArea())
         .onAppear {
             viewModel.fetchLocalData(modelContext: modelContext)
         }

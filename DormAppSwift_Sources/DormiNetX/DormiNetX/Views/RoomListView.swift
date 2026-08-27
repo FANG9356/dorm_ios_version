@@ -25,6 +25,7 @@ struct RoomListView: View {
     @State private var showSyncOverlay = false
     @State private var syncButtonRotation = 0.0
     @State private var lastAutoPullCheck: Date?
+    @State private var lastBookingPromotionCheck: Date?
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -209,10 +210,12 @@ struct RoomListView: View {
         )
         .onAppear {
             scheduleAutoPullCheck()
+            promoteDueBookedTenantsIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 scheduleAutoPullCheck()
+                promoteDueBookedTenantsIfNeeded()
             }
         }
     }
@@ -260,6 +263,56 @@ struct RoomListView: View {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
             guard !syncManager.isSyncing else { return }
             await syncManager.autoPullRecentRemoteIfNeeded(modelContext: modelContext)
+            await MainActor.run {
+                promoteDueBookedTenantsIfNeeded(force: true)
+            }
+        }
+    }
+
+    private func promoteDueBookedTenantsIfNeeded(force: Bool = false) {
+        if !force, let lastBookingPromotionCheck, Date().timeIntervalSince(lastBookingPromotionCheck) < 30 {
+            return
+        }
+        lastBookingPromotionCheck = Date()
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+
+        let today = Calendar(identifier: .gregorian).startOfDay(for: Date())
+        let bookedUsers = (try? modelContext.fetch(FetchDescriptor<DormUser>())) ?? []
+        var didPromote = false
+        var promotedRooms: [String] = []
+
+        for user in bookedUsers where !user.isDeletedLocally && user.status == "จอง" {
+            guard let moveInDate = formatter.date(from: String(user.moveInDate.prefix(10))) else {
+                continue
+            }
+
+            if Calendar(identifier: .gregorian).startOfDay(for: moveInDate) <= today {
+                user.status = "กำลังพักอาศัย"
+                user.bookingStatus = "auto_converted"
+                user.lastUpdated = Date()
+                user.isDirty = true
+                didPromote = true
+                promotedRooms.append(user.roomNumber)
+            }
+        }
+
+        guard didPromote else { return }
+
+        do {
+            modelContext.insert(LocalSystemLog(
+                action: "เปลี่ยนสถานะจองอัตโนมัติ",
+                details: "เลื่อนห้อง \(promotedRooms.joined(separator: ", ")) เป็นกำลังพักอาศัย"
+            ))
+            try modelContext.save()
+            Task {
+                await syncManager.autoPushLocalChanges(modelContext: modelContext)
+            }
+        } catch {
+            print("Failed to promote booked tenants: \(error.localizedDescription)")
         }
     }
     

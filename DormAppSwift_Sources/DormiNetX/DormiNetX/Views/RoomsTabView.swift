@@ -39,9 +39,11 @@ struct RoomsTabView: View {
         .padding(.horizontal, 20)
         .sheet(item: $movingTenant) { tenant in
             MoveTenantRoomSheet(tenant: tenant, rooms: vacantRooms(including: tenant.roomNumber)) { newRoomNumber in
+                let oldRoomNumber = tenant.roomNumber
                 tenant.roomNumber = newRoomNumber
                 tenant.isDirty = true
                 tenant.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "ย้ายห้อง", details: "\(tenant.firstName) \(tenant.lastName) จากห้อง \(oldRoomNumber) ไปห้อง \(newRoomNumber)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
