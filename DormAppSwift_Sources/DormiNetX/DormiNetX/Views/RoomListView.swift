@@ -7,6 +7,7 @@ import Charts
 struct RoomListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var rooms: [Room]
+    @Query private var users: [DormUser]
     @StateObject private var syncManager = SyncManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var isSidebarOpen = false
@@ -210,12 +211,12 @@ struct RoomListView: View {
         )
         .onAppear {
             scheduleAutoPullCheck()
-            promoteDueBookedTenantsIfNeeded()
+            scheduleBookingPromotionCheck()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 scheduleAutoPullCheck()
-                promoteDueBookedTenantsIfNeeded()
+                scheduleBookingPromotionCheck()
             }
         }
     }
@@ -264,8 +265,15 @@ struct RoomListView: View {
             guard !syncManager.isSyncing else { return }
             await syncManager.autoPullRecentRemoteIfNeeded(modelContext: modelContext)
             await MainActor.run {
-                promoteDueBookedTenantsIfNeeded(force: true)
+                scheduleBookingPromotionCheck(force: true)
             }
+        }
+    }
+
+    private func scheduleBookingPromotionCheck(force: Bool = false) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: force ? 250_000_000 : 700_000_000)
+            promoteDueBookedTenantsIfNeeded(force: force)
         }
     }
 
@@ -281,7 +289,7 @@ struct RoomListView: View {
         formatter.calendar = Calendar(identifier: .gregorian)
 
         let today = Calendar(identifier: .gregorian).startOfDay(for: Date())
-        let bookedUsers = (try? modelContext.fetch(FetchDescriptor<DormUser>())) ?? []
+        let bookedUsers = users
         var didPromote = false
         var promotedRooms: [String] = []
 
