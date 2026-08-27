@@ -134,6 +134,19 @@ struct SystemLogSnapshot: Codable {
     var timestamp: Date
 }
 
+struct LocalBackupEnvelope: Codable {
+    var formatVersion: Int = 2
+    var snapshot: SyncEnvelope
+    var slipFiles: [LocalBackupFilePayload]
+    var appBackgroundKind: String?
+    var appBackgroundFile: LocalBackupFilePayload?
+}
+
+struct LocalBackupFilePayload: Codable {
+    var fileName: String
+    var data: Data
+}
+
 struct SyncLatestResponse: Decodable {
     var status: String
     var hasSnapshot: Bool
@@ -311,11 +324,26 @@ class SyncManager: ObservableObject {
     }
 
     func exportLocalBackupData(modelContext: ModelContext) throws -> Data {
-        try encoded(buildSnapshot(modelContext: modelContext))
+        let snapshot = try buildSnapshot(modelContext: modelContext)
+        let backup = LocalBackupEnvelope(
+            snapshot: snapshot,
+            slipFiles: collectSlipFiles(from: snapshot),
+            appBackgroundKind: UserDefaults.standard.string(forKey: AppBackgroundManager.kindKey),
+            appBackgroundFile: collectAppBackgroundFile()
+        )
+        return try encoded(backup)
     }
 
     func restoreLocalBackupData(_ data: Data, modelContext: ModelContext) throws {
-        let snapshot = try decoder().decode(SyncEnvelope.self, from: data)
+        let snapshot: SyncEnvelope
+
+        if let backup = try? decoder().decode(LocalBackupEnvelope.self, from: data) {
+            try restoreBackupFiles(backup)
+            snapshot = backup.snapshot
+        } else {
+            snapshot = try decoder().decode(SyncEnvelope.self, from: data)
+        }
+
         try applySnapshot(snapshot, modelContext: modelContext)
         UserDefaults.standard.set(snapshot.version, forKey: "lastSyncVersion")
         lastSyncTime = Date()
@@ -387,6 +415,61 @@ class SyncManager: ObservableObject {
                 SystemLogSnapshot(id: $0.id, action: $0.action, details: $0.details, timestamp: $0.timestamp)
             }
         )
+    }
+
+    private func collectSlipFiles(from snapshot: SyncEnvelope) -> [LocalBackupFilePayload] {
+        let rawPaths = snapshot.tenants.flatMap(\.bookingSlips) +
+            snapshot.payments.flatMap { payment in
+                var paths = payment.slipPathArray
+                if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
+                    paths.append(payment.slipPath)
+                }
+                return paths
+            }
+
+        var seen = Set<String>()
+        return rawPaths.compactMap { path in
+            guard let url = SlipImageManager.url(for: path),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return nil
+            }
+
+            let fileName = url.lastPathComponent
+            guard !fileName.isEmpty, seen.insert(fileName).inserted,
+                  let data = try? Data(contentsOf: url) else {
+                return nil
+            }
+
+            return LocalBackupFilePayload(fileName: fileName, data: data)
+        }
+    }
+
+    private func collectAppBackgroundFile() -> LocalBackupFilePayload? {
+        let kind = UserDefaults.standard.string(forKey: AppBackgroundManager.kindKey) ?? AppBackgroundKind.system.rawValue
+        guard kind != AppBackgroundKind.system.rawValue,
+              let fileName = UserDefaults.standard.string(forKey: AppBackgroundManager.fileNameKey),
+              let url = AppBackgroundManager.url(for: fileName),
+              FileManager.default.fileExists(atPath: url.path),
+              let data = try? Data(contentsOf: url) else {
+            return nil
+        }
+
+        return LocalBackupFilePayload(fileName: url.lastPathComponent, data: data)
+    }
+
+    private func restoreBackupFiles(_ backup: LocalBackupEnvelope) throws {
+        for file in backup.slipFiles {
+            _ = try SlipImageManager.restoreImageData(file.data, fileName: file.fileName)
+        }
+
+        if let background = backup.appBackgroundFile,
+           let kind = backup.appBackgroundKind,
+           kind != AppBackgroundKind.system.rawValue {
+            let fileName = try AppBackgroundManager.restoreFileData(background.data, fileName: background.fileName)
+            UserDefaults.standard.set(kind, forKey: AppBackgroundManager.kindKey)
+            UserDefaults.standard.set(fileName, forKey: AppBackgroundManager.fileNameKey)
+            UserDefaults.standard.set(UUID().uuidString, forKey: AppBackgroundManager.updateTokenKey)
+        }
     }
 
     private func pushCurrentSnapshot(modelContext: ModelContext) async throws {

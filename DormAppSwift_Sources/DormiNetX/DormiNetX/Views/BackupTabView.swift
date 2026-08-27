@@ -125,7 +125,7 @@ struct BackupTabView: View {
                 BackupSectionHeader(
                     icon: "iphone",
                     title: "ไฟล์สำรองในเครื่อง",
-                    subtitle: "สร้างไฟล์จากข้อมูลภายในเครื่องปัจจุบัน แล้วเลือกแชร์เก็บไว้ที่ Files, iCloud Drive หรือ AirDrop ได้"
+                    subtitle: "สร้างไฟล์จากข้อมูลภายในเครื่องปัจจุบัน พร้อมรูปสลิปและพื้นหลังแอป แล้วเลือกแชร์เก็บไว้ที่ Files, iCloud Drive หรือ AirDrop ได้"
                 )
 
                 HStack(spacing: 10) {
@@ -158,7 +158,7 @@ struct BackupTabView: View {
                 )
 
                 if backupFiles.isEmpty {
-                    BackupEmptyStateView(text: "กดสร้างไฟล์สำรองเพื่อเก็บข้อมูลล่าสุดไว้ในเครื่อง")
+                BackupEmptyStateView(text: "กดสร้างไฟล์สำรองเพื่อเก็บข้อมูลล่าสุด รูปสลิป และพื้นหลังไว้ในเครื่อง")
                 } else {
                     VStack(spacing: 10) {
                         ForEach(backupFiles) { file in

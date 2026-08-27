@@ -45,6 +45,7 @@ struct PricingTabView: View {
         .sheet(isPresented: $showCreateRoomType) {
             RoomTypeEditor { roomType in
                 modelContext.insert(roomType)
+                modelContext.insert(LocalSystemLog(action: "เพิ่มประเภทห้อง", details: "\(roomType.name) ค่าเช่า \(roomType.price.formatted(.number.precision(.fractionLength(0)))) บาท"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -56,6 +57,7 @@ struct PricingTabView: View {
                 room.isDirty = true
                 room.lastUpdated = Date()
                 modelContext.insert(room)
+                modelContext.insert(LocalSystemLog(action: "เพิ่มเลขห้อง", details: "ห้อง \(room.roomNumber) ประเภท \(room.roomType)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -70,6 +72,7 @@ struct PricingTabView: View {
                 roomType.lateFee = updated.lateFee
                 roomType.lastUpdated = Date()
                 roomType.isDirty = true
+                modelContext.insert(LocalSystemLog(action: "แก้ไขประเภทห้อง", details: "\(roomType.name) ค่าเช่า \(roomType.price.formatted(.number.precision(.fractionLength(0)))) บาท"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -80,6 +83,7 @@ struct PricingTabView: View {
                 room.roomType = roomType
                 room.isDirty = true
                 room.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "แก้ไขเลขห้อง", details: "ห้อง \(room.roomNumber) ประเภท \(room.roomType)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -87,6 +91,7 @@ struct PricingTabView: View {
         .confirmationDialog("ลบประเภทห้องนี้หรือไม่", isPresented: roomTypeDeleteDialogBinding) {
             Button("ลบ \(roomTypeToDelete?.name ?? "")", role: .destructive) {
                 guard let roomType = roomTypeToDelete else { return }
+                modelContext.insert(LocalSystemLog(action: "ลบประเภทห้อง", details: roomType.name))
                 modelContext.delete(roomType)
                 saveAndPush()
                 roomTypeToDelete = nil
@@ -99,6 +104,7 @@ struct PricingTabView: View {
                 room.isDeletedLocally = true
                 room.isDirty = true
                 room.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "ลบเลขห้อง", details: "ห้อง \(room.roomNumber)"))
                 saveAndPush()
                 roomToDelete = nil
             }

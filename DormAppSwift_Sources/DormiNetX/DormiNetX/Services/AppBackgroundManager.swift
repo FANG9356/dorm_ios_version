@@ -42,6 +42,18 @@ enum AppBackgroundManager {
         return videoFileName
     }
 
+    static func restoreFileData(_ data: Data, fileName: String) throws -> String {
+        let safeName = URL(fileURLWithPath: fileName).lastPathComponent
+        guard !safeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+
+        let directory = try backgroundsDirectory()
+        let url = directory.appendingPathComponent(safeName)
+        try data.write(to: url, options: .atomic)
+        return safeName
+    }
+
     static func clearStoredBackgrounds() {
         guard let directory = try? backgroundsDirectory() else { return }
         [imageFileName, videoFileName].forEach { fileName in

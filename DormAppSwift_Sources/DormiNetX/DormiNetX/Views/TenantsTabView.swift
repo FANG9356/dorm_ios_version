@@ -1443,6 +1443,10 @@ struct TenantFormSheet: View {
             user.lastUpdated = Date()
             user.isDirty = true
             try ensureCurrentMonthPayment(for: user)
+            modelContext.insert(LocalSystemLog(
+                action: isEditing ? "แก้ไขลูกบ้าน" : "เพิ่มลูกบ้าน",
+                details: "\(user.firstName) \(user.lastName) ห้อง \(user.roomNumber) สถานะ \(user.status)"
+            ))
             try modelContext.save()
             await SyncManager.shared.autoPushLocalChanges(modelContext: modelContext)
             await viewModel.fetchUsers(modelContext: modelContext)

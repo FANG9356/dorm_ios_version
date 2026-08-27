@@ -41,18 +41,10 @@ struct BillsTabView: View {
         }
         .padding(.top, 106)
         .padding(.horizontal, 20)
-        .sheet(isPresented: $showingEditor) {
-            PaymentEditor(users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: currentMonthKey()) { payment in
-                payment.isDirty = true
-                payment.lastUpdated = Date()
-                modelContext.insert(payment)
-                saveAndPush()
-            }
-            .iphoneSheetStyle()
-        }
         .sheet(item: $editingPayment) { payment in
             PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: payment.month) { draft in
                 apply(draft, to: payment)
+                modelContext.insert(LocalSystemLog(action: "แก้ไขบิล", details: "แก้ไขบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -63,10 +55,16 @@ struct BillsTabView: View {
                 payment.isDeletedLocally = true
                 payment.isDirty = true
                 payment.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "ลบบิล", details: "ลบบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
                 saveAndPush()
                 deletingPayment = nil
             }
             Button("ยกเลิก", role: .cancel) { }
+        }
+        .onChange(of: showingEditor) { _, isShowing in
+            if isShowing {
+                showingEditor = false
+            }
         }
     }
 
@@ -125,11 +123,6 @@ struct BillsTabView: View {
         }
     }
 
-    private func currentMonthKey() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: Date())
-    }
 }
 
 private struct BillRow: View {
