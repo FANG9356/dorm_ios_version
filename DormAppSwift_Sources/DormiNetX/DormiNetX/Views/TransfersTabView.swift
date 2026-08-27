@@ -232,7 +232,6 @@ private struct SlipPreviewView: View {
     let images: [UIImage]
     let initialIndex: Int
     @Environment(\.dismiss) private var dismiss
-    @State private var scale: CGFloat = 1
     @State private var selectedIndex: Int
 
     init(images: [UIImage], initialIndex: Int = 0) {
@@ -248,33 +247,14 @@ private struct SlipPreviewView: View {
 
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, image in
-                        Image(uiImage: image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .scaleEffect(scale)
-                            .frame(
-                                width: max(1, proxy.size.width - 32),
-                                height: max(1, proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom - 84)
-                            )
+                        ScrollableSlipImage(image: image)
+                            .padding(.top, proxy.safeAreaInsets.top + 62)
+                            .padding(.bottom, proxy.safeAreaInsets.bottom + 24)
                             .tag(index)
-                            .gesture(
-                                MagnificationGesture()
-                                    .onChanged { value in
-                                        scale = min(3.5, max(1, value))
-                                    }
-                            )
-                            .onTapGesture(count: 2) {
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                                    scale = scale > 1 ? 1 : 2
-                                }
-                            }
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .automatic : .never))
                 .frame(width: proxy.size.width, height: proxy.size.height)
-                .onChange(of: selectedIndex) { _, _ in
-                    scale = 1
-                }
 
                 if images.count > 1 {
                     Text("\(selectedIndex + 1) / \(images.count)")
@@ -303,6 +283,41 @@ private struct SlipPreviewView: View {
                 .padding(.top, max(12, proxy.safeAreaInsets.top + 8))
                 .padding(.trailing, 18)
             }
+        }
+    }
+}
+
+private struct ScrollableSlipImage: View {
+    let image: UIImage
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        GeometryReader { proxy in
+            ScrollView([.vertical, .horizontal], showsIndicators: true) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: max(1, proxy.size.width - 24))
+                    .scaleEffect(scale, anchor: .top)
+                    .frame(
+                        width: max(1, (proxy.size.width - 24) * scale),
+                        alignment: .top
+                    )
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                scale = min(3.2, max(1, value))
+                            }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            scale = scale > 1 ? 1 : 2
+                        }
+                    }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
     }
 }

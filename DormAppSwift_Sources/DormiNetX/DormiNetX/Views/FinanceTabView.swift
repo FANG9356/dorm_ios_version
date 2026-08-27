@@ -29,16 +29,6 @@ struct FinanceTabView: View {
         .padding(.top, 106)
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
-        .sheet(isPresented: $showingPaymentEditor) {
-            PaymentEditor(users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: monthKey) { payment in
-                payment.isDirty = true
-                payment.lastUpdated = Date()
-                modelContext.insert(payment)
-                modelContext.insert(LocalSystemLog(action: "เพิ่มรายการชำระเงิน", details: "เพิ่มรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                saveAndPush()
-            }
-            .iphoneSheetStyle()
-        }
         .sheet(item: $editingPayment) { payment in
             PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: monthKey) { draft in
                 apply(draft, to: payment)
@@ -64,6 +54,11 @@ struct FinanceTabView: View {
         }
         .onChange(of: selectedMonth) { _, _ in
             ensurePaymentsForSelectedMonth()
+        }
+        .onChange(of: showingPaymentEditor) { _, isShowing in
+            if isShowing {
+                showingPaymentEditor = false
+            }
         }
     }
 
@@ -261,11 +256,20 @@ struct FinanceTabView: View {
 
         var didCreate = false
         for user in activeUsers {
+            let hasMoveInInstallment = monthKey == moveInMonth(for: user) && payments.contains { payment in
+                payment.month == monthKey &&
+                payment.paymentPlan == "installment" &&
+                clean(payment.roomNumber) == clean(user.roomNumber)
+            }
+            let hasRegularPayment = payments.contains { payment in
+                payment.month == monthKey &&
+                payment.paymentPlan != "installment" &&
+                clean(payment.roomNumber) == clean(user.roomNumber)
+            }
+
             guard shouldCreatePayment(for: user, month: monthKey),
-                  !payments.contains(where: { payment in
-                      payment.month == monthKey &&
-                      clean(payment.roomNumber) == clean(user.roomNumber)
-                  }) else {
+                  !hasMoveInInstallment,
+                  !hasRegularPayment else {
                 continue
             }
 
@@ -309,7 +313,7 @@ struct FinanceTabView: View {
         payment.method = paymentMethodLabel(for: user)
         payment.slipPath = user.bookingSlips.first ?? ""
         payment.slipPathArray = user.bookingSlips
-        payment.paymentPlan = user.paymentMethod
+        payment.paymentPlan = isBooking ? "booking" : "monthly"
         payment.installmentPhase = user.installmentMonths
         payment.dueDate = dueDateKey(for: month)
         payment.paymentStatus = inferredPaymentStatus(for: user, isMoveInMonth: isMoveInMonth)
@@ -444,6 +448,11 @@ private struct PaymentRow: View {
                         Text(status)
                             .font(.custom("SukhumvitSet-Medium", size: 10))
                             .foregroundStyle(statusColor)
+                        if payment.paymentPlan == "installment", payment.installmentPhase > 0 {
+                            Text("งวด \(payment.installmentPhase)")
+                                .font(.custom("SukhumvitSet-Medium", size: 10))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
@@ -511,6 +520,8 @@ struct PaymentEditor: View {
     let roomTypes: [RoomType]
     let defaultMonth: String
     let onSave: (Payment) -> Void
+    private let sourcePaymentPlan: String
+    private let sourceInstallmentPhase: Int
 
     @State private var roomNumber: String
     @State private var month: String
@@ -544,6 +555,8 @@ struct PaymentEditor: View {
         self.roomTypes = roomTypes
         self.defaultMonth = defaultMonth
         self.onSave = onSave
+        self.sourcePaymentPlan = payment?.paymentPlan ?? "monthly"
+        self.sourceInstallmentPhase = payment?.installmentPhase ?? 0
         _roomNumber = State(initialValue: payment?.roomNumber ?? rooms.first?.roomNumber ?? users.first?.roomNumber ?? "")
         _month = State(initialValue: payment?.month ?? defaultMonth)
         _rentFee = State(initialValue: payment.map { String(format: "%.0f", $0.rentFee) } ?? "")
@@ -571,6 +584,7 @@ struct PaymentEditor: View {
                         tenantName: selectedTenantName,
                         roomType: selectedRoomTypeName,
                         month: clean(month).isEmpty ? defaultMonth : clean(month),
+                        planText: planText,
                         amount: totalAmount,
                         paidAmount: money(paidAmount),
                         status: statusTitle(for: paymentStatus),
@@ -581,7 +595,7 @@ struct PaymentEditor: View {
                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                 .listRowBackground(Color.clear)
 
-                Section("รอบบิล") {
+                Section {
                     if rooms.isEmpty {
                         labeledTextField("เลขห้อง", placeholder: "เช่น 101", text: $roomNumber)
                     } else {
@@ -609,9 +623,11 @@ struct PaymentEditor: View {
                     labeledTextField("วันครบกำหนด", placeholder: "เช่น 2026-08-31", text: $dueDate)
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($dueDate)
+                } header: {
+                    formSectionHeader("ข้อมูลบิล", subtitle: "ระบุห้อง รอบเดือน และวันครบกำหนดของรายการนี้")
                 }
 
-                Section("ค่าใช้จ่าย") {
+                Section {
                     moneyField("ค่าเช่า", text: $rentFee)
                     moneyField("ค่าน้ำ", text: $waterFee)
                     moneyField("ค่าไฟ", text: $electricFee)
@@ -624,9 +640,11 @@ struct PaymentEditor: View {
                         Text(totalAmount.formatted(.number.precision(.fractionLength(0))) + " ฿")
                             .fontWeight(.semibold)
                     }
+                } header: {
+                    formSectionHeader("ยอดที่คิดเงิน", subtitle: "แก้เฉพาะยอดที่ต้องออกบิลให้ห้องนี้")
                 }
 
-                Section("การชำระเงิน") {
+                Section {
                     statusSelector
                     labeledTextField("ยอดที่ชำระแล้ว", placeholder: "0", text: $paidAmount)
                         .keyboardType(.decimalPad)
@@ -637,9 +655,11 @@ struct PaymentEditor: View {
                         .keyboardType(.numbersAndPunctuation)
                         .dateKeyInput($paymentDate)
                     slipPickerContent
+                } header: {
+                    formSectionHeader("ผลการรับเงิน", subtitle: "อัปเดตสถานะ ช่องทางชำระ และหลักฐานสลิป")
                 }
             }
-            .navigationTitle("รายการชำระเงิน")
+            .navigationTitle("แก้ไขรายการชำระเงิน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -667,6 +687,8 @@ struct PaymentEditor: View {
                         item.dueDate = clean(dueDate)
                         item.paymentDate = clean(paymentDate)
                         item.paymentStatus = paymentStatus
+                        item.paymentPlan = sourcePaymentPlan
+                        item.installmentPhase = sourceInstallmentPhase
                         onSave(item)
                         dismiss()
                     }
@@ -720,6 +742,16 @@ struct PaymentEditor: View {
         users.first { clean($0.roomNumber) == clean(roomNumber) }
     }
 
+    private var planText: String {
+        if sourcePaymentPlan == "installment", sourceInstallmentPhase > 0 {
+            return "ผ่อนชำระ งวด \(sourceInstallmentPhase)"
+        }
+        if sourcePaymentPlan == "booking" {
+            return "รายการจอง/แรกเข้า"
+        }
+        return "บิลรายเดือน"
+    }
+
     private var selectedTenantName: String {
         guard let selectedTenant else { return "ยังไม่พบลูกบ้านของห้องนี้" }
         let fullName = "\(selectedTenant.firstName) \(selectedTenant.lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
@@ -743,6 +775,19 @@ struct PaymentEditor: View {
         case "partial": return .blue
         default: return .orange
         }
+    }
+
+    private func formSectionHeader(_ title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Bold", size: 14))
+                .foregroundStyle(.primary)
+            Text(subtitle)
+                .font(.custom("SukhumvitSet-Text", size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .textCase(nil)
+        .padding(.top, 8)
     }
 
     @ViewBuilder
@@ -953,6 +998,7 @@ private struct PaymentEditorContextCard: View {
     let tenantName: String
     let roomType: String
     let month: String
+    let planText: String
     let amount: Double
     let paidAmount: Double
     let status: String
@@ -987,6 +1033,9 @@ private struct PaymentEditorContextCard: View {
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                     Label("รอบบิล \(month)", systemImage: "calendar")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                    Label(planText, systemImage: "doc.text")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }
