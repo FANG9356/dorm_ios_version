@@ -8,6 +8,8 @@ struct RoomListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var rooms: [Room]
     @Query private var users: [DormUser]
+    @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
+    @Query(sort: \Payment.lastUpdated, order: .reverse) private var allPayments: [Payment]
     @StateObject private var syncManager = SyncManager.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var isSidebarOpen = false
@@ -210,11 +212,13 @@ struct RoomListView: View {
                 }
         )
         .onAppear {
+            ensureCurrentMonthPaymentsIfNeeded()
             scheduleAutoPullCheck()
             scheduleBookingPromotionCheck()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                ensureCurrentMonthPaymentsIfNeeded()
                 scheduleAutoPullCheck()
                 scheduleBookingPromotionCheck()
             }
@@ -322,6 +326,158 @@ struct RoomListView: View {
         } catch {
             print("Failed to promote booked tenants: \(error.localizedDescription)")
         }
+    }
+
+    private func ensureCurrentMonthPaymentsIfNeeded() {
+        let activeUsers = users.filter {
+            !$0.isDeletedLocally &&
+            !$0.roomNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            $0.status != "ย้ายออกแล้ว"
+        }
+        guard !activeUsers.isEmpty else { return }
+
+        let month = currentMonthKey()
+        let payments = allPayments.filter { !$0.isDeletedLocally }
+        var didCreate = false
+
+        for user in activeUsers {
+            let hasMoveInInstallment = month == moveInMonth(for: user) && payments.contains { payment in
+                payment.month == month &&
+                payment.paymentPlan == "installment" &&
+                isPayment(payment, for: user)
+            }
+            let hasRegularPayment = payments.contains { payment in
+                payment.month == month &&
+                payment.paymentPlan != "installment" &&
+                isPayment(payment, for: user)
+            }
+
+            guard shouldCreatePayment(for: user, month: month),
+                  !hasMoveInInstallment,
+                  !hasRegularPayment else {
+                continue
+            }
+
+            let payment = generatedPayment(for: user, month: month)
+            modelContext.insert(payment)
+            modelContext.insert(LocalSystemLog(action: "สร้างรายการชำระอัตโนมัติ", details: "สร้างรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+            didCreate = true
+        }
+
+        guard didCreate else { return }
+
+        do {
+            try modelContext.save()
+            Task {
+                await syncManager.autoPushLocalChanges(modelContext: modelContext)
+            }
+        } catch {
+            print("Failed to create current month payments: \(error.localizedDescription)")
+        }
+    }
+
+    private func generatedPayment(for user: DormUser, month: String) -> Payment {
+        let payment = Payment(month: month)
+        let roomType = roomType(for: user)
+        let rent = roomType?.price ?? 0
+        let isBooking = user.status == "จอง"
+        let isMoveInMonth = month == moveInMonth(for: user)
+        let amount = isBooking ? user.deposit : rent + (isMoveInMonth ? user.deposit : 0)
+
+        payment.userId = stableLocalUserID(for: user)
+        payment.roomNumber = user.roomNumber
+        payment.rentFee = isBooking ? user.deposit : rent
+        payment.waterFee = 0
+        payment.electricFee = 0
+        payment.commonFee = 0
+        payment.lateFee = 0
+        payment.applianceFee = 0
+        payment.amount = amount
+        payment.method = paymentMethodLabel(for: user)
+        payment.slipPath = user.bookingSlips.first ?? ""
+        payment.slipPathArray = user.bookingSlips
+        payment.paymentPlan = isBooking ? "booking" : "monthly"
+        payment.installmentPhase = user.installmentMonths
+        payment.dueDate = dueDateKey(for: month)
+        payment.paymentStatus = inferredPaymentStatus(for: user, isMoveInMonth: isMoveInMonth)
+        payment.paidAmount = payment.paymentStatus == "paid" ? amount : (payment.paymentStatus == "partial" ? user.installmentAmount : 0)
+        payment.paymentDate = payment.paymentStatus == "pending" ? "" : currentDateString()
+        payment.lastUpdated = Date()
+        payment.isDirty = true
+        return payment
+    }
+
+    private func shouldCreatePayment(for user: DormUser, month: String) -> Bool {
+        if user.status == "จอง" {
+            return month == moveInMonth(for: user)
+        }
+
+        let moveInMonth = moveInMonth(for: user)
+        guard !moveInMonth.isEmpty else { return true }
+        return month >= moveInMonth
+    }
+
+    private func inferredPaymentStatus(for user: DormUser, isMoveInMonth: Bool) -> String {
+        guard isMoveInMonth else { return "pending" }
+        if user.paymentMethod == "installment" { return "partial" }
+        if user.paymentMethod == "full_payment" { return "paid" }
+        return "pending"
+    }
+
+    private func paymentMethodLabel(for user: DormUser) -> String {
+        let method = user.paymentMethod == "installment" ? "ผ่อนชำระ" : (user.paymentMethod == "full_payment" ? "ชำระเต็มจำนวน" : "รอระบุ")
+        let channel = user.paymentChannel == "cash" ? "เงินสด" : (user.paymentChannel == "bank_transfer" ? "โอนผ่านธนาคาร" : "ยังไม่ได้ระบุช่องทาง")
+        return "\(method) • \(channel)"
+    }
+
+    private func roomType(for user: DormUser) -> RoomType? {
+        guard let room = rooms.first(where: { clean($0.roomNumber) == clean(user.roomNumber) && !$0.isDeletedLocally }) else { return nil }
+        return roomTypes.first { clean($0.name) == clean(room.roomType) }
+    }
+
+    private func isPayment(_ payment: Payment, for user: DormUser) -> Bool {
+        if payment.userId > 0 {
+            return stableLocalUserID(for: user) == payment.userId
+        }
+        return clean(payment.roomNumber) == clean(user.roomNumber)
+    }
+
+    private func moveInMonth(for user: DormUser) -> String {
+        String(user.moveInDate.prefix(7))
+    }
+
+    private func currentMonthKey() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        return formatter.string(from: Date())
+    }
+
+    private func dueDateKey(for month: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        guard let date = formatter.date(from: "\(month)-01") else { return "" }
+
+        var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
+        components.month = (components.month ?? 1) + 1
+        components.day = 0
+        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
+        return formatter.string(from: dueDate)
+    }
+
+    private func currentDateString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        return formatter.string(from: Date())
+    }
+
+    private func clean(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     private func syncData() {

@@ -59,13 +59,13 @@ struct OverviewTabView: View {
                     GlassSummaryCard(title: "ห้องว่าง", value: "\(viewModel.stats.empty_rooms)", icon: "bed.double.fill", color: .indigo)
                     
                     // KPI 3: Income
-                    GlassSummaryCard(title: "เงินสดรับเดือนนี้", value: String(format: "฿%.1fk", viewModel.stats.income_this_month / 1000.0), icon: "banknote.fill", color: .green)
+                    GlassSummaryCard(title: "เงินสดรับเดือนนี้", value: moneyText(viewModel.stats.income_this_month), icon: "banknote.fill", color: .green)
                     
                     // KPI 4: Billing Cycle
-                    GlassSummaryCard(title: "ยอดเก็บรอบบิลนี้", value: String(format: "฿%.1fk", viewModel.stats.billing_cycle_income / 1000.0), icon: "doc.text.fill", color: .cyan)
+                    GlassSummaryCard(title: "ยอดเก็บรอบบิลนี้", value: moneyText(viewModel.stats.billing_cycle_income), icon: "doc.text.fill", color: .cyan)
                     
                     // KPI 5: Deposit
-                    GlassSummaryCard(title: "มัดจำแรกเข้า", value: String(format: "฿%.1fk", viewModel.depositThisMonth / 1000.0), icon: "archivebox.fill", color: .orange)
+                    GlassSummaryCard(title: "มัดจำแรกเข้า", value: moneyText(viewModel.depositThisMonth), icon: "archivebox.fill", color: .orange)
                     
                     // KPI 6: Pending
                     GlassSummaryCard(title: "บิลค้างชำระ", value: "\(viewModel.stats.pending_bills)", icon: "exclamationmark.triangle.fill", color: viewModel.stats.pending_bills > 0 ? .red : .gray)
@@ -99,7 +99,7 @@ struct OverviewTabView: View {
                                 AxisMarks(position: .leading) { value in
                                     AxisValueLabel() {
                                         if let intValue = value.as(Double.self) {
-                                            Text("฿\(Int(intValue/1000))k")
+                                            Text(Int(intValue).formatted())
                                                 .font(.custom("SukhumvitSet-Text", size: 10))
                                         }
                                     }
@@ -237,5 +237,10 @@ struct OverviewTabView: View {
             await Task.yield()
             viewModel.updateLocalData(users: users, rooms: rooms, payments: payments, maintenances: maintenances)
         }
+    }
+
+    private func moneyText(_ amount: Double) -> String {
+        let formatted = amount.formatted(.number.precision(.fractionLength(0)))
+        return "\(formatted) บาท"
     }
 }

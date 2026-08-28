@@ -40,3 +40,14 @@ final class DormUser: Identifiable {
         self.lastName = lastName
     }
 }
+
+func stableLocalUserID(for user: DormUser) -> Int {
+    if let serverId = user.serverId, serverId > 0 {
+        return serverId
+    }
+
+    let value = user.id.uuidString.unicodeScalars.reduce(Int32(17)) { result, scalar in
+        result &* 31 &+ Int32(scalar.value)
+    }
+    return max(1, Int(abs(value)))
+}

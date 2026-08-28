@@ -276,7 +276,7 @@ struct FinanceTabView: View {
     }
 
     private func userFor(_ payment: Payment) -> DormUser? {
-        users.first { $0.serverId == payment.userId && payment.userId > 0 } ?? users.first { $0.roomNumber == payment.roomNumber }
+        users.first { stableLocalUserID(for: $0) == payment.userId && payment.userId > 0 } ?? users.first { $0.roomNumber == payment.roomNumber }
     }
 
     private var usersForBilling: [DormUser] {
@@ -298,8 +298,10 @@ struct FinanceTabView: View {
     }
 
     private func isPayment(_ payment: Payment, for user: DormUser) -> Bool {
-        clean(payment.roomNumber) == clean(user.roomNumber) ||
-        (payment.userId > 0 && (user.serverId == payment.userId || Int(truncatingIfNeeded: user.id.hashValue) == payment.userId))
+        if payment.userId > 0 {
+            return stableLocalUserID(for: user) == payment.userId
+        }
+        return clean(payment.roomNumber) == clean(user.roomNumber)
     }
 
     private func dueDayText(for user: DormUser) -> String {
@@ -377,12 +379,12 @@ struct FinanceTabView: View {
             let hasMoveInInstallment = monthKey == moveInMonth(for: user) && payments.contains { payment in
                 payment.month == monthKey &&
                 payment.paymentPlan == "installment" &&
-                clean(payment.roomNumber) == clean(user.roomNumber)
+                isPayment(payment, for: user)
             }
             let hasRegularPayment = payments.contains { payment in
                 payment.month == monthKey &&
                 payment.paymentPlan != "installment" &&
-                clean(payment.roomNumber) == clean(user.roomNumber)
+                isPayment(payment, for: user)
             }
 
             guard shouldCreatePayment(for: user, month: monthKey),
@@ -419,7 +421,7 @@ struct FinanceTabView: View {
         let isMoveInMonth = month == moveInMonth(for: user)
         let amount = isBooking ? user.deposit : rent + (isMoveInMonth ? user.deposit : 0)
 
-        payment.userId = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        payment.userId = stableLocalUserID(for: user)
         payment.roomNumber = user.roomNumber
         payment.rentFee = isBooking ? user.deposit : rent
         payment.waterFee = 0
@@ -1906,9 +1908,10 @@ struct PaymentEditor: View {
                     .font(.custom("SukhumvitSet-Bold", size: 17))
                     .foregroundStyle(.primary)
                     .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
 
-                Text("฿")
-                    .font(.custom("SukhumvitSet-Bold", size: 13))
+                Text("บาท")
+                    .font(.custom("SukhumvitSet-Medium", size: 11))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12)
@@ -1923,8 +1926,16 @@ struct PaymentEditor: View {
 
     private var paymentMethodQuickChoices: some View {
         HStack(spacing: 8) {
-            paymentMethodButton("เงินสด", value: "ชำระเต็มจำนวน • เงินสด")
-            paymentMethodButton("โอนธนาคาร", value: "ชำระเต็มจำนวน • โอนผ่านธนาคาร")
+            paymentMethodButton("เงินสด", value: "\(paymentMethodPrefix) • เงินสด")
+            paymentMethodButton("โอนธนาคาร", value: "\(paymentMethodPrefix) • โอนผ่านธนาคาร")
+        }
+    }
+
+    private var paymentMethodPrefix: String {
+        switch paymentStatus {
+        case "partial": return "จ่ายบางส่วน"
+        case "paid": return "ชำระเต็มจำนวน"
+        default: return "รอชำระ"
         }
     }
 
@@ -1945,14 +1956,31 @@ struct PaymentEditor: View {
     private func savePayment() {
         month = Self.monthKey(from: billDate)
         dueDate = Self.dateKey(from: dueDateValue)
-        if paymentStatus != "pending", clean(paymentDate).isEmpty {
+
+        var finalStatus = paymentStatus
+        var finalPaidAmount = money(paidAmount)
+        var finalPaymentDate = clean(paymentDate)
+        if finalStatus == "paid" {
+            finalPaidAmount = finalPaidAmount == 0 ? totalAmount : min(finalPaidAmount, totalAmount)
+        } else if finalStatus == "partial" {
+            finalPaidAmount = min(finalPaidAmount, totalAmount)
+            if finalPaidAmount <= 0 {
+                finalStatus = "pending"
+            }
+        } else {
+            finalPaidAmount = 0
+            finalPaymentDate = ""
+        }
+
+        if finalStatus != "pending", finalPaymentDate.isEmpty {
             paymentDate = Self.dateKey(from: paymentDateValue)
+            finalPaymentDate = paymentDate
         }
 
         let item = Payment(month: clean(month), amount: totalAmount)
         item.roomNumber = clean(roomNumber)
         if let tenant = users.first(where: { $0.roomNumber == item.roomNumber }) {
-            item.userId = tenant.serverId ?? Int(truncatingIfNeeded: tenant.id.hashValue)
+            item.userId = stableLocalUserID(for: tenant)
         } else {
             item.userId = 0
         }
@@ -1962,13 +1990,13 @@ struct PaymentEditor: View {
         item.commonFee = money(commonFee)
         item.lateFee = money(lateFee)
         item.applianceFee = money(applianceFee)
-        item.paidAmount = paymentStatus == "paid" && money(paidAmount) == 0 ? totalAmount : money(paidAmount)
-        item.method = clean(method)
+        item.paidAmount = finalPaidAmount
+        item.method = clean(method).isEmpty && finalStatus != "pending" ? paymentMethodPrefix : clean(method)
         item.slipPath = slipPaths.first ?? clean(slipPath)
         item.slipPathArray = slipPaths
         item.dueDate = clean(dueDate)
-        item.paymentDate = clean(paymentDate)
-        item.paymentStatus = paymentStatus
+        item.paymentDate = finalPaymentDate
+        item.paymentStatus = finalStatus
         item.paymentPlan = sourcePaymentPlan
         item.installmentPhase = sourceInstallmentPhase
         onSave(item)
@@ -2188,6 +2216,7 @@ private struct PaymentEditorContextCard: View {
     }
 
     private func currency(_ amount: Double) -> String {
-        amount.formatted(.currency(code: "THB").precision(.fractionLength(0)))
+        let formatted = amount.formatted(.number.precision(.fractionLength(0)))
+        return "\(formatted) บาท"
     }
 }

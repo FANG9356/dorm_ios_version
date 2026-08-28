@@ -192,10 +192,10 @@ class DashboardViewModel: ObservableObject {
         )
         pendingUsers = activeUsers.filter { user in
             !currentPayments.contains { payment in
-                payment.userId == (user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)) && payment.paymentStatus == "paid"
+                payment.userId == stableLocalUserID(for: user) && payment.paymentStatus == "paid"
             }
         }.map { user in
-            APIUser(id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
+            APIUser(id: stableLocalUserID(for: user), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
         }
         pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
         inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count

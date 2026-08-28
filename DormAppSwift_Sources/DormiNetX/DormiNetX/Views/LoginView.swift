@@ -61,7 +61,7 @@ struct LoginView: View {
                                 .blur(radius: isSignUpMode || isForgotPasswordMode ? 5 : 0)
 
                             HStack(spacing: 8) {
-                                Text(isForgotPasswordMode ? "Reset Password" : "Create Account")
+                                Text(isForgotPasswordMode ? "รีเซ็ตรหัสผ่าน" : "สร้างบัญชี")
                                 if !isForgotPasswordMode {
                                     Image(systemName: "sparkles")
                                         .font(.custom("SukhumvitSet-Bold", size: 28))
@@ -91,7 +91,8 @@ struct LoginView: View {
                                     Image(systemName: "person.fill")
                                         .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .indigo)
                                         .frame(width: 20)
-                                    TextField("Name", text: $name)
+                                    TextField("ชื่อผู้ใช้", text: $name)
+                                        .font(.custom("SukhumvitSet-Medium", size: 16))
                                         .textInputAutocapitalization(.words)
                                         .disableAutocorrection(true)
                                         .foregroundColor(.primary)
@@ -115,7 +116,8 @@ struct LoginView: View {
                                 Image(systemName: "envelope.fill")
                                     .foregroundColor(colorScheme == .dark ? .white.opacity(0.7) : .indigo)
                                     .frame(width: 20)
-                                TextField("Email", text: $email)
+                                TextField("อีเมล", text: $email)
+                                    .font(.custom("SukhumvitSet-Medium", size: 16))
                                     .textInputAutocapitalization(.never)
                                     .disableAutocorrection(true)
                                     .keyboardType(.emailAddress)
@@ -138,13 +140,15 @@ struct LoginView: View {
                                     .frame(width: 20)
                                 
                                 if isPasswordVisible {
-                                    TextField("Password", text: $password)
+                                    TextField("รหัสผ่าน", text: $password)
+                                        .font(.custom("SukhumvitSet-Medium", size: 16))
                                         .textInputAutocapitalization(.never)
                                         .disableAutocorrection(true)
                                         .foregroundColor(.primary)
                                         .limitedText($password, maxLength: 64, trimNewlines: true)
                                 } else {
-                                    SecureField("Password", text: $password)
+                                    SecureField("รหัสผ่าน", text: $password)
+                                        .font(.custom("SukhumvitSet-Medium", size: 16))
                                         .foregroundColor(.primary)
                                         .limitedText($password, maxLength: 64, trimNewlines: true)
                                 }
@@ -173,13 +177,15 @@ struct LoginView: View {
                                         .frame(width: 20)
                                     
                                     if isConfirmPasswordVisible {
-                                        TextField("Confirm Password", text: $confirmPassword)
+                                        TextField("ยืนยันรหัสผ่าน", text: $confirmPassword)
+                                            .font(.custom("SukhumvitSet-Medium", size: 16))
                                             .textInputAutocapitalization(.never)
                                             .disableAutocorrection(true)
                                             .foregroundColor(.primary)
                                             .limitedText($confirmPassword, maxLength: 64, trimNewlines: true)
                                     } else {
-                                        SecureField("Confirm Password", text: $confirmPassword)
+                                        SecureField("ยืนยันรหัสผ่าน", text: $confirmPassword)
+                                            .font(.custom("SukhumvitSet-Medium", size: 16))
                                             .foregroundColor(.primary)
                                             .limitedText($confirmPassword, maxLength: 64, trimNewlines: true)
                                     }
@@ -231,7 +237,7 @@ struct LoginView: View {
                                         isConfirmPasswordVisible = false
                                     }
                                 }) {
-                                    Text("Forgot your password?")
+                                    Text("ลืมรหัสผ่าน?")
                                         .font(.custom("SukhumvitSet-Medium", size: 13))
                                         .foregroundColor(colorScheme == .dark ? .white.opacity(0.85) : .indigo)
                                 }
@@ -247,7 +253,7 @@ struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: colorScheme == .dark ? .white : .indigo))
                                     } else {
-                                        Text(isForgotPasswordMode ? "Send Reset Link" : (isSignUpMode ? "Sign Up" : "Sign In"))
+                                        Text(isForgotPasswordMode ? "ส่งคำขอรีเซ็ตรหัสผ่าน" : (isSignUpMode ? "สมัครบัญชี" : "เข้าสู่ระบบ"))
                                             .font(.custom("SukhumvitSet-Bold", size: 17))
                                             .id(isForgotPasswordMode ? "forgot" : (isSignUpMode ? "signup" : "login"))
                                             .transition(.asymmetric(
@@ -285,7 +291,7 @@ struct LoginView: View {
                                 }
                             }
                         }) {
-                            Text(isForgotPasswordMode ? "Back to Sign In" : (isSignUpMode ? "Already have an account? Sign In" : "Don't have an account? Sign Up"))
+                            Text(isForgotPasswordMode ? "กลับไปเข้าสู่ระบบ" : (isSignUpMode ? "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครบัญชี"))
                                 .font(.custom("SukhumvitSet-Text", size: 15))
                                 .foregroundColor(.indigo)
                                 .id(isSignUpMode)
@@ -365,10 +371,10 @@ struct LoginView: View {
                                     }
                                     
                                     VStack(spacing: 4) {
-                                        Text("Enter 6-Digit Security Code")
+                                        Text("ใส่รหัสยืนยัน 6 หลัก")
                                             .font(.custom("SukhumvitSet-Bold", size: 17))
                                             .foregroundColor(.primary)
-                                        Text("Enter your 6-digit security code to continue")
+                                        Text("กรอกรหัสความปลอดภัยเพื่อเข้าใช้งานต่อ")
                                             .font(.custom("SukhumvitSet-Medium", size: 13))
                                             .foregroundColor(.secondary)
                                             .multilineTextAlignment(.center)
@@ -376,6 +382,7 @@ struct LoginView: View {
                                     
                                     ZStack {
                                         TextField("", text: $passcodeInput)
+                                            .font(.custom("SukhumvitSet-Bold", size: 22))
                                             .keyboardType(.numberPad)
                                             .focused($isPasscodeFocused)
                                             .opacity(0.01)
@@ -425,7 +432,7 @@ struct LoginView: View {
                                                 showingPasscodeModal = false
                                             }
                                         }) {
-                                            Text("Cancel")
+                                            Text("ยกเลิก")
                                                 .font(.custom("SukhumvitSet-Medium", size: 14))
                                                 .foregroundColor(.secondary)
                                                 .frame(maxWidth: .infinity)
@@ -435,7 +442,7 @@ struct LoginView: View {
                                         Button(action: {
                                             verifyPasscode()
                                         }) {
-                                            Text("Confirm")
+                                            Text("ยืนยัน")
                                                 .font(.custom("SukhumvitSet-Bold", size: 14))
                                                 .foregroundColor(.white)
                                                 .frame(maxWidth: .infinity)
@@ -528,18 +535,18 @@ struct LoginView: View {
 
         if isSignUpMode {
             if name.count <= 4 {
-                showError("Name must be at least 5 characters long")
+                showError("ชื่อผู้ใช้ต้องมีอย่างน้อย 5 ตัวอักษร")
                 return
             }
             
             let emailRegex = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$"
             if email.range(of: emailRegex, options: .regularExpression) == nil {
-                showError("Invalid email format")
+                showError("รูปแบบอีเมลไม่ถูกต้อง")
                 return
             }
             
             if password.count < 8 {
-                showError("Password must be at least 8 characters long")
+                showError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
                 return
             }
             
@@ -549,12 +556,12 @@ struct LoginView: View {
             let hasSpecial = password.contains(where: { !$0.isLetter && !$0.isNumber })
             
             if !hasUppercase || !hasLowercase || !hasNumber || !hasSpecial {
-                showError("Password must contain uppercase, lowercase, number, and special character")
+                showError("รหัสผ่านต้องมีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ")
                 return
             }
             
             guard password == confirmPassword else {
-                showError("Passwords do not match")
+                showError("รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน")
                 return
             }
         }
@@ -587,7 +594,7 @@ struct LoginView: View {
                     } else if isSignUpMode {
                         userName = name
                     } else if userName.isEmpty {
-                        userName = String(email.split(separator: "@").first ?? "User")
+                        userName = String(email.split(separator: "@").first ?? "ผู้ใช้")
                     }
                     
                     if securityTokenEnabled && !securityPasscode.isEmpty && !isSignUpMode {
@@ -617,10 +624,10 @@ struct LoginView: View {
                     }
                 }
             } else {
-                showError(isSignUpMode ? (backendErrorMsg ?? "Sign up failed") : "Sign in failed. Please check your email and password.")
+                showError(isSignUpMode ? (backendErrorMsg ?? "สมัครบัญชีไม่สำเร็จ") : "เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน")
             }
         } catch {
-            showError("A network error occurred, or the server is not responding.")
+            showError("เกิดปัญหาเครือข่าย หรือเซิร์ฟเวอร์ไม่ตอบสนอง")
             print("Auth Error: \(error)")
         }
         
@@ -632,7 +639,7 @@ struct LoginView: View {
         let emailRegex = "^[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}$"
 
         guard normalizedEmail.range(of: emailRegex, options: .regularExpression) != nil else {
-            await MainActor.run { showError("Please enter a valid email address.") }
+            await MainActor.run { showError("กรุณากรอกอีเมลให้ถูกต้อง") }
             return
         }
 
@@ -640,7 +647,7 @@ struct LoginView: View {
         try? await Task.sleep(nanoseconds: 350_000_000)
         await MainActor.run {
             isLoading = false
-            showError("Reset password is not connected to the backend yet.")
+            showError("ระบบรีเซ็ตรหัสผ่านยังไม่ได้เชื่อมต่อกับหลังบ้าน")
         }
     }
 
@@ -694,7 +701,7 @@ struct LoginView: View {
         isConfirmPasswordVisible = false
 
         guard let token = account.token, !token.isEmpty else {
-            showError("Saved session is missing. Please sign in again.")
+            showError("ไม่พบเซสชันที่บันทึกไว้ กรุณาเข้าสู่ระบบใหม่")
             return
         }
 
@@ -721,7 +728,7 @@ struct LoginView: View {
         }
         APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
         userEmail = account.email
-        userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "User") : account.name
+        userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "ผู้ใช้") : account.name
     }
 
     private func completeLoginTransition(shouldSaveAccount: Bool = true) {
@@ -759,7 +766,7 @@ struct LoginView: View {
             }
         } else {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                passcodeError = "Incorrect 6-digit security code"
+                passcodeError = "รหัสยืนยัน 6 หลักไม่ถูกต้อง"
                 passcodeInput = ""
             }
         }
