@@ -228,7 +228,7 @@ private struct TransferEvidenceRow: View {
     }
 }
 
-private struct SlipPreviewView: View {
+struct SlipPreviewView: View {
     let images: [UIImage]
     let initialIndex: Int
     @Environment(\.dismiss) private var dismiss
@@ -287,7 +287,7 @@ private struct SlipPreviewView: View {
     }
 }
 
-private struct ScrollableSlipImage: View {
+struct ScrollableSlipImage: View {
     let image: UIImage
     @State private var scale: CGFloat = 1
 

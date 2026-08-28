@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UIKit
 
 struct FinanceTabView: View {
     @Binding var showingPaymentEditor: Bool
@@ -12,7 +13,8 @@ struct FinanceTabView: View {
     @State private var selectedMonth = Date()
     @State private var selectedStatus = "ทั้งหมด"
     @State private var searchText = ""
-    @State private var editingPayment: Payment?
+    @State private var selectedBillingUser: DormUser?
+    @State private var paymentEditTarget: PaymentEditTarget?
     @State private var deletingPayment: Payment?
 
     private let statuses = ["ทั้งหมด", "ชำระแล้ว", "รอชำระ", "ชำระบางส่วน"]
@@ -24,15 +26,55 @@ struct FinanceTabView: View {
             header
             summaryGrid
             filters
-            paymentList
+            billingUserList
         }
         .padding(.top, 106)
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
-        .sheet(item: $editingPayment) { payment in
-            PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: monthKey) { draft in
-                apply(draft, to: payment)
-                modelContext.insert(LocalSystemLog(action: "แก้ไขรายการชำระเงิน", details: "แก้ไขรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+        .sheet(item: $selectedBillingUser) { user in
+            BillingHistorySheet(
+                user: user,
+                payments: paymentsFor(user),
+                onIssueBill: { month in
+                    selectedBillingUser = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        paymentEditTarget = .draft(generatedPayment(for: user, month: month))
+                    }
+                },
+                onEdit: { payment in
+                    selectedBillingUser = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        paymentEditTarget = .existing(payment)
+                    }
+                },
+                onDelete: { payment in
+                    selectedBillingUser = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        deletingPayment = payment
+                    }
+                },
+                onMarkPaid: { payment in
+                    markPaid(payment)
+                },
+                onSendLine: { payment in
+                    modelContext.insert(LocalSystemLog(action: "รอเชื่อมต่อ LINE", details: "เตรียมส่งแจ้งเตือนบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+                    saveAndPush()
+                }
+            )
+            .iphoneSheetStyle()
+        }
+        .sheet(item: $paymentEditTarget) { target in
+            PaymentEditor(payment: target.payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: target.payment.month.isEmpty ? monthKey : target.payment.month) { draft in
+                switch target {
+                case .existing(let payment):
+                    apply(draft, to: payment)
+                    modelContext.insert(LocalSystemLog(action: "แก้ไขรายการชำระเงิน", details: "แก้ไขรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+                case .draft:
+                    draft.lastUpdated = Date()
+                    draft.isDirty = true
+                    modelContext.insert(draft)
+                    modelContext.insert(LocalSystemLog(action: "ออกบิล", details: "ออกบิลห้อง \(draft.roomNumber) รอบ \(draft.month)"))
+                }
                 saveAndPush()
             }
             .iphoneSheetStyle()
@@ -171,9 +213,56 @@ struct FinanceTabView: View {
                         user: userFor(payment),
                         status: statusLabel(for: payment),
                         onMarkPaid: { markPaid(payment) },
-                        onEdit: { editingPayment = payment },
+                        onEdit: { paymentEditTarget = .existing(payment) },
                         onDelete: { deletingPayment = payment }
                     )
+                }
+            }
+        }
+    }
+
+    private var billingUserList: some View {
+        let visibleUsers = usersForBilling.filter { user in
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !query.isEmpty else { return true }
+            let name = "\(user.prefix)\(user.firstName) \(user.lastName)".lowercased()
+            return user.roomNumber.lowercased().contains(query) || name.contains(query)
+        }
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("ห้องที่ต้องติดตาม")
+                    .font(.custom("SukhumvitSet-Bold", size: 16))
+                Spacer()
+                Text("\(visibleUsers.count) ห้อง")
+                    .font(.custom("SukhumvitSet-Medium", size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            if visibleUsers.isEmpty {
+                GlassCard {
+                    VStack(spacing: 10) {
+                        Image(systemName: "person.text.rectangle")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.secondary)
+                        Text("ยังไม่มีลูกบ้านที่ต้องออกบิล")
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 22)
+                }
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    ForEach(visibleUsers) { user in
+                        BillingUserCard(
+                            user: user,
+                            currentPayment: paymentFor(user, month: monthKey),
+                            dueDay: dueDayText(for: user)
+                        ) {
+                            selectedBillingUser = user
+                        }
+                    }
                 }
             }
         }
@@ -187,6 +276,34 @@ struct FinanceTabView: View {
 
     private func userFor(_ payment: Payment) -> DormUser? {
         users.first { $0.serverId == payment.userId && payment.userId > 0 } ?? users.first { $0.roomNumber == payment.roomNumber }
+    }
+
+    private var usersForBilling: [DormUser] {
+        users
+            .filter {
+                !$0.isDeletedLocally &&
+                $0.status != "ย้ายออกแล้ว" &&
+                !$0.roomNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            .sorted { clean($0.roomNumber).localizedStandardCompare(clean($1.roomNumber)) == .orderedAscending }
+    }
+
+    private func paymentsFor(_ user: DormUser) -> [Payment] {
+        payments.filter { isPayment($0, for: user) }
+    }
+
+    private func paymentFor(_ user: DormUser, month: String) -> Payment? {
+        payments.first { isPayment($0, for: user) && $0.month == month && $0.paymentPlan != "installment" }
+    }
+
+    private func isPayment(_ payment: Payment, for user: DormUser) -> Bool {
+        clean(payment.roomNumber) == clean(user.roomNumber) ||
+        (payment.userId > 0 && (user.serverId == payment.userId || Int(truncatingIfNeeded: user.id.hashValue) == payment.userId))
+    }
+
+    private func dueDayText(for user: DormUser) -> String {
+        let day = Int(String(user.moveInDate.suffix(2))) ?? 1
+        return "ครบกำหนดวันที่ \(max(1, min(day, 31)))"
     }
 
     private func statusLabel(for payment: Payment) -> String {
@@ -367,6 +484,682 @@ struct FinanceTabView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
+    }
+}
+
+private enum PaymentEditTarget: Identifiable {
+    case existing(Payment)
+    case draft(Payment)
+
+    var id: UUID { payment.id }
+    var payment: Payment {
+        switch self {
+        case .existing(let payment), .draft(let payment):
+            return payment
+        }
+    }
+}
+
+private struct BillingUserCard: View {
+    let user: DormUser
+    let currentPayment: Payment?
+    let dueDay: String
+    let action: () -> Void
+
+    private var fullName: String {
+        "\(user.prefix)\(user.firstName) \(user.lastName)"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        Button(action: action) {
+            GlassCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top) {
+                        Text(user.roomNumber)
+                            .font(.custom("SukhumvitSet-Bold", size: 24))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+
+                        Spacer()
+
+                        Text(statusText)
+                            .font(.custom("SukhumvitSet-Bold", size: 10))
+                            .foregroundStyle(statusColor)
+                            .padding(.horizontal, 9)
+                            .frame(height: 26)
+                            .background(statusColor.opacity(0.13), in: Capsule())
+                    }
+
+                    Text(fullName.isEmpty ? "ลูกบ้าน" : fullName)
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(height: 1)
+
+                    Label(dueDay, systemImage: "calendar")
+                        .font(.custom("SukhumvitSet-Text", size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var statusText: String {
+        guard let currentPayment else { return "รอออกบิล" }
+        switch currentPayment.paymentStatus {
+        case "paid": return "ชำระแล้ว"
+        case "partial": return "บางส่วน"
+        case "checking": return "รอตรวจ"
+        default: return "รอชำระ"
+        }
+    }
+
+    private var statusColor: Color {
+        guard let currentPayment else { return .secondary }
+        switch currentPayment.paymentStatus {
+        case "paid": return .green
+        case "partial": return .blue
+        case "checking": return .yellow
+        default: return .orange
+        }
+    }
+}
+
+private struct BillingHistorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let user: DormUser
+    let payments: [Payment]
+    let onIssueBill: (String) -> Void
+    let onEdit: (Payment) -> Void
+    let onDelete: (Payment) -> Void
+    let onMarkPaid: (Payment) -> Void
+    let onSendLine: (Payment) -> Void
+
+    private var cycles: [BillingCycle] {
+        BillingCycle.generate(
+            moveInDate: user.moveInDate,
+            contractEndDate: user.contractEndDate,
+            indefiniteContract: user.indefiniteContract == 1
+        )
+    }
+
+    private var fullName: String {
+        "\(user.prefix)\(user.firstName) \(user.lastName)"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    historyHeader
+
+                    ForEach(Array(cycles.enumerated()), id: \.element.monthId) { index, cycle in
+                        BillingCycleRow(
+                            number: index + 1,
+                            cycle: cycle,
+                            payment: payment(for: cycle.monthId),
+                            onIssueBill: { onIssueBill(cycle.monthId) },
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                            onMarkPaid: onMarkPaid,
+                            onSendLine: onSendLine
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 28)
+            }
+            .navigationTitle("ประวัติการชำระเงิน")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ปิด") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var historyHeader: some View {
+        GlassCard {
+            HStack(spacing: 14) {
+                VStack(spacing: 2) {
+                    Text(user.roomNumber)
+                        .font(.custom("SukhumvitSet-Bold", size: 28))
+                        .foregroundStyle(.primary)
+                    Text("ห้อง")
+                        .font(.custom("SukhumvitSet-Text", size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 78, height: 70)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(fullName.isEmpty ? "ลูกบ้าน" : fullName)
+                        .font(.custom("SukhumvitSet-Bold", size: 18))
+                        .foregroundStyle(.primary)
+                    Text("ระบบคำนวณรอบบิลรายเดือนจากวันเข้าอยู่และสัญญา")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private func payment(for month: String) -> Payment? {
+        payments
+            .filter { $0.month == month }
+            .sorted { $0.lastUpdated > $1.lastUpdated }
+            .first
+    }
+}
+
+private struct BillingCycleRow: View {
+    let number: Int
+    let cycle: BillingCycle
+    let payment: Payment?
+    let onIssueBill: () -> Void
+    let onEdit: (Payment) -> Void
+    let onDelete: (Payment) -> Void
+    let onMarkPaid: (Payment) -> Void
+    let onSendLine: (Payment) -> Void
+    @State private var showingSlipPreview = false
+    @State private var showingReceipt = false
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(alignment: .center, spacing: 12) {
+                    Text("\(number)")
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
+                        .foregroundStyle(payment == nil ? Color.secondary : Color.green)
+                        .frame(width: 34, height: 34)
+                        .background((payment == nil ? Color.primary.opacity(0.06) : Color.green.opacity(0.14)), in: Circle())
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(cycle.label)
+                            .font(.custom("SukhumvitSet-Bold", size: 16))
+                            .foregroundStyle(cycle.isFuture && payment == nil ? .secondary : .primary)
+                        Text("กำหนดชำระวันที่ \(cycle.dueDay)")
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text(statusText)
+                            .font(.custom("SukhumvitSet-Bold", size: 10))
+                            .foregroundStyle(statusColor)
+                        if let payment {
+                            Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                                .font(.custom("SukhumvitSet-Bold", size: 16))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+                }
+
+                actionContent
+            }
+            .opacity(cycle.isFuture && payment == nil ? 0.62 : 1)
+        }
+        .fullScreenCover(isPresented: $showingSlipPreview) {
+            if !slipImages.isEmpty {
+                SlipPreviewView(images: slipImages)
+            }
+        }
+        .fullScreenCover(isPresented: $showingReceipt) {
+            if let payment {
+                PaymentReceiptView(payment: payment, cycle: cycle)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var actionContent: some View {
+        if let payment {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                if payment.paymentStatus != "paid" {
+                    compactAction("รับชำระ", icon: "checkmark.circle.fill", color: .green) {
+                        onMarkPaid(payment)
+                    }
+                }
+                if !slipImages.isEmpty {
+                    compactAction("หลักฐาน", icon: "photo.on.rectangle", color: .primary) {
+                        showingSlipPreview = true
+                    }
+                }
+                if payment.paymentStatus == "paid" {
+                    compactAction("ใบเสร็จ", icon: "doc.richtext", color: .blue) {
+                        showingReceipt = true
+                    }
+                }
+                compactAction("แก้ไข", icon: "pencil", color: .blue) {
+                    onEdit(payment)
+                }
+                compactAction("ลบ", icon: "trash", color: .red) {
+                    onDelete(payment)
+                }
+                compactAction("LINE", icon: "paperplane.fill", color: .green) {
+                    onSendLine(payment)
+                }
+            }
+        } else {
+            Button(action: onIssueBill) {
+                HStack(spacing: 8) {
+                    Image(systemName: cycle.isFuture ? "doc.badge.plus" : "doc.text.fill")
+                    Text(cycle.isFuture ? "เตรียมบิลล่วงหน้า" : "ออกบิล / รับชำระ")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                }
+                .font(.custom("SukhumvitSet-Bold", size: 13))
+                .foregroundStyle(cycle.isFuture ? Color.secondary : Color.blue)
+                .padding(.horizontal, 13)
+                .frame(height: 44)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var slipImages: [UIImage] {
+        guard let payment else { return [] }
+        var paths = payment.slipPathArray
+        if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
+            paths.insert(payment.slipPath, at: 0)
+        }
+        return paths.compactMap { path in
+            guard let url = SlipImageManager.url(for: path),
+                  FileManager.default.fileExists(atPath: url.path) else {
+                return nil
+            }
+            return UIImage(contentsOfFile: url.path)
+        }
+    }
+
+    private func compactAction(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.custom("SukhumvitSet-Bold", size: 11))
+                .foregroundStyle(color)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(color.opacity(0.12), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var statusText: String {
+        guard let payment else {
+            return cycle.isFuture ? "ยังไม่ถึงรอบบิล" : "รอออกบิล"
+        }
+        switch payment.paymentStatus {
+        case "paid": return "ชำระแล้ว"
+        case "partial": return "ชำระบางส่วน"
+        case "checking": return "รอตรวจสอบสลิป"
+        default: return "รอชำระเงิน"
+        }
+    }
+
+    private var statusColor: Color {
+        guard let payment else { return cycle.isFuture ? .secondary : .orange }
+        switch payment.paymentStatus {
+        case "paid": return .green
+        case "partial": return .blue
+        case "checking": return .yellow
+        default: return .orange
+        }
+    }
+}
+
+private struct PaymentReceiptView: View {
+    @Environment(\.dismiss) private var dismiss
+    let payment: Payment
+    let cycle: BillingCycle
+    @State private var shareImage: UIImage?
+    @State private var showingShareSheet = false
+    @State private var saveMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.opacity(0.94)
+                    .ignoresSafeArea()
+
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 14) {
+                        ReceiptExportCard(payment: payment, cycle: cycle)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 12)
+
+                        if let saveMessage {
+                            Text(saveMessage)
+                                .font(.custom("SukhumvitSet-Medium", size: 12))
+                                .foregroundStyle(.white.opacity(0.72))
+                                .padding(.bottom, 8)
+                        }
+                    }
+                    .padding(.bottom, 24)
+                }
+            }
+            .navigationTitle("ใบเสร็จ")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 38, height: 38)
+                            .background(.white.opacity(0.12), in: Circle())
+                    }
+                }
+                ToolbarItemGroup(placement: .confirmationAction) {
+                    Button {
+                        shareImage = renderedReceiptImage()
+                        showingShareSheet = shareImage != nil
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .foregroundStyle(.white)
+
+                    Button {
+                        saveReceipt()
+                    } label: {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    .foregroundStyle(.white)
+
+                    Button {
+                        printReceipt()
+                    } label: {
+                        Image(systemName: "printer")
+                    }
+                    .foregroundStyle(.white)
+                }
+            }
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            if let shareImage {
+                ActivityShareSheet(items: [shareImage])
+            }
+        }
+    }
+
+    private func saveReceipt() {
+        guard let image = renderedReceiptImage() else {
+            saveMessage = "สร้างรูปใบเสร็จไม่สำเร็จ"
+            return
+        }
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        saveMessage = "บันทึกใบเสร็จลงรูปภาพแล้ว"
+    }
+
+    private func printReceipt() {
+        guard let image = renderedReceiptImage() else {
+            saveMessage = "สร้างเอกสารสำหรับพิมพ์ไม่สำเร็จ"
+            return
+        }
+        let controller = UIPrintInteractionController.shared
+        controller.printInfo = UIPrintInfo(dictionary: nil)
+        controller.printInfo?.outputType = .general
+        controller.printInfo?.jobName = "DormiNet Receipt \(payment.roomNumber) \(cycle.monthId)"
+        controller.printingItem = image
+        controller.present(animated: true)
+    }
+
+    @MainActor
+    private func renderedReceiptImage() -> UIImage? {
+        let renderer = ImageRenderer(content:
+            ReceiptExportCard(payment: payment, cycle: cycle)
+                .frame(width: 820)
+                .padding(42)
+                .background(Color.white)
+        )
+        renderer.scale = 2
+        return renderer.uiImage
+    }
+}
+
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+private struct ReceiptExportCard: View {
+    let payment: Payment
+    let cycle: BillingCycle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("DormiNet")
+                        .font(.system(size: 24, weight: .black))
+                        .foregroundStyle(.black)
+                    Text("ใบเสร็จรับเงิน")
+                        .font(.custom("SukhumvitSet-Bold", size: 28))
+                        .foregroundStyle(.black)
+                }
+
+                Spacer()
+
+                Text(payment.paymentStatus == "paid" ? "ชำระแล้ว" : "ยังไม่ปิดบิล")
+                    .font(.custom("SukhumvitSet-Bold", size: 13))
+                    .foregroundStyle(.black.opacity(0.72))
+                    .padding(.horizontal, 13)
+                    .frame(height: 34)
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.black.opacity(0.14), lineWidth: 1)
+                    )
+            }
+
+            HStack(spacing: 12) {
+                infoBox("ห้อง", payment.roomNumber)
+                infoBox("รอบบิล", cycle.label)
+                infoBox("วันที่ชำระ", thaiDate(payment.paymentDate))
+            }
+
+            VStack(spacing: 0) {
+                receiptLine("ช่องทางชำระเงิน", thaiPaymentMethod)
+                divider
+                receiptLine("ค่าเช่า", currency(payment.rentFee))
+                receiptLine("ค่าน้ำ", currency(payment.waterFee))
+                receiptLine("ค่าไฟ", currency(payment.electricFee))
+                receiptLine("ค่าส่วนกลาง", currency(payment.commonFee))
+                receiptLine("ค่าอุปกรณ์เสริม", currency(payment.applianceFee))
+                receiptLine("ค่าปรับล่าช้า", currency(payment.lateFee))
+                divider
+                receiptLine("ยอดรวม", currency(payment.amount), isTotal: true)
+                receiptLine("รับชำระแล้ว", currency(payment.paidAmount), isTotal: true)
+                receiptLine("ยอดคงเหลือ", currency(max(payment.amount - payment.paidAmount, 0)), isTotal: true)
+            }
+            .padding(.vertical, 6)
+
+            HStack {
+                Text("เอกสารนี้สร้างจากข้อมูลภายในเครื่องของระบบ DormiNet")
+                    .font(.custom("SukhumvitSet-Text", size: 11))
+                    .foregroundStyle(.gray)
+                Spacer()
+                Text(generatedDateText)
+                    .font(.custom("SukhumvitSet-Medium", size: 11))
+                    .foregroundStyle(.gray)
+            }
+        }
+        .padding(26)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private func infoBox(_ title: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Medium", size: 11))
+                .foregroundStyle(.gray)
+            Text(value)
+                .font(.custom("SukhumvitSet-Bold", size: 15))
+                .foregroundStyle(.black)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 10)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.black.opacity(0.08))
+                .frame(height: 1)
+        }
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Color.black.opacity(0.09))
+            .frame(height: 1)
+            .padding(.vertical, 8)
+    }
+
+    private func receiptLine(_ title: String, _ value: String, isTotal: Bool = false) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.custom(isTotal ? "SukhumvitSet-Bold" : "SukhumvitSet-Text", size: isTotal ? 15 : 13))
+                .foregroundStyle(isTotal ? Color.black : Color.gray)
+            Spacer(minLength: 18)
+            Text(value)
+                .font(.custom("SukhumvitSet-Bold", size: isTotal ? 18 : 14))
+                .foregroundStyle(.black)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, 5)
+    }
+
+    private func currency(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = Locale(identifier: "th_TH")
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = value.rounded() == value ? 0 : 2
+
+        let amount = formatter.string(from: NSNumber(value: value)) ?? "0"
+        return "\(amount) บาท"
+    }
+
+    private var thaiPaymentMethod: String {
+        let trimmed = payment.method.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "-" }
+
+        return trimmed
+            .replacingOccurrences(of: "เงินโอน (Transfer)", with: "โอนผ่านธนาคาร")
+            .replacingOccurrences(of: "เงินสด (Cash)", with: "เงินสด")
+            .replacingOccurrences(of: "Transfer", with: "โอนผ่านธนาคาร")
+            .replacingOccurrences(of: "Cash", with: "เงินสด")
+            .replacingOccurrences(of: "Full payment", with: "ชำระเต็มจำนวน")
+            .replacingOccurrences(of: "Installment", with: "ผ่อนชำระ")
+    }
+
+    private var generatedDateText: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "th_TH")
+        formatter.calendar = Calendar(identifier: .buddhist)
+        formatter.dateFormat = "d MMMM yyyy เวลา HH:mm น."
+        return formatter.string(from: Date())
+    }
+
+    private func thaiDate(_ rawValue: String) -> String {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "-" }
+
+        let inputFormatter = DateFormatter()
+        inputFormatter.locale = Locale(identifier: "en_US_POSIX")
+        inputFormatter.calendar = Calendar(identifier: .gregorian)
+
+        let outputFormatter = DateFormatter()
+        outputFormatter.locale = Locale(identifier: "th_TH")
+        outputFormatter.calendar = Calendar(identifier: .buddhist)
+        outputFormatter.dateFormat = "d MMMM yyyy"
+
+        for format in ["yyyy-MM-dd", "yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ"] {
+            inputFormatter.dateFormat = format
+            if let date = inputFormatter.date(from: trimmed) {
+                return outputFormatter.string(from: date)
+            }
+        }
+
+        return trimmed
+    }
+}
+
+private struct BillingCycle {
+    let monthId: String
+    let label: String
+    let dueDay: Int
+    let isFuture: Bool
+
+    static func generate(moveInDate: String, contractEndDate: String, indefiniteContract: Bool) -> [BillingCycle] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+
+        let moveIn = formatter.date(from: String(moveInDate.prefix(10))) ?? Date()
+        let end = indefiniteContract ? Calendar(identifier: .gregorian).date(byAdding: .month, value: 12, to: moveIn) ?? moveIn : (formatter.date(from: String(contractEndDate.prefix(10))) ?? Calendar(identifier: .gregorian).date(byAdding: .month, value: 12, to: moveIn) ?? moveIn)
+        let dueDay = Calendar(identifier: .gregorian).component(.day, from: moveIn)
+        let todayMonth = monthKey(for: Date())
+
+        var result: [BillingCycle] = []
+        var cursor = Calendar(identifier: .gregorian).date(from: Calendar(identifier: .gregorian).dateComponents([.year, .month], from: moveIn)) ?? moveIn
+        let endMonth = Calendar(identifier: .gregorian).date(from: Calendar(identifier: .gregorian).dateComponents([.year, .month], from: end)) ?? end
+
+        while cursor <= endMonth && result.count < 60 {
+            let monthId = monthKey(for: cursor)
+            result.append(BillingCycle(
+                monthId: monthId,
+                label: monthLabel(for: cursor),
+                dueDay: dueDay,
+                isFuture: monthId > todayMonth
+            ))
+            cursor = Calendar(identifier: .gregorian).date(byAdding: .month, value: 1, to: cursor) ?? cursor
+        }
+        return result
+    }
+
+    private static func monthKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: date)
+    }
+
+    private static func monthLabel(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "th_TH")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: date)
     }
 }
 
