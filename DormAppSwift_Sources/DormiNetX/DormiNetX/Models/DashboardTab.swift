@@ -11,6 +11,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
     case maintenance = "แจ้งซ่อม"
     case adminManagement = "จัดการผู้ดูแลระบบ"
     case securityToken = "โทเคนเข้าสู่ระบบ"
+    case language = "จัดการภาษา"
     case appIcon = "ไอคอนแอพ"
     case appBackground = "พื้นหลังแอพ"
     case backup = "สำรองและกู้คืนข้อมูล"
@@ -30,6 +31,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
         case .maintenance: return "wrench.and.screwdriver.fill"
         case .adminManagement: return "person.badge.key.fill"
         case .securityToken: return "lock.shield.fill"
+        case .language: return "globe.asia.australia.fill"
         case .appIcon: return "app.fill"
         case .appBackground: return "photo.on.rectangle.angled"
         case .backup: return "archivebox.fill"
@@ -39,7 +41,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
     
     var isSettingsMenu: Bool {
         switch self {
-        case .adminManagement, .securityToken, .appIcon, .appBackground, .backup, .systemLogs:
+        case .adminManagement, .securityToken, .language, .appIcon, .appBackground, .backup, .systemLogs:
             return true
         default:
             return false
