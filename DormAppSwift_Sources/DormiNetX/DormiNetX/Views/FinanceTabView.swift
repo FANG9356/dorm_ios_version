@@ -15,6 +15,7 @@ struct FinanceTabView: View {
     @State private var searchText = ""
     @State private var selectedBillingUser: DormUser?
     @State private var paymentEditTarget: PaymentEditTarget?
+    @State private var pendingPaymentEditTarget: PaymentEditTarget?
     @State private var deletingPayment: Payment?
 
     private let statuses = ["ทั้งหมด", "ชำระแล้ว", "รอชำระ", "ชำระบางส่วน"]
@@ -31,21 +32,21 @@ struct FinanceTabView: View {
         .padding(.top, 106)
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
-        .sheet(item: $selectedBillingUser) { user in
+        .sheet(item: $selectedBillingUser, onDismiss: {
+            guard let target = pendingPaymentEditTarget else { return }
+            pendingPaymentEditTarget = nil
+            paymentEditTarget = target
+        }) { user in
             BillingHistorySheet(
                 user: user,
                 payments: paymentsFor(user),
                 onIssueBill: { month in
+                    pendingPaymentEditTarget = .draft(generatedPayment(for: user, month: month))
                     selectedBillingUser = nil
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        paymentEditTarget = .draft(generatedPayment(for: user, month: month))
-                    }
                 },
                 onEdit: { payment in
+                    pendingPaymentEditTarget = .existing(payment)
                     selectedBillingUser = nil
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        paymentEditTarget = .existing(payment)
-                    }
                 },
                 onDelete: { payment in
                     selectedBillingUser = nil
@@ -581,13 +582,33 @@ private struct BillingHistorySheet: View {
     let onDelete: (Payment) -> Void
     let onMarkPaid: (Payment) -> Void
     let onSendLine: (Payment) -> Void
+    private let cycles: [BillingCycle]
+    private let paymentsByMonth: [String: Payment]
 
-    private var cycles: [BillingCycle] {
-        BillingCycle.generate(
+    init(
+        user: DormUser,
+        payments: [Payment],
+        onIssueBill: @escaping (String) -> Void,
+        onEdit: @escaping (Payment) -> Void,
+        onDelete: @escaping (Payment) -> Void,
+        onMarkPaid: @escaping (Payment) -> Void,
+        onSendLine: @escaping (Payment) -> Void
+    ) {
+        self.user = user
+        self.payments = payments
+        self.onIssueBill = onIssueBill
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.onMarkPaid = onMarkPaid
+        self.onSendLine = onSendLine
+        self.cycles = BillingCycle.generate(
             moveInDate: user.moveInDate,
             contractEndDate: user.contractEndDate,
             indefiniteContract: user.indefiniteContract == 1
         )
+        self.paymentsByMonth = Dictionary(grouping: payments, by: \.month).compactMapValues { payments in
+            payments.sorted { $0.lastUpdated > $1.lastUpdated }.first
+        }
     }
 
     private var fullName: String {
@@ -605,7 +626,7 @@ private struct BillingHistorySheet: View {
                         BillingCycleRow(
                             number: index + 1,
                             cycle: cycle,
-                            payment: payment(for: cycle.monthId),
+                            payment: paymentsByMonth[cycle.monthId],
                             onIssueBill: { onIssueBill(cycle.monthId) },
                             onEdit: onEdit,
                             onDelete: onDelete,
@@ -656,13 +677,6 @@ private struct BillingHistorySheet: View {
                 Spacer()
             }
         }
-    }
-
-    private func payment(for month: String) -> Payment? {
-        payments
-            .filter { $0.month == month }
-            .sorted { $0.lastUpdated > $1.lastUpdated }
-            .first
     }
 }
 
@@ -736,7 +750,7 @@ private struct BillingCycleRow: View {
                         onMarkPaid(payment)
                     }
                 }
-                if !slipImages.isEmpty {
+                if hasSlipImages {
                     compactAction("หลักฐาน", icon: "photo.on.rectangle", color: .primary) {
                         showingSlipPreview = true
                     }
@@ -775,18 +789,30 @@ private struct BillingCycleRow: View {
     }
 
     private var slipImages: [UIImage] {
-        guard let payment else { return [] }
-        var paths = payment.slipPathArray
-        if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
-            paths.insert(payment.slipPath, at: 0)
-        }
-        return paths.compactMap { path in
+        guard payment != nil else { return [] }
+        return slipPaths.compactMap { path in
             guard let url = SlipImageManager.url(for: path),
                   FileManager.default.fileExists(atPath: url.path) else {
                 return nil
             }
             return UIImage(contentsOfFile: url.path)
         }
+    }
+
+    private var hasSlipImages: Bool {
+        slipPaths.contains { path in
+            guard let url = SlipImageManager.url(for: path) else { return false }
+            return FileManager.default.fileExists(atPath: url.path)
+        }
+    }
+
+    private var slipPaths: [String] {
+        guard let payment else { return [] }
+        var paths = payment.slipPathArray
+        if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
+            paths.insert(payment.slipPath, at: 0)
+        }
+        return paths
     }
 
     private func compactAction(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
@@ -828,9 +854,9 @@ private struct PaymentReceiptView: View {
     @Environment(\.dismiss) private var dismiss
     let payment: Payment
     let cycle: BillingCycle
-    @State private var shareImage: UIImage?
-    @State private var showingShareSheet = false
+    @State private var sharePayload: ReceiptSharePayload?
     @State private var saveMessage: String?
+    @State private var showingSaveAlert = false
 
     var body: some View {
         NavigationStack {
@@ -838,21 +864,15 @@ private struct PaymentReceiptView: View {
                 Color.black.opacity(0.94)
                     .ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 14) {
-                        ReceiptExportCard(payment: payment, cycle: cycle)
-                            .padding(.horizontal, 18)
-                            .padding(.top, 12)
+                VStack {
+                    ReceiptExportCard(payment: payment, cycle: cycle)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 12)
 
-                        if let saveMessage {
-                            Text(saveMessage)
-                                .font(.custom("SukhumvitSet-Medium", size: 12))
-                                .foregroundStyle(.white.opacity(0.72))
-                                .padding(.bottom, 8)
-                        }
-                    }
-                    .padding(.bottom, 24)
+                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .allowsHitTesting(false)
             }
             .navigationTitle("ใบเสร็จ")
             .navigationBarTitleDisplayMode(.inline)
@@ -871,8 +891,7 @@ private struct PaymentReceiptView: View {
                 }
                 ToolbarItemGroup(placement: .confirmationAction) {
                     Button {
-                        shareImage = renderedReceiptImage()
-                        showingShareSheet = shareImage != nil
+                        shareReceipt()
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                     }
@@ -894,20 +913,33 @@ private struct PaymentReceiptView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingShareSheet) {
-            if let shareImage {
-                ActivityShareSheet(items: [shareImage])
-            }
+        .sheet(item: $sharePayload) { payload in
+            ActivityShareSheet(items: [payload.image])
+                .presentationDetents([.medium, .large])
         }
+        .alert(saveMessage ?? "", isPresented: $showingSaveAlert) {
+            Button("ตกลง", role: .cancel) { }
+        }
+    }
+
+    private func shareReceipt() {
+        guard let image = renderedReceiptImage() else {
+            saveMessage = "สร้างรูปใบเสร็จไม่สำเร็จ"
+            showingSaveAlert = true
+            return
+        }
+        sharePayload = ReceiptSharePayload(image: image)
     }
 
     private func saveReceipt() {
         guard let image = renderedReceiptImage() else {
             saveMessage = "สร้างรูปใบเสร็จไม่สำเร็จ"
+            showingSaveAlert = true
             return
         }
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
         saveMessage = "บันทึกใบเสร็จลงรูปภาพแล้ว"
+        showingSaveAlert = true
     }
 
     private func printReceipt() {
@@ -934,6 +966,11 @@ private struct PaymentReceiptView: View {
         renderer.scale = 2
         return renderer.uiImage
     }
+}
+
+private struct ReceiptSharePayload: Identifiable {
+    let id = UUID()
+    let image: UIImage
 }
 
 private struct ActivityShareSheet: UIViewControllerRepresentable {
