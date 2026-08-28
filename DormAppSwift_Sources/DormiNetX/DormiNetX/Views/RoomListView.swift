@@ -248,6 +248,8 @@ struct RoomListView: View {
             AdminManagementTabView()
         case .securityToken:
             SecurityTokenTabView()
+        case .language:
+            LanguageSettingsTabView()
         case .appIcon:
             AppIconSettingsTabView()
         case .appBackground:
