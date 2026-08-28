@@ -1372,10 +1372,13 @@ struct PaymentEditor: View {
     @State private var isImportingSlip = false
     @State private var slipImportMessage: String?
     @State private var selectedDetent: PresentationDetent = .large
+    @State private var billDate: Date
+    @State private var dueDateValue: Date
+    @State private var paymentDateValue: Date
 
     private let statusOptions = [
         ("pending", "รอชำระ"),
-        ("partial", "ชำระบางส่วน"),
+        ("partial", "จ่ายบางส่วน"),
         ("paid", "ชำระแล้ว")
     ]
 
@@ -1403,12 +1406,17 @@ struct PaymentEditor: View {
         _dueDate = State(initialValue: payment?.dueDate ?? "")
         _paymentDate = State(initialValue: payment?.paymentDate ?? "")
         _paymentStatus = State(initialValue: payment?.paymentStatus.isEmpty == false ? payment?.paymentStatus ?? "pending" : "pending")
+        let initialBillDate = Self.dateFromMonthKey(payment?.month ?? defaultMonth) ?? Date()
+        let initialDueDate = Self.dateFromDateKey(payment?.dueDate ?? "") ?? initialBillDate
+        _billDate = State(initialValue: initialBillDate)
+        _dueDateValue = State(initialValue: initialDueDate)
+        _paymentDateValue = State(initialValue: Self.dateFromDateKey(payment?.paymentDate ?? "") ?? Date())
     }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 18) {
                     PaymentEditorContextCard(
                         roomNumber: clean(roomNumber).isEmpty ? "-" : clean(roomNumber),
                         tenantName: selectedTenantName,
@@ -1421,73 +1429,102 @@ struct PaymentEditor: View {
                         statusColor: statusColor(for: paymentStatus),
                         slipCount: slipPaths.count
                     )
-                }
-                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                .listRowBackground(Color.clear)
 
-                Section {
-                    if rooms.isEmpty {
-                        labeledTextField("เลขห้อง", placeholder: "เช่น 101", text: $roomNumber)
-                    } else {
-                        Picker("ห้อง", selection: $roomNumber) {
-                            ForEach(rooms) { room in
-                                Text(room.roomNumber).tag(room.roomNumber)
-                            }
+                    formSectionHeader("ข้อมูลบิล", subtitle: "เลือกห้องและรอบที่ต้องการแก้ไข")
+                    editorCard {
+                        if rooms.isEmpty {
+                            labeledTextField("เลขห้อง", placeholder: "เช่น 101", text: $roomNumber)
+                        } else {
+                            roomPickerButton
                         }
-                        .onChange(of: roomNumber) { _, _ in
-                            applyRoomTypeDefaults(onlyWhenEmpty: true)
-                        }
+
                         Button {
                             applyRoomTypeDefaults()
                         } label: {
                             Label("เติมราคาจากประเภทห้อง", systemImage: "wand.and.stars")
-                                .font(.custom("SukhumvitSet-Bold", size: 14))
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .font(.custom("SukhumvitSet-Bold", size: 13))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.primary.opacity(0.06), in: Capsule())
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(.blue)
-                    }
-                    labeledTextField("รอบเดือน", placeholder: "เช่น 2026-08", text: $month)
-                        .keyboardType(.numbersAndPunctuation)
-                        .dateKeyInput($month, maxLength: 7)
-                    labeledTextField("วันครบกำหนด", placeholder: "เช่น 2026-08-31", text: $dueDate)
-                        .keyboardType(.numbersAndPunctuation)
-                        .dateKeyInput($dueDate)
-                } header: {
-                    formSectionHeader("ข้อมูลบิล", subtitle: "ระบุห้อง รอบเดือน และวันครบกำหนดของรายการนี้")
-                }
 
-                Section {
-                    moneyField("ค่าเช่า", text: $rentFee)
-                    moneyField("ค่าน้ำ", text: $waterFee)
-                    moneyField("ค่าไฟ", text: $electricFee)
-                    moneyField("ค่าส่วนกลาง", text: $commonFee)
-                    moneyField("ค่าปรับล่าช้า", text: $lateFee)
-                    moneyField("ค่าอุปกรณ์เสริม", text: $applianceFee)
-                    HStack {
-                        Text("ยอดรวม")
-                        Spacer()
-                        Text(totalAmount.formatted(.number.precision(.fractionLength(0))) + " ฿")
-                            .fontWeight(.semibold)
-                    }
-                } header: {
-                    formSectionHeader("ยอดที่คิดเงิน", subtitle: "แก้เฉพาะยอดที่ต้องออกบิลให้ห้องนี้")
-                }
+                        dividerLine
 
-                Section {
-                    statusSelector
-                    labeledTextField("ยอดที่ชำระแล้ว", placeholder: "0", text: $paidAmount)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
-                    labeledTextField("ช่องทางชำระเงิน", placeholder: "เช่น เงินสด หรือ โอนผ่านธนาคาร", text: $method)
-                        .limitedText($method, maxLength: 60, trimNewlines: true)
-                    labeledTextField("วันที่ชำระ", placeholder: "เช่น 2026-08-23", text: $paymentDate)
-                        .keyboardType(.numbersAndPunctuation)
-                        .dateKeyInput($paymentDate)
-                    slipPickerContent
-                } header: {
+                        DatePicker("รอบบิล", selection: $billDate, displayedComponents: [.date])
+                            .datePickerStyle(.compact)
+                            .environment(\.locale, Locale(identifier: "th_TH"))
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .onChange(of: billDate) { _, newValue in
+                                month = Self.monthKey(from: newValue)
+                                if clean(dueDate).isEmpty {
+                                    dueDateValue = newValue
+                                    dueDate = Self.dateKey(from: newValue)
+                                }
+                            }
+
+                        DatePicker("วันครบกำหนด", selection: $dueDateValue, displayedComponents: [.date])
+                            .datePickerStyle(.compact)
+                            .environment(\.locale, Locale(identifier: "th_TH"))
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .onChange(of: dueDateValue) { _, newValue in
+                                dueDate = Self.dateKey(from: newValue)
+                            }
+                    }
+
+                    formSectionHeader("ยอดที่คิดเงิน", subtitle: "แยกรายการค่าใช้จ่ายเพื่อให้ตรวจสอบง่าย")
+                    editorCard {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 12) {
+                            moneyField("ค่าเช่า", text: $rentFee)
+                            moneyField("ค่าน้ำ", text: $waterFee)
+                            moneyField("ค่าไฟ", text: $electricFee)
+                            moneyField("ส่วนกลาง", text: $commonFee)
+                            moneyField("ค่าปรับ", text: $lateFee)
+                            moneyField("อุปกรณ์เสริม", text: $applianceFee)
+                        }
+
+                        dividerLine
+
+                        HStack(alignment: .lastTextBaseline) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("ยอดรวมบิล")
+                                    .font(.custom("SukhumvitSet-Bold", size: 15))
+                                    .foregroundStyle(.primary)
+                                Text("รวมค่าใช้จ่ายทั้งหมดของรอบนี้")
+                                    .font(.custom("SukhumvitSet-Text", size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(totalAmount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                                .font(.custom("SukhumvitSet-Bold", size: 22))
+                                .foregroundStyle(.primary)
+                        }
+                    }
+
                     formSectionHeader("ผลการรับเงิน", subtitle: "อัปเดตสถานะ ช่องทางชำระ และหลักฐานสลิป")
+                    editorCard {
+                        statusSelector
+                        statusHelper
+
+                        dividerLine
+
+                        labeledTextField("ยอดที่ชำระแล้ว", placeholder: "0", text: $paidAmount)
+                            .keyboardType(.decimalPad)
+                            .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
+                        paymentMethodQuickChoices
+                        labeledTextField("ช่องทางชำระเงิน", placeholder: "เช่น เงินสด หรือ โอนผ่านธนาคาร", text: $method)
+                            .limitedText($method, maxLength: 60, trimNewlines: true)
+                        paymentDateSummary
+
+                        dividerLine
+
+                        slipPickerContent
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 28)
             }
             .navigationTitle("แก้ไขรายการชำระเงิน")
             .navigationBarTitleDisplayMode(.inline)
@@ -1497,30 +1534,7 @@ struct PaymentEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
-                        let item = Payment(month: clean(month), amount: totalAmount)
-                        item.roomNumber = clean(roomNumber)
-                        if let tenant = users.first(where: { $0.roomNumber == item.roomNumber }) {
-                            item.userId = tenant.serverId ?? Int(truncatingIfNeeded: tenant.id.hashValue)
-                        } else {
-                            item.userId = 0
-                        }
-                        item.rentFee = money(rentFee)
-                        item.waterFee = money(waterFee)
-                        item.electricFee = money(electricFee)
-                        item.commonFee = money(commonFee)
-                        item.lateFee = money(lateFee)
-                        item.applianceFee = money(applianceFee)
-                        item.paidAmount = paymentStatus == "paid" && money(paidAmount) == 0 ? totalAmount : money(paidAmount)
-                        item.method = clean(method)
-                        item.slipPath = slipPaths.first ?? clean(slipPath)
-                        item.slipPathArray = slipPaths
-                        item.dueDate = clean(dueDate)
-                        item.paymentDate = clean(paymentDate)
-                        item.paymentStatus = paymentStatus
-                        item.paymentPlan = sourcePaymentPlan
-                        item.installmentPhase = sourceInstallmentPhase
-                        onSave(item)
-                        dismiss()
+                        savePayment()
                     }
                     .fontWeight(.semibold)
                     .disabled(clean(roomNumber).isEmpty || clean(month).isEmpty)
@@ -1528,6 +1542,11 @@ struct PaymentEditor: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
+                month = Self.monthKey(from: billDate)
+                dueDate = Self.dateKey(from: dueDateValue)
+                if paymentStatus != "pending", clean(paymentDate).isEmpty {
+                    paymentDate = Self.dateKey(from: paymentDateValue)
+                }
                 applyRoomTypeDefaults(onlyWhenEmpty: true)
             }
         }
@@ -1535,10 +1554,58 @@ struct PaymentEditor: View {
         .presentationDragIndicator(.visible)
     }
 
+    private var roomPickerButton: some View {
+        Menu {
+            ForEach(rooms) { room in
+                Button {
+                    roomNumber = room.roomNumber
+                    applyRoomTypeDefaults(onlyWhenEmpty: true)
+                } label: {
+                    Text(room.roomNumber)
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "door.left.hand.open")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.blue)
+                    .frame(width: 36, height: 36)
+                    .background(Color.blue.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("ห้อง")
+                        .font(.custom("SukhumvitSet-Medium", size: 11))
+                        .foregroundStyle(.secondary)
+                    Text(clean(roomNumber).isEmpty ? "เลือกห้อง" : "ห้อง \(clean(roomNumber))")
+                        .font(.custom("SukhumvitSet-Bold", size: 17))
+                        .foregroundStyle(.primary)
+                }
+
+                Spacer()
+
+                Text("แตะเพื่อเลือก")
+                    .font(.custom("SukhumvitSet-Medium", size: 11))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 62)
+            .background(Color.primary.opacity(0.065), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var statusSelector: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("สถานะ")
-                .font(.custom("SukhumvitSet-Medium", size: 13))
+            Text("สถานะการชำระ")
+                .font(.custom("SukhumvitSet-Bold", size: 14))
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 8) {
@@ -1549,15 +1616,28 @@ struct PaymentEditor: View {
                             paidAmount = String(format: "%.0f", totalAmount)
                         } else if value == "pending" {
                             paidAmount = "0"
+                            paymentDate = ""
+                        }
+
+                        if value != "pending" {
+                            paymentDateValue = Date()
+                            paymentDate = Self.dateKey(from: paymentDateValue)
                         }
                     } label: {
-                        Text(title)
-                            .font(.custom("SukhumvitSet-Bold", size: 12))
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(statusColor(for: value))
+                                .frame(width: 7, height: 7)
+                            Text(title)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                            .font(.custom("SukhumvitSet-Bold", size: 11))
                             .foregroundStyle(paymentStatus == value ? Color.white : Color.primary.opacity(0.72))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 38)
+                            .frame(height: 40)
                             .background(
-                                Capsule()
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
                                     .fill(paymentStatus == value ? Color.indigo : Color.primary.opacity(0.07))
                             )
                     }
@@ -1565,7 +1645,57 @@ struct PaymentEditor: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+    }
+
+    private var statusHelper: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text(statusDescription)
+                .font(.custom("SukhumvitSet-Text", size: 12))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var paymentDateSummary: some View {
+        HStack(spacing: 12) {
+            Image(systemName: paymentStatus == "pending" ? "calendar.badge.clock" : "calendar.badge.checkmark")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(paymentStatus == "pending" ? Color.secondary : Color.green)
+                .frame(width: 34, height: 34)
+                .background(Color.primary.opacity(0.06), in: Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("วันที่ชำระ")
+                    .font(.custom("SukhumvitSet-Medium", size: 11))
+                    .foregroundStyle(.secondary)
+                Text(paymentStatus == "pending" ? "ยังไม่บันทึกวันที่ เพราะยังรอชำระ" : thaiDateLabel(paymentDateValue))
+                    .font(.custom("SukhumvitSet-Bold", size: 14))
+                    .foregroundStyle(.primary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .frame(minHeight: 56)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var statusDescription: String {
+        switch paymentStatus {
+        case "paid":
+            return "ใช้เมื่อรับครบทั้งยอดแล้ว ระบบจะเติมยอดชำระและวันที่ชำระของวันนี้ให้อัตโนมัติ"
+        case "partial":
+            return "ใช้เมื่อรับเงินมาแล้วบางส่วน ยังไม่ถือว่าปิดบิล เหลือยอดคงค้างให้ตามต่อ"
+        default:
+            return "ใช้เมื่อยังไม่ได้รับเงิน บิลนี้จะถูกนับเป็นยอดค้างชำระ"
+        }
     }
 
     private var selectedTenant: DormUser? {
@@ -1618,6 +1748,29 @@ struct PaymentEditor: View {
         }
         .textCase(nil)
         .padding(.top, 8)
+    }
+
+    private var dividerLine: some View {
+        Rectangle()
+            .fill(Color.primary.opacity(0.08))
+            .frame(height: 1)
+            .padding(.vertical, 4)
+    }
+
+    private func editorCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.primary.opacity(0.055))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -1676,7 +1829,9 @@ struct PaymentEditor: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.blue)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .padding(.horizontal, 14)
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -1716,38 +1871,148 @@ struct PaymentEditor: View {
     }
 
     private func moneyField(_ title: String, text: Binding<String>) -> some View {
-        labeledTextField(title, placeholder: "0", text: text)
+        compactMoneyField(title, text: text)
             .keyboardType(.decimalPad)
             .decimalInput(text, maxIntegerDigits: 9, maxFractionDigits: 2)
     }
 
     private func labeledTextField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.custom("SukhumvitSet-Medium", size: 12))
-                    .foregroundStyle(.secondary)
-                Image(systemName: "pencil")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary.opacity(0.8))
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Medium", size: 12))
+                .foregroundStyle(.secondary)
 
             TextField(placeholder, text: text)
                 .font(.custom("SukhumvitSet-Text", size: 16))
                 .foregroundStyle(.primary)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.primary.opacity(0.06))
-                )
+                .padding(.horizontal, 14)
+                .frame(minHeight: 48)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.primary.opacity(0.07), lineWidth: 1)
                 )
-                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .padding(.vertical, 6)
+    }
+
+    private func compactMoneyField(_ title: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Medium", size: 11))
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 6) {
+                TextField("0", text: text)
+                    .font(.custom("SukhumvitSet-Bold", size: 17))
+                    .foregroundStyle(.primary)
+                    .keyboardType(.decimalPad)
+
+                Text("฿")
+                    .font(.custom("SukhumvitSet-Bold", size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 46)
+            .background(Color.primary.opacity(0.052), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .stroke(Color.primary.opacity(0.065), lineWidth: 1)
+            )
+        }
+    }
+
+    private var paymentMethodQuickChoices: some View {
+        HStack(spacing: 8) {
+            paymentMethodButton("เงินสด", value: "ชำระเต็มจำนวน • เงินสด")
+            paymentMethodButton("โอนธนาคาร", value: "ชำระเต็มจำนวน • โอนผ่านธนาคาร")
+        }
+    }
+
+    private func paymentMethodButton(_ title: String, value: String) -> some View {
+        Button {
+            method = value
+        } label: {
+            Text(title)
+                .font(.custom("SukhumvitSet-Bold", size: 12))
+                .foregroundStyle(method == value ? Color.white : Color.primary.opacity(0.7))
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(method == value ? Color.indigo : Color.primary.opacity(0.06), in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func savePayment() {
+        month = Self.monthKey(from: billDate)
+        dueDate = Self.dateKey(from: dueDateValue)
+        if paymentStatus != "pending", clean(paymentDate).isEmpty {
+            paymentDate = Self.dateKey(from: paymentDateValue)
+        }
+
+        let item = Payment(month: clean(month), amount: totalAmount)
+        item.roomNumber = clean(roomNumber)
+        if let tenant = users.first(where: { $0.roomNumber == item.roomNumber }) {
+            item.userId = tenant.serverId ?? Int(truncatingIfNeeded: tenant.id.hashValue)
+        } else {
+            item.userId = 0
+        }
+        item.rentFee = money(rentFee)
+        item.waterFee = money(waterFee)
+        item.electricFee = money(electricFee)
+        item.commonFee = money(commonFee)
+        item.lateFee = money(lateFee)
+        item.applianceFee = money(applianceFee)
+        item.paidAmount = paymentStatus == "paid" && money(paidAmount) == 0 ? totalAmount : money(paidAmount)
+        item.method = clean(method)
+        item.slipPath = slipPaths.first ?? clean(slipPath)
+        item.slipPathArray = slipPaths
+        item.dueDate = clean(dueDate)
+        item.paymentDate = clean(paymentDate)
+        item.paymentStatus = paymentStatus
+        item.paymentPlan = sourcePaymentPlan
+        item.installmentPhase = sourceInstallmentPhase
+        onSave(item)
+        dismiss()
+    }
+
+    private func thaiDateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "th_TH")
+        formatter.calendar = Calendar(identifier: .buddhist)
+        formatter.dateFormat = "d MMMM yyyy"
+        return formatter.string(from: date)
+    }
+
+    private static func monthKey(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: date)
+    }
+
+    private static func dateKey(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    private static func dateFromMonthKey(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: "\(value)-01")
+    }
+
+    private static func dateFromDateKey(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: value)
     }
 
     private func removeSlip(at index: Int) {
