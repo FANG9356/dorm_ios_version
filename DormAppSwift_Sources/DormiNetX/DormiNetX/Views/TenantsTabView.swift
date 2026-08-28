@@ -867,18 +867,33 @@ struct TenantFormSheet: View {
                     .pickerStyle(.menu)
                     .tint(.primary)
                     
-                    TextField("ชื่อ", text: $firstName)
-                        .limitedText($firstName, maxLength: 60, trimNewlines: true)
-                    TextField("นามสกุล", text: $lastName)
-                        .limitedText($lastName, maxLength: 60, trimNewlines: true)
-                    TextField("เบอร์โทรศัพท์", text: $phone)
-                        .keyboardType(.phonePad)
-                        .digitsOnly($phone, maxLength: 10)
-                    TextField("เลขบัตรประชาชน", text: $nationalID)
-                        .keyboardType(.numberPad)
-                        .digitsOnly($nationalID, maxLength: 13)
-                    TextField("ที่อยู่", text: $address)
-                        .limitedText($address, maxLength: 180, trimNewlines: true)
+                    LabeledContent("ชื่อ") {
+                        TextField("ชื่อ", text: $firstName)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($firstName, maxLength: 60, trimNewlines: true)
+                    }
+                    LabeledContent("นามสกุล") {
+                        TextField("นามสกุล", text: $lastName)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($lastName, maxLength: 60, trimNewlines: true)
+                    }
+                    LabeledContent("เบอร์โทรศัพท์") {
+                        TextField("10 หลัก", text: $phone)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.phonePad)
+                            .digitsOnly($phone, maxLength: 10)
+                    }
+                    LabeledContent("เลขบัตรประชาชน") {
+                        TextField("13 หลัก", text: $nationalID)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.numberPad)
+                            .digitsOnly($nationalID, maxLength: 13)
+                    }
+                    LabeledContent("ที่อยู่") {
+                        TextField("ที่อยู่", text: $address)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($address, maxLength: 180, trimNewlines: true)
+                    }
                 }
                 
                 Section(header: Text("ข้อมูลห้องพัก")) {
@@ -956,23 +971,33 @@ struct TenantFormSheet: View {
                                 .environment(\.calendar, Calendar(identifier: .buddhist))
                         }
 
-                        TextField("เงินมัดจำ (บาท)", text: $deposit)
-                            .keyboardType(.decimalPad)
-                            .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
-                            .onChange(of: deposit) { _, _ in
-                                guard !isApplyingSuggestedValues else { return }
-                                depositWasEdited = true
-                                applySuggestedInstallmentIfNeeded()
-                            }
+                        LabeledContent("เงินมัดจำ") {
+                            TextField("0", text: $deposit)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.decimalPad)
+                                .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
+                                .onChange(of: deposit) { _, _ in
+                                    guard !isApplyingSuggestedValues else { return }
+                                    depositWasEdited = true
+                                    applySuggestedInstallmentIfNeeded()
+                                }
+                            Text("บาท")
+                                .foregroundStyle(.secondary)
+                        }
                     } else {
-                        TextField("เงินจอง/มัดจำ (บาท)", text: $deposit)
-                            .keyboardType(.decimalPad)
-                            .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
-                            .onChange(of: deposit) { _, _ in
-                                guard !isApplyingSuggestedValues else { return }
-                                depositWasEdited = true
-                                applySuggestedInstallmentIfNeeded()
-                            }
+                        LabeledContent("เงินจอง/มัดจำ") {
+                            TextField("0", text: $deposit)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.decimalPad)
+                                .decimalInput($deposit, maxIntegerDigits: 8, maxFractionDigits: 2)
+                                .onChange(of: deposit) { _, _ in
+                                    guard !isApplyingSuggestedValues else { return }
+                                    depositWasEdited = true
+                                    applySuggestedInstallmentIfNeeded()
+                                }
+                            Text("บาท")
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     moveInPaymentSummary
@@ -982,19 +1007,27 @@ struct TenantFormSheet: View {
                     paymentMethodSelector
                     paymentChannelSelector
                     if paymentMethod == "installment" {
-                        TextField("จำนวนงวด", text: $installmentMonths)
-                            .keyboardType(.numberPad)
-                            .digitsOnly($installmentMonths, maxLength: 2)
-                            .onChange(of: installmentMonths) { _, _ in
-                                applySuggestedInstallmentIfNeeded()
-                            }
-                        TextField("ยอดชำระต่องวด (บาท)", text: $installmentAmount)
-                            .keyboardType(.decimalPad)
-                            .decimalInput($installmentAmount, maxIntegerDigits: 8, maxFractionDigits: 2)
-                            .onChange(of: installmentAmount) { _, _ in
-                                guard !isApplyingSuggestedValues else { return }
-                                installmentWasEdited = true
-                            }
+                        LabeledContent("จำนวนงวด") {
+                            TextField("เช่น 2", text: $installmentMonths)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.numberPad)
+                                .digitsOnly($installmentMonths, maxLength: 2)
+                                .onChange(of: installmentMonths) { _, _ in
+                                    applySuggestedInstallmentIfNeeded()
+                                }
+                        }
+                        LabeledContent("ยอดชำระต่องวด") {
+                            TextField("0", text: $installmentAmount)
+                                .multilineTextAlignment(.trailing)
+                                .keyboardType(.decimalPad)
+                                .decimalInput($installmentAmount, maxIntegerDigits: 8, maxFractionDigits: 2)
+                                .onChange(of: installmentAmount) { _, _ in
+                                    guard !isApplyingSuggestedValues else { return }
+                                    installmentWasEdited = true
+                                }
+                            Text("บาท")
+                                .foregroundStyle(.secondary)
+                        }
                         installmentSummary
                     }
                     if paymentChannel == "bank_transfer" {
@@ -1416,10 +1449,11 @@ struct TenantFormSheet: View {
                 user = existing
             } else {
                 user = DormUser(firstName: firstName, lastName: lastName)
-                user.serverId = Int(truncatingIfNeeded: user.id.hashValue)
+                user.serverId = stableLocalUserID(for: user)
                 modelContext.insert(user)
             }
 
+            let previousRoomNumber = clean(user.roomNumber)
             let cleanedRoomNumber = clean(roomNumber)
             user.prefix = clean(prefix)
             user.firstName = clean(firstName)
@@ -1442,6 +1476,7 @@ struct TenantFormSheet: View {
             user.bookingSlips = paymentChannel == "bank_transfer" ? bookingSlipPaths : []
             user.lastUpdated = Date()
             user.isDirty = true
+            try relinkOpenPaymentsIfRoomChanged(for: user, userID: stableLocalUserID(for: user), previousRoomNumber: previousRoomNumber, newRoomNumber: cleanedRoomNumber)
             try ensureCurrentMonthPayment(for: user)
             modelContext.insert(LocalSystemLog(
                 action: isEditing ? "แก้ไขลูกบ้าน" : "เพิ่มลูกบ้าน",
@@ -1500,7 +1535,7 @@ struct TenantFormSheet: View {
         guard user.status != "ย้ายออกแล้ว", let room = selectedRoom else { return }
 
         let month = monthKey(for: moveInDate)
-        let userID = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        let userID = stableLocalUserID(for: user)
         let localPayments = try modelContext.fetch(FetchDescriptor<Payment>())
         if user.paymentMethod == "installment" {
             try ensureMoveInInstallmentPayments(
@@ -1638,7 +1673,34 @@ struct TenantFormSheet: View {
 
     private func isPayment(_ payment: Payment, for user: DormUser, userID: Int) -> Bool {
         !payment.isDeletedLocally &&
-        (payment.userId == userID || clean(payment.roomNumber) == clean(user.roomNumber))
+        (payment.userId > 0 ? payment.userId == userID : clean(payment.roomNumber) == clean(user.roomNumber))
+    }
+
+    private func relinkOpenPaymentsIfRoomChanged(for user: DormUser, userID: Int, previousRoomNumber: String, newRoomNumber: String) throws {
+        guard !previousRoomNumber.isEmpty, previousRoomNumber != newRoomNumber else { return }
+
+        let currentMonth = monthKey(for: Date())
+        let payments = try modelContext.fetch(FetchDescriptor<Payment>())
+        var didRelink = false
+
+        for payment in payments where !payment.isDeletedLocally {
+            let belongsToUser = payment.userId == userID || (payment.userId == 0 && clean(payment.roomNumber) == previousRoomNumber)
+            let shouldFollowRoom = payment.paymentStatus != "paid" || payment.month >= currentMonth
+            guard belongsToUser, shouldFollowRoom else { continue }
+
+            payment.userId = userID
+            payment.roomNumber = newRoomNumber
+            payment.lastUpdated = Date()
+            payment.isDirty = true
+            didRelink = true
+        }
+
+        if didRelink {
+            modelContext.insert(LocalSystemLog(
+                action: "ย้ายบิลตามลูกบ้าน",
+                details: "\(user.firstName) \(user.lastName) จากห้อง \(previousRoomNumber) ไปห้อง \(newRoomNumber)"
+            ))
+        }
     }
 
     private func firstInstallmentStatus(for user: DormUser, amount: Double) -> String {
@@ -1724,7 +1786,7 @@ struct TenantFormSheet: View {
     }
 
     private func matches(_ user: DormUser, editUser: APIUser) -> Bool {
-        let localID = user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue)
+        let localID = stableLocalUserID(for: user)
         if localID == editUser.id { return true }
         return clean(user.roomNumber) == clean(editUser.room_number ?? "") &&
             clean(user.firstName) == clean(editUser.first_name ?? "") &&

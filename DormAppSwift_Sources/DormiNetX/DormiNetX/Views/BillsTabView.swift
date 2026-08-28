@@ -42,9 +42,9 @@ struct BillsTabView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("รายการบิล")
+                    Text("ประวัติบิลและธุรกรรม")
                         .font(.custom("SukhumvitSet-Bold", size: 30))
-                    Text("รวมบิลรายเดือน แรกเข้า และประวัติรับเงินจากข้อมูลในเครื่อง")
+                    Text("รายการนี้สร้างจากลูกบ้าน รอบบิล และการรับชำระของระบบ")
                         .font(.custom("SukhumvitSet-Text", size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -60,6 +60,7 @@ struct BillsTabView: View {
                         subtitle: section.subtitle,
                         icon: section.icon,
                         payments: section.payments,
+                        users: users,
                         onEdit: { editingPayment = $0 },
                         onDelete: { deletingPayment = $0 }
                     )
@@ -159,6 +160,7 @@ private struct BillSectionView: View {
     let subtitle: String
     let icon: String
     let payments: [Payment]
+    let users: [DormUser]
     let onEdit: (Payment) -> Void
     let onDelete: (Payment) -> Void
 
@@ -193,16 +195,23 @@ private struct BillSectionView: View {
             ForEach(payments) { payment in
                 BillRow(
                     payment: payment,
+                    user: userFor(payment),
                     onEdit: { onEdit(payment) },
                     onDelete: { onDelete(payment) }
                 )
             }
         }
     }
+
+    private func userFor(_ payment: Payment) -> DormUser? {
+        users.first { stableLocalUserID(for: $0) == payment.userId && payment.userId > 0 }
+            ?? users.first { $0.roomNumber == payment.roomNumber }
+    }
 }
 
 private struct BillRow: View {
     let payment: Payment
+    let user: DormUser?
     let onEdit: () -> Void
     let onDelete: () -> Void
     @State private var horizontalOffset: CGFloat = 0
@@ -213,23 +222,73 @@ private struct BillRow: View {
     var body: some View {
         ZStack(alignment: .trailing) {
             GlassCard {
-                HStack {
-                    Image(systemName: "doc.text.fill")
-                        .foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("ห้อง \(payment.roomNumber)")
-                            .font(.custom("SukhumvitSet-Bold", size: 15))
-                        Text(detailText)
-                            .font(.custom("SukhumvitSet-Text", size: 11))
-                            .foregroundStyle(.secondary)
+                VStack(spacing: 12) {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(spacing: 2) {
+                            Text(payment.roomNumber)
+                                .font(.custom("SukhumvitSet-Bold", size: 22))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                            Text("ห้อง")
+                                .font(.custom("SukhumvitSet-Text", size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 64, height: 58)
+                        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(tenantName)
+                                .font(.custom("SukhumvitSet-Bold", size: 15))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(detailText)
+                                .font(.custom("SukhumvitSet-Text", size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                            if !dateText.isEmpty {
+                                Label(dateText, systemImage: "calendar")
+                                    .font(.custom("SukhumvitSet-Text", size: 10))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        Spacer(minLength: 8)
+
+                        VStack(alignment: .trailing, spacing: 6) {
+                            Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                                .font(.custom("SukhumvitSet-Bold", size: 16))
+                                .foregroundStyle(.primary)
+                            Text(statusText)
+                                .font(.custom("SukhumvitSet-Bold", size: 10))
+                                .foregroundStyle(statusColor)
+                                .padding(.horizontal, 9)
+                                .frame(height: 24)
+                                .background(statusColor.opacity(0.12), in: Capsule())
+                        }
                     }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
-                            .font(.custom("SukhumvitSet-Bold", size: 15))
-                        Text(statusText)
-                            .font(.custom("SukhumvitSet-Medium", size: 10))
-                            .foregroundStyle(statusColor)
+
+                    HStack(spacing: 8) {
+                        Button(action: onEdit) {
+                            Label("แก้ไข", systemImage: "pencil")
+                                .font(.custom("SukhumvitSet-Bold", size: 11))
+                                .foregroundStyle(.blue)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 34)
+                                .background(Color.blue.opacity(0.1), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+
+                        Button(role: .destructive, action: onDelete) {
+                            Label("ลบ", systemImage: "trash")
+                                .font(.custom("SukhumvitSet-Bold", size: 11))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 34)
+                                .background(Color.red.opacity(0.1), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -351,5 +410,22 @@ private struct BillRow: View {
             parts.append(payment.method)
         }
         return parts.joined(separator: " • ")
+    }
+
+    private var tenantName: String {
+        guard let user else { return "ไม่พบชื่อลูกบ้าน" }
+        let fullName = "\(user.prefix)\(user.firstName) \(user.lastName)"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return fullName.isEmpty ? "ลูกบ้าน" : fullName
+    }
+
+    private var dateText: String {
+        if !payment.paymentDate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "ชำระวันที่ \(payment.paymentDate)"
+        }
+        if !payment.dueDate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "ครบกำหนด \(payment.dueDate)"
+        }
+        return ""
     }
 }

@@ -263,15 +263,29 @@ private struct MaintenanceEditor: View {
                 }
 
                 Section("ค่าใช้จ่ายและหลักฐาน") {
-                    TextField("ค่าใช้จ่าย", text: $cost)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
-                    TextField("ช่องทางชำระเงิน", text: $paymentMethod)
-                        .limitedText($paymentMethod, maxLength: 60, trimNewlines: true)
-                    TextField("ลิงก์/ชื่อไฟล์สลิป", text: $slipPath)
-                        .limitedText($slipPath, maxLength: 200, trimNewlines: true)
-                    TextField("ลิงก์/ชื่อไฟล์รูปอาการเสีย", text: $issueImage)
-                        .limitedText($issueImage, maxLength: 200, trimNewlines: true)
+                    LabeledContent("ค่าใช้จ่าย") {
+                        TextField("0", text: $cost)
+                            .multilineTextAlignment(.trailing)
+                            .keyboardType(.decimalPad)
+                            .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
+                        Text("บาท")
+                            .foregroundStyle(.secondary)
+                    }
+                    LabeledContent("ช่องทางชำระ") {
+                        TextField("เช่น เงินสด", text: $paymentMethod)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($paymentMethod, maxLength: 60, trimNewlines: true)
+                    }
+                    LabeledContent("สลิปชำระเงิน") {
+                        TextField("ยังไม่มีไฟล์สลิป", text: $slipPath)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($slipPath, maxLength: 200, trimNewlines: true)
+                    }
+                    LabeledContent("รูปอาการเสีย") {
+                        TextField("ยังไม่มีรูปอาการเสีย", text: $issueImage)
+                            .multilineTextAlignment(.trailing)
+                            .limitedText($issueImage, maxLength: 200, trimNewlines: true)
+                    }
                 }
             }
             .navigationTitle("งานซ่อม")

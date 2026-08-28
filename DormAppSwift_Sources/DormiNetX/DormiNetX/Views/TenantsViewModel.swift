@@ -74,7 +74,7 @@ class TenantsViewModel: ObservableObject {
                 let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
                 self.users = localUsers.map { user in
                     APIUser(
-                        id: user.serverId ?? Int(truncatingIfNeeded: user.id.hashValue),
+                        id: stableLocalUserID(for: user),
                         prefix: user.prefix,
                         first_name: user.firstName,
                         last_name: user.lastName,
@@ -120,7 +120,7 @@ class TenantsViewModel: ObservableObject {
         if let modelContext {
             do {
                 let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
-                if let user = localUsers.first(where: { ($0.serverId ?? Int(truncatingIfNeeded: $0.id.hashValue)) == id }) {
+                if let user = localUsers.first(where: { stableLocalUserID(for: $0) == id }) {
                     user.isDeletedLocally = true
                     user.isDirty = true
                     user.lastUpdated = Date()

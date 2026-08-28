@@ -463,23 +463,15 @@ private struct RoomTypeEditor: View {
         NavigationStack {
             Form {
                 Section("ข้อมูลประเภทห้อง") {
-                    TextField("ชื่อประเภทห้อง", text: $name)
+                    labeledTextField("ชื่อประเภทห้อง", placeholder: "เช่น ห้องพัดลม", text: $name)
                         .limitedText($name, maxLength: 40, trimNewlines: true)
-                    TextField("ค่าเช่ารายเดือน", text: $price)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($price, maxIntegerDigits: 8, maxFractionDigits: 2)
+                    moneyInputRow("ค่าเช่ารายเดือน", text: $price, note: "ยอดหลักที่ใช้สร้างบิลรายเดือน")
                 }
 
                 Section("ค่าใช้จ่ายเพิ่มเติม") {
-                    TextField("ค่าน้ำ", text: $water)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($water, maxIntegerDigits: 8, maxFractionDigits: 2)
-                    TextField("ค่าไฟ", text: $electric)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($electric, maxIntegerDigits: 8, maxFractionDigits: 2)
-                    TextField("ค่าส่วนกลาง", text: $common)
-                        .keyboardType(.decimalPad)
-                        .decimalInput($common, maxIntegerDigits: 8, maxFractionDigits: 2)
+                    moneyInputRow("ค่าน้ำ", text: $water, note: "ใส่ 0 ถ้ายังไม่คิดรวมในประเภทห้อง")
+                    moneyInputRow("ค่าไฟ", text: $electric, note: "ใส่ 0 ถ้าคิดตามมิเตอร์ภายหลัง")
+                    moneyInputRow("ค่าส่วนกลาง", text: $common, note: "ค่าบริการประจำเดือนถ้ามี")
                 }
             }
             .navigationTitle("ประเภทห้อง")
@@ -506,6 +498,51 @@ private struct RoomTypeEditor: View {
         }
         .presentationDetents([.medium, .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
+    }
+
+    private func labeledTextField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.custom("SukhumvitSet-Bold", size: 13))
+                .foregroundStyle(.secondary)
+
+            TextField(placeholder, text: text)
+                .font(.custom("SukhumvitSet-Medium", size: 16))
+                .frame(minHeight: 44)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func moneyInputRow(_ title: String, text: Binding<String>, note: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
+                        .foregroundStyle(.primary)
+                    Text(note)
+                        .font(.custom("SukhumvitSet-Text", size: 10))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 6) {
+                    TextField("0", text: text)
+                        .font(.custom("SukhumvitSet-Bold", size: 17))
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.decimalPad)
+                        .decimalInput(text, maxIntegerDigits: 8, maxFractionDigits: 2)
+                        .frame(minWidth: 58, maxWidth: 96)
+
+                    Text("บาท")
+                        .font(.custom("SukhumvitSet-Medium", size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
