@@ -105,6 +105,7 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE payments ADD COLUMN payment_status TEXT DEFAULT 'pending'`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN slip_path_array TEXT`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN paid_amount REAL DEFAULT 0`)
+	db.Exec(`ALTER TABLE payments ADD COLUMN last_updated TEXT DEFAULT ''`)
 
 	db.Exec(`ALTER TABLE users ADD COLUMN additional_appliances TEXT`)
 	db.Exec(`ALTER TABLE users ADD COLUMN additional_appliance_fee REAL DEFAULT 0`)

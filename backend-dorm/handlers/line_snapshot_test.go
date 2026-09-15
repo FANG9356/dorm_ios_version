@@ -34,6 +34,7 @@ func TestMaterializeLineSnapshotKeepsIdentityAcrossRoomMove(t *testing.T) {
 		Payments: []linePaymentSnapshot{{
 			ID: "payment-one", UserID: 44, RoomNumber: "101", Month: "2026-09",
 			RentFee: 1500, DepositFee: 75, Amount: 1575, PaymentStatus: "pending",
+			LastUpdated: "2026-09-15T14:30:00Z",
 		}},
 	}
 	if err := materializeLineSnapshotInto(master, tenantDB, 7, snapshot); err != nil {
@@ -48,11 +49,15 @@ func TestMaterializeLineSnapshotKeepsIdentityAcrossRoomMove(t *testing.T) {
 		t.Fatalf("initial room/link = %q/%q", room, lineUserID)
 	}
 	var deposit float64
-	if err := tenantDB.QueryRow(`SELECT deposit_fee FROM payments WHERE external_id='payment-one'`).Scan(&deposit); err != nil {
+	var lastUpdated string
+	if err := tenantDB.QueryRow(`SELECT deposit_fee, last_updated FROM payments WHERE external_id='payment-one'`).Scan(&deposit, &lastUpdated); err != nil {
 		t.Fatal(err)
 	}
 	if deposit != 75 {
 		t.Fatalf("deposit = %v", deposit)
+	}
+	if lastUpdated != "2026-09-15T14:30:00Z" {
+		t.Fatalf("last_updated = %q", lastUpdated)
 	}
 
 	snapshot.SnapshotID = "snapshot-2"

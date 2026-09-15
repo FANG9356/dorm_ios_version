@@ -93,6 +93,7 @@ func RunServer() {
 	http.Handle("/api/admin/push-invoices", handlers.AuthMiddleware(db, handlers.HandlePushInvoices(db)))
 	http.Handle("/api/line/invoices/send", handlers.AuthMiddleware(db, handlers.HandleSendLineInvoice(db)))
 	http.HandleFunc("/api/liff/rooms", handlers.HandleLiffRooms(db))
+	http.HandleFunc("/api/liff/status", handlers.HandleLiffStatus(db))
 	http.HandleFunc("/api/liff/verify-tenant", handlers.HandleLiffVerify(db))
 	http.HandleFunc("/api/liff/link", handlers.HandleLiffLink(db))
 

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -49,6 +50,29 @@ type LineWebhookRequest struct {
 			Data string `json:"data"`
 		} `json:"postback"`
 	} `json:"events"`
+}
+
+type lineInvoiceFlexData struct {
+	InvoiceNo       string
+	Name            string
+	Room            string
+	Period          string
+	DueDate         string
+	UpdatedAt       string
+	PaymentDate     string
+	Status          string
+	Installment     int
+	Rent            float64
+	Deposit         float64
+	Water           float64
+	Electric        float64
+	Common          float64
+	Appliance       float64
+	Late            float64
+	Other           float64
+	Total           float64
+	Paid            float64
+	AdditionalBills int
 }
 
 // verifySignature checks if the webhook request actually came from LINE
@@ -144,204 +168,25 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 	}
 
 	if text == "การเงิน" {
+		var userID int
 		var roomNumber, fullName string
-		err := db.QueryRow("SELECT room_number, full_name FROM users WHERE line_user_id = ?", lineUserID).Scan(&roomNumber, &fullName)
+		err := db.QueryRow("SELECT user_id, room_number, full_name FROM users WHERE line_user_id = ?", lineUserID).
+			Scan(&userID, &roomNumber, &fullName)
 		if err != nil {
-			replyToLine(replyToken, "คุณยังไม่ได้ผูกบัญชีห้องพักค่ะ โปรดกดปุ่ม 'ผูกบัญชี' จากเมนูด้านล่าง ")
+			replyToLine(replyToken, "คุณยังไม่ได้ผูกบัญชีห้องพักค่ะ โปรดกดปุ่ม 'ผูกบัญชี' จากเมนูด้านล่าง")
 			return
 		}
 
-		var paymentID int
-		var month string
-		var rent, water, electric, common, late, amount float64
-		var paymentStatus string
-		var paymentDate string
-		err = db.QueryRow("SELECT payment_id, month, rent_fee, water_fee, electric_fee, common_fee, late_fee, amount, payment_status, IFNULL(payment_date, '') FROM payments WHERE room_number = ? ORDER BY payment_id DESC LIMIT 1", roomNumber).Scan(&paymentID, &month, &rent, &water, &electric, &common, &late, &amount, &paymentStatus, &paymentDate)
-
+		invoice, err := loadLatestOutstandingLineInvoice(db, userID, roomNumber, fullName)
 		if err == nil {
-			if paymentStatus == "paid" {
-				replyToLine(replyToken, "ขณะนี้คุณไม่มียอดค้างชำระค่ะ บิลล่าสุดของคุณชำระเรียบร้อยแล้ว")
-				return
-			}
-
-			var displayMonth string = month
-			if paymentStatus == "checking" && paymentDate != "" {
-				displayMonth = fmt.Sprintf("%s (แจ้งชำระ %s)", month, paymentDate)
-			}
-			var footerText string
-			if paymentStatus == "pending" {
-				footerText = "โปรดส่งภาพสลิปโอนเงินเข้ามาในแชทนี้"
-				// [เพิ่มใหม่] เซ็ตสถานะบอทให้รอรับสลิป
+			if invoice.Status == "pending" || invoice.Status == "partial" {
 				db.Exec("UPDATE users SET bot_state = 'slip' WHERE line_user_id = ?", lineUserID)
-			} else if paymentStatus == "checking" {
-				footerText = "สถานะ: รอแอดมินตรวจสอบสลิป"
 			}
-
-			// Found a bill, construct Flex Message
-			invoiceNo := fmt.Sprintf("INV-%05d", paymentID)
-
-			flexJSON := fmt.Sprintf(`{
-				"type": "bubble",
-				"header": {
-					"type": "box",
-					"layout": "vertical",
-					"contents": [
-						{
-							"type": "text",
-							"text": "ใบแจ้งหนี้ (INVOICE)",
-							"weight": "bold",
-							"color": "#F59E0B",
-							"size": "xl"
-						},
-						{
-							"type": "text",
-							"text": "หอพัก DormiNet",
-							"size": "sm",
-							"color": "#6B7280",
-							"margin": "sm"
-						}
-					]
-				},
-				"body": {
-					"type": "box",
-					"layout": "vertical",
-					"contents": [
-						{
-							"type": "box",
-							"layout": "vertical",
-							"margin": "md",
-							"spacing": "sm",
-							"contents": [
-								{
-									"type": "box",
-									"layout": "baseline",
-									"spacing": "sm",
-									"contents": [
-										{"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
-										{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "baseline",
-									"spacing": "sm",
-									"contents": [
-										{"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1},
-										{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "baseline",
-									"spacing": "sm",
-									"contents": [
-										{"type": "text", "text": "ชื่อ", "color": "#aaaaaa", "size": "sm", "flex": 1},
-										{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "baseline",
-									"spacing": "sm",
-									"contents": [
-										{"type": "text", "text": "ประจำเดือน", "color": "#aaaaaa", "size": "sm", "flex": 1},
-										{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-									]
-								}
-							]
-						},
-						{
-							"type": "separator",
-							"margin": "lg"
-						},
-						{
-							"type": "box",
-							"layout": "vertical",
-							"margin": "lg",
-							"spacing": "sm",
-							"contents": [
-								{
-									"type": "box",
-									"layout": "horizontal",
-									"contents": [
-										{"type": "text", "text": "ค่าเช่าห้อง", "size": "sm", "color": "#555555", "flex": 2},
-										{"type": "text", "text": "฿%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 1}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "horizontal",
-									"contents": [
-										{"type": "text", "text": "ค่าน้ำประปา", "size": "sm", "color": "#555555", "flex": 2},
-										{"type": "text", "text": "฿%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 1}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "horizontal",
-									"contents": [
-										{"type": "text", "text": "ค่าไฟฟ้า", "size": "sm", "color": "#555555", "flex": 2},
-										{"type": "text", "text": "฿%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 1}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "horizontal",
-									"contents": [
-										{"type": "text", "text": "ค่าส่วนกลาง", "size": "sm", "color": "#555555", "flex": 2},
-										{"type": "text", "text": "฿%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 1}
-									]
-								},
-								{
-									"type": "box",
-									"layout": "horizontal",
-									"contents": [
-										{"type": "text", "text": "ค่าปรับ", "size": "sm", "color": "#555555", "flex": 2},
-										{"type": "text", "text": "฿%.2f", "size": "sm", "color": "#EF4444", "align": "end", "flex": 1}
-									]
-								}
-							]
-						},
-						{
-							"type": "separator",
-							"margin": "lg"
-						},
-						{
-							"type": "box",
-							"layout": "horizontal",
-							"margin": "md",
-							"contents": [
-								{"type": "text", "text": "ยอดสุทธิที่ต้องชำระ", "weight": "bold", "size": "md", "color": "#000000"},
-								{"type": "text", "text": "฿%.2f", "weight": "bold", "size": "md", "align": "end", "color": "#EF4444"}
-							]
-						},
-						{
-							"type": "box",
-							"layout": "vertical",
-							"margin": "lg",
-							"contents": [
-								{
-									"type": "text",
-									"text": "%s",
-									"size": "xs",
-									"color": "#888888",
-									"align": "center",
-									"wrap": true
-								}
-							]
-						}
-					]
-				}
-			}`, invoiceNo, roomNumber, fullName, displayMonth, rent, water, electric, common, late, amount, footerText)
-
-			var contents map[string]interface{}
-			json.Unmarshal([]byte(flexJSON), &contents)
-
-			altText := fmt.Sprintf("บิลแจ้งหนี้ห้อง %s (ยอด %.2f บาท)", roomNumber, amount)
-			replyToLineWithFlexMessage(replyToken, altText, contents)
-
-		} else {
+			replyToLineWithFlexMessage(replyToken, lineInvoiceAltText(invoice), buildLineInvoiceBubble(invoice))
+		} else if err == sql.ErrNoRows {
 			replyToLine(replyToken, fmt.Sprintf("ห้อง %s ไม่มียอดค้างชำระในระบบขณะนี้ค่ะ ขอบคุณค่ะ", roomNumber))
+		} else {
+			replyToLine(replyToken, "อ่านข้อมูลใบแจ้งหนี้ไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ")
 		}
 		return
 	}
@@ -695,183 +540,221 @@ func replyToLineWithFlexMessage(replyToken, altText string, contents interface{}
 	client.Do(req)
 }
 
-func PushInvoiceFlexMessage(lineUserID, invoiceNo, dateStr, name, room, period string, rent, utilities, water, electric, common, late, total float64) {
-	token := getLineToken()
-	if token == "" || lineUserID == "" {
-		return
+func loadLatestOutstandingLineInvoice(db *sql.DB, userID int, room, name string) (lineInvoiceFlexData, error) {
+	var paymentID int
+	var invoice lineInvoiceFlexData
+	err := db.QueryRow(`SELECT payment_id, COALESCE(month, ''), COALESCE(due_date, ''),
+		COALESCE(last_updated, ''), COALESCE(payment_date, ''), COALESCE(NULLIF(payment_status, ''), 'pending'),
+		COALESCE(installment_phase, 0), COALESCE(rent_fee, 0), COALESCE(deposit_fee, 0),
+		COALESCE(water_fee, 0), COALESCE(electric_fee, 0), COALESCE(common_fee, 0),
+		COALESCE(appliance_fee, 0), COALESCE(late_fee, 0), COALESCE(amount, 0), COALESCE(paid_amount, 0)
+		FROM payments WHERE user_id = ? AND COALESCE(payment_status, 'pending') != 'paid'
+		AND amount > COALESCE(paid_amount, 0)
+		ORDER BY month DESC, installment_phase DESC, payment_id DESC LIMIT 1`, userID).Scan(
+		&paymentID, &invoice.Period, &invoice.DueDate, &invoice.UpdatedAt, &invoice.PaymentDate,
+		&invoice.Status, &invoice.Installment, &invoice.Rent, &invoice.Deposit, &invoice.Water,
+		&invoice.Electric, &invoice.Common, &invoice.Appliance, &invoice.Late, &invoice.Total, &invoice.Paid,
+	)
+	if err != nil {
+		return lineInvoiceFlexData{}, err
 	}
-
-	flexJSON := fmt.Sprintf(`{
-		"type": "flex",
-		"altText": "บิลแจ้งหนี้ห้อง %s (ยอด %.2f บาท)",
-		"contents": {
-			"type": "bubble",
-			"size": "kilo",
-			"header": {
-				"type": "box",
-				"layout": "vertical",
-				"contents": [
-					{
-						"type": "text",
-						"text": "ใบแจ้งหนี้ (INVOICE)",
-						"weight": "bold",
-						"color": "#F59E0B",
-						"size": "xl"
-					},
-					{
-						"type": "text",
-						"text": "หอพัก DormiNet",
-						"size": "sm",
-						"color": "#6B7280",
-						"margin": "sm"
-					}
-				]
-			},
-			"body": {
-				"type": "box",
-				"layout": "vertical",
-				"contents": [
-					{
-						"type": "box",
-						"layout": "vertical",
-						"margin": "md",
-						"spacing": "sm",
-						"contents": [
-							{
-								"type": "box",
-								"layout": "baseline",
-								"spacing": "sm",
-								"contents": [
-									{"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
-									{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "baseline",
-								"spacing": "sm",
-								"contents": [
-									{"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1},
-									{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "baseline",
-								"spacing": "sm",
-								"contents": [
-									{"type": "text", "text": "ชื่อ", "color": "#aaaaaa", "size": "sm", "flex": 1},
-									{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "baseline",
-								"spacing": "sm",
-								"contents": [
-									{"type": "text", "text": "รอบบิล", "color": "#aaaaaa", "size": "sm", "flex": 1},
-									{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "baseline",
-								"spacing": "sm",
-								"contents": [
-									{"type": "text", "text": "วันที่ออก", "color": "#aaaaaa", "size": "sm", "flex": 1},
-									{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-								]
-							}
-						]
-					},
-					{
-						"type": "separator",
-						"margin": "md"
-					},
-					{
-						"type": "box",
-						"layout": "vertical",
-						"margin": "md",
-						"spacing": "sm",
-						"contents": [
-							{
-								"type": "box",
-								"layout": "horizontal",
-								"contents": [
-									{"type": "text", "text": "ค่าเช่าห้องพัก", "size": "sm", "color": "#555555", "flex": 1},
-									{"type": "text", "text": "%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 0, "wrap": true}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "horizontal",
-								"contents": [
-									{"type": "text", "text": "ค่าน้ำประปา", "size": "sm", "color": "#555555", "flex": 1},
-									{"type": "text", "text": "%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 0, "wrap": true}
-								]
-							},
-							{
-								"type": "box",
-								"layout": "horizontal",
-								"contents": [
-									{"type": "text", "text": "ค่าไฟฟ้า", "size": "sm", "color": "#555555", "flex": 1},
-									{"type": "text", "text": "%.2f", "size": "sm", "color": "#111111", "align": "end", "flex": 0, "wrap": true}
-								]
-							}
-						]
-					},
-					{
-						"type": "separator",
-						"margin": "md"
-					},
-					{
-						"type": "box",
-						"layout": "horizontal",
-						"margin": "md",
-						"contents": [
-							{"type": "text", "text": "ยอดสุทธิ", "size": "md", "weight": "bold", "color": "#F59E0B", "flex": 1},
-							{"type": "text", "text": "%.2f บาท", "size": "md", "weight": "bold", "color": "#F59E0B", "align": "end", "flex": 0, "wrap": true}
-						]
-					}
-				]
-			},
-			"footer": {
-				"type": "box",
-				"layout": "vertical",
-				"spacing": "sm",
-				"contents": [
-					{
-						"type": "text",
-						"text": "กรุณาอัปโหลดรูปสลิปเข้ามาในแชทนี้เพื่อชำระเงิน",
-						"size": "xs",
-						"color": "#aaaaaa",
-						"align": "center",
-						"margin": "md",
-						"wrap": true
-					}
-				]
-			}
-		}
-	}`, room, total, invoiceNo, room, name, period, dateStr, rent, water, electric, total)
-
-	var body map[string]interface{}
-	json.Unmarshal([]byte(flexJSON), &body)
-
-	url := "https://api.line.me/v2/bot/message/push"
-	reqBody := map[string]interface{}{
-		"to":       lineUserID,
-		"messages": []map[string]interface{}{body},
+	invoice.InvoiceNo = fmt.Sprintf("INV-%05d", paymentID)
+	invoice.Room = room
+	invoice.Name = name
+	knownTotal := invoice.Rent + invoice.Deposit + invoice.Water + invoice.Electric + invoice.Common + invoice.Appliance + invoice.Late
+	if difference := invoice.Total - knownTotal; math.Abs(difference) >= 0.01 {
+		invoice.Other = difference
 	}
-	jsonBody, _ := json.Marshal(reqBody)
-
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	_ = db.QueryRow(`SELECT CASE WHEN COUNT(*) > 0 THEN COUNT(*) - 1 ELSE 0 END FROM payments
+		WHERE user_id = ? AND COALESCE(payment_status, 'pending') != 'paid'
+		AND amount > COALESCE(paid_amount, 0)`, userID).Scan(&invoice.AdditionalBills)
+	return invoice, nil
 }
 
+func lineInvoiceAltText(invoice lineInvoiceFlexData) string {
+	return fmt.Sprintf("%s ห้อง %s ยอดคงเหลือ %s", invoice.InvoiceNo, invoice.Room, formatLineMoney(invoiceBalance(invoice)))
+}
+
+func invoiceBalance(invoice lineInvoiceFlexData) float64 {
+	return math.Max(invoice.Total-invoice.Paid, 0)
+}
+
+func formatLineMoney(value float64) string {
+	negative := value < 0
+	if negative {
+		value = -value
+	}
+	parts := strings.Split(fmt.Sprintf("%.2f", value), ".")
+	integer := parts[0]
+	for index := len(integer) - 3; index > 0; index -= 3 {
+		integer = integer[:index] + "," + integer[index:]
+	}
+	prefix := ""
+	if negative {
+		prefix = "-"
+	}
+	return prefix + integer + "." + parts[1] + " บาท"
+}
+
+var thaiFullMonths = []string{"", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"}
+var thaiShortMonths = []string{"", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."}
+
+func buddhistDisplayYear(year int) int {
+	if year > 2400 {
+		return year
+	}
+	return year + 543
+}
+
+func formatLinePeriod(value string) string {
+	var year, month int
+	if _, err := fmt.Sscanf(strings.TrimSpace(value), "%d-%d", &year, &month); err != nil || month < 1 || month > 12 {
+		return blankAsDash(value)
+	}
+	return fmt.Sprintf("%s %d", thaiFullMonths[month], buddhistDisplayYear(year))
+}
+
+func formatLineDate(value string) string {
+	var year, month, day int
+	if _, err := fmt.Sscanf(strings.TrimSpace(value), "%d-%d-%d", &year, &month, &day); err != nil || month < 1 || month > 12 || day < 1 || day > 31 {
+		return blankAsDash(value)
+	}
+	return fmt.Sprintf("%d %s %d", day, thaiShortMonths[month], buddhistDisplayYear(year))
+}
+
+func formatLineDateTime(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return "-"
+	}
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return formatLineDate(value)
+	}
+	location, locationErr := time.LoadLocation("Asia/Bangkok")
+	if locationErr == nil {
+		parsed = parsed.In(location)
+	}
+	return fmt.Sprintf("%d %s %d %02d:%02d น.", parsed.Day(), thaiShortMonths[int(parsed.Month())], buddhistDisplayYear(parsed.Year()), parsed.Hour(), parsed.Minute())
+}
+
+func linePaymentStatusLabel(status string) string {
+	switch status {
+	case "paid":
+		return "ชำระแล้ว"
+	case "partial":
+		return "ชำระบางส่วน"
+	case "checking":
+		return "รอตรวจสอบ"
+	default:
+		return "รอชำระ"
+	}
+}
+
+func lineInvoiceMoneyRow(label string, value float64) map[string]interface{} {
+	return map[string]interface{}{"type": "box", "layout": "horizontal", "spacing": "md", "contents": []map[string]interface{}{
+		{"type": "text", "text": label, "size": "sm", "color": "#4B5563", "flex": 3, "wrap": true},
+		{"type": "text", "text": formatLineMoney(value), "size": "sm", "color": "#111827", "align": "end", "flex": 2, "wrap": true},
+	}}
+}
+
+func buildLineInvoiceBubble(invoice lineInvoiceFlexData) map[string]interface{} {
+	items := []map[string]interface{}{
+		lineInvoiceMoneyRow("ค่าเช่าห้อง", invoice.Rent),
+		lineInvoiceMoneyRow("ค่าน้ำประปา", invoice.Water),
+		lineInvoiceMoneyRow("ค่าไฟฟ้า", invoice.Electric),
+		lineInvoiceMoneyRow("ค่าส่วนกลาง", invoice.Common),
+		lineInvoiceMoneyRow("ค่าปรับ", invoice.Late),
+	}
+	if math.Abs(invoice.Deposit) >= 0.01 {
+		items = append(items, lineInvoiceMoneyRow("ค่ามัดจำ", invoice.Deposit))
+	}
+	if math.Abs(invoice.Appliance) >= 0.01 {
+		items = append(items, lineInvoiceMoneyRow("ค่าอุปกรณ์เพิ่มเติม", invoice.Appliance))
+	}
+	if math.Abs(invoice.Other) >= 0.01 {
+		items = append(items, lineInvoiceMoneyRow("รายการอื่น ๆ", invoice.Other))
+	}
+
+	periodStatus := map[string]interface{}{"type": "box", "layout": "horizontal", "margin": "lg", "contents": []map[string]interface{}{
+		{"type": "box", "layout": "vertical", "flex": 3, "contents": []map[string]interface{}{
+			{"type": "text", "text": "รอบบิล", "size": "xs", "color": "#9CA3AF"},
+			{"type": "text", "text": formatLinePeriod(invoice.Period), "size": "sm", "weight": "bold", "color": "#374151", "margin": "xs", "wrap": true},
+		}},
+		{"type": "box", "layout": "vertical", "flex": 2, "alignItems": "flex-end", "contents": []map[string]interface{}{
+			{"type": "text", "text": "สถานะ", "size": "xs", "color": "#9CA3AF", "align": "end"},
+			{"type": "text", "text": linePaymentStatusLabel(invoice.Status), "size": "sm", "weight": "bold", "color": "#374151", "margin": "xs", "align": "end", "wrap": true},
+		}},
+	}}
+
+	info := []map[string]interface{}{
+		lineInfoRow("ห้อง", invoice.Room),
+		lineInfoRow("ชื่อลูกบ้าน", invoice.Name),
+		lineInfoRow("กำหนดชำระ", formatLineDate(invoice.DueDate)),
+		lineInfoRow("อัปเดตล่าสุด", formatLineDateTime(invoice.UpdatedAt)),
+	}
+	if invoice.Installment > 0 {
+		info = append(info, lineInfoRow("งวดที่", fmt.Sprintf("%d", invoice.Installment)))
+	}
+	if invoice.PaymentDate != "" {
+		info = append(info, lineInfoRow("วันที่รับชำระ", formatLineDate(invoice.PaymentDate)))
+	}
+
+	body := []interface{}{
+		map[string]interface{}{"type": "text", "text": "ยอดคงเหลือ", "size": "xs", "color": "#6B7280"},
+		map[string]interface{}{"type": "text", "text": formatLineMoney(invoiceBalance(invoice)), "size": "xxl", "weight": "bold", "color": "#111827", "margin": "xs", "wrap": true},
+		periodStatus,
+		map[string]interface{}{"type": "separator", "margin": "lg"},
+	}
+	for _, row := range info {
+		body = append(body, row)
+	}
+	body = append(body,
+		map[string]interface{}{"type": "text", "text": "รายละเอียดค่าใช้จ่าย", "size": "sm", "weight": "bold", "color": "#374151", "margin": "lg"},
+		map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "sm", "margin": "md", "contents": items},
+		map[string]interface{}{"type": "separator", "margin": "lg"},
+		map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "sm", "margin": "md", "contents": []map[string]interface{}{
+			lineInvoiceMoneyRow("ยอดบิล", invoice.Total),
+			lineInvoiceMoneyRow("ชำระแล้ว", invoice.Paid),
+		}},
+	)
+	if invoice.AdditionalBills > 0 {
+		body = append(body, map[string]interface{}{"type": "text", "text": fmt.Sprintf("มีใบแจ้งหนี้ค้างอีก %d ใบ · ดูทั้งหมดได้จากเมนูผูกบัญชี", invoice.AdditionalBills), "size": "xs", "color": "#7C8796", "wrap": true, "margin": "lg"})
+	}
+
+	return map[string]interface{}{
+		"type": "bubble", "size": "mega",
+		"header": map[string]interface{}{"type": "box", "layout": "vertical", "paddingBottom": "10px", "contents": []map[string]interface{}{
+			{"type": "text", "text": "ใบแจ้งหนี้", "weight": "bold", "size": "lg", "color": "#111827"},
+			{"type": "text", "text": "เลขที่บิล " + invoice.InvoiceNo, "size": "xs", "color": "#6B7280", "margin": "xs"},
+		}},
+		"body": map[string]interface{}{"type": "box", "layout": "vertical", "paddingTop": "10px", "spacing": "sm", "contents": body},
+		"footer": map[string]interface{}{"type": "box", "layout": "vertical", "contents": []map[string]interface{}{
+			{"type": "text", "text": lineInvoiceFooter(invoice.Status), "size": "xs", "color": "#6B7280", "align": "center", "wrap": true},
+		}},
+	}
+}
+func lineInvoiceFooter(status string) string {
+	switch status {
+	case "checking":
+		return "กำลังรอผู้ดูแลตรวจสอบหลักฐานการชำระเงิน"
+	case "partial":
+		return "ยอดชำระยังไม่ครบ กรุณาตรวจสอบยอดคงเหลือ"
+	case "paid":
+		return "ชำระใบแจ้งหนี้นี้เรียบร้อยแล้ว"
+	default:
+		return "ส่งสลิปในแชทนี้หลังชำระเงิน"
+	}
+}
+
+func PushInvoiceFlexMessage(lineUserID string, invoice lineInvoiceFlexData) {
+	if getLineToken() == "" || lineUserID == "" {
+		return
+	}
+	message := map[string]interface{}{
+		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceBubble(invoice),
+	}
+	_ = pushLinePayload(lineUserID, message)
+}
 func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "OPTIONS" {
@@ -887,7 +770,11 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 
 		// ค้นหาบิลทั้งหมดที่ค้างชำระ (pending) และห้องนั้นมีการผูก LINE (line_user_id) แล้ว
 		rows, err := tenantDB.Query(`
-			SELECT p.payment_id, p.room_number, p.amount, p.month, p.rent_fee, p.water_fee, p.electric_fee, 
+			SELECT p.payment_id, p.room_number, p.amount, p.month, COALESCE(p.due_date, ''),
+			       COALESCE(p.last_updated, ''), COALESCE(p.payment_date, ''), COALESCE(p.payment_status, 'pending'),
+			       COALESCE(p.installment_phase, 0), p.rent_fee, COALESCE(p.deposit_fee, 0),
+			       p.water_fee, p.electric_fee, p.common_fee, COALESCE(p.appliance_fee, 0), p.late_fee,
+			       COALESCE(p.paid_amount, 0),
 			       u.full_name, u.line_user_id 
 			FROM payments p 
 			JOIN users u ON p.user_id = u.user_id 
@@ -902,15 +789,19 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 		count := 0
 		for rows.Next() {
 			var paymentID int
-			var room, period, name, lineUserID string
-			var amount, rent, water, electric float64
+			var invoice lineInvoiceFlexData
+			var lineUserID string
 
-			if err := rows.Scan(&paymentID, &room, &amount, &period, &rent, &water, &electric, &name, &lineUserID); err == nil {
-				invoiceNo := fmt.Sprintf("INV-%d-%s", time.Now().Year(), room)
-				dateStr := time.Now().Format("02/01/2006 15:04")
-
-				// ส่ง Flex Message
-				PushInvoiceFlexMessage(lineUserID, invoiceNo, dateStr, name, room, period, rent, 0, water, electric, 0, 0, amount)
+			if err := rows.Scan(&paymentID, &invoice.Room, &invoice.Total, &invoice.Period, &invoice.DueDate,
+				&invoice.UpdatedAt, &invoice.PaymentDate, &invoice.Status, &invoice.Installment,
+				&invoice.Rent, &invoice.Deposit, &invoice.Water, &invoice.Electric, &invoice.Common,
+				&invoice.Appliance, &invoice.Late, &invoice.Paid, &invoice.Name, &lineUserID); err == nil {
+				invoice.InvoiceNo = fmt.Sprintf("INV-%05d", paymentID)
+				knownTotal := invoice.Rent + invoice.Deposit + invoice.Water + invoice.Electric + invoice.Common + invoice.Appliance + invoice.Late
+				if difference := invoice.Total - knownTotal; math.Abs(difference) >= 0.01 {
+					invoice.Other = difference
+				}
+				PushInvoiceFlexMessage(lineUserID, invoice)
 				count++
 			}
 		}

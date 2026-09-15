@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -76,6 +77,56 @@ type LiffVerifyRequest struct {
 	Phone      string `json:"phone"`
 }
 
+type LiffStatusRequest struct {
+	AccessToken string `json:"access_token"`
+}
+
+type liffTokenVerifier func(string) (string, error)
+type liffTenantDBOpener func(int) (*sql.DB, error)
+
+type LiffResidentSummary struct {
+	FullName           string `json:"full_name"`
+	RoomNumber         string `json:"room_number"`
+	RoomType           string `json:"room_type"`
+	Status             string `json:"status"`
+	MoveInDate         string `json:"move_in_date"`
+	ContractEndDate    string `json:"contract_end_date"`
+	IndefiniteContract bool   `json:"indefinite_contract"`
+}
+
+type LiffBillingSummary struct {
+	OutstandingCount  int                  `json:"outstanding_count"`
+	OutstandingAmount float64              `json:"outstanding_amount"`
+	Invoices          []LiffInvoiceSummary `json:"invoices"`
+}
+
+type LiffInvoiceSummary struct {
+	InvoiceNumber    string  `json:"invoice_number"`
+	Period           string  `json:"period"`
+	DueDate          string  `json:"due_date"`
+	UpdatedAt        string  `json:"updated_at"`
+	PaymentDate      string  `json:"payment_date"`
+	Status           string  `json:"status"`
+	InstallmentPhase int     `json:"installment_phase"`
+	RentFee          float64 `json:"rent_fee"`
+	DepositFee       float64 `json:"deposit_fee"`
+	WaterFee         float64 `json:"water_fee"`
+	ElectricFee      float64 `json:"electric_fee"`
+	CommonFee        float64 `json:"common_fee"`
+	ApplianceFee     float64 `json:"appliance_fee"`
+	LateFee          float64 `json:"late_fee"`
+	OtherFee         float64 `json:"other_fee"`
+	Amount           float64 `json:"amount"`
+	PaidAmount       float64 `json:"paid_amount"`
+	Balance          float64 `json:"balance"`
+	Outstanding      bool    `json:"outstanding"`
+}
+
+type LiffLinkedSummary struct {
+	Resident LiffResidentSummary `json:"resident"`
+	Billing  LiffBillingSummary  `json:"billing"`
+}
+
 func singleLineAccount(master *sql.DB) (int, error) {
 	rows, err := master.Query(`SELECT account_id FROM sync_snapshots GROUP BY account_id ORDER BY account_id LIMIT 2`)
 	if err != nil {
@@ -120,6 +171,156 @@ func HandleLiffRooms(_ *sql.DB) http.HandlerFunc {
 		// exact room only after verifying the resident's phone number.
 		http.Error(w, `{"error":"กรุณากรอกเบอร์โทรศัพท์เพื่อค้นหาห้อง"}`, http.StatusGone)
 	}
+}
+
+func HandleLiffStatus(master *sql.DB) http.HandlerFunc {
+	return handleLiffStatus(master, verifiedLineUserID, GetTenantDB)
+}
+
+func handleLiffStatus(master *sql.DB, verifyToken liffTokenVerifier, openTenantDB liffTenantDBOpener) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		if !allowRequestAttempt(r, "liff-status", 60, 5*time.Minute) {
+			http.Error(w, `{"error":"ตรวจสอบสถานะบ่อยเกินไป กรุณาลองใหม่ภายหลัง"}`, http.StatusTooManyRequests)
+			return
+		}
+
+		var request LiffStatusRequest
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16<<10))
+		if decoder.Decode(&request) != nil || strings.TrimSpace(request.AccessToken) == "" {
+			http.Error(w, `{"error":"ไม่พบข้อมูลยืนยันตัวตนจาก LINE"}`, http.StatusBadRequest)
+			return
+		}
+		lineUserID, err := verifyToken(strings.TrimSpace(request.AccessToken))
+		if err != nil {
+			http.Error(w, `{"error":"การยืนยันตัวตนกับ LINE ล้มเหลว"}`, http.StatusUnauthorized)
+			return
+		}
+
+		summary, err := lookupLinkedResident(master, openTenantDB, lineUserID)
+		if err == sql.ErrNoRows {
+			writeLineJSON(w, http.StatusOK, map[string]interface{}{"linked": false})
+			return
+		}
+		if err != nil {
+			http.Error(w, `{"error":"ตรวจสอบสถานะการเชื่อมต่อไม่สำเร็จ"}`, http.StatusInternalServerError)
+			return
+		}
+		writeLineJSON(w, http.StatusOK, map[string]interface{}{
+			"linked":      true,
+			"room_number": summary.Resident.RoomNumber,
+			"resident":    summary.Resident,
+			"billing":     summary.Billing,
+		})
+	}
+}
+
+func lookupLinkedResident(master *sql.DB, openTenantDB liffTenantDBOpener, lineUserID string) (LiffLinkedSummary, error) {
+	var summary LiffLinkedSummary
+	var accountID int
+	var tenantID string
+	if err := master.QueryRow(`SELECT account_id, tenant_id FROM line_links
+		WHERE line_user_id = ? AND status = 'linked' AND tenant_id != ''`, lineUserID).Scan(&accountID, &tenantID); err != nil {
+		return summary, err
+	}
+	tenantDB, err := openTenantDB(accountID)
+	if err != nil {
+		return summary, err
+	}
+	var userID int
+	var indefiniteContract int
+	err = tenantDB.QueryRow(`SELECT u.user_id, COALESCE(u.full_name, ''), u.room_number,
+		COALESCE(r.room_type, ''), COALESCE(u.status, ''), COALESCE(u.move_in_date, ''),
+		COALESCE(u.contract_end_date, ''), COALESCE(u.indefinite_contract, 0)
+		FROM users u LEFT JOIN rooms r ON r.room_number = u.room_number
+		WHERE u.external_id = ? AND u.line_user_id = ?
+		AND u.status IN ('active', 'กำลังพักอาศัย', 'จอง')`, tenantID, lineUserID).Scan(
+		&userID, &summary.Resident.FullName, &summary.Resident.RoomNumber, &summary.Resident.RoomType,
+		&summary.Resident.Status, &summary.Resident.MoveInDate, &summary.Resident.ContractEndDate,
+		&indefiniteContract,
+	)
+	if err != nil || strings.TrimSpace(summary.Resident.RoomNumber) == "" {
+		if err == nil {
+			err = sql.ErrNoRows
+		}
+		return summary, err
+	}
+	summary.Resident.FullName = strings.TrimSpace(summary.Resident.FullName)
+	summary.Resident.RoomNumber = strings.TrimSpace(summary.Resident.RoomNumber)
+	summary.Resident.RoomType = strings.TrimSpace(summary.Resident.RoomType)
+	summary.Resident.IndefiniteContract = indefiniteContract != 0
+
+	if err := tenantDB.QueryRow(`SELECT COUNT(*), COALESCE(SUM(
+		CASE WHEN amount > COALESCE(paid_amount, 0) THEN amount - COALESCE(paid_amount, 0) ELSE 0 END
+	), 0) FROM payments WHERE user_id = ? AND COALESCE(payment_status, 'pending') != 'paid'
+	AND amount > COALESCE(paid_amount, 0)`, userID).Scan(
+		&summary.Billing.OutstandingCount, &summary.Billing.OutstandingAmount,
+	); err != nil {
+		return LiffLinkedSummary{}, err
+	}
+
+	summary.Billing.Invoices, err = loadLiffInvoices(tenantDB, userID, summary.Billing.OutstandingCount > 0)
+	if err != nil {
+		return LiffLinkedSummary{}, err
+	}
+	return summary, nil
+}
+
+func loadLiffInvoices(db *sql.DB, userID int, outstandingOnly bool) ([]LiffInvoiceSummary, error) {
+	query := `SELECT payment_id, COALESCE(month, ''), COALESCE(due_date, ''),
+		COALESCE(last_updated, ''), COALESCE(payment_date, ''),
+		COALESCE(NULLIF(payment_status, ''), 'pending'), COALESCE(installment_phase, 0),
+		COALESCE(rent_fee, 0), COALESCE(deposit_fee, 0), COALESCE(water_fee, 0),
+		COALESCE(electric_fee, 0), COALESCE(common_fee, 0), COALESCE(appliance_fee, 0),
+		COALESCE(late_fee, 0), COALESCE(amount, 0), COALESCE(paid_amount, 0)
+		FROM payments WHERE user_id = ?`
+	if outstandingOnly {
+		query += ` AND COALESCE(payment_status, 'pending') != 'paid'
+			AND amount > COALESCE(paid_amount, 0)`
+	}
+	query += ` ORDER BY month DESC, installment_phase DESC, payment_id DESC`
+	if !outstandingOnly {
+		query += ` LIMIT 1`
+	}
+
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	invoices := make([]LiffInvoiceSummary, 0)
+	for rows.Next() {
+		var paymentID int
+		var invoice LiffInvoiceSummary
+		if err := rows.Scan(
+			&paymentID, &invoice.Period, &invoice.DueDate, &invoice.UpdatedAt, &invoice.PaymentDate,
+			&invoice.Status, &invoice.InstallmentPhase, &invoice.RentFee, &invoice.DepositFee,
+			&invoice.WaterFee, &invoice.ElectricFee, &invoice.CommonFee, &invoice.ApplianceFee,
+			&invoice.LateFee, &invoice.Amount, &invoice.PaidAmount,
+		); err != nil {
+			return nil, err
+		}
+		invoice.InvoiceNumber = fmt.Sprintf("INV-%05d", paymentID)
+		invoice.Balance = math.Max(invoice.Amount-invoice.PaidAmount, 0)
+		invoice.Outstanding = invoice.Status != "paid" && invoice.Balance > 0
+		knownTotal := invoice.RentFee + invoice.DepositFee + invoice.WaterFee + invoice.ElectricFee +
+			invoice.CommonFee + invoice.ApplianceFee + invoice.LateFee
+		if difference := invoice.Amount - knownTotal; math.Abs(difference) >= 0.01 {
+			invoice.OtherFee = difference
+		}
+		invoices = append(invoices, invoice)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return invoices, nil
 }
 
 func HandleLiffVerify(master *sql.DB) http.HandlerFunc {
