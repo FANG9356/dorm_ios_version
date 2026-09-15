@@ -1,9 +1,8 @@
 package handlers
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"dorm_os/utils"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -25,6 +23,8 @@ type SyncAuthRequest struct {
 
 type SyncSnapshotRequest struct {
 	Payload         json.RawMessage `json:"payload"`
+	PayloadBase64   string          `json:"payload_base64,omitempty"`
+	BaseVersion     *int            `json:"base_version"`
 	DeviceID        string          `json:"device_id,omitempty"`
 	ClientUpdatedAt string          `json:"client_updated_at,omitempty"`
 }
@@ -100,6 +100,7 @@ func writeLatestSnapshot(db *sql.DB, w http.ResponseWriter, accountID int, email
 		"checksum":            checksum,
 		"size":                size,
 		"payload":             json.RawMessage(payload),
+		"payload_base64":      base64.StdEncoding.EncodeToString([]byte(payload)),
 	})
 }
 
@@ -122,10 +123,11 @@ func writeLatestSnapshotMeta(db *sql.DB, w http.ResponseWriter, accountID int, e
 	if err == sql.ErrNoRows {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":       "empty",
-			"has_snapshot": false,
-			"account_id":   accountID,
-			"email":        email,
+			"sync_protocol": 2,
+			"status":        "empty",
+			"has_snapshot":  false,
+			"account_id":    accountID,
+			"email":         email,
 		})
 		return
 	}
@@ -136,6 +138,7 @@ func writeLatestSnapshotMeta(db *sql.DB, w http.ResponseWriter, accountID int, e
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
+		"sync_protocol":       2,
 		"status":              "success",
 		"has_snapshot":        true,
 		"snapshot_id":         snapshotID,
@@ -167,9 +170,15 @@ func SetupSyncRoutes(db *sql.DB) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
+		if !allowRequestAttempt(r, "sync-register", 5, time.Hour) {
+			http.Error(w, "Too many registration attempts", http.StatusTooManyRequests)
+			return
+		}
+		req.Name = strings.TrimSpace(req.Name)
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
-		if req.Email == "" || req.Password == "" || req.Name == "" {
-			http.Error(w, "Name, Email and Password are required", http.StatusBadRequest)
+		if req.Name == "" || !isValidEmail(req.Email) || !isValidPassword(req.Password) {
+			http.Error(w, "Valid name, email and 8-72 character password with letters and numbers are required", http.StatusBadRequest)
 			return
 		}
 
@@ -200,20 +209,14 @@ func SetupSyncRoutes(db *sql.DB) {
 
 		if authHeader != "" {
 			// Internal staff creation!
-			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			secret := getJWTSecret()
-			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-				return secret, nil
-			})
-			if err == nil && token.Valid {
-				if claims, ok := token.Claims.(jwt.MapClaims); ok {
-					if idFloat, ok := claims["admin_id"].(float64); ok {
-						superadminID = int(idFloat)
-						// Fetch the superadmin's email
-						err = db.QueryRow("SELECT email FROM admins WHERE id = ? AND role = 'superadmin'", superadminID).Scan(&superadminEmail)
-						if err == nil && superadminEmail != "" {
-							isInternalCreation = true
-						}
+			parts := strings.Fields(authHeader)
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				claims, currentRole, authErr := authenticateSession(db, parts[1])
+				if authErr == nil && currentRole == "superadmin" {
+					superadminID = claims.AdminID
+					err = db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", superadminID).Scan(&superadminEmail)
+					if err == nil && strings.TrimSpace(superadminEmail) != "" {
+						isInternalCreation = true
 					}
 				}
 			}
@@ -228,6 +231,11 @@ func SetupSyncRoutes(db *sql.DB) {
 			roleToInsert = req.Role
 			if roleToInsert == "" {
 				roleToInsert = "admin" // Default staff role
+			}
+			roleToInsert = strings.ToLower(strings.TrimSpace(roleToInsert))
+			if !validStaffRole(roleToInsert) {
+				http.Error(w, "Invalid staff role", http.StatusBadRequest)
+				return
 			}
 			primaryEmail = superadminEmail
 			backupEmail = req.Email // The email sent from AddAdminSheet
@@ -294,20 +302,11 @@ func SetupSyncRoutes(db *sql.DB) {
 			_, _ = GetTenantDB(int(adminID))
 		}
 
-		// Generate JWT Token
-		secret := getJWTSecret()
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"admin_id": int(adminID),
-			"username": req.Name,
-			"role":     roleToInsert,
-			"exp":      time.Now().Add(time.Hour * 24 * 365).Unix(), // 1 year expiry for app
-		})
-		tokenString, _ := token.SignedString(secret)
-
-		// Insert session into database
-		_, err = db.Exec("INSERT INTO sessions (admin_id, token) VALUES (?, ?)", int(adminID), tokenString)
+		tokenString, err := issueSessionToken(db, int(adminID), req.Name, roleToInsert, 365*24*time.Hour)
 		if err != nil {
-			log.Printf("Failed to insert session: %v", err)
+			log.Printf("Failed to create session: %v", err)
+			http.Error(w, "Failed to create session", http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -329,6 +328,12 @@ func SetupSyncRoutes(db *sql.DB) {
 		var req SyncAuthRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		loginIdentifier := strings.ToLower(strings.TrimSpace(req.Email))
+		if !allowRequestAttempt(r, "sync-login-ip", 30, 15*time.Minute) ||
+			!allowRequestAttempt(r, "sync-login-account:"+loginIdentifier, 10, 15*time.Minute) {
+			http.Error(w, "Too many login attempts", http.StatusTooManyRequests)
 			return
 		}
 
@@ -353,20 +358,11 @@ func SetupSyncRoutes(db *sql.DB) {
 			return
 		}
 
-		// Generate JWT Token
-		secret := getJWTSecret()
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"admin_id": adminID,
-			"username": username,
-			"role":     role,
-			"exp":      time.Now().Add(time.Hour * 24 * 365).Unix(),
-		})
-		tokenString, _ := token.SignedString(secret)
-
-		// Insert session into database
-		_, err = db.Exec("INSERT INTO sessions (admin_id, token) VALUES (?, ?)", adminID, tokenString)
+		tokenString, err := issueSessionToken(db, adminID, username, role, 365*24*time.Hour)
 		if err != nil {
-			log.Printf("Failed to insert session: %v", err)
+			log.Printf("Failed to create session: %v", err)
+			http.Error(w, "Failed to create session", http.StatusInternalServerError)
+			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -413,70 +409,5 @@ func SetupSyncRoutes(db *sql.DB) {
 		writeLatestSnapshotMeta(db, w, accountID, email)
 	})
 
-	http.HandleFunc("/api/sync/push", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		adminID, accountID, email, err := resolveSyncAccount(db, r)
-		if err != nil {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		var req SyncSnapshotRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return
-		}
-		if len(req.Payload) == 0 || string(req.Payload) == "null" || !json.Valid(req.Payload) {
-			http.Error(w, "Invalid payload", http.StatusBadRequest)
-			return
-		}
-
-		var nextVersion int
-		if err := db.QueryRow("SELECT COALESCE(MAX(version), 0) + 1 FROM sync_snapshots WHERE account_id = ?", accountID).Scan(&nextVersion); err != nil {
-			http.Error(w, "Sync push failed", http.StatusInternalServerError)
-			return
-		}
-
-		var canonicalPayload interface{}
-		if err := json.Unmarshal(req.Payload, &canonicalPayload); err != nil {
-			http.Error(w, "Invalid payload", http.StatusBadRequest)
-			return
-		}
-		canonicalBytes, err := json.Marshal(canonicalPayload)
-		if err != nil {
-			http.Error(w, "Invalid payload", http.StatusBadRequest)
-			return
-		}
-
-		payload := string(canonicalBytes)
-		sum := sha256.Sum256(canonicalBytes)
-		checksum := hex.EncodeToString(sum[:])
-		createdAt := time.Now().UTC().Format(time.RFC3339Nano)
-		snapshotID := fmt.Sprintf("acct-%d-v%d-%s", accountID, nextVersion, checksum[:12])
-
-		_, err = db.Exec(`
-			INSERT INTO sync_snapshots (snapshot_id, account_id, version, payload, checksum, size, device_id, created_at, created_by_admin_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, snapshotID, accountID, nextVersion, payload, checksum, len(canonicalBytes), req.DeviceID, createdAt, adminID)
-		if err != nil {
-			http.Error(w, "Sync push failed", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":      "success",
-			"snapshot_id": snapshotID,
-			"account_id":  accountID,
-			"email":       email,
-			"version":     nextVersion,
-			"created_at":  createdAt,
-			"checksum":    checksum,
-			"size":        len(canonicalBytes),
-		})
-	})
+	http.HandleFunc("/api/sync/push", HandleSyncPush(db))
 }

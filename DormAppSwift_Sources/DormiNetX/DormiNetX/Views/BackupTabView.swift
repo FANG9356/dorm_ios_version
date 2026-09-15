@@ -16,6 +16,7 @@ private enum LocalBackupConfirmation: Identifiable {
     case restoreImported(URL)
     case delete(LocalBackupFile)
     case resetLocal
+    case useRemote
 
     var id: String {
         switch self {
@@ -23,11 +24,13 @@ private enum LocalBackupConfirmation: Identifiable {
         case .restoreImported(let url): return "restore-imported-\(url.path)"
         case .delete(let file): return "delete-\(file.id)"
         case .resetLocal: return "reset-local"
+        case .useRemote: return "use-remote"
         }
     }
 }
 
 struct BackupTabView: View {
+    @ObservedObject private var sync = SyncManager.shared
     @Environment(\.modelContext) private var modelContext
     @Query private var rooms: [Room]
     @Query private var tenants: [DormUser]
@@ -59,6 +62,11 @@ struct BackupTabView: View {
                 summaryCard
                 statusBanner
                 actionsCard
+                if case .failed = sync.state {
+                    BackupActionButton(title: "ใช้ข้อมูลล่าสุดจากเซิร์ฟเวอร์", icon: "icloud.and.arrow.down",
+                                       tint: .primary, isLoading: isBusy || sync.isSyncing,
+                                       action: { confirmation = .useRemote })
+                }
                 backupListCard
                 dangerCard
             }
@@ -269,17 +277,33 @@ struct BackupTabView: View {
             defer { isBusy = false }
 
             do {
+                guard !SyncManager.shared.isSyncing else { throw SyncError.busy }
                 for item in rooms { modelContext.delete(item) }
                 for item in tenants { modelContext.delete(item) }
                 for item in payments { modelContext.delete(item) }
                 for item in maintenanceItems { modelContext.delete(item) }
                 for item in roomTypes { modelContext.delete(item) }
                 for item in logs { modelContext.delete(item) }
-                UserDefaults.standard.set(false, forKey: "syncHasPendingLocalChanges")
-                UserDefaults.standard.set(0, forKey: "lastSyncVersion")
                 try modelContext.save()
+                try SyncManager.shared.resetCheckpoint()
                 showMessage("ล้างข้อมูลภายในเครื่องของเครื่องนี้เรียบร้อยแล้ว")
             } catch {
+                showError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func useRemoteSnapshot() {
+        Task {
+            isBusy = true
+            defer { isBusy = false }
+            do {
+                let url = try backupDirectory().appendingPathComponent("ก่อนรับข้อมูล_\(UUID().uuidString).dorminetbackup")
+                try await sync.replaceWithRemoteSnapshot(modelContext: modelContext, backupURL: url)
+                refreshBackupFiles()
+                showMessage(sync.message)
+            } catch {
+                refreshBackupFiles()
                 showError(error.localizedDescription)
             }
         }
@@ -327,6 +351,13 @@ struct BackupTabView: View {
 
     private func confirmationAlert(for item: LocalBackupConfirmation) -> Alert {
         switch item {
+        case .useRemote:
+            return Alert(
+                title: Text("ใช้ข้อมูลจากเซิร์ฟเวอร์แทนข้อมูลในเครื่อง?"),
+                message: Text("ระบบจะเก็บข้อมูลในเครื่องเป็นไฟล์สำรองก่อน การแก้ไขที่ยังไม่ส่งจะอยู่ในไฟล์สำรอง แต่จะไม่รวมกับข้อมูลที่รับมา"),
+                primaryButton: .destructive(Text("สำรองแล้วรับข้อมูล")) { useRemoteSnapshot() },
+                secondaryButton: .cancel(Text("ยกเลิก"))
+            )
         case .restore(let file):
             return Alert(
                 title: Text("กู้คืนไฟล์นี้?"),

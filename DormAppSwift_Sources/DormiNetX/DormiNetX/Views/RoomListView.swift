@@ -362,6 +362,13 @@ struct RoomListView: View {
 
             let payment = generatedPayment(for: user, month: month)
             modelContext.insert(payment)
+            do {
+                _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "automatic-billing")
+            } catch {
+                modelContext.rollback()
+                print("Payment ledger error: \(error.localizedDescription)")
+                return
+            }
             modelContext.insert(LocalSystemLog(action: "สร้างรายการชำระอัตโนมัติ", details: "สร้างรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
             didCreate = true
         }
@@ -859,7 +866,8 @@ struct SidebarMenu: View {
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isSettingsMode)
                         
                         Button(action: {
-                            UserDefaults.standard.removeObject(forKey: "savedAccountsHistory")
+                            do { try CredentialStore.shared.setSavedAccountsData(nil) }
+                            catch { return }
                             let generator = UINotificationFeedbackGenerator()
                             generator.notificationOccurred(.success)
                         }) {

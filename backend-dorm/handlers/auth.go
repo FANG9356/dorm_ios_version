@@ -5,27 +5,28 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"dorm_os/utils"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"io"
 	"net"
 	"net/http"
+	"net/mail"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"io"
-	"path/filepath"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Admin struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"-"`
+	ID           int    `json:"id"`
+	Username     string `json:"username"`
+	Password     string `json:"-"`
 	Role         string `json:"role"`
 	Email        string `json:"email"`
 	ProfileImage string `json:"profile_image"`
@@ -33,27 +34,106 @@ type Admin struct {
 
 var jwtSecretKey []byte
 
+type sessionTokenClaims struct {
+	AdminID  int    `json:"admin_id"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+func issueSessionToken(db *sql.DB, adminID int, username, role string, lifetime time.Duration) (string, error) {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+	now := time.Now()
+	claims := sessionTokenClaims{
+		AdminID:  adminID,
+		Username: username,
+		Role:     role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(lifetime)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ID:        hex.EncodeToString(nonce),
+		},
+	}
+	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(getJWTSecret())
+	if err != nil {
+		return "", err
+	}
+	if _, err = db.Exec("INSERT INTO sessions (admin_id, token) VALUES (?, ?)", adminID, tokenString); err != nil {
+		return "", err
+	}
+	return tokenString, nil
+}
+
+func parseSessionToken(tokenString string) (*sessionTokenClaims, error) {
+	claims := &sessionTokenClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
+		return getJWTSecret(), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	if err != nil || !token.Valid || claims.AdminID <= 0 || claims.Username == "" {
+		return nil, fmt.Errorf("invalid session token")
+	}
+	return claims, nil
+}
+
+func parsePurposeToken(tokenString, purpose string) (jwt.MapClaims, error) {
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
+		return getJWTSecret(), nil
+	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	role, _ := claims["role"].(string)
+	if err != nil || !token.Valid || role != purpose {
+		return nil, fmt.Errorf("invalid %s token", purpose)
+	}
+	return claims, nil
+}
+
+func authenticateSession(db *sql.DB, tokenString string) (*sessionTokenClaims, string, error) {
+	claims, err := parseSessionToken(tokenString)
+	if err != nil {
+		return nil, "", err
+	}
+	var currentRole string
+	if err = db.QueryRow("SELECT COALESCE(NULLIF(role, ''), 'services') FROM admins WHERE id = ?", claims.AdminID).Scan(&currentRole); err != nil {
+		return nil, "", err
+	}
+	var exists int
+	if err = db.QueryRow("SELECT 1 FROM sessions WHERE admin_id = ? AND token = ?", claims.AdminID, tokenString).Scan(&exists); err != nil || exists != 1 {
+		return nil, "", fmt.Errorf("session revoked")
+	}
+	return claims, currentRole, nil
+}
+
 func getJWTSecret() []byte {
 	if len(jwtSecretKey) > 0 {
 		return jwtSecretKey
 	}
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		log.Println("[WARNING] JWT_SECRET is not set! Generating and saving a new secret to .env")
-		key := make([]byte, 32)
-		rand.Read(key)
-		secret = fmt.Sprintf("%x", key)
-
-		f, err := os.OpenFile(".env", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err == nil {
-			f.WriteString(fmt.Sprintf("\nJWT_SECRET=%s\n", secret))
-			f.Close()
-		} else {
-			log.Println("[ERROR] Failed to write JWT_SECRET to .env")
-		}
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if len(secret) < 32 {
+		panic("JWT_SECRET must be set and contain at least 32 characters")
 	}
 	jwtSecretKey = []byte(secret)
 	return jwtSecretKey
+}
+
+// InitializeJWTSecret validates configuration before the HTTP listener starts.
+// Authentication must fail closed instead of silently replacing the signing
+// key and invalidating every existing session.
+func InitializeJWTSecret() error {
+	secret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if len(secret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be set and contain at least 32 characters")
+	}
+	jwtSecretKey = []byte(secret)
+	return nil
 }
 
 func InitAdminTable(db *sql.DB) {
@@ -102,11 +182,8 @@ func PerformSetup(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-
-		var count int
-		db.QueryRow("SELECT COUNT(*) FROM admins").Scan(&count)
-		if count > 0 {
-			http.Error(w, `{"error": "Setup already completed"}`, http.StatusForbidden)
+		if !allowRequestAttempt(r, "initial-setup", 3, time.Hour) {
+			http.Error(w, `{"error":"Too many setup attempts"}`, http.StatusTooManyRequests)
 			return
 		}
 
@@ -116,13 +193,16 @@ func PerformSetup(db *sql.DB) http.HandlerFunc {
 			Email    string `json:"email"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request body"}`, http.StatusBadRequest)
 			return
 		}
 
-		if len(req.Username) < 4 || len(req.Password) < 4 {
-			http.Error(w, `{"error": "Username and password must be at least 4 characters"}`, http.StatusBadRequest)
+		req.Username = strings.TrimSpace(req.Username)
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if len(req.Username) < 4 || !isValidPassword(req.Password) || !isValidEmail(req.Email) {
+			http.Error(w, `{"error":"Username, email, and a password of 8-72 characters containing letters and numbers are required"}`, http.StatusBadRequest)
 			return
 		}
 
@@ -132,9 +212,18 @@ func PerformSetup(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		_, err = db.Exec("INSERT INTO admins (username, password, role, email, profile_image) VALUES (?, ?, ?, ?, '')", req.Username, string(hashedPassword), "services", req.Email)
+		result, err := db.Exec(`
+			INSERT INTO admins (username, password, role, email, profile_image)
+			SELECT ?, ?, 'superadmin', ?, ''
+			WHERE NOT EXISTS (SELECT 1 FROM admins)
+		`, req.Username, string(hashedPassword), req.Email)
 		if err != nil {
 			http.Error(w, `{"error": "Failed to create admin account"}`, http.StatusInternalServerError)
+			return
+		}
+		inserted, err := result.RowsAffected()
+		if err != nil || inserted != 1 {
+			http.Error(w, `{"error":"Setup already completed"}`, http.StatusForbidden)
 			return
 		}
 
@@ -144,12 +233,18 @@ func PerformSetup(db *sql.DB) http.HandlerFunc {
 }
 
 func isValidPassword(p string) bool {
-	if len(p) < 8 {
+	if len(p) < 8 || len(p) > 72 {
 		return false
 	}
 	hasLetter := regexp.MustCompile(`[a-zA-Z]`).MatchString(p)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(p)
 	return hasLetter && hasNumber
+}
+
+func isValidEmail(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	address, err := mail.ParseAddress(value)
+	return err == nil && strings.EqualFold(address.Address, value) && strings.Contains(value, "@")
 }
 
 func LoginHandler(db *sql.DB) http.HandlerFunc {
@@ -183,10 +278,16 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			ProfileImage       string
 			MustChangePassword int
 		}
-		
+
 		loginIdentifier := creds.Username
 		if loginIdentifier == "" {
 			loginIdentifier = creds.Email
+		}
+		loginIdentifier = strings.TrimSpace(loginIdentifier)
+		if !allowRequestAttempt(r, "login-ip", 30, 15*time.Minute) ||
+			!allowRequestAttempt(r, "login-account:"+strings.ToLower(loginIdentifier), 10, 15*time.Minute) {
+			http.Error(w, `{"error": "เข้าสู่ระบบบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
+			return
 		}
 
 		err := db.QueryRow("SELECT id, username, password, COALESCE(role, 'services'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(must_change_password, 0) FROM admins WHERE username = ? OR email = ? OR backup_email = ?", loginIdentifier, loginIdentifier, loginIdentifier).Scan(&admin.ID, &admin.Username, &admin.Password, &admin.Role, &admin.Email, &admin.ProfileImage, &admin.MustChangePassword)
@@ -209,16 +310,7 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		secret := getJWTSecret()
-
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"admin_id": admin.ID,
-			"username": admin.Username,
-			"role":     admin.Role,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
-		})
-
-		tokenString, err := token.SignedString(secret)
+		tokenString, err := issueSessionToken(db, admin.ID, admin.Username, admin.Role, 24*time.Hour)
 		if err != nil {
 			http.Error(w, `{"error": "Could not generate token"}`, http.StatusInternalServerError)
 			return
@@ -268,85 +360,72 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 			if len(parts) == 2 && parts[0] == "Bearer" {
 				tokenStr = parts[1]
 			}
-		} else {
-			tokenStr = r.URL.Query().Get("token")
 		}
 
 		if tokenStr == "" {
 			http.Error(w, `{"error": "Unauthorized: Missing Token"}`, http.StatusUnauthorized)
 			return
 		}
-		secret := getJWTSecret()
-
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return secret, nil
-		})
-
-		if err != nil || !token.Valid {
+		claims, currentRole, err := authenticateSession(db, tokenStr)
+		if err != nil {
 			http.Error(w, `{"error": "Unauthorized: Invalid or Expired Token"}`, http.StatusUnauthorized)
 			return
 		}
 
-		// ตรวจสอบกับ Database ว่าแอดมินคนนี้ยังคงมีตัวตนอยู่หรือไม่ (ป้องกันบัญชีถูกลบแต่ยังเข้าสู่ระบบได้)
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			var exists int
-			adminID := int(claims["admin_id"].(float64)) // JWT numbers are float64
-			err := db.QueryRow("SELECT 1 FROM admins WHERE id = ?", adminID).Scan(&exists)
-			if err != nil || exists == 0 {
-				http.Error(w, `{"error": "Unauthorized: Account no longer exists"}`, http.StatusUnauthorized)
-				return
-			}
-			
-			// Check if session exists in DB (for remote logout/kick)
-			var sessionExists int
-			err = db.QueryRow("SELECT 1 FROM sessions WHERE admin_id = ? AND token = ?", adminID, tokenStr).Scan(&sessionExists)
-			if err != nil || sessionExists == 0 {
-				http.Error(w, `{"error": "Unauthorized: Session expired or logged out"}`, http.StatusUnauthorized)
-				return
-			}
-
-			// Inject admin_id into context
-			ctx := context.WithValue(r.Context(), "admin_id", adminID)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		} else {
-			http.Error(w, `{"error": "Unauthorized: Invalid Token Claims"}`, http.StatusUnauthorized)
-			return
-		}
+		ctx := context.WithValue(r.Context(), "admin_id", claims.AdminID)
+		ctx = context.WithValue(ctx, "admin_role", currentRole)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func IsServicesRole(r *http.Request) bool {
-	authHeader := r.Header.Get("Authorization")
-	tokenStr := ""
-	if authHeader != "" {
-		parts := strings.Split(authHeader, " ")
-		if len(parts) == 2 && parts[0] == "Bearer" {
-			tokenStr = parts[1]
-		}
-	} else {
-		tokenStr = r.URL.Query().Get("token")
-	}
+	role, _ := r.Context().Value("admin_role").(string)
+	return role == "superadmin" || role == "admin" || role == "services"
+}
 
-	if tokenStr == "" {
+func IsSuperadmin(r *http.Request) bool {
+	role, _ := r.Context().Value("admin_role").(string)
+	return role == "superadmin"
+}
+
+func IsSystemOperator(r *http.Request) bool {
+	if !IsSuperadmin(r) {
 		return false
 	}
+	configuredID, err := strconv.Atoi(strings.TrimSpace(os.Getenv("SYSTEM_OPERATOR_ADMIN_ID")))
+	adminID, ok := r.Context().Value("admin_id").(int)
+	return err == nil && configuredID > 0 && ok && adminID == configuredID
+}
 
-	secret := getJWTSecret()
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return secret, nil
-	})
-
-	if err == nil && token.Valid {
-		if claims, ok := token.Claims.(jwt.MapClaims); ok {
-			role, _ := claims["role"].(string)
-			return role == "superadmin" || role == "admin" || role == "services"
-		}
+func currentAdminScope(db *sql.DB, r *http.Request) (int, string, string, error) {
+	adminID, ok := r.Context().Value("admin_id").(int)
+	if !ok || adminID <= 0 {
+		return 0, "", "", fmt.Errorf("missing admin scope")
 	}
-	return false
+	var role, email string
+	if err := db.QueryRow(`SELECT COALESCE(NULLIF(role, ''), 'dorm'), LOWER(TRIM(COALESCE(email, '')))
+		FROM admins WHERE id = ?`, adminID).Scan(&role, &email); err != nil || email == "" {
+		return 0, "", "", fmt.Errorf("invalid admin scope")
+	}
+	return adminID, role, email, nil
+}
+
+func targetAdminScope(db *sql.DB, targetID int) (string, string, error) {
+	var role, email string
+	if err := db.QueryRow(`SELECT COALESCE(NULLIF(role, ''), 'dorm'), LOWER(TRIM(COALESCE(email, '')))
+		FROM admins WHERE id = ?`, targetID).Scan(&role, &email); err != nil || email == "" {
+		return "", "", fmt.Errorf("target account unavailable")
+	}
+	return role, email, nil
+}
+
+func validStaffRole(role string) bool {
+	switch role {
+	case "admin", "services", "dorm":
+		return true
+	default:
+		return false
+	}
 }
 
 func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
@@ -371,6 +450,10 @@ func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
+		if !allowRequestAttempt(r, "change-password:"+strings.ToLower(strings.TrimSpace(req.Username)), 10, 15*time.Minute) {
+			http.Error(w, `{"error": "ลองเปลี่ยนรหัสผ่านบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
+			return
+		}
 
 		var admin Admin
 		err := db.QueryRow("SELECT id, username, password FROM admins WHERE username = ?", req.Username).Scan(&admin.ID, &admin.Username, &admin.Password)
@@ -391,34 +474,17 @@ func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		authenticated := false
-		debugInfo := ""
 		if tokenStr != "" {
-			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-				}
-				return getJWTSecret(), nil
-			})
-			debugInfo += fmt.Sprintf("err=%v, valid=%v, ", err, token != nil && token.Valid)
-			if err == nil && token.Valid {
-				if claims, ok := token.Claims.(jwt.MapClaims); ok {
-					username, okStr := claims["username"].(string)
-					debugInfo += fmt.Sprintf("claim_uname=%s, req_uname=%s, ", username, req.Username)
-					if okStr && username == req.Username {
-						authenticated = true
-					}
-				} else {
-					debugInfo += "claims_fail, "
-				}
+			claims, _, err := authenticateSession(db, tokenStr)
+			if err == nil && claims.Username == req.Username {
+				authenticated = true
 			}
-		} else {
-			debugInfo += "token_empty, "
 		}
 
 		if !authenticated {
 			if req.OldPassword == "" || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.OldPassword)) != nil {
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(fmt.Sprintf(`{"error": "ชื่อผู้ใช้หรือรหัสผ่านเดิมไม่ถูกต้อง (DEBUG: %s)"}`, debugInfo)))
+				w.Write([]byte(`{"error": "ชื่อผู้ใช้หรือรหัสผ่านเดิมไม่ถูกต้อง"}`))
 				return
 			}
 		}
@@ -439,9 +505,23 @@ func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
 			newUsername = admin.Username
 		}
 
-		_, err = db.Exec("UPDATE admins SET username = ?, password = ?, must_change_password = 0 WHERE id = ?", newUsername, string(hashedPassword), admin.ID)
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, `{"error": "ไม่สามารถอัปเดตข้อมูลได้"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		_, err = tx.Exec("UPDATE admins SET username = ?, password = ?, must_change_password = 0 WHERE id = ?", newUsername, string(hashedPassword), admin.ID)
 		if err != nil {
 			http.Error(w, `{"error": "ไม่สามารถอัปเดตข้อมูลได้ ชื่อผู้ใช้นี้อาจมีคนใช้แล้ว"}`, http.StatusInternalServerError)
+			return
+		}
+		if _, err = tx.Exec("DELETE FROM sessions WHERE admin_id = ?", admin.ID); err != nil {
+			http.Error(w, `{"error": "ไม่สามารถยกเลิกเซสชันเดิมได้"}`, http.StatusInternalServerError)
+			return
+		}
+		if err = tx.Commit(); err != nil {
+			http.Error(w, `{"error": "ไม่สามารถอัปเดตข้อมูลได้"}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -463,35 +543,19 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Extract admin_id from JWT to filter by tenant (same primary email)
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
 		var filterEmail string
-		authHeader := r.Header.Get("Authorization")
-		if authHeader != "" {
-			tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-			secret := getJWTSecret()
-			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-				return secret, nil
-			})
-			if err == nil && token.Valid {
-				if claims, ok := token.Claims.(jwt.MapClaims); ok {
-					if idFloat, ok := claims["admin_id"].(float64); ok {
-						adminID := int(idFloat)
-						// Get the primary email of this admin
-						db.QueryRow("SELECT email FROM admins WHERE id = ?", adminID).Scan(&filterEmail)
-					}
-				}
-			}
+		if err := db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", adminID).Scan(&filterEmail); err != nil || strings.TrimSpace(filterEmail) == "" {
+			http.Error(w, `{"error": "Account scope unavailable"}`, http.StatusForbidden)
+			return
 		}
 
-		var rows *sql.Rows
-		var err error
-		if filterEmail != "" {
-			// Multi-tenant: only show admins with the same primary email (= same dorm)
-			rows, err = db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, '') FROM admins WHERE email = ? ORDER BY id ASC", filterEmail)
-		} else {
-			// Fallback: no token, show all (for backwards compatibility)
-			rows, err = db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, '') FROM admins ORDER BY id ASC")
-		}
+		// Multi-tenant: only show admins with the same primary email (= same dorm).
+		rows, err := db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, '') FROM admins WHERE email = ? ORDER BY id ASC", strings.ToLower(strings.TrimSpace(filterEmail)))
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
@@ -537,8 +601,9 @@ func CreateAdminHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if !IsServicesRole(r) {
-			http.Error(w, `{"error": "Unauthorized: Services role required"}`, http.StatusForbidden)
+		_, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil || requesterRole != "superadmin" {
+			http.Error(w, `{"error": "Unauthorized: Superadmin role required"}`, http.StatusForbidden)
 			return
 		}
 
@@ -546,8 +611,10 @@ func CreateAdminHandler(db *sql.DB) http.HandlerFunc {
 			Username string `json:"username"`
 			Role     string `json:"role"`
 			Email    string `json:"email"`
+			Password string `json:"password"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Username) == "" {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
@@ -558,24 +625,36 @@ func CreateAdminHandler(db *sql.DB) http.HandlerFunc {
 
 		// Check if username already exists
 		var userExists bool
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE LOWER(username) = LOWER(?))", req.Username).Scan(&userExists)
+		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE LOWER(username) = LOWER(?))", req.Username).Scan(&userExists)
 		if err == nil && userExists {
 			http.Error(w, `{"error": "ชื่อผู้ใช้นี้มีอยู่ในระบบแล้ว กรุณาใช้ชื่ออื่น"}`, http.StatusConflict)
 			return
 		}
 
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin"), bcrypt.DefaultCost)
-		if err != nil {
-			http.Error(w, `{"error": "Failed to generate password"}`, http.StatusInternalServerError)
-			return
-		}
-
-		role := req.Role
+		role := strings.ToLower(strings.TrimSpace(req.Role))
 		if role == "" {
 			role = "admin"
 		}
+		if !validStaffRole(role) {
+			http.Error(w, `{"error": "Invalid staff role"}`, http.StatusBadRequest)
+			return
+		}
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if !isValidEmail(req.Email) || strings.EqualFold(req.Email, requesterEmail) {
+			http.Error(w, `{"error": "Staff recovery email is required and must differ from the owner email"}`, http.StatusBadRequest)
+			return
+		}
+		if !isValidPassword(req.Password) {
+			http.Error(w, `{"error":"Temporary password must contain 8-72 characters with letters and numbers"}`, http.StatusBadRequest)
+			return
+		}
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, `{"error":"Failed to generate password"}`, http.StatusInternalServerError)
+			return
+		}
 
-		_, err = db.Exec("INSERT INTO admins (username, password, role, email, must_change_password) VALUES (?, ?, ?, ?, 1)", req.Username, string(hashedPassword), role, req.Email)
+		_, err = db.Exec("INSERT INTO admins (username, password, role, email, backup_email, must_change_password) VALUES (?, ?, ?, ?, ?, 1)", req.Username, string(hashedPassword), role, requesterEmail, strings.ToLower(req.Email))
 		if err != nil {
 			http.Error(w, `{"error": "ไม่สามารถสร้างบัญชีผู้ใช้ได้ ชื่อผู้ใช้หรืออีเมลอาจซ้ำกัน"}`, http.StatusConflict)
 			return
@@ -599,8 +678,9 @@ func DeleteAdminHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if !IsServicesRole(r) {
-			http.Error(w, `{"error": "Unauthorized: Services role required"}`, http.StatusForbidden)
+		requesterID, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil || requesterRole != "superadmin" {
+			http.Error(w, `{"error": "Unauthorized: Superadmin role required"}`, http.StatusForbidden)
 			return
 		}
 
@@ -610,21 +690,40 @@ func DeleteAdminHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Invalid URL"}`, http.StatusBadRequest)
 			return
 		}
-		id := parts[3]
+		id, err := strconv.Atoi(parts[3])
+		if err != nil || id <= 0 {
+			http.Error(w, `{"error": "Invalid admin ID"}`, http.StatusBadRequest)
+			return
+		}
+		if id == requesterID {
+			http.Error(w, `{"error": "ไม่สามารถลบบัญชีที่กำลังใช้งานได้"}`, http.StatusForbidden)
+			return
+		}
 
-		// Prevent deleting superadmin account
-		var targetRole string
-		err := db.QueryRow("SELECT role FROM admins WHERE id = ?", id).Scan(&targetRole)
-		if err == nil && targetRole == "superadmin" {
+		targetRole, targetEmail, err := targetAdminScope(db, id)
+		if err != nil {
+			http.Error(w, `{"error": "ไม่พบบัญชีผู้ใช้"}`, http.StatusNotFound)
+			return
+		}
+		if targetEmail != requesterEmail {
+			http.Error(w, `{"error": "ไม่สามารถจัดการบัญชีต่างหอพักได้"}`, http.StatusForbidden)
+			return
+		}
+		if targetRole == "superadmin" {
 			http.Error(w, `{"error": "ไม่สามารถลบบัญชี Super Admin ได้"}`, http.StatusForbidden)
 			return
 		}
 
-		// Delete active sessions for this admin first
-		db.Exec("DELETE FROM sessions WHERE admin_id = ?", id)
-
-		_, err = db.Exec("DELETE FROM admins WHERE id = ?", id)
+		tx, err := db.Begin()
 		if err != nil {
+			http.Error(w, `{"error": "ไม่สามารถลบข้อมูลได้"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		if _, err = tx.Exec("DELETE FROM sessions WHERE admin_id = ?", id); err == nil {
+			_, err = tx.Exec("DELETE FROM admins WHERE id = ? AND LOWER(TRIM(email)) = ? AND role != 'superadmin'", id, requesterEmail)
+		}
+		if err != nil || tx.Commit() != nil {
 			http.Error(w, `{"error": "ไม่สามารถลบข้อมูลได้"}`, http.StatusInternalServerError)
 			return
 		}
@@ -647,16 +746,29 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) < 4 {
 			http.Error(w, `{"error": "Invalid URL"}`, http.StatusBadRequest)
 			return
 		}
-		
+
 		id, err := strconv.Atoi(parts[3])
 		if err != nil {
 			http.Error(w, `{"error": "Invalid ID"}`, http.StatusBadRequest)
+			return
+		}
+		requesterID, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		targetRole, targetEmail, err := targetAdminScope(db, id)
+		if err != nil {
+			http.Error(w, `{"error": "ไม่พบบัญชีผู้ใช้"}`, http.StatusNotFound)
+			return
+		}
+		if targetEmail != requesterEmail || (id != requesterID && requesterRole != "superadmin") {
+			http.Error(w, `{"error": "ไม่สามารถจัดการบัญชีนี้ได้"}`, http.StatusForbidden)
 			return
 		}
 
@@ -673,10 +785,20 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
-
 		if req.Email != "" && req.BackupEmail != "" && strings.EqualFold(strings.TrimSpace(req.Email), strings.TrimSpace(req.BackupEmail)) {
 			http.Error(w, `{"error": "อีเมลสำรองต้องไม่ตรงกับอีเมลหลัก"}`, http.StatusBadRequest)
 			return
+		}
+		if req.Email != "" && !strings.EqualFold(strings.TrimSpace(req.Email), targetEmail) {
+			http.Error(w, `{"error": "การเปลี่ยนอีเมลหลักต้องใช้ขั้นตอนย้าย account โดยเฉพาะ"}`, http.StatusBadRequest)
+			return
+		}
+		if req.Role != "" {
+			req.Role = strings.ToLower(strings.TrimSpace(req.Role))
+			if requesterRole != "superadmin" || targetRole == "superadmin" || !validStaffRole(req.Role) {
+				http.Error(w, `{"error": "ไม่อนุญาตให้เปลี่ยนสิทธิ์นี้"}`, http.StatusForbidden)
+				return
+			}
 		}
 
 		if req.BackupEmail != "" {
@@ -697,30 +819,21 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			args = append(args, req.Username)
 		}
 		if req.NewPassword != "" {
-			// Require old password if not superadmin
-			requesterID, ok := r.Context().Value("admin_id").(float64)
-			if ok {
-				var requesterRole string
-				db.QueryRow("SELECT role FROM admins WHERE id = ?", int(requesterID)).Scan(&requesterRole)
-				
-				// If they are not superadmin, they must provide the correct old password
-				if requesterRole != "superadmin" {
-					if req.OldPassword == "" {
-						http.Error(w, `{"error": "ต้องระบุรหัสผ่านเดิมเพื่อเปลี่ยนรหัสผ่านใหม่"}`, http.StatusBadRequest)
-						return
-					}
-					
-					var currentHashedPassword string
-					err := db.QueryRow("SELECT password FROM admins WHERE id = ?", id).Scan(&currentHashedPassword)
-					if err != nil {
-						http.Error(w, `{"error": "ไม่พบผู้ใช้นี้"}`, http.StatusNotFound)
-						return
-					}
-					
-					if err := bcrypt.CompareHashAndPassword([]byte(currentHashedPassword), []byte(req.OldPassword)); err != nil {
-						http.Error(w, `{"error": "รหัสผ่านเดิมไม่ถูกต้อง"}`, http.StatusUnauthorized)
-						return
-					}
+			// A superadmin may reset staff passwords. Everyone changing their own
+			// password must prove knowledge of the current password.
+			if id == requesterID {
+				if req.OldPassword == "" {
+					http.Error(w, `{"error": "ต้องระบุรหัสผ่านเดิมเพื่อเปลี่ยนรหัสผ่านใหม่"}`, http.StatusBadRequest)
+					return
+				}
+				var currentHashedPassword string
+				if err := db.QueryRow("SELECT password FROM admins WHERE id = ?", id).Scan(&currentHashedPassword); err != nil {
+					http.Error(w, `{"error": "ไม่พบผู้ใช้นี้"}`, http.StatusNotFound)
+					return
+				}
+				if err := bcrypt.CompareHashAndPassword([]byte(currentHashedPassword), []byte(req.OldPassword)); err != nil {
+					http.Error(w, `{"error": "รหัสผ่านเดิมไม่ถูกต้อง"}`, http.StatusUnauthorized)
+					return
 				}
 			}
 
@@ -768,8 +881,16 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 		query += " WHERE id = ?"
 		args = append(args, id)
 
-		_, err = db.Exec(query, args...)
+		tx, err := db.Begin()
 		if err != nil {
+			http.Error(w, `{"error": "ไม่สามารถอัปเดตข้อมูลได้"}`, http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback()
+		if _, err = tx.Exec(query, args...); err == nil && (req.NewPassword != "" || req.Role != "") {
+			_, err = tx.Exec("DELETE FROM sessions WHERE admin_id = ?", id)
+		}
+		if err != nil || tx.Commit() != nil {
 			http.Error(w, `{"error": "ไม่สามารถอัปเดตข้อมูลได้ ชื่อผู้ใช้หรืออีเมลอาจซ้ำกัน"}`, http.StatusInternalServerError)
 			return
 		}
@@ -792,23 +913,15 @@ func PingAdminHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return getJWTSecret(), nil
-		})
-		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+		if _, err := db.Exec("UPDATE admins SET last_active = CURRENT_TIMESTAMP WHERE id = ?", adminID); err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
-
-		username, _ := claims["username"].(string)
-		db.Exec("UPDATE admins SET last_active = CURRENT_TIMESTAMP WHERE username = ?", username)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
@@ -826,27 +939,25 @@ func LogoutAdminHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		adminID, ok := r.Context().Value("admin_id").(int)
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
+		parts := strings.Fields(authHeader)
+		if !ok || adminID <= 0 || len(parts) != 2 || parts[0] != "Bearer" {
 			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
 			return
 		}
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return getJWTSecret(), nil
-		})
-		if err != nil || !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+		tokenString := parts[1]
+		// Set last_active to an old date to instantly show as Offline
+		if _, err := db.Exec("UPDATE admins SET last_active = '2000-01-01 00:00:00' WHERE id = ?", adminID); err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 
-		username, _ := claims["username"].(string)
-		// Set last_active to an old date to instantly show as Offline
-		db.Exec("UPDATE admins SET last_active = '2000-01-01 00:00:00' WHERE username = ?", username)
-		
 		// Remove session to force remote kick
-		db.Exec("DELETE FROM sessions WHERE token = ?", tokenString)
+		if _, err := db.Exec("DELETE FROM sessions WHERE admin_id = ? AND token = ?", adminID, tokenString); err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "logged out"})
@@ -865,60 +976,98 @@ func UpdateProfileImageHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		adminID := r.URL.Query().Get("id")
-		if adminID == "" {
+		targetID, err := strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil || targetID <= 0 {
 			http.Error(w, `{"error": "Missing admin ID"}`, http.StatusBadRequest)
 			return
 		}
+		requesterID, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+		_, targetEmail, err := targetAdminScope(db, targetID)
+		if err != nil {
+			http.Error(w, `{"error": "Admin not found"}`, http.StatusNotFound)
+			return
+		}
+		if targetEmail != requesterEmail || (targetID != requesterID && requesterRole != "superadmin") {
+			http.Error(w, `{"error": "ไม่สามารถจัดการบัญชีนี้ได้"}`, http.StatusForbidden)
+			return
+		}
 
-		err := r.ParseMultipartForm(10 << 20) // 10 MB limit
+		r.Body = http.MaxBytesReader(w, r.Body, 10<<20)
+		err = r.ParseMultipartForm(10 << 20)
 		if err != nil {
 			http.Error(w, `{"error": "Unable to parse form"}`, http.StatusBadRequest)
 			return
 		}
 
-		file, handler, err := r.FormFile("profile_image")
+		file, _, err := r.FormFile("profile_image")
 		if err != nil {
 			http.Error(w, `{"error": "Error retrieving the file"}`, http.StatusBadRequest)
 			return
 		}
 		defer file.Close()
 
+		buffer := make([]byte, 512)
+		read, readErr := file.Read(buffer)
+		if readErr != nil && readErr != io.EOF {
+			http.Error(w, `{"error": "Error reading image"}`, http.StatusBadRequest)
+			return
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, `{"error": "Error reading image"}`, http.StatusBadRequest)
+			return
+		}
+		contentType := http.DetectContentType(buffer[:read])
+		extensions := map[string]string{"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+		ext, allowed := extensions[contentType]
+		if !allowed {
+			http.Error(w, `{"error": "Only JPEG, PNG or WebP images are allowed"}`, http.StatusBadRequest)
+			return
+		}
+
 		// Ensure directory exists
 		uploadDir := "./uploads/profiles"
-		os.MkdirAll(uploadDir, os.ModePerm)
+		if err := os.MkdirAll(uploadDir, 0700); err != nil {
+			http.Error(w, `{"error": "Error preparing upload directory"}`, http.StatusInternalServerError)
+			return
+		}
 
 		// Create unique filename
-		ext := filepath.Ext(handler.Filename)
-		if ext == "" {
-			ext = ".jpg" // default
-		}
-		fileName := fmt.Sprintf("admin_%s_%d%s", adminID, time.Now().Unix(), ext)
-			filePath := filepath.Join(uploadDir, fileName)
+		fileName := fmt.Sprintf("admin_%d_%d%s", targetID, time.Now().UnixNano(), ext)
+		filePath := filepath.Join(uploadDir, fileName)
 
-		dst, err := os.Create(filePath)
+		dst, err := os.OpenFile(filePath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 		if err != nil {
 			http.Error(w, `{"error": "Error saving the file"}`, http.StatusInternalServerError)
 			return
 		}
-		defer dst.Close()
-
 		if _, err := io.Copy(dst, file); err != nil {
+			dst.Close()
+			os.Remove(filePath)
+			http.Error(w, `{"error": "Error writing the file"}`, http.StatusInternalServerError)
+			return
+		}
+		if err := dst.Close(); err != nil {
+			os.Remove(filePath)
 			http.Error(w, `{"error": "Error writing the file"}`, http.StatusInternalServerError)
 			return
 		}
 
 		// Update database
 		imageURL := "/uploads/profiles/" + fileName
-		_, err = db.Exec("UPDATE admins SET profile_image = ? WHERE id = ?", imageURL, adminID)
+		_, err = db.Exec("UPDATE admins SET profile_image = ? WHERE id = ? AND LOWER(TRIM(email)) = ?", imageURL, targetID, requesterEmail)
 		if err != nil {
+			os.Remove(filePath)
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Profile image updated successfully",
+			"message":       "Profile image updated successfully",
 			"profile_image": imageURL,
 		})
 	}
@@ -946,9 +1095,15 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"status": "error", "message": "ข้อมูลไม่ถูกต้อง"}`, http.StatusBadRequest)
 			return
 		}
+		req.Name = strings.TrimSpace(req.Name)
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if !allowRequestAttempt(r, "register", 5, time.Hour) {
+			http.Error(w, `{"status": "error", "message": "สมัครบัญชีบ่อยเกินไป กรุณาลองใหม่ภายหลัง"}`, http.StatusTooManyRequests)
+			return
+		}
 
-		if len(req.Name) < 3 || len(req.Password) < 4 || len(req.Email) < 5 {
-			http.Error(w, `{"status": "error", "message": "ชื่อ, อีเมล และรหัสผ่าน ต้องมีความยาวที่เหมาะสม"}`, http.StatusBadRequest)
+		if len(req.Name) < 3 || !isValidPassword(req.Password) || !isValidEmail(req.Email) {
+			http.Error(w, `{"status": "error", "message": "กรุณาระบุชื่อ อีเมล และรหัสผ่าน 8-72 ตัวที่มีตัวอักษรกับตัวเลข"}`, http.StatusBadRequest)
 			return
 		}
 
@@ -988,7 +1143,7 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"status": "error", "message": "ไม่สามารถสร้างบัญชีได้"}`, http.StatusInternalServerError)
 			return
 		}
-		
+
 		adminID, _ := result.LastInsertId()
 
 		// Immediately provision their new tenant DB
@@ -998,15 +1153,8 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 			fmt.Println("Warning: Failed to create tenant DB on register:", err)
 		}
 
-		// Generate JWT Token so they can login immediately
-		claims := jwt.MapClaims{
-			"username": req.Name,
-			"role":     "superadmin",
-			"admin_id": int(adminID),
-			"exp":      time.Now().Add(24 * time.Hour).Unix(),
-		}
-		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		tokenString, err := token.SignedString(getJWTSecret())
+		// Generate a revocable session so the token works with AuthMiddleware.
+		tokenString, err := issueSessionToken(db, int(adminID), req.Name, "superadmin", 24*time.Hour)
 		if err != nil {
 			http.Error(w, `{"status": "error", "message": "สร้าง Token ล้มเหลว"}`, http.StatusInternalServerError)
 			return
@@ -1060,7 +1208,7 @@ func GenerateInviteTokenHandler(db *sql.DB) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{
 			"invite_token": tokenString,
-			"expires_in": "300",
+			"expires_in":   "300",
 		})
 	}
 }
@@ -1158,15 +1306,7 @@ func RegisterWithInviteHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Verify Token
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(req.InviteToken, claims, func(token *jwt.Token) (interface{}, error) {
-			return getJWTSecret(), nil
-		})
-
-		role, _ := claims["role"].(string)
-
-		if err != nil || !token.Valid || role != "invite" {
+		if _, err := parsePurposeToken(req.InviteToken, "invite"); err != nil {
 			http.Error(w, `{"error": "QR Code หมดอายุหรือไม่ถูกต้อง กรุณาให้เครื่องแม่สร้างใหม่"}`, http.StatusUnauthorized)
 			return
 		}
@@ -1291,21 +1431,14 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
-
-		// Verify Token
-		claims := jwt.MapClaims{}
-		token, err := jwt.ParseWithClaims(req.LoginToken, claims, func(token *jwt.Token) (interface{}, error) {
-			return getJWTSecret(), nil
-		})
-
-		if err != nil || !token.Valid {
-			http.Error(w, `{"error": "QR Code หมดอายุหรือไม่ถูกต้อง กรุณาสร้างใหม่"}`, http.StatusUnauthorized)
+		if !allowRequestAttempt(r, "qr-login", 10, 15*time.Minute) {
+			http.Error(w, `{"error": "ลองเข้าสู่ระบบบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
 			return
 		}
 
-		role, _ := claims["role"].(string)
-		if role != "login_qr" {
-			http.Error(w, `{"error": "QR Code ไม่ใช่สำหรับการเข้าสู่ระบบ"}`, http.StatusUnauthorized)
+		claims, err := parsePurposeToken(req.LoginToken, "login_qr")
+		if err != nil {
+			http.Error(w, `{"error": "QR Code หมดอายุหรือไม่ถูกต้อง กรุณาสร้างใหม่"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -1325,17 +1458,8 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Generate the real dorminet_token (session token)
-		expirationTime := time.Now().Add(24 * time.Hour)
-		sessionClaims := jwt.MapClaims{
-			"admin_id": id,
-			"username": username,
-			"role":     userRole,
-			"exp":      expirationTime.Unix(),
-		}
-
-		sessionToken := jwt.NewWithClaims(jwt.SigningMethodHS256, sessionClaims)
-		tokenString, err := sessionToken.SignedString(getJWTSecret())
+		// Generate the real revocable session token.
+		tokenString, err := issueSessionToken(db, id, username, userRole, 24*time.Hour)
 		if err != nil {
 			http.Error(w, `{"error": "Could not generate session token"}`, http.StatusInternalServerError)
 			return

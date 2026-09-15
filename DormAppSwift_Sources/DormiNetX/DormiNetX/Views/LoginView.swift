@@ -8,6 +8,10 @@ struct LoginView: View {
     // Authentication modes
     @State private var isSignUpMode: Bool = false
     @State private var isForgotPasswordMode: Bool = false
+    @State private var passwordResetEmail: String?
+    @State private var showingPasswordReset = false
+    @State private var passwordResetCompleted = false
+    @State private var showingPasswordResetSuccess = false
     @State private var name: String = ""
     @State private var confirmPassword: String = ""
     @State private var isConfirmPasswordVisible: Bool = false
@@ -19,7 +23,7 @@ struct LoginView: View {
     @AppStorage("userEmail") var userEmail: String = ""
     @AppStorage("userName") var userName: String = ""
     @AppStorage("securityTokenEnabled") var securityTokenEnabled: Bool = false
-    @AppStorage("securityPasscode") var securityPasscode: String = "123456"
+    @ObservedObject private var credentials = CredentialStore.shared
     
     @State private var showingPasscodeModal: Bool = false
     @State private var passcodeInput: String = ""
@@ -479,6 +483,32 @@ struct LoginView: View {
             }
         }
         .animation(.easeInOut(duration: 0.8), value: colorScheme)
+        .sheet(isPresented: $showingPasswordReset, onDismiss: {
+            if passwordResetCompleted {
+                resetToSignIn()
+                passwordResetCompleted = false
+                showingPasswordResetSuccess = true
+            }
+        }) {
+            if let passwordResetEmail {
+                PasswordResetView(email: passwordResetEmail) {
+                    passwordResetCompleted = true
+                    // Remove this device's saved session; server-side JWT revocation is separate.
+                    do {
+                        let remaining = savedAccounts.filter {
+                            $0.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() != passwordResetEmail
+                        }
+                        try credentials.setSavedAccountsData(JSONEncoder().encode(remaining))
+                        savedAccounts = remaining
+                    } catch { credentials.errorMessage = error.localizedDescription }
+                }
+            }
+        }
+        .alert("เปลี่ยนรหัสผ่านสำเร็จ", isPresented: $showingPasswordResetSuccess) {
+            Button("ตกลง", role: .cancel) {}
+        } message: {
+            Text("กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่")
+        }
     }
     
     private func showError(_ message: String) {
@@ -597,7 +627,7 @@ struct LoginView: View {
                         userName = String(email.split(separator: "@").first ?? "ผู้ใช้")
                     }
                     
-                    if securityTokenEnabled && !securityPasscode.isEmpty && !isSignUpMode {
+                    if securityTokenEnabled && !isSignUpMode {
                         passcodeInput = ""
                         passcodeError = nil
                         withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
@@ -643,19 +673,23 @@ struct LoginView: View {
             return
         }
 
-        await MainActor.run { isLoading = true; clearError() }
-        try? await Task.sleep(nanoseconds: 350_000_000)
-        await MainActor.run {
-            isLoading = false
-            showError("ระบบรีเซ็ตรหัสผ่านยังไม่ได้เชื่อมต่อกับหลังบ้าน")
-        }
+        guard !isLoading else { return }
+        isLoading = true
+        clearError()
+        defer { isLoading = false }
+        do {
+            try await PasswordResetService().requestCode(email: normalizedEmail)
+            passwordResetEmail = normalizedEmail.lowercased()
+            showingPasswordReset = true
+        } catch { showError(error.localizedDescription) }
     }
 
     private func loadSavedAccounts() {
-        if let data = UserDefaults.standard.data(forKey: "savedAccountsHistory"),
-           let decoded = try? JSONDecoder().decode([SavedAccount].self, from: data) {
-            savedAccounts = decoded
-        }
+        do {
+            if let data = try credentials.savedAccountsData() {
+                savedAccounts = try JSONDecoder().decode([SavedAccount].self, from: data)
+            }
+        } catch { showError(error.localizedDescription) }
     }
     
     private func saveAccount() {
@@ -679,15 +713,17 @@ struct LoginView: View {
             accounts = Array(accounts.prefix(5))
         }
         
-        if let data = try? JSONEncoder().encode(accounts) {
-            UserDefaults.standard.set(data, forKey: "savedAccountsHistory")
-        }
-        savedAccounts = accounts
+        do {
+            try credentials.setSavedAccountsData(JSONEncoder().encode(accounts))
+            savedAccounts = accounts
+        } catch { showError(error.localizedDescription) }
     }
     
     private func clearSavedAccounts() {
-        UserDefaults.standard.removeObject(forKey: "savedAccountsHistory")
-        savedAccounts = []
+        do {
+            try credentials.setSavedAccountsData(nil)
+            savedAccounts = []
+        } catch { showError(error.localizedDescription) }
     }
 
     private func selectSavedAccount(_ account: SavedAccount) {
@@ -704,8 +740,12 @@ struct LoginView: View {
             showError("ไม่พบเซสชันที่บันทึกไว้ กรุณาเข้าสู่ระบบใหม่")
             return
         }
+        guard APIService.shared.localSessionAccountID(token: token) != nil else {
+            showError(CredentialError.expiredSession.localizedDescription)
+            return
+        }
 
-        if securityTokenEnabled && !securityPasscode.isEmpty {
+        if securityTokenEnabled {
             pendingSavedAccount = account
             passcodeInput = ""
             passcodeError = nil
@@ -717,16 +757,18 @@ struct LoginView: View {
                 isPasscodeFocused = true
             }
         } else {
-            restoreSavedAccount(account, token: token)
-            completeLoginTransition()
+            do {
+                try restoreSavedAccount(account, token: token)
+                completeLoginTransition()
+            } catch { showError(error.localizedDescription) }
         }
     }
 
-    private func restoreSavedAccount(_ account: SavedAccount, token: String) {
+    private func restoreSavedAccount(_ account: SavedAccount, token: String) throws {
         if let adminID = account.adminID, adminID > 0 {
             UserDefaults.standard.set(adminID, forKey: "adminID")
         }
-        APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
+        try APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
         userEmail = account.email
         userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "ผู้ใช้") : account.name
     }
@@ -749,7 +791,14 @@ struct LoginView: View {
     private func verifyPasscode() {
         guard !isVerifyingPasscode else { return }
 
-        if passcodeInput == securityPasscode {
+        let isValid: Bool
+        do { isValid = try credentials.verifyPasscode(passcodeInput) }
+        catch {
+            passcodeError = error.localizedDescription
+            passcodeInput = ""
+            return
+        }
+        if isValid {
             isVerifyingPasscode = true
             isPasscodeFocused = false
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -758,7 +807,12 @@ struct LoginView: View {
             
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 if let account = pendingSavedAccount, let token = account.token, !token.isEmpty {
-                    restoreSavedAccount(account, token: token)
+                    do { try restoreSavedAccount(account, token: token) }
+                    catch {
+                        isVerifyingPasscode = false
+                        showError(error.localizedDescription)
+                        return
+                    }
                     pendingSavedAccount = nil
                 }
 

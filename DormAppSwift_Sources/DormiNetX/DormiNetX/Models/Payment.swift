@@ -14,6 +14,7 @@ final class Payment: Identifiable {
     var commonFee: Double = 0.0
     var lateFee: Double = 0.0
     var applianceFee: Double = 0.0
+    var depositFee: Double = 0.0
     var amount: Double = 0.0
     var month: String = ""
     var paymentDate: String = ""

@@ -2,6 +2,8 @@ import Foundation
 
 class APIService {
     static let shared = APIService()
+    // No actor-bound cleanup; avoid the Swift 6.2 isolated-deinit runtime crash (swiftlang/swift#85663).
+    nonisolated deinit {}
     
     // โดเมนที่เจาะอุโมงค์ Cloudflare ไว้ ทะลุเข้าเซิร์ฟเวอร์เราโดยตรง
     var baseURL = "https://api.dorminet.studio/api"
@@ -11,13 +13,10 @@ class APIService {
     
     // เก็บ Token สำหรับยืนยันตัวตน
     var authToken: String? {
-        get { UserDefaults.standard.string(forKey: "authToken") }
+        get { CredentialStore.shared.token }
         set {
-            if let newValue = newValue {
-                UserDefaults.standard.set(newValue, forKey: "authToken")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "authToken")
-            }
+            do { try CredentialStore.shared.setToken(newValue) }
+            catch { CredentialStore.shared.errorMessage = error.localizedDescription }
         }
     }
     var userRole: String? {
@@ -31,8 +30,9 @@ class APIService {
         }
     }
 
-    func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil) {
-        authToken = token
+    func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil) throws {
+        guard localSessionAccountID(token: token) != nil else { throw CredentialError.expiredSession }
+        try CredentialStore.shared.setToken(token)
         currentEmail = email
 
         if let role = jwtStringClaim("role", from: token), !role.isEmpty {
@@ -54,15 +54,21 @@ class APIService {
 
     private func jwtIntClaim(_ key: String, from token: String) -> Int? {
         guard let value = jwtPayload(from: token)?[key] else { return nil }
-        if let intValue = value as? Int { return intValue }
-        if let numberValue = value as? NSNumber { return numberValue.intValue }
-        if let doubleValue = value as? Double { return Int(doubleValue) }
+        if let numberValue = value as? NSNumber { return Int(exactly: numberValue.doubleValue) }
         return nil
+    }
+
+    // This is an expiry/scope check for local session restoration, not signature verification.
+    func localSessionAccountID(token: String, now: Date = Date()) -> Int? {
+        guard let payload = jwtPayload(from: token), let expiry = payload["exp"] as? Double,
+              expiry.isFinite, expiry > now.timeIntervalSince1970,
+              let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
+        return account
     }
 
     private func jwtPayload(from token: String) -> [String: Any]? {
         let parts = token.split(separator: ".")
-        guard parts.count >= 2 else { return nil }
+        guard parts.count == 3 else { return nil }
 
         var payload = String(parts[1])
             .replacingOccurrences(of: "-", with: "+")
@@ -98,7 +104,7 @@ class APIService {
            let status = json["status"] as? String, status == "success" {
             self.currentEmail = email
             if let token = json["token"] as? String {
-                self.authToken = token
+                try CredentialStore.shared.setToken(token)
             }
             let name = json["name"] as? String
             
@@ -139,7 +145,7 @@ class APIService {
             if let status = json["status"] as? String, status == "success" {
                 self.currentEmail = email
                 if let token = json["token"] as? String {
-                    self.authToken = token
+                    try CredentialStore.shared.setToken(token)
                 }
                 if let role = json["role"] as? String {
                     self.userRole = role
@@ -204,6 +210,32 @@ class APIService {
             throw error
         }
     }
+
+    func createStaff(username: String, recoveryEmail: String, temporaryPassword: String, role: String = "admin") async throws {
+        guard let url = URL(string: "\(baseURL)/admins") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONEncoder().encode([
+            "username": username,
+            "email": recoveryEmail,
+            "password": temporaryPassword,
+            "role": role
+        ])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let message = body?["error"] as? String ?? "สร้างผู้ดูแลไม่สำเร็จ"
+            throw NSError(domain: "DormiNet.Admin", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: message])
+        }
+    }
     
     // MARK: - Dashboard APIs
     
@@ -239,7 +271,7 @@ class APIService {
         return try await performGetRequest(path: "/sync/meta")
     }
 
-    func pushSyncSnapshot(payload: Data, deviceID: String) async throws -> Data {
+    func pushSyncSnapshot(payload: Data, deviceID: String, baseVersion: Int) async throws -> Data {
         guard let url = URL(string: "\(baseURL)/sync/push") else { throw URLError(.badURL) }
         guard let payloadObject = try JSONSerialization.jsonObject(with: payload) as? [String: Any] else {
             throw URLError(.cannotParseResponse)
@@ -253,6 +285,8 @@ class APIService {
         }
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "payload": payloadObject,
+            "payload_base64": payload.base64EncodedString(),
+            "base_version": baseVersion,
             "device_id": deviceID,
             "client_updated_at": ISO8601DateFormatter().string(from: Date())
         ])
@@ -261,11 +295,35 @@ class APIService {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
+        if httpResponse.statusCode == 409 { throw SyncError.conflict }
+        if httpResponse.statusCode == 428 { throw SyncError.updateRequired }
         if httpResponse.statusCode != 200 {
             let errorMsg = String(data: data, encoding: .utf8) ?? "Server Error"
             throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
         return data
+    }
+
+    func sendLineInvoice(paymentID: UUID) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/line/invoices/send") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = try JSONEncoder().encode(["payment_id": paymentID.uuidString])
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        if (200..<300).contains(httpResponse.statusCode) {
+            return body?["message"] as? String ?? "ส่งบิลไปยัง LINE แล้ว"
+        }
+        let message = body?["error"] as? String ?? "ส่งบิลไปยัง LINE ไม่สำเร็จ"
+        throw NSError(domain: "DormiNet.LINE", code: httpResponse.statusCode,
+                      userInfo: [NSLocalizedDescriptionKey: message])
     }
 
     // MARK: - Backup & Restore APIs
