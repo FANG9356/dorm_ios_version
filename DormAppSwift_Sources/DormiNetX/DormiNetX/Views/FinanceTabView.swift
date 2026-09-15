@@ -315,6 +315,9 @@ struct FinanceTabView: View {
 
     private var monthKey: String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
         formatter.dateFormat = "yyyy-MM"
         return formatter.string(from: selectedMonth)
     }

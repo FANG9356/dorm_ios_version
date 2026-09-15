@@ -208,6 +208,9 @@ class DashboardViewModel: ObservableObject {
 
     private func monthKey(for date: Date) -> String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
         formatter.dateFormat = "yyyy-MM"
         return formatter.string(from: date)
     }
@@ -260,6 +263,9 @@ class DashboardViewModel: ObservableObject {
             
             // Process Users & Payments
             let dateFormatter = DateFormatter()
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            dateFormatter.calendar = Calendar(identifier: .gregorian)
+            dateFormatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
             dateFormatter.dateFormat = "yyyy-MM"
             let currentMonthString = dateFormatter.string(from: Date())
             

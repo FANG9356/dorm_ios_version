@@ -41,6 +41,17 @@ func TestLiffHandlerServesEndpointAndAssets(t *testing.T) {
 	if strings.Contains(recorder.Body.String(), "/api/liff/rooms") {
 		t.Fatal("GET /liff/app.js still loads the public room list")
 	}
+	if !strings.Contains(recorder.Body.String(), "/api/liff/status") {
+		t.Fatal("GET /liff/app.js does not check an existing LINE link before showing the form")
+	}
+	if !strings.Contains(recorder.Body.String(), "renderResidentDashboard") {
+		t.Fatal("GET /liff/app.js does not render the linked resident dashboard")
+	}
+	if !strings.Contains(recorder.Body.String(), "billing.invoices") ||
+		!strings.Contains(recorder.Body.String(), "formatDateTime") ||
+		!strings.Contains(recorder.Body.String(), "gregorianYear") {
+		t.Fatal("GET /liff/app.js does not render complete invoice details with normalized dates")
+	}
 
 	request := httptest.NewRequest(http.MethodPost, "/liff", nil)
 	recorder = httptest.NewRecorder()

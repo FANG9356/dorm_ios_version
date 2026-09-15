@@ -73,6 +73,7 @@ type linePaymentSnapshot struct {
 	PaymentStatus    string   `json:"paymentStatus"`
 	SlipPathArray    []string `json:"slipPathArray"`
 	PaidAmount       float64  `json:"paidAmount"`
+	LastUpdated      string   `json:"lastUpdated"`
 }
 
 type lineMaintenanceSnapshot struct {
@@ -268,8 +269,8 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 		_, err = tx.Exec(`INSERT INTO payments
 			(user_id, room_number, rent_fee, deposit_fee, water_fee, electric_fee, common_fee, late_fee,
 			 appliance_fee, amount, month, payment_date, method, slip_path, payment_plan, installment_phase,
-			 due_date, payment_status, slip_path_array, paid_amount, external_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			 due_date, payment_status, slip_path_array, paid_amount, last_updated, external_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(external_id) WHERE external_id != '' DO UPDATE SET user_id=excluded.user_id, room_number=excluded.room_number,
 			 rent_fee=excluded.rent_fee, deposit_fee=excluded.deposit_fee, water_fee=excluded.water_fee,
 			 electric_fee=excluded.electric_fee, common_fee=excluded.common_fee, late_fee=excluded.late_fee,
@@ -277,12 +278,13 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 			 payment_date=excluded.payment_date, method=excluded.method, slip_path=excluded.slip_path,
 			 payment_plan=excluded.payment_plan, installment_phase=excluded.installment_phase,
 			 due_date=excluded.due_date, payment_status=excluded.payment_status,
-			 slip_path_array=excluded.slip_path_array, paid_amount=excluded.paid_amount`,
+			 slip_path_array=excluded.slip_path_array, paid_amount=excluded.paid_amount,
+			 last_updated=excluded.last_updated`,
 			payment.UserID, payment.RoomNumber, payment.RentFee, payment.DepositFee, payment.WaterFee,
 			payment.ElectricFee, payment.CommonFee, payment.LateFee, payment.ApplianceFee, payment.Amount,
 			payment.Month, payment.PaymentDate, payment.Method, payment.SlipPath, payment.PaymentPlan,
 			payment.InstallmentPhase, payment.DueDate, payment.PaymentStatus, string(slips), payment.PaidAmount,
-			payment.ID)
+			payment.LastUpdated, payment.ID)
 		if err != nil {
 			return fmt.Errorf("upsert payment: %w", err)
 		}
@@ -380,14 +382,20 @@ func HandleSendLineInvoice(master *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var tenantID, lineUserID, room, period, name, dueDate string
-		var rent, deposit, water, electric, common, late, appliance, total float64
-		err = tenantDB.QueryRow(`SELECT u.external_id, COALESCE(u.line_user_id, ''), p.room_number, p.month,
-			COALESCE(u.full_name, ''), COALESCE(p.due_date, ''), p.rent_fee, COALESCE(p.deposit_fee, 0),
-			p.water_fee, p.electric_fee, p.common_fee, p.late_fee, COALESCE(p.appliance_fee, 0), p.amount
+		var paymentID int
+		var tenantID, lineUserID string
+		var invoice lineInvoiceFlexData
+		err = tenantDB.QueryRow(`SELECT p.payment_id, u.external_id, COALESCE(u.line_user_id, ''), p.room_number, p.month,
+			COALESCE(u.full_name, ''), COALESCE(p.due_date, ''), COALESCE(p.last_updated, ''),
+			COALESCE(p.payment_date, ''), COALESCE(NULLIF(p.payment_status, ''), 'pending'),
+			COALESCE(p.installment_phase, 0), p.rent_fee, COALESCE(p.deposit_fee, 0),
+			p.water_fee, p.electric_fee, p.common_fee, p.late_fee, COALESCE(p.appliance_fee, 0),
+			p.amount, COALESCE(p.paid_amount, 0)
 			FROM payments p JOIN users u ON p.user_id = u.user_id WHERE p.external_id = ?`,
-			request.PaymentID).Scan(&tenantID, &lineUserID, &room, &period, &name, &dueDate,
-			&rent, &deposit, &water, &electric, &common, &late, &appliance, &total)
+			request.PaymentID).Scan(&paymentID, &tenantID, &lineUserID, &invoice.Room, &invoice.Period,
+			&invoice.Name, &invoice.DueDate, &invoice.UpdatedAt, &invoice.PaymentDate, &invoice.Status,
+			&invoice.Installment, &invoice.Rent, &invoice.Deposit, &invoice.Water, &invoice.Electric,
+			&invoice.Common, &invoice.Late, &invoice.Appliance, &invoice.Total, &invoice.Paid)
 		if err == sql.ErrNoRows {
 			http.Error(w, `{"error":"ไม่พบบิลนี้ในข้อมูลล่าสุด กรุณาซิงก์แล้วลองใหม่"}`, http.StatusNotFound)
 			return
@@ -405,16 +413,12 @@ func HandleSendLineInvoice(master *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		invoiceKey := strings.ToUpper(strings.ReplaceAll(request.PaymentID, "-", ""))
-		if len(invoiceKey) > 8 {
-			invoiceKey = invoiceKey[:8]
+		invoice.InvoiceNo = fmt.Sprintf("INV-%05d", paymentID)
+		knownTotal := invoice.Rent + invoice.Deposit + invoice.Water + invoice.Electric + invoice.Common + invoice.Appliance + invoice.Late
+		if difference := invoice.Total - knownTotal; math.Abs(difference) >= 0.01 {
+			invoice.Other = difference
 		}
-		invoiceNo := "INV-" + invoiceKey
-		items := []lineInvoiceItem{
-			{"ค่าเช่าห้องพัก", rent}, {"เงินมัดจำ", deposit}, {"ค่าน้ำประปา", water},
-			{"ค่าไฟฟ้า", electric}, {"ค่าส่วนกลาง", common}, {"ค่าอุปกรณ์เสริม", appliance}, {"ค่าปรับล่าช้า", late},
-		}
-		if err := sendLineInvoice(lineUserID, invoiceNo, name, room, period, dueDate, items, total); err != nil {
+		if err := sendLineInvoice(lineUserID, invoice); err != nil {
 			master.Exec(`INSERT INTO line_delivery_logs(account_id, tenant_id, payment_id, status, detail, created_at)
 				VALUES (?, ?, ?, 'failed', ?, ?)`, accountID, tenantID, request.PaymentID, err.Error(), time.Now().UTC().Format(time.RFC3339))
 			http.Error(w, `{"error":"LINE ไม่รับข้อความ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่"}`, http.StatusBadGateway)
@@ -426,62 +430,19 @@ func HandleSendLineInvoice(master *sql.DB) http.HandlerFunc {
 	}
 }
 
-type lineInvoiceItem struct {
-	Label  string
-	Amount float64
-}
-
-func sendLineInvoice(lineUserID, invoiceNo, name, room, period, dueDate string, items []lineInvoiceItem, total float64) error {
+func sendLineInvoice(lineUserID string, invoice lineInvoiceFlexData) error {
 	if getLineToken() == "" {
 		return errors.New("LINE token is not configured")
 	}
-	rows := make([]map[string]interface{}, 0, len(items)+2)
-	for _, item := range items {
-		if item.Amount == 0 {
-			continue
-		}
-		rows = append(rows, map[string]interface{}{
-			"type": "box", "layout": "horizontal",
-			"contents": []map[string]interface{}{
-				{"type": "text", "text": item.Label, "size": "sm", "color": "#555555", "flex": 2},
-				{"type": "text", "text": fmt.Sprintf("%.2f บาท", item.Amount), "size": "sm", "color": "#111111", "align": "end", "flex": 1},
-			},
-		})
-	}
-	if len(rows) == 0 {
-		rows = append(rows, map[string]interface{}{"type": "text", "text": "ไม่มีรายการค่าใช้จ่าย", "size": "sm", "color": "#777777"})
-	}
 	message := map[string]interface{}{
-		"type": "flex", "altText": fmt.Sprintf("บิลห้อง %s ยอด %.2f บาท", room, total),
-		"contents": map[string]interface{}{
-			"type": "bubble", "size": "kilo",
-			"header": map[string]interface{}{"type": "box", "layout": "vertical", "contents": []map[string]interface{}{
-				{"type": "text", "text": "ใบแจ้งหนี้", "weight": "bold", "size": "xl", "color": "#111111"},
-				{"type": "text", "text": "DormiNet", "size": "sm", "color": "#777777", "margin": "sm"},
-			}},
-			"body": map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "sm", "contents": []interface{}{
-				lineInfoRow("เลขที่", invoiceNo), lineInfoRow("ห้อง", room), lineInfoRow("ชื่อ", name),
-				lineInfoRow("รอบบิล", period), lineInfoRow("ครบกำหนด", blankAsDash(dueDate)),
-				map[string]interface{}{"type": "separator", "margin": "md"},
-				map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "sm", "margin": "md", "contents": rows},
-				map[string]interface{}{"type": "separator", "margin": "md"},
-				map[string]interface{}{"type": "box", "layout": "horizontal", "margin": "md", "contents": []map[string]interface{}{
-					{"type": "text", "text": "ยอดที่ต้องชำระ", "weight": "bold", "flex": 2},
-					{"type": "text", "text": fmt.Sprintf("%.2f บาท", total), "weight": "bold", "align": "end", "flex": 1},
-				}},
-			}},
-			"footer": map[string]interface{}{"type": "box", "layout": "vertical", "contents": []map[string]interface{}{
-				{"type": "text", "text": "ส่งสลิปในแชทนี้หลังชำระเงิน", "size": "xs", "color": "#777777", "align": "center"},
-			}},
-		},
+		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceBubble(invoice),
 	}
 	return pushLinePayload(lineUserID, message)
 }
-
 func lineInfoRow(label, value string) map[string]interface{} {
 	return map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []map[string]interface{}{
-		{"type": "text", "text": label, "size": "sm", "color": "#999999", "flex": 1},
-		{"type": "text", "text": blankAsDash(value), "size": "sm", "color": "#333333", "wrap": true, "flex": 3},
+		{"type": "text", "text": label, "size": "xs", "color": "#9CA3AF", "flex": 2, "wrap": true},
+		{"type": "text", "text": blankAsDash(value), "size": "sm", "color": "#374151", "wrap": true, "flex": 4},
 	}}
 }
 
