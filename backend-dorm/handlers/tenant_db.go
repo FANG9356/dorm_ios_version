@@ -73,24 +73,24 @@ func CloseAllTenantDBs() {
 func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY AUTOINCREMENT, prefix TEXT, first_name TEXT, last_name TEXT, full_name TEXT, room_number TEXT, status TEXT, national_id TEXT, phone TEXT, address TEXT, move_in_date TEXT, contract_end_date TEXT, deposit REAL DEFAULT 0)`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_active_room ON users (room_number) WHERE status = 'กำลังพักอาศัย' OR status = 'จอง'`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS room_types (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, price REAL DEFAULT 0)`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN water_fee_default REAL DEFAULT 0`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN electric_fee_default REAL DEFAULT 0`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN common_fee_default REAL DEFAULT 0`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN late_fee_default REAL DEFAULT 0`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS rooms (room_id INTEGER PRIMARY KEY AUTOINCREMENT, room_number TEXT UNIQUE, room_type TEXT)`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS payments (payment_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, room_number TEXT, rent_fee REAL, water_fee REAL, electric_fee REAL, common_fee REAL, late_fee REAL, amount REAL, month TEXT, payment_date TEXT, method TEXT, slip_path TEXT, water_meter_prev REAL DEFAULT 0, water_meter_curr REAL DEFAULT 0, electric_meter_prev REAL DEFAULT 0, electric_meter_curr REAL DEFAULT 0)`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0'))`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS system_logs (log_id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT, details TEXT, timestamp TEXT)`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS deposit_refunds (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, room_number TEXT, original_deposit REAL, cleaning_fee REAL, damage_fee REAL, net_refund REAL, refund_date TEXT)`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS room_conditions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, room_number TEXT, image_path TEXT, uploaded_at TEXT)`)
-	
+
 	db.Exec(`CREATE TABLE IF NOT EXISTS maintenances (id INTEGER PRIMARY KEY AUTOINCREMENT, room_number TEXT, issue TEXT, status TEXT DEFAULT 'รอดำเนินการ', cost REAL DEFAULT 0, reported_at TEXT, resolved_at TEXT, payment_method TEXT DEFAULT '', slip_path TEXT DEFAULT '')`)
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN issue_image TEXT DEFAULT ''`)
 
@@ -113,4 +113,13 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE users ADD COLUMN additional_details TEXT`)
 	db.Exec(`ALTER TABLE users ADD COLUMN bot_state TEXT DEFAULT 'none'`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN appliance_fee REAL DEFAULT 0`)
+	db.Exec(`ALTER TABLE users ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE payments ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE payments ADD COLUMN deposit_fee REAL DEFAULT 0`)
+	db.Exec(`ALTER TABLE maintenances ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE rooms ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE room_types ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id) WHERE external_id != ''`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_external_id ON payments(external_id) WHERE external_id != ''`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_external_id ON maintenances(external_id) WHERE external_id != ''`)
 }

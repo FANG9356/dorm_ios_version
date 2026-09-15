@@ -25,7 +25,10 @@ func IsSafeBackupName(name string) bool {
 	if name == "" || filepath.Base(name) != name {
 		return false
 	}
-	return len(name) > 7 && name[:7] == "backup_"
+	if strings.ToLower(filepath.Ext(name)) != ".zip" {
+		return false
+	}
+	return strings.HasPrefix(name, "backup_") || strings.HasPrefix(name, "server_backup_")
 }
 
 func IsSafeZipEntry(name string) (string, bool) {

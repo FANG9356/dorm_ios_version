@@ -10,6 +10,7 @@ struct BillsTabView: View {
     @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
     @State private var editingPayment: Payment?
     @State private var deletingPayment: Payment?
+    @State private var ledgerErrorMessage: String?
 
     private var payments: [Payment] { allPayments.filter { !$0.isDeletedLocally } }
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
@@ -71,20 +72,23 @@ struct BillsTabView: View {
         .padding(.horizontal, 20)
         .sheet(item: $editingPayment) { payment in
             PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: payment.month) { draft in
-                apply(draft, to: payment)
-                modelContext.insert(LocalSystemLog(action: "แก้ไขบิล", details: "แก้ไขบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                saveAndPush()
+                do {
+                    apply(draft, to: payment)
+                    _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "bill-editor")
+                    modelContext.insert(LocalSystemLog(action: "แก้ไขบิล", details: "แก้ไขบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+                    try modelContext.save()
+                } catch {
+                    modelContext.rollback()
+                    throw error
+                }
+                Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
             }
             .iphoneSheetStyle()
         }
         .confirmationDialog("ลบบิลนี้หรือไม่", isPresented: deleteDialogBinding) {
             Button("ลบบิลห้อง \(deletingPayment?.roomNumber ?? "")", role: .destructive) {
                 guard let payment = deletingPayment else { return }
-                payment.isDeletedLocally = true
-                payment.isDirty = true
-                payment.lastUpdated = Date()
-                modelContext.insert(LocalSystemLog(action: "ลบบิล", details: "ลบบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                saveAndPush()
+                delete(payment)
                 deletingPayment = nil
             }
             Button("ยกเลิก", role: .cancel) { }
@@ -93,6 +97,14 @@ struct BillsTabView: View {
             if isShowing {
                 showingEditor = false
             }
+        }
+        .alert("ดำเนินการกับบิลไม่ได้", isPresented: Binding(
+            get: { ledgerErrorMessage != nil },
+            set: { if !$0 { ledgerErrorMessage = nil } }
+        )) {
+            Button("ตกลง", role: .cancel) { ledgerErrorMessage = nil }
+        } message: {
+            Text(ledgerErrorMessage ?? "")
         }
     }
 
@@ -122,6 +134,7 @@ struct BillsTabView: View {
         payment.userId = draft.userId
         payment.roomNumber = draft.roomNumber
         payment.rentFee = draft.rentFee
+        payment.depositFee = draft.depositFee
         payment.waterFee = draft.waterFee
         payment.electricFee = draft.electricFee
         payment.commonFee = draft.commonFee
@@ -150,6 +163,21 @@ struct BillsTabView: View {
             }
         } catch {
             print("Bill save error: \(error)")
+        }
+    }
+
+    private func delete(_ payment: Payment) {
+        do {
+            try PaymentLedger.ensureInvoiceCanBeDeleted(payment, in: modelContext)
+            payment.isDeletedLocally = true
+            payment.isDirty = true
+            payment.lastUpdated = Date()
+            modelContext.insert(LocalSystemLog(action: "ลบบิล", details: "ลบบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+            try modelContext.save()
+            Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
+        } catch {
+            modelContext.rollback()
+            ledgerErrorMessage = error.localizedDescription
         }
     }
 

@@ -10,15 +10,31 @@
 		32A0CEA03035FC0D00951300 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 32A0CE9F3035FC0D00951300 /* AppIntents.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		DA0000000000000000000006 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 32A0CE873035FC0B00951300 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 32A0CE8E3035FC0B00951300;
+			remoteInfo = DormiNetX;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		32A0CE8F3035FC0B00951300 /* DormiNetX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DormiNetX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		32A0CE9F3035FC0D00951300 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
+		DA0000000000000000000001 /* DormiNetXTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = DormiNetXTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		32A0CE913035FC0B00951300 /* DormiNetX */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = DormiNetX;
+			sourceTree = "<group>";
+		};
+		DA0000000000000000000002 /* DormiNetXTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = DormiNetXTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +48,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DA0000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -39,6 +62,7 @@
 			isa = PBXGroup;
 			children = (
 				32A0CE913035FC0B00951300 /* DormiNetX */,
+				DA0000000000000000000002 /* DormiNetXTests */,
 				32A0CE9F3035FC0D00951300 /* AppIntents.framework */,
 				32A0CE903035FC0B00951300 /* Products */,
 			);
@@ -48,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				32A0CE8F3035FC0B00951300 /* DormiNetX.app */,
+				DA0000000000000000000001 /* DormiNetXTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -76,6 +101,27 @@
 			productName = DormiNetX;
 			productReference = 32A0CE8F3035FC0B00951300 /* DormiNetX.app */;
 			productType = "com.apple.product-type.application";
+		};
+		DA0000000000000000000008 /* DormiNetXTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DA0000000000000000000009 /* Build configuration list for PBXNativeTarget "DormiNetXTests" */;
+			buildPhases = (
+				DA0000000000000000000003 /* Sources */,
+				DA0000000000000000000004 /* Frameworks */,
+				DA0000000000000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DA0000000000000000000007 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DA0000000000000000000002 /* DormiNetXTests */,
+			);
+			name = DormiNetXTests;
+			productName = DormiNetXTests;
+			productReference = DA0000000000000000000001 /* DormiNetXTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -107,12 +153,20 @@
 			projectRoot = "";
 			targets = (
 				32A0CE8E3035FC0B00951300 /* DormiNetX */,
+				DA0000000000000000000008 /* DormiNetXTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		32A0CE8D3035FC0B00951300 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DA0000000000000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -129,7 +183,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DA0000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DA0000000000000000000007 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 32A0CE8E3035FC0B00951300 /* DormiNetX */;
+			targetProxy = DA0000000000000000000006 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		32A0CE9A3035FC0D00951300 /* Debug */ = {
@@ -327,6 +396,32 @@
 			};
 			name = Release;
 		};
+		DA000000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dorminet.DormiNetXTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DormiNetX.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DormiNetX";
+			};
+			name = Debug;
+		};
+		DA000000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dorminet.DormiNetXTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DormiNetX.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DormiNetX";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -344,6 +439,15 @@
 			buildConfigurations = (
 				32A0CE9D3035FC0D00951300 /* Debug */,
 				32A0CE9E3035FC0D00951300 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DA0000000000000000000009 /* Build configuration list for PBXNativeTarget "DormiNetXTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA000000000000000000000A /* Debug */,
+				DA000000000000000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

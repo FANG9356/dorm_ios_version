@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"bytes"
-	"database/sql"
-	"encoding/json"
-	"fmt"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -35,9 +35,9 @@ func getLineSecret() string {
 // LineWebhookRequest represents the incoming webhook from LINE
 type LineWebhookRequest struct {
 	Events []struct {
-		Type    string `json:"type"`
+		Type       string `json:"type"`
 		ReplyToken string `json:"replyToken"`
-		Source  struct {
+		Source     struct {
 			UserID string `json:"userId"`
 		} `json:"source"`
 		Message struct {
@@ -56,7 +56,7 @@ func verifySignature(body []byte, signature, secret string) bool {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)
 	expectedSignature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
-	return signature == expectedSignature
+	return hmac.Equal([]byte(signature), []byte(expectedSignature))
 }
 
 // HandleLineWebhook handles POST /api/webhook/line
@@ -76,12 +76,14 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 
 		// Verify signature
 		secret := getLineSecret()
-		if secret != "" {
-			signature := r.Header.Get("X-Line-Signature")
-			if !verifySignature(bodyBytes, signature, secret) {
-				http.Error(w, "Invalid signature", http.StatusUnauthorized)
-				return
-			}
+		if secret == "" {
+			http.Error(w, "LINE integration is not configured", http.StatusServiceUnavailable)
+			return
+		}
+		signature := r.Header.Get("X-Line-Signature")
+		if !verifySignature(bodyBytes, signature, secret) {
+			http.Error(w, "Invalid signature", http.StatusUnauthorized)
+			return
 		}
 
 		// Restore body for json decoding
@@ -95,20 +97,33 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 
 		for _, event := range req.Events {
 			lineUserID := event.Source.UserID
+			if lineUserID == "" {
+				continue
+			}
 
 			if event.Type == "message" {
+				tenantDB, _, _, linkErr := resolveLineTenantDB(db, lineUserID)
+				if linkErr != nil {
+					replyToLine(event.ReplyToken, "บัญชี LINE นี้ยังไม่ได้เชื่อมกับลูกบ้านในระบบใหม่ กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่างแล้วเลือกห้องอีกครั้งค่ะ")
+					continue
+				}
 				if event.Message.Type == "text" {
 					scheme := "http://"
 					if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
 						scheme = "https://"
 					}
 					serverURL := scheme + r.Host
-					handleTextMessage(db, event.ReplyToken, lineUserID, event.Message.Text, serverURL)
+					handleTextMessage(tenantDB, event.ReplyToken, lineUserID, event.Message.Text, serverURL)
 				} else if event.Message.Type == "image" {
-					handleImageMessage(db, event.ReplyToken, lineUserID, event.Message.ID)
+					handleImageMessage(tenantDB, event.ReplyToken, lineUserID, event.Message.ID)
 				}
 			} else if event.Type == "postback" {
-				handlePostbackEvent(db, event.ReplyToken, lineUserID, event.Postback.Data)
+				tenantDB, _, _, linkErr := resolveLineTenantDB(db, lineUserID)
+				if linkErr != nil {
+					replyToLine(event.ReplyToken, "กรุณาผูกบัญชี LINE กับห้องพักในระบบใหม่ก่อนทำรายการค่ะ")
+					continue
+				}
+				handlePostbackEvent(tenantDB, event.ReplyToken, lineUserID, event.Postback.Data)
 			} else if event.Type == "follow" {
 				welcomeMsg := "สวัสดีค่ะ! ยินดีต้อนรับสู่บริการหอพัก DormiNet นะคะ ✨\n\nหากคุณเป็นลูกบ้านของเรา กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่าง เพื่อรับข้อมูลบิลค่าเช่าและการแจ้งเตือนต่างๆ ได้เลยค่ะ "
 				replyToLine(event.ReplyToken, welcomeMsg)
@@ -121,7 +136,7 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 
 func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL string) {
 	text = strings.TrimSpace(text)
-	
+
 	// Command: ผูกบัญชี [เลขบัตรประชาชน] [เบอร์โทร] (Deprecated for security reasons)
 	if strings.HasPrefix(text, "ผูกบัญชี") {
 		replyToLine(replyToken, "เพื่อความปลอดภัยสูงสุด ระบบยกเลิกการผูกบัญชีผ่านการพิมพ์แล้วค่ะ\n\nรบกวนลูกบ้านกดที่ปุ่ม 'ผูกบัญชี' ที่เมนูหลักด้านล่าง เพื่อดำเนินการแทนนะคะ")
@@ -142,7 +157,7 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 		var paymentStatus string
 		var paymentDate string
 		err = db.QueryRow("SELECT payment_id, month, rent_fee, water_fee, electric_fee, common_fee, late_fee, amount, payment_status, IFNULL(payment_date, '') FROM payments WHERE room_number = ? ORDER BY payment_id DESC LIMIT 1", roomNumber).Scan(&paymentID, &month, &rent, &water, &electric, &common, &late, &amount, &paymentStatus, &paymentDate)
-		
+
 		if err == nil {
 			if paymentStatus == "paid" {
 				replyToLine(replyToken, "ขณะนี้คุณไม่มียอดค้างชำระค่ะ บิลล่าสุดของคุณชำระเรียบร้อยแล้ว")
@@ -164,7 +179,7 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 
 			// Found a bill, construct Flex Message
 			invoiceNo := fmt.Sprintf("INV-%05d", paymentID)
-			
+
 			flexJSON := fmt.Sprintf(`{
 				"type": "bubble",
 				"header": {
@@ -321,7 +336,7 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 
 			var contents map[string]interface{}
 			json.Unmarshal([]byte(flexJSON), &contents)
-			
+
 			altText := fmt.Sprintf("บิลแจ้งหนี้ห้อง %s (ยอด %.2f บาท)", roomNumber, amount)
 			replyToLineWithFlexMessage(replyToken, altText, contents)
 
@@ -355,13 +370,13 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 				replyToLine(replyToken, "กรุณาระบุรายละเอียดสิ่งที่ต้องการซ่อมด้วยค่ะ")
 				return
 			}
-			
+
 			_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at) VALUES (?, ?, 'รอดำเนินการ', ?)", roomNumber, issue, time.Now().Format("2006-01-02 15:04:05"))
 			if err != nil {
 				replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้งค่ะ")
 				return
 			}
-			
+
 			db.Exec("UPDATE users SET bot_state = 'maintenance_wait_image' WHERE line_user_id = ?", lineUserID)
 			replyToLineWithQuickReply(replyToken, "บันทึกรายละเอียดเรียบร้อยค่ะ หากมีรูปภาพปัญหาประกอบสามารถส่งรูปมาได้เลยนะคะ (หากไม่มี กด 'ข้าม')", []string{"ข้าม"})
 			return
@@ -389,7 +404,6 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 			return
 		}
 	}
-
 
 	if !strings.HasPrefix(text, "ผูกบัญชี") && text != "เมนู" && text != "การเงิน" && text != "แจ้งซ่อม" {
 		db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
@@ -499,12 +513,12 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		var contents map[string]interface{}
 		json.Unmarshal([]byte(flexJSON), &contents)
 		replyToLineWithFlexMessage(replyToken, fmt.Sprintf("รับสลิปห้อง %s เรียบร้อย (ยอด %.2f บาท)", roomNumber, amount), contents)
-		
+
 		db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
-		
+
 		// Trigger automated slip verification (Disabled by user request)
 		// go VerifySlipMock(db, paymentID, filepath, false)
-		
+
 	} else if botState == "maintenance" {
 		_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, issue_image) VALUES (?, ?, 'รอดำเนินการ', ?, ?)", roomNumber, "รอรายละเอียดเพิ่มเติม", time.Now().Format("2006-01-02 15:04:05"), "/uploads/"+newFileName)
 		if err != nil {
@@ -527,7 +541,7 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้งค่ะ")
 			return
 		}
-		
+
 		if currentImages == "" {
 			// ส่งกลับเฉพาะรูปแรก เพื่อไม่ให้ส่งข้อความซ้ำซ้อนเมื่อลูกบ้านส่งหลายรูปพร้อมกัน
 			replyToLineWithQuickReply(replyToken, "เพิ่มรูปภาพประกอบเรียบร้อยค่ะ (หากมีอีกสามารถส่งเพิ่มได้เลย หรือกด 'เสร็จสิ้น' เพื่อจบการแจ้งซ่อม)", []string{"เสร็จสิ้น"})
@@ -542,14 +556,14 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		newImages += "/uploads/" + newFileName
 
 		_, err = db.Exec("UPDATE maintenances SET issue_image = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", newImages, roomNumber)
-		
+
 		if currentImages == "" {
 			replyToLineWithQuickReply(replyToken, "เพิ่มรูปภาพประกอบเรียบร้อยค่ะ กรุณาพิมพ์รายละเอียดปัญหา หรือส่งรูปภาพเพิ่มเติมนะคะ (หากไม่มี กด 'ข้าม')", []string{"ข้าม"})
 		}
 
 	} else if strings.HasPrefix(botState, "pay_maint_") {
 		maintID := strings.TrimPrefix(botState, "pay_maint_")
-		
+
 		var cost float64
 		err = db.QueryRow("SELECT cost FROM maintenances WHERE id = ?", maintID).Scan(&cost)
 		if err != nil || cost <= 0 {
@@ -557,16 +571,16 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
 			return
 		}
-		
+
 		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, status = 'รอตรวจสอบชำระเงิน' WHERE id = ?", newFileName, maintID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
 		}
-		
+
 		db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
 		replyToLine(replyToken, "รับสลิปค่าซ่อมแซมเรียบร้อยแล้วค่ะ แอดมินจะตรวจสอบและยืนยันให้เร็วที่สุดค่ะ")
-		
+
 		// Trigger automated slip verification (Disabled by user request)
 		// mID, _ := strconv.Atoi(maintID)
 		// go VerifySlipMock(db, mID, filepath, true)
@@ -869,9 +883,10 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 			return
 		}
+		tenantDB := getTenantDB(r, db)
 
 		// ค้นหาบิลทั้งหมดที่ค้างชำระ (pending) และห้องนั้นมีการผูก LINE (line_user_id) แล้ว
-		rows, err := db.Query(`
+		rows, err := tenantDB.Query(`
 			SELECT p.payment_id, p.room_number, p.amount, p.month, p.rent_fee, p.water_fee, p.electric_fee, 
 			       u.full_name, u.line_user_id 
 			FROM payments p 
@@ -893,7 +908,7 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 			if err := rows.Scan(&paymentID, &room, &amount, &period, &rent, &water, &electric, &name, &lineUserID); err == nil {
 				invoiceNo := fmt.Sprintf("INV-%d-%s", time.Now().Year(), room)
 				dateStr := time.Now().Format("02/01/2006 15:04")
-				
+
 				// ส่ง Flex Message
 				PushInvoiceFlexMessage(lineUserID, invoiceNo, dateStr, name, room, period, rent, 0, water, electric, 0, 0, amount)
 				count++
@@ -902,7 +917,7 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"message": "success", 
+			"message":      "success",
 			"pushed_count": count,
 		})
 	}
@@ -913,9 +928,9 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 	if token == "" || lineUserID == "" {
 		return
 	}
-	
+
 	receiptNo := fmt.Sprintf("REC-%05s", paymentIDStr)
-	
+
 	flexJSON := fmt.Sprintf(`{
 		"type": "bubble",
 		"size": "kilo",
@@ -1023,19 +1038,19 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 		if body, ok := contents["body"].(map[string]interface{}); ok {
 			if bodyContents, ok := body["contents"].([]interface{}); ok {
 				buttonBox := map[string]interface{}{
-					"type": "box",
+					"type":   "box",
 					"layout": "vertical",
 					"margin": "md",
 					"contents": []interface{}{
 						map[string]interface{}{
-							"type": "button",
-							"style": "primary",
-							"color": "#4F46E5",
+							"type":   "button",
+							"style":  "primary",
+							"color":  "#4F46E5",
 							"height": "sm",
 							"action": map[string]interface{}{
-								"type": "uri",
+								"type":  "uri",
 								"label": "ดูรูปสลิป",
-								"uri": imageURL,
+								"uri":   imageURL,
 							},
 						},
 					},
@@ -1057,7 +1072,7 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 
 	url := "https://api.line.me/v2/bot/message/push"
 	body := map[string]interface{}{
-		"to": lineUserID,
+		"to":       lineUserID,
 		"messages": messages,
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -1073,7 +1088,7 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 		return
 	}
 	defer resp.Body.Close()
-	
+
 	respBody, _ := io.ReadAll(resp.Body)
 	fmt.Println("LINE Push Receipt response:", resp.Status, string(respBody))
 }
@@ -1093,21 +1108,21 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 	}
 
 	dateStr := time.Now().Format("02/01/2006")
-	
+
 	buttonLabel := "ชำระเงินค่าซ่อม"
 	buttonColor := "#F59E0B"
 	headerColor := "#F59E0B"
 	subHeaderColor := "#FCD34D"
 	amountColor := "#F59E0B"
 	actionData := fmt.Sprintf("action=pay_maint&id=%s", maintID)
-	
+
 	if cost <= 0 {
 		buttonLabel = "ไม่มีค่าใช้จ่าย"
 		buttonColor = "#d1d5db"
 		actionData = "action=ignore"
-		
+
 		// Indigo Theme for No Cost
-		headerColor = "#4338CA" // Indigo-700
+		headerColor = "#4338CA"    // Indigo-700
 		subHeaderColor = "#818CF8" // Indigo-400
 		amountColor = "#4338CA"
 	}
@@ -1160,8 +1175,8 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 		"to": lineUserID,
 		"messages": []map[string]interface{}{
 			{
-				"type": "flex",
-				"altText": fmt.Sprintf("ใบแจ้งหนี้ค่าซ่อมแซมห้อง %s (ยอด %.2f บาท)", roomNumber, cost),
+				"type":     "flex",
+				"altText":  fmt.Sprintf("ใบแจ้งหนี้ค่าซ่อมแซมห้อง %s (ยอด %.2f บาท)", roomNumber, cost),
 				"contents": contents,
 			},
 		},
@@ -1182,10 +1197,10 @@ func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status stri
 	}
 
 	dateStr := time.Now().Format("02/01/2006 15:04")
-	
+
 	headerColor := "#3B82F6"
 	statusColor := "#2563EB"
-	
+
 	if status == "กำลังซ่อม" {
 		headerColor = "#0284C7"
 		statusColor = "#0284C7"
@@ -1238,8 +1253,8 @@ func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status stri
 		"to": lineUserID,
 		"messages": []map[string]interface{}{
 			{
-				"type": "flex",
-				"altText": fmt.Sprintf("อัปเดตแจ้งซ่อมห้อง %s: %s", roomNumber, status),
+				"type":     "flex",
+				"altText":  fmt.Sprintf("อัปเดตแจ้งซ่อมห้อง %s: %s", roomNumber, status),
 				"contents": contents,
 			},
 		},
@@ -1270,7 +1285,7 @@ func replyToLineWithQuickReply(replyToken, text string, options []string) {
 	}
 
 	url := "https://api.line.me/v2/bot/message/reply"
-	
+
 	var items []map[string]interface{}
 	for _, opt := range options {
 		items = append(items, map[string]interface{}{
@@ -1287,7 +1302,7 @@ func replyToLineWithQuickReply(replyToken, text string, options []string) {
 		"replyToken": replyToken,
 		"messages": []map[string]interface{}{
 			{
-				"type": "text", 
+				"type": "text",
 				"text": text,
 				"quickReply": map[string]interface{}{
 					"items": items,

@@ -204,7 +204,6 @@ struct AddAdminSheet: View {
     @State private var primaryEmail = ""
     @State private var backupEmail = ""
     @State private var password = ""
-    @State private var selectedRole = "admin"
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     
@@ -227,7 +226,7 @@ struct AddAdminSheet: View {
                         .disabled(true)
                         .foregroundColor(.secondary)
                     
-                    TextField("อีเมลสำรอง (ไม่บังคับ)", text: $backupEmail)
+                    TextField("อีเมลสำหรับผู้ดูแล", text: $backupEmail)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -237,51 +236,8 @@ struct AddAdminSheet: View {
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .limitedText($password, maxLength: 64, trimNewlines: true)
                         
-                    HStack {
-                        Text("สิทธิ์การใช้งาน")
-                            .font(.custom("SukhumvitSet-Text", size: 16))
-                        Spacer()
-                        Menu {
-                            Button("ผู้ดูแลทั่วไป") {
-                                withTransaction(Transaction(animation: nil)) {
-                                    selectedRole = "admin"
-                                }
-                            }
-
-                            Button("ผู้ดูแลระบบสูงสุด") {
-                                withTransaction(Transaction(animation: nil)) {
-                                    selectedRole = "superadmin"
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Text(selectedRole == "superadmin" ? "ผู้ดูแลระบบสูงสุด" : "ผู้ดูแลทั่วไป")
-                                    .font(.custom("SukhumvitSet-Text", size: 16))
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                                    .minimumScaleFactor(0.72)
-                                    .allowsTightening(true)
-                                    .frame(width: 148, alignment: .trailing)
-                                    .transaction { transaction in
-                                        transaction.animation = nil
-                                    }
-
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 14, height: 18)
-                            }
-                            .frame(width: 168, height: 24, alignment: .trailing)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .frame(width: 168, height: 24, alignment: .trailing)
-                        .animation(nil, value: selectedRole)
-                        .transaction { transaction in
-                            transaction.animation = nil
-                        }
-                    }
+                    LabeledContent("สิทธิ์การใช้งาน", value: "ผู้ดูแลทั่วไป")
+                        .font(.custom("SukhumvitSet-Text", size: 16))
                 }
                 
                 if let error = errorMessage {
@@ -309,7 +265,9 @@ struct AddAdminSheet: View {
                         }
                     }
                     .font(.custom("SukhumvitSet-Bold", size: 16))
-                    .disabled(name.isEmpty || password.isEmpty || isLoading)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                              backupEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                              password.isEmpty || isLoading)
                 }
             }
             .overlay(
@@ -332,13 +290,13 @@ struct AddAdminSheet: View {
         errorMessage = nil
         
         do {
-            let (success, _, msg) = try await APIService.shared.register(name: name, email: backupEmail, password: password, role: selectedRole)
-            if success {
-                onSuccess()
-                isPresented = false
-            } else {
-                errorMessage = msg ?? "การสมัครสมาชิกล้มเหลว"
-            }
+            try await APIService.shared.createStaff(
+                username: name,
+                recoveryEmail: backupEmail,
+                temporaryPassword: password
+            )
+            onSuccess()
+            isPresented = false
         } catch {
             errorMessage = "เกิดข้อผิดพลาด: \(error.localizedDescription)"
         }

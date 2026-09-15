@@ -10,6 +10,8 @@ enum AccountScopedStore {
     static let schema = Schema([
         DormUser.self,
         Payment.self,
+        PaymentTransaction.self,
+        FinancialReceipt.self,
         Room.self,
         Maintenance.self,
         RoomType.self,
@@ -34,10 +36,14 @@ enum AccountScopedStore {
             cloudKitDatabase: .none
         )
 
-        return try ModelContainer(
+        let container = try ModelContainer(
             for: schema,
             configurations: [configuration]
         )
+        if try PaymentLedger.migrateLegacyBalances(in: container.mainContext) > 0 {
+            try container.mainContext.save()
+        }
+        return container
     }
 
     /// A temporary in-memory container is used while the user is logged out.
@@ -92,7 +98,7 @@ enum AccountStoreError: LocalizedError {
 struct AccountScopedRootView: View {
     @AppStorage("isLoggedIn") private var isLoggedIn: Bool = false
     @AppStorage("adminID") private var adminID: Int = 0
-    @AppStorage("authToken") private var authToken: String = ""
+    @ObservedObject private var credentials = CredentialStore.shared
 
     @State private var modelContainer: ModelContainer
     @State private var loadedStoreKey: String = ""
@@ -105,7 +111,7 @@ struct AccountScopedRootView: View {
            let accountID = Self.resolveAccountID(),
            let container = try? AccountScopedStore.makeContainer(accountID: accountID) {
             initialContainer = container
-            let token = UserDefaults.standard.string(forKey: "authToken") ?? ""
+            let token = CredentialStore.shared.token ?? ""
             initialStoreKey = "account-\(accountID)-\(token)"
         } else {
             initialContainer = (try? AccountScopedStore.makeGuestContainer())
@@ -130,7 +136,7 @@ struct AccountScopedRootView: View {
             return "guest"
         }
 
-        return "account-\(adminID)-\(authToken)"
+        return "account-\(adminID)-\(credentials.token ?? "")"
     }
 
     var body: some View {
@@ -145,6 +151,12 @@ struct AccountScopedRootView: View {
             .task(id: storeKey) {
                 reloadContainerIfNeeded()
             }
+            .alert("ข้อมูลความปลอดภัย", isPresented: Binding(
+                get: { credentials.errorMessage != nil },
+                set: { if !$0 { credentials.errorMessage = nil } }
+            )) {
+                Button("ตกลง", role: .cancel) { credentials.errorMessage = nil }
+            } message: { Text(credentials.errorMessage ?? "") }
     }
 
     private func reloadContainerIfNeeded() {
@@ -193,45 +205,10 @@ struct AccountScopedRootView: View {
         }
     }
 
-    /// The login API already persists adminID in UserDefaults. This fallback
-    /// decodes the JWT only when adminID has not yet been persisted.
+    /// Resolve the local store from the saved session, never from a stale account preference.
     private static func resolveAccountID() -> Int? {
-        let storedID = UserDefaults.standard.integer(forKey: "adminID")
-        if storedID > 0 {
-            return storedID
-        }
-
-        guard let token = UserDefaults.standard.string(forKey: "authToken"),
-              !token.isEmpty else {
-            return nil
-        }
-
-        let parts = token.split(separator: ".")
-        guard parts.count == 3 else {
-            return nil
-        }
-
-        var encodedPayload = String(parts[1])
-            .replacingOccurrences(of: "-", with: "+")
-            .replacingOccurrences(of: "_", with: "/")
-
-        let remainder = encodedPayload.count % 4
-        if remainder != 0 {
-            encodedPayload += String(repeating: "=", count: 4 - remainder)
-        }
-
-        guard let data = Data(base64Encoded: encodedPayload),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let payload = object as? [String: Any],
-              let value = payload["admin_id"] as? NSNumber else {
-            return nil
-        }
-
-        let accountID = value.intValue
-        guard accountID > 0 else {
-            return nil
-        }
-
+        guard let token = CredentialStore.shared.token,
+              let accountID = APIService.shared.localSessionAccountID(token: token) else { return nil }
         UserDefaults.standard.set(accountID, forKey: "adminID")
         return accountID
     }

@@ -2,7 +2,8 @@ import SwiftUI
 
 struct SecurityTokenTabView: View {
     @AppStorage("securityTokenEnabled") var securityTokenEnabled: Bool = false
-    @AppStorage("securityPasscode") var securityPasscode: String = "123456"
+    @ObservedObject private var credentials = CredentialStore.shared
+    private var securityPasscode: String { credentials.passcode ?? "" }
     
     @State private var customCode: String = ""
     @State private var showCustomInput: Bool = false
@@ -29,7 +30,7 @@ struct SecurityTokenTabView: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("ยืนยันตัวตนหลัง Sign In")
+                                Text("ยืนยันตัวตนหลังเข้าสู่ระบบ")
                                     .font(.custom("SukhumvitSet-Bold", size: 18))
                                     .foregroundColor(.primary)
                                 Text("เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบ")
@@ -53,7 +54,14 @@ struct SecurityTokenTabView: View {
                                     .foregroundColor(securityTokenEnabled ? .green : .secondary)
                             }
                             Spacer()
-                            Toggle("", isOn: $securityTokenEnabled.animation(.easeInOut))
+                            Toggle("", isOn: Binding(get: { securityTokenEnabled }, set: { enabled in
+                                do {
+                                    if enabled && securityPasscode.isEmpty {
+                                        try credentials.setPasscode(String(format: "%06d", Int.random(in: 0...999999)))
+                                    }
+                                    securityTokenEnabled = enabled
+                                } catch { showAlertMessage(error.localizedDescription) }
+                            }))
                                 .tint(.indigo)
                                 .labelsHidden()
                         }
@@ -178,7 +186,8 @@ struct SecurityTokenTabView: View {
                                     
                                     Button("บันทึก") {
                                         if customCode.count == 6 {
-                                            securityPasscode = customCode
+                                            do { try credentials.setPasscode(customCode) }
+                                            catch { showAlertMessage(error.localizedDescription); return }
                                             isCustomInputFocused = false
                                             showAlertMessage("บันทึกรหัสผ่าน 6 หลักเรียบร้อยแล้ว")
                                             withAnimation(.easeInOut(duration: 0.2)) { showCustomInput = false }
@@ -275,7 +284,9 @@ struct SecurityTokenTabView: View {
     
     private func generateRandomPasscode() {
         let newCode = String((0..<6).map { _ in Int.random(in: 0...9) }.map(String.init).joined())
-        securityPasscode = newCode
-        showAlertMessage("สุ่มรหัสผ่านใหม่เรียบร้อยแล้ว: \(newCode)")
+        do {
+            try credentials.setPasscode(newCode)
+            showAlertMessage("สุ่มรหัสผ่านใหม่เรียบร้อยแล้ว")
+        } catch { showAlertMessage(error.localizedDescription) }
     }
 }

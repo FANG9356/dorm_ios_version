@@ -17,6 +17,8 @@ struct FinanceTabView: View {
     @State private var paymentEditTarget: PaymentEditTarget?
     @State private var pendingPaymentEditTarget: PaymentEditTarget?
     @State private var deletingPayment: Payment?
+	@State private var lineResultMessage: String?
+    @State private var paymentErrorMessage: String?
 
     private let statuses = ["ทั้งหมด", "ชำระแล้ว", "รอชำระ", "ชำระบางส่วน"]
     private var payments: [Payment] { allPayments.filter { !$0.isDeletedLocally } }
@@ -58,39 +60,81 @@ struct FinanceTabView: View {
                     markPaid(payment)
                 },
                 onSendLine: { payment in
-                    modelContext.insert(LocalSystemLog(action: "รอเชื่อมต่อ LINE", details: "เตรียมส่งแจ้งเตือนบิลห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                    saveAndPush()
+					Task {
+						await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext, reason: "เตรียมส่งบิลผ่าน LINE")
+						if case .failed(let message) = SyncManager.shared.state {
+							lineResultMessage = "ซิงก์ข้อมูลก่อนส่ง LINE ไม่สำเร็จ: \(message)"
+							return
+						}
+						do {
+							let message = try await APIService.shared.sendLineInvoice(paymentID: payment.id)
+							modelContext.insert(LocalSystemLog(action: "ส่งบิลผ่าน LINE", details: "ส่งบิลห้อง \(payment.roomNumber) รอบ \(payment.month) แล้ว"))
+							try? modelContext.save()
+							lineResultMessage = message
+						} catch {
+							lineResultMessage = error.localizedDescription
+						}
+					}
                 }
             )
             .iphoneSheetStyle()
         }
         .sheet(item: $paymentEditTarget) { target in
             PaymentEditor(payment: target.payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: target.payment.month.isEmpty ? monthKey : target.payment.month) { draft in
-                switch target {
-                case .existing(let payment):
-                    apply(draft, to: payment)
-                    modelContext.insert(LocalSystemLog(action: "แก้ไขรายการชำระเงิน", details: "แก้ไขรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                case .draft:
-                    draft.lastUpdated = Date()
-                    draft.isDirty = true
-                    modelContext.insert(draft)
-                    modelContext.insert(LocalSystemLog(action: "ออกบิล", details: "ออกบิลห้อง \(draft.roomNumber) รอบ \(draft.month)"))
+                do {
+                    let ledgerSource: String
+                    let ledgerPayment: Payment
+                    switch target {
+                    case .existing(let payment):
+                        apply(draft, to: payment)
+                        ledgerSource = "payment-editor"
+                        ledgerPayment = payment
+                        modelContext.insert(LocalSystemLog(action: "แก้ไขรายการชำระเงิน", details: "แก้ไขรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+                    case .draft:
+                        draft.lastUpdated = Date()
+                        draft.isDirty = true
+                        modelContext.insert(draft)
+                        ledgerSource = "manual-invoice"
+                        ledgerPayment = draft
+                        modelContext.insert(LocalSystemLog(action: "ออกบิล", details: "ออกบิลห้อง \(draft.roomNumber) รอบ \(draft.month)"))
+                    }
+                    _ = try PaymentLedger.recordUnrecordedBalance(
+                        for: ledgerPayment,
+                        in: modelContext,
+                        source: ledgerSource
+                    )
+                    try modelContext.save()
+                } catch {
+                    modelContext.rollback()
+                    throw error
                 }
-                saveAndPush()
+                Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
             }
             .iphoneSheetStyle()
         }
         .confirmationDialog("ลบรายการชำระเงินนี้หรือไม่", isPresented: deleteDialogBinding) {
             Button("ลบรายการห้อง \(deletingPayment?.roomNumber ?? "")", role: .destructive) {
                 guard let payment = deletingPayment else { return }
-                payment.isDeletedLocally = true
-                payment.isDirty = true
-                payment.lastUpdated = Date()
-                modelContext.insert(LocalSystemLog(action: "ลบรายการชำระเงิน", details: "ลบรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-                saveAndPush()
+                delete(payment)
                 deletingPayment = nil
             }
             Button("ยกเลิก", role: .cancel) { }
+        }
+		.alert("การส่งบิลผ่าน LINE", isPresented: Binding(
+			get: { lineResultMessage != nil },
+			set: { if !$0 { lineResultMessage = nil } }
+		)) {
+			Button("ตกลง", role: .cancel) { lineResultMessage = nil }
+		} message: {
+			Text(lineResultMessage ?? "")
+		}
+        .alert("ดำเนินการกับบิลไม่ได้", isPresented: Binding(
+            get: { paymentErrorMessage != nil },
+            set: { if !$0 { paymentErrorMessage = nil } }
+        )) {
+            Button("ตกลง", role: .cancel) { paymentErrorMessage = nil }
+        } message: {
+            Text(paymentErrorMessage ?? "")
         }
         .onAppear {
             ensurePaymentsForSelectedMonth()
@@ -324,13 +368,21 @@ struct FinanceTabView: View {
         payment.lastUpdated = Date()
         payment.isDirty = true
         modelContext.insert(LocalSystemLog(action: "รับชำระเงิน", details: "รับชำระเต็มจำนวน ห้อง \(payment.roomNumber) รอบ \(payment.month)"))
-        saveAndPush()
+        do {
+            _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "quick-settlement")
+            try modelContext.save()
+            Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
+        } catch {
+            modelContext.rollback()
+            lineResultMessage = error.localizedDescription
+        }
     }
 
     private func apply(_ draft: Payment, to payment: Payment) {
         payment.userId = draft.userId
         payment.roomNumber = draft.roomNumber
         payment.rentFee = draft.rentFee
+        payment.depositFee = draft.depositFee
         payment.waterFee = draft.waterFee
         payment.electricFee = draft.electricFee
         payment.commonFee = draft.commonFee
@@ -366,6 +418,21 @@ struct FinanceTabView: View {
         }
     }
 
+    private func delete(_ payment: Payment) {
+        do {
+            try PaymentLedger.ensureInvoiceCanBeDeleted(payment, in: modelContext)
+            payment.isDeletedLocally = true
+            payment.isDirty = true
+            payment.lastUpdated = Date()
+            modelContext.insert(LocalSystemLog(action: "ลบรายการชำระเงิน", details: "ลบรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
+            try modelContext.save()
+            Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
+        } catch {
+            modelContext.rollback()
+            paymentErrorMessage = error.localizedDescription
+        }
+    }
+
     private func ensurePaymentsForSelectedMonth() {
         let activeUsers = users.filter {
             !$0.isDeletedLocally &&
@@ -395,6 +462,13 @@ struct FinanceTabView: View {
 
             let payment = generatedPayment(for: user, month: monthKey)
             modelContext.insert(payment)
+            do {
+                _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "automatic-billing")
+            } catch {
+                modelContext.rollback()
+                print("Payment ledger error: \(error)")
+                return
+            }
             modelContext.insert(LocalSystemLog(action: "สร้างรายการชำระอัตโนมัติ", details: "สร้างรายการห้อง \(payment.roomNumber) รอบ \(payment.month)"))
             didCreate = true
         }
@@ -404,6 +478,10 @@ struct FinanceTabView: View {
     }
 
     private func shouldCreatePayment(for user: DormUser, month: String) -> Bool {
+        guard BillingCycle.date("\(month)-01") != nil,
+              BillingCycle.date(user.moveInDate) != nil else { return false }
+        if user.indefiniteContract != 1, !user.contractEndDate.isEmpty,
+           month > String(user.contractEndDate.prefix(7)) { return false }
         if user.status == "จอง" {
             return month == moveInMonth(for: user)
         }
@@ -419,11 +497,12 @@ struct FinanceTabView: View {
         let rent = roomType?.price ?? 0
         let isBooking = user.status == "จอง"
         let isMoveInMonth = month == moveInMonth(for: user)
-        let amount = isBooking ? user.deposit : rent + (isMoveInMonth ? user.deposit : 0)
+        let amount = PaymentAmounts.sum(isBooking ? [user.deposit] : [rent, isMoveInMonth ? user.deposit : 0])
 
         payment.userId = stableLocalUserID(for: user)
         payment.roomNumber = user.roomNumber
-        payment.rentFee = isBooking ? user.deposit : rent
+        payment.rentFee = isBooking ? 0 : rent
+        payment.depositFee = isBooking || isMoveInMonth ? user.deposit : 0
         payment.waterFee = 0
         payment.electricFee = 0
         payment.commonFee = 0
@@ -435,7 +514,7 @@ struct FinanceTabView: View {
         payment.slipPathArray = user.bookingSlips
         payment.paymentPlan = isBooking ? "booking" : "monthly"
         payment.installmentPhase = user.installmentMonths
-        payment.dueDate = dueDateKey(for: month)
+        payment.dueDate = BillingCycle.dueDateKey(month: month, moveInDate: user.moveInDate)
         payment.paymentStatus = inferredPaymentStatus(for: user, isMoveInMonth: isMoveInMonth)
         payment.paidAmount = payment.paymentStatus == "paid" ? amount : (payment.paymentStatus == "partial" ? user.installmentAmount : 0)
         payment.lastUpdated = Date()
@@ -463,20 +542,6 @@ struct FinanceTabView: View {
 
     private func moveInMonth(for user: DormUser) -> String {
         String(user.moveInDate.prefix(7))
-    }
-
-    private func dueDateKey(for month: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        guard let date = formatter.date(from: "\(month)-01") else { return "" }
-
-        var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
-        components.month = (components.month ?? 1) + 1
-        components.day = 0
-        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
-        return formatter.string(from: dueDate)
     }
 
     private func clean(_ value: String) -> String {
@@ -585,7 +650,7 @@ private struct BillingHistorySheet: View {
     let onMarkPaid: (Payment) -> Void
     let onSendLine: (Payment) -> Void
     private let cycles: [BillingCycle]
-    private let paymentsByMonth: [String: Payment]
+    private let paymentsByMonth: [String: [Payment]]
 
     init(
         user: DormUser,
@@ -603,13 +668,25 @@ private struct BillingHistorySheet: View {
         self.onDelete = onDelete
         self.onMarkPaid = onMarkPaid
         self.onSendLine = onSendLine
-        self.cycles = BillingCycle.generate(
+        var cycles = BillingCycle.generate(
             moveInDate: user.moveInDate,
             contractEndDate: user.contractEndDate,
             indefiniteContract: user.indefiniteContract == 1
         )
-        self.paymentsByMonth = Dictionary(grouping: payments, by: \.month).compactMapValues { payments in
-            payments.sorted { $0.lastUpdated > $1.lastUpdated }.first
+        let scheduledMonths = Set(cycles.map(\.monthId))
+        // Historical invoices remain accessible even after contract dates are edited.
+        for month in Set(payments.filter { !$0.isDeletedLocally }.map(\.month)).subtracting(scheduledMonths) {
+            guard let date = BillingCycle.date("\(month)-01") else { continue }
+            let due = BillingCycle.dueDateKey(month: month, moveInDate: user.moveInDate)
+            cycles.append(BillingCycle(monthId: month, label: BillingCycle.monthLabel(for: date),
+                                       dueDay: Int(due.suffix(2)) ?? 1, isFuture: false))
+        }
+        self.cycles = cycles.sorted { $0.monthId < $1.monthId }
+        self.paymentsByMonth = Dictionary(grouping: payments.filter { !$0.isDeletedLocally }, by: \.month).mapValues { payments in
+            payments.sorted {
+                if $0.installmentPhase != $1.installmentPhase { return $0.installmentPhase < $1.installmentPhase }
+                return $0.id.uuidString < $1.id.uuidString
+            }
         }
     }
 
@@ -625,16 +702,13 @@ private struct BillingHistorySheet: View {
                     historyHeader
 
                     ForEach(Array(cycles.enumerated()), id: \.element.monthId) { index, cycle in
-                        BillingCycleRow(
-                            number: index + 1,
-                            cycle: cycle,
-                            payment: paymentsByMonth[cycle.monthId],
-                            onIssueBill: { onIssueBill(cycle.monthId) },
-                            onEdit: onEdit,
-                            onDelete: onDelete,
-                            onMarkPaid: onMarkPaid,
-                            onSendLine: onSendLine
-                        )
+                        if let monthlyPayments = paymentsByMonth[cycle.monthId], !monthlyPayments.isEmpty {
+                            ForEach(monthlyPayments) { payment in
+                                cycleRow(cycle, number: index + 1, payment: payment)
+                            }
+                        } else {
+                            cycleRow(cycle, number: index + 1, payment: nil)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -651,6 +725,12 @@ private struct BillingHistorySheet: View {
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func cycleRow(_ cycle: BillingCycle, number: Int, payment: Payment?) -> some View {
+        BillingCycleRow(number: number, cycle: cycle, payment: payment,
+                        onIssueBill: { onIssueBill(cycle.monthId) }, onEdit: onEdit,
+                        onDelete: onDelete, onMarkPaid: onMarkPaid, onSendLine: onSendLine)
     }
 
     private var historyHeader: some View {
@@ -708,6 +788,11 @@ private struct BillingCycleRow: View {
                         Text(cycle.label)
                             .font(.custom("SukhumvitSet-Bold", size: 16))
                             .foregroundStyle(cycle.isFuture && payment == nil ? .secondary : .primary)
+                        if let payment, payment.paymentPlan == "installment" {
+                            Text("ผ่อนชำระ งวดที่ \(payment.installmentPhase)")
+                                .font(.custom("SukhumvitSet-Text", size: 11))
+                                .foregroundStyle(.secondary)
+                        }
                         Text("กำหนดชำระวันที่ \(cycle.dueDay)")
                             .font(.custom("SukhumvitSet-Text", size: 11))
                             .foregroundStyle(.secondary)
@@ -859,6 +944,7 @@ private struct PaymentReceiptView: View {
     @State private var sharePayload: ReceiptSharePayload?
     @State private var saveMessage: String?
     @State private var showingSaveAlert = false
+    @State private var isSavingReceipt = false
 
     var body: some View {
         NavigationStack {
@@ -905,6 +991,8 @@ private struct PaymentReceiptView: View {
                         Image(systemName: "square.and.arrow.down")
                     }
                     .foregroundStyle(.white)
+                    .disabled(isSavingReceipt)
+                    .accessibilityLabel(isSavingReceipt ? "กำลังบันทึกใบเสร็จ" : "บันทึกใบเสร็จ")
 
                     Button {
                         printReceipt()
@@ -934,19 +1022,37 @@ private struct PaymentReceiptView: View {
     }
 
     private func saveReceipt() {
+        guard !isSavingReceipt else { return }
         guard let image = renderedReceiptImage() else {
             saveMessage = "สร้างรูปใบเสร็จไม่สำเร็จ"
             showingSaveAlert = true
             return
         }
-        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-        saveMessage = "บันทึกใบเสร็จลงรูปภาพแล้ว"
-        showingSaveAlert = true
+        isSavingReceipt = true
+        Task { @MainActor in
+            defer { isSavingReceipt = false }
+            let authorization = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            guard authorization == .authorized || authorization == .limited else {
+                saveMessage = "กรุณาอนุญาตให้บันทึกรูปภาพในการตั้งค่าของเครื่อง"
+                showingSaveAlert = true
+                return
+            }
+            do {
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.creationRequestForAsset(from: image)
+                }
+                saveMessage = "บันทึกใบเสร็จลงรูปภาพแล้ว"
+            } catch {
+                saveMessage = "บันทึกใบเสร็จไม่สำเร็จ: \(error.localizedDescription)"
+            }
+            showingSaveAlert = true
+        }
     }
 
     private func printReceipt() {
         guard let image = renderedReceiptImage() else {
             saveMessage = "สร้างเอกสารสำหรับพิมพ์ไม่สำเร็จ"
+            showingSaveAlert = true
             return
         }
         let controller = UIPrintInteractionController.shared
@@ -1024,6 +1130,12 @@ private struct ReceiptExportCard: View {
                 receiptLine("ช่องทางชำระเงิน", thaiPaymentMethod)
                 divider
                 receiptLine("ค่าเช่า", currency(payment.rentFee))
+                if payment.depositFee != 0 {
+                    receiptLine("เงินมัดจำ", currency(payment.depositFee))
+                }
+                if PaymentAmounts.unallocated(in: payment) != 0 {
+                    receiptLine("ยอดเดิมที่ยังไม่แยกรายการ", currency(PaymentAmounts.unallocated(in: payment)))
+                }
                 receiptLine("ค่าน้ำ", currency(payment.waterFee))
                 receiptLine("ค่าไฟ", currency(payment.electricFee))
                 receiptLine("ค่าส่วนกลาง", currency(payment.commonFee))
@@ -1149,56 +1261,6 @@ private struct ReceiptExportCard: View {
         }
 
         return trimmed
-    }
-}
-
-private struct BillingCycle {
-    let monthId: String
-    let label: String
-    let dueDay: Int
-    let isFuture: Bool
-
-    static func generate(moveInDate: String, contractEndDate: String, indefiniteContract: Bool) -> [BillingCycle] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-
-        let moveIn = formatter.date(from: String(moveInDate.prefix(10))) ?? Date()
-        let end = indefiniteContract ? Calendar(identifier: .gregorian).date(byAdding: .month, value: 12, to: moveIn) ?? moveIn : (formatter.date(from: String(contractEndDate.prefix(10))) ?? Calendar(identifier: .gregorian).date(byAdding: .month, value: 12, to: moveIn) ?? moveIn)
-        let dueDay = Calendar(identifier: .gregorian).component(.day, from: moveIn)
-        let todayMonth = monthKey(for: Date())
-
-        var result: [BillingCycle] = []
-        var cursor = Calendar(identifier: .gregorian).date(from: Calendar(identifier: .gregorian).dateComponents([.year, .month], from: moveIn)) ?? moveIn
-        let endMonth = Calendar(identifier: .gregorian).date(from: Calendar(identifier: .gregorian).dateComponents([.year, .month], from: end)) ?? end
-
-        while cursor <= endMonth && result.count < 60 {
-            let monthId = monthKey(for: cursor)
-            result.append(BillingCycle(
-                monthId: monthId,
-                label: monthLabel(for: cursor),
-                dueDay: dueDay,
-                isFuture: monthId > todayMonth
-            ))
-            cursor = Calendar(identifier: .gregorian).date(byAdding: .month, value: 1, to: cursor) ?? cursor
-        }
-        return result
-    }
-
-    private static func monthKey(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter.string(from: date)
-    }
-
-    private static func monthLabel(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "th_TH")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "MMMM yyyy"
-        return formatter.string(from: date)
     }
 }
 
@@ -1351,13 +1413,17 @@ struct PaymentEditor: View {
     let rooms: [Room]
     let roomTypes: [RoomType]
     let defaultMonth: String
-    let onSave: (Payment) -> Void
+    let onSave: (Payment) throws -> Void
     private let sourcePaymentPlan: String
     private let sourceInstallmentPhase: Int
+    private let sourcePayment: Payment?
+    private let legacyAdjustment: Double
 
     @State private var roomNumber: String
     @State private var month: String
     @State private var rentFee: String
+    @State private var depositFee: String
+    @State private var validationError: String?
     @State private var waterFee: String
     @State private var electricFee: String
     @State private var commonFee: String
@@ -1384,7 +1450,7 @@ struct PaymentEditor: View {
         ("paid", "ชำระแล้ว")
     ]
 
-    init(payment: Payment? = nil, users: [DormUser], rooms: [Room], roomTypes: [RoomType], defaultMonth: String, onSave: @escaping (Payment) -> Void) {
+    init(payment: Payment? = nil, users: [DormUser], rooms: [Room], roomTypes: [RoomType], defaultMonth: String, onSave: @escaping (Payment) throws -> Void) {
         self.users = users
         self.rooms = rooms
         self.roomTypes = roomTypes
@@ -1392,15 +1458,18 @@ struct PaymentEditor: View {
         self.onSave = onSave
         self.sourcePaymentPlan = payment?.paymentPlan ?? "monthly"
         self.sourceInstallmentPhase = payment?.installmentPhase ?? 0
+        self.sourcePayment = payment
+        self.legacyAdjustment = payment.map { PaymentAmounts.unallocated(in: $0) } ?? 0
         _roomNumber = State(initialValue: payment?.roomNumber ?? rooms.first?.roomNumber ?? users.first?.roomNumber ?? "")
         _month = State(initialValue: payment?.month ?? defaultMonth)
-        _rentFee = State(initialValue: payment.map { String(format: "%.0f", $0.rentFee) } ?? "")
-        _waterFee = State(initialValue: payment.map { String(format: "%.0f", $0.waterFee) } ?? "")
-        _electricFee = State(initialValue: payment.map { String(format: "%.0f", $0.electricFee) } ?? "")
-        _commonFee = State(initialValue: payment.map { String(format: "%.0f", $0.commonFee) } ?? "")
-        _lateFee = State(initialValue: payment.map { String(format: "%.0f", $0.lateFee) } ?? "")
-        _applianceFee = State(initialValue: payment.map { String(format: "%.0f", $0.applianceFee) } ?? "")
-        _paidAmount = State(initialValue: payment.map { String(format: "%.0f", $0.paidAmount) } ?? "")
+        _rentFee = State(initialValue: payment.map { PaymentAmounts.input($0.rentFee) } ?? "")
+        _depositFee = State(initialValue: payment.map { PaymentAmounts.input($0.depositFee) } ?? "")
+        _waterFee = State(initialValue: payment.map { PaymentAmounts.input($0.waterFee) } ?? "")
+        _electricFee = State(initialValue: payment.map { PaymentAmounts.input($0.electricFee) } ?? "")
+        _commonFee = State(initialValue: payment.map { PaymentAmounts.input($0.commonFee) } ?? "")
+        _lateFee = State(initialValue: payment.map { PaymentAmounts.input($0.lateFee) } ?? "")
+        _applianceFee = State(initialValue: payment.map { PaymentAmounts.input($0.applianceFee) } ?? "")
+        _paidAmount = State(initialValue: payment.map { PaymentAmounts.input($0.paidAmount) } ?? "")
         _method = State(initialValue: payment?.method ?? "")
         let initialSlipPaths = Self.normalizedSlipPaths(from: payment)
         _slipPath = State(initialValue: initialSlipPaths.first ?? "")
@@ -1426,7 +1495,7 @@ struct PaymentEditor: View {
                         month: clean(month).isEmpty ? defaultMonth : clean(month),
                         planText: planText,
                         amount: totalAmount,
-                        paidAmount: money(paidAmount),
+                        paidAmount: effectivePaidAmount,
                         status: statusTitle(for: paymentStatus),
                         statusColor: statusColor(for: paymentStatus),
                         slipCount: slipPaths.count
@@ -1479,11 +1548,19 @@ struct PaymentEditor: View {
                     editorCard {
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 12) {
                             moneyField("ค่าเช่า", text: $rentFee)
+                            moneyField("เงินมัดจำ", text: $depositFee)
                             moneyField("ค่าน้ำ", text: $waterFee)
                             moneyField("ค่าไฟ", text: $electricFee)
                             moneyField("ส่วนกลาง", text: $commonFee)
                             moneyField("ค่าปรับ", text: $lateFee)
                             moneyField("อุปกรณ์เสริม", text: $applianceFee)
+                        }
+
+                        if legacyAdjustment != 0 {
+                            LabeledContent("ยอดเดิมที่ยังไม่แยกรายการ") {
+                                Text(PaymentAmounts.input(legacyAdjustment) + " บาท")
+                            }
+                            .font(.custom("SukhumvitSet-Medium", size: 13))
                         }
 
                         dividerLine
@@ -1498,7 +1575,7 @@ struct PaymentEditor: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Text(totalAmount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                            Text(totalAmount.formatted(.number.precision(.fractionLength(0...2))) + " ฿")
                                 .font(.custom("SukhumvitSet-Bold", size: 22))
                                 .foregroundStyle(.primary)
                         }
@@ -1511,9 +1588,13 @@ struct PaymentEditor: View {
 
                         dividerLine
 
-                        labeledTextField("ยอดที่ชำระแล้ว", placeholder: "0", text: $paidAmount)
-                            .keyboardType(.decimalPad)
-                            .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
+                        if paymentStatus == "partial" {
+                            labeledTextField("ยอดรับชำระสะสม", placeholder: "0", text: $paidAmount)
+                                .keyboardType(.decimalPad)
+                                .decimalInput($paidAmount, maxIntegerDigits: 9, maxFractionDigits: 2)
+                        } else {
+                            LabeledContent("ยอดรับชำระสะสม", value: PaymentAmounts.input(effectivePaidAmount) + " บาท")
+                        }
                         paymentMethodQuickChoices
                         labeledTextField("ช่องทางชำระเงิน", placeholder: "เช่น เงินสด หรือ โอนผ่านธนาคาร", text: $method)
                             .limitedText($method, maxLength: 60, trimNewlines: true)
@@ -1543,6 +1624,12 @@ struct PaymentEditor: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
+            .alert("บันทึกไม่ได้", isPresented: Binding(
+                get: { validationError != nil },
+                set: { if !$0 { validationError = nil } }
+            )) {
+                Button("ตกลง", role: .cancel) { validationError = nil }
+            } message: { Text(validationError ?? "") }
             .onAppear {
                 month = Self.monthKey(from: billDate)
                 dueDate = Self.dateKey(from: dueDateValue)
@@ -1614,14 +1701,14 @@ struct PaymentEditor: View {
                 ForEach(statusOptions, id: \.0) { value, title in
                     Button {
                         paymentStatus = value
-                        if value == "paid", money(paidAmount) == 0 {
-                            paidAmount = String(format: "%.0f", totalAmount)
+                        if value == "paid" {
+                            paidAmount = PaymentAmounts.input(totalAmount)
                         } else if value == "pending" {
                             paidAmount = "0"
                             paymentDate = ""
                         }
 
-                        if value != "pending" {
+                        if value != "pending", clean(paymentDate).isEmpty {
                             paymentDateValue = Date()
                             paymentDate = Self.dateKey(from: paymentDateValue)
                         }
@@ -1701,7 +1788,10 @@ struct PaymentEditor: View {
     }
 
     private var selectedTenant: DormUser? {
-        users.first { clean($0.roomNumber) == clean(roomNumber) }
+        if let sourcePayment, sourcePayment.userId > 0 {
+            return users.first { stableLocalUserID(for: $0) == sourcePayment.userId }
+        }
+        return users.first { clean($0.roomNumber) == clean(roomNumber) && $0.status != "ย้ายออกแล้ว" }
     }
 
     private var planText: String {
@@ -1869,7 +1959,12 @@ struct PaymentEditor: View {
     }
 
     private var totalAmount: Double {
-        money(rentFee) + money(waterFee) + money(electricFee) + money(commonFee) + money(lateFee) + money(applianceFee)
+        PaymentAmounts.sum([money(rentFee), money(depositFee), money(waterFee), money(electricFee),
+                            money(commonFee), money(lateFee), money(applianceFee), legacyAdjustment])
+    }
+
+    private var effectivePaidAmount: Double {
+        paymentStatus == "paid" ? totalAmount : (paymentStatus == "pending" ? 0 : money(paidAmount))
     }
 
     private func moneyField(_ title: String, text: Binding<String>) -> some View {
@@ -1957,20 +2052,21 @@ struct PaymentEditor: View {
         month = Self.monthKey(from: billDate)
         dueDate = Self.dateKey(from: dueDateValue)
 
-        var finalStatus = paymentStatus
-        var finalPaidAmount = money(paidAmount)
+        let finalStatus = paymentStatus
+        let finalPaidAmount = effectivePaidAmount
         var finalPaymentDate = clean(paymentDate)
-        if finalStatus == "paid" {
-            finalPaidAmount = finalPaidAmount == 0 ? totalAmount : min(finalPaidAmount, totalAmount)
-        } else if finalStatus == "partial" {
-            finalPaidAmount = min(finalPaidAmount, totalAmount)
-            if finalPaidAmount <= 0 {
-                finalStatus = "pending"
+        do {
+            let fields = [rentFee, depositFee, waterFee, electricFee, commonFee, lateFee, applianceFee]
+            guard fields.allSatisfy({ clean($0).isEmpty || (Double(clean($0)).map { $0.isFinite && $0 >= 0 } ?? false) }) else {
+                throw PaymentAmounts.InvalidPayment("กรุณาตรวจสอบยอดค่าใช้จ่าย ต้องเป็นตัวเลขที่ไม่ติดลบ")
             }
-        } else {
-            finalPaidAmount = 0
-            finalPaymentDate = ""
+            try PaymentAmounts.validate(total: totalAmount, paid: finalPaidAmount, status: finalStatus,
+                                        previousPaid: sourcePayment?.paidAmount ?? 0)
+        } catch {
+            validationError = error.localizedDescription
+            return
         }
+        if finalStatus == "pending" { finalPaymentDate = "" }
 
         if finalStatus != "pending", finalPaymentDate.isEmpty {
             paymentDate = Self.dateKey(from: paymentDateValue)
@@ -1979,12 +2075,19 @@ struct PaymentEditor: View {
 
         let item = Payment(month: clean(month), amount: totalAmount)
         item.roomNumber = clean(roomNumber)
-        if let tenant = users.first(where: { $0.roomNumber == item.roomNumber }) {
+        if let sourcePayment, sourcePayment.userId > 0 {
+            item.userId = sourcePayment.userId
+        } else if let tenant = users.first(where: { $0.roomNumber == item.roomNumber && $0.status != "ย้ายออกแล้ว" }) {
             item.userId = stableLocalUserID(for: tenant)
         } else {
             item.userId = 0
         }
         item.rentFee = money(rentFee)
+        item.depositFee = money(depositFee)
+        item.waterMeterPrev = sourcePayment?.waterMeterPrev ?? 0
+        item.waterMeterCurr = sourcePayment?.waterMeterCurr ?? 0
+        item.electricMeterPrev = sourcePayment?.electricMeterPrev ?? 0
+        item.electricMeterCurr = sourcePayment?.electricMeterCurr ?? 0
         item.waterFee = money(waterFee)
         item.electricFee = money(electricFee)
         item.commonFee = money(commonFee)
@@ -1999,8 +2102,12 @@ struct PaymentEditor: View {
         item.paymentStatus = finalStatus
         item.paymentPlan = sourcePaymentPlan
         item.installmentPhase = sourceInstallmentPhase
-        onSave(item)
-        dismiss()
+        do {
+            try onSave(item)
+            dismiss()
+        } catch {
+            validationError = "บันทึกลงเครื่องไม่สำเร็จ กรุณาตรวจสอบพื้นที่ว่างแล้วลองใหม่"
+        }
     }
 
     private func thaiDateLabel(_ date: Date) -> String {
@@ -2092,10 +2199,10 @@ struct PaymentEditor: View {
 
         guard let room = rooms.first(where: { $0.roomNumber == roomNumber }),
               let type = roomTypes.first(where: { $0.name == room.roomType }) else { return }
-        rentFee = String(format: "%.0f", type.price)
-        waterFee = String(format: "%.0f", type.waterFee)
-        electricFee = String(format: "%.0f", type.electricFee)
-        commonFee = String(format: "%.0f", type.commonFee)
+        rentFee = PaymentAmounts.input(type.price)
+        waterFee = PaymentAmounts.input(type.waterFee)
+        electricFee = PaymentAmounts.input(type.electricFee)
+        commonFee = PaymentAmounts.input(type.commonFee)
     }
 
     private func money(_ value: String) -> Double {

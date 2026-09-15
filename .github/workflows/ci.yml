@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feature/local-account-isolation-v2]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend race tests and vet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-dorm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: backend-dorm/go.sum
+      - run: go test -count=1 -race ./...
+      - run: go vet ./...
+
+  ios:
+    name: iOS tests, release build and analyzer
+    runs-on: macos-26
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.5.app/Contents/Developer
+      PROJECT: DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj
+      SCHEME: DormiNetX
+      DERIVED_DATA: ${{ runner.temp }}/DormiNetXDerivedData
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select an available iPhone simulator
+        run: |
+          udid=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; devices=json.load(sys.stdin)["devices"]; print(next(device["udid"] for runtime in devices.values() for device in runtime if device["name"].startswith("iPhone")))')
+          test -n "$udid"
+          echo "SIMULATOR_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Run unit tests
+        run: |
+          xcodebuild test \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$DERIVED_DATA"
+      - name: Build Release
+        run: |
+          xcodebuild build \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Analyze
+        run: |
+          xcodebuild analyze \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO

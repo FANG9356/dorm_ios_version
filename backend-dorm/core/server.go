@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -34,6 +33,9 @@ func RunServer() {
 		}
 	}()
 	_ = godotenv.Load()
+	if err := handlers.InitializeJWTSecret(); err != nil {
+		log.Fatal(err)
+	}
 
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
@@ -59,11 +61,21 @@ func RunServer() {
 	}
 
 	os.MkdirAll("./uploads", os.ModePerm)
-	os.MkdirAll("./backups", os.ModePerm)
-	os.MkdirAll("./backups_zip", os.ModePerm)
+	os.MkdirAll("./backups", 0700)
+	os.MkdirAll("./backups_zip", 0700)
+	if err := os.Chmod("./backups", 0700); err != nil {
+		log.Printf("Failed to protect legacy backup directory: %v", err)
+	}
+	if err := os.Chmod("./backups_zip", 0700); err != nil {
+		log.Printf("Failed to protect backup directory: %v", err)
+	}
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	InitializeDatabase(db)
+	handlers.InitializeLineIntegration(db)
+	if err := handlers.MaterializeLatestLineSnapshots(db); err != nil {
+		log.Printf("LINE snapshot preparation failed: %v", err)
+	}
 	handlers.InitAdminTable(db)
 	handlers.SetupDormRoutes(db)
 
@@ -79,6 +91,7 @@ func RunServer() {
 	http.HandleFunc("/api/change-password", handlers.ChangePasswordHandler(db))
 	http.HandleFunc("/api/webhook/line", handlers.HandleLineWebhook(db))
 	http.Handle("/api/admin/push-invoices", handlers.AuthMiddleware(db, handlers.HandlePushInvoices(db)))
+	http.Handle("/api/line/invoices/send", handlers.AuthMiddleware(db, handlers.HandleSendLineInvoice(db)))
 	http.HandleFunc("/api/liff/rooms", handlers.HandleLiffRooms(db))
 	http.HandleFunc("/api/liff/verify-tenant", handlers.HandleLiffVerify(db))
 	http.HandleFunc("/api/liff/link", handlers.HandleLiffLink(db))
@@ -124,9 +137,15 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
+		}
 		if r.Method == "POST" {
 			go func() {
-				_ = handlers.PerformZipBackup(db, "./backups_zip")
+				if _, err := handlers.PerformServerBackup(db, dbPath, "./dorm_data", "./uploads", "./backups_zip"); err != nil {
+					log.Printf("Manual server backup failed: %v", err)
+				}
 			}()
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -138,27 +157,29 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
+		}
 		if r.Method == "GET" {
-			zipData, err := handlers.GenerateZipBackupData(db)
+			filePath, err := handlers.PerformServerBackup(db, dbPath, "./dorm_data", "./uploads", "./backups_zip")
 			if err != nil {
 				http.Error(w, "Backup generation failed: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			// Also save a copy on the server in "backups_zip"
-			backupZipDir := "./backups_zip"
-			_ = os.MkdirAll(backupZipDir, os.ModePerm)
-			fileName := fmt.Sprintf("backup_%s.zip", time.Now().Format("2006-01-02_15-04-05"))
-			_ = os.WriteFile(filepath.Join(backupZipDir, fileName), zipData, 0644)
-
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "name": filepath.Base(filePath)})
 		}
 	})
 
 	http.HandleFunc("/api/system/backups", func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
+			return
+		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
 			return
 		}
 		if r.Method == "GET" {
@@ -173,7 +194,7 @@ func RunServer() {
 			zFiles, err := os.ReadDir("./backups_zip")
 			if err == nil {
 				for _, f := range zFiles {
-					if !f.IsDir() && len(f.Name()) > 7 && f.Name()[:7] == "backup_" && filepath.Ext(f.Name()) == ".zip" {
+					if !f.IsDir() && utils.IsSafeBackupName(f.Name()) {
 						info, err := f.Info()
 						if err == nil {
 							list = append(list, BackupItem{
@@ -224,6 +245,10 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
+		}
 		if r.Method == "GET" {
 			absPath, err := filepath.Abs("./backups_zip")
 			if err != nil {
@@ -256,9 +281,16 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
+		}
 		if r.Method == "DELETE" {
 			os.RemoveAll("./backups_zip")
-			os.MkdirAll("./backups_zip", os.ModePerm)
+			if err := os.MkdirAll("./backups_zip", 0700); err != nil {
+				http.Error(w, "Delete failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 
 			db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES ('Backup Delete All', ?, ?)", "ลบไฟล์สำรองข้อมูลทั้งหมดในระบบ", time.Now().Format("2006-01-02 15:04:05"))
 			w.WriteHeader(http.StatusOK)
@@ -268,6 +300,10 @@ func RunServer() {
 	http.HandleFunc("/api/system/backups/download", func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
+			return
+		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
 			return
 		}
 		if r.Method == "GET" {
@@ -296,41 +332,19 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
+		}
 		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		// Parse multipart form (up to 1GB to support large backups)
-		if err := r.ParseMultipartForm(1024 << 20); err != nil {
-			http.Error(w, "Invalid upload", http.StatusBadRequest)
-			return
-		}
-		file, _, err := r.FormFile("backup_file")
-		if err != nil {
-			http.Error(w, "Invalid file", http.StatusBadRequest)
-			return
-		}
-		defer file.Close()
-		// Save uploaded file to temp file to prevent memory exhaustion on large files
-		tempFile, err := os.CreateTemp("", "restore-*.zip")
-		if err != nil {
-			http.Error(w, "Cannot create temp file", http.StatusInternalServerError)
-			return
-		}
-		tempName := tempFile.Name()
-		defer os.Remove(tempName)
-
-		if _, err := io.Copy(tempFile, file); err != nil {
-			tempFile.Close()
-			http.Error(w, "Cannot write temp file", http.StatusInternalServerError)
-			return
-		}
-		tempFile.Close()
-
-		if err := handlers.PerformRestore(db, tempName); err != nil {
-			http.Error(w, "Restore failed", http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
+		// The legacy JSON restore mutates one database and replaces uploads before
+		// the database transaction starts. It cannot safely restore a server
+		// archive containing master plus tenant databases while the process is
+		// online, so fail closed until an atomic maintenance-mode restore exists.
+		http.Error(w, `{"error":"Online server restore is disabled; validate the archive and restore during a maintenance window"}`, http.StatusNotImplemented)
 	})
 
 	http.HandleFunc("/api/system/backups/restore", func(w http.ResponseWriter, r *http.Request) {
@@ -338,19 +352,28 @@ func RunServer() {
 		if r.Method == "OPTIONS" {
 			return
 		}
-		if r.Method == "POST" {
-			name := r.URL.Query().Get("name")
-			if !utils.IsSafeBackupName(name) {
-				http.Error(w, "Invalid name", http.StatusBadRequest)
-				return
-			}
-			filePath := filepath.Join("./backups_zip", name)
-			if err := handlers.PerformRestore(db, filePath); err != nil {
-				http.Error(w, "Restore failed", http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
+		if !handlers.IsSystemOperator(r) {
+			http.Error(w, `{"error":"System operator required"}`, http.StatusForbidden)
+			return
 		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		name := r.URL.Query().Get("name")
+		if !utils.IsSafeBackupName(name) {
+			http.Error(w, "Invalid name", http.StatusBadRequest)
+			return
+		}
+		if _, err := os.Stat(filepath.Join("./backups_zip", name)); err != nil {
+			if os.IsNotExist(err) {
+				http.Error(w, "Backup not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "Cannot inspect backup", http.StatusInternalServerError)
+			}
+			return
+		}
+		http.Error(w, `{"error":"Online server restore is disabled; validate the archive and restore during a maintenance window"}`, http.StatusNotImplemented)
 	})
 
 	http.HandleFunc("/api/system/reset", func(w http.ResponseWriter, r *http.Request) {
@@ -361,12 +384,17 @@ func RunServer() {
 		if r.Method != "POST" {
 			return
 		}
-		// Only services role can reset the entire system
-		if !handlers.IsServicesRole(r) {
-			http.Error(w, `{"error": "Unauthorized: Services role required"}`, http.StatusForbidden)
+		// Only the account owner can reset the entire system.
+		if !handlers.IsSuperadmin(r) {
+			http.Error(w, `{"error": "Unauthorized: Superadmin role required"}`, http.StatusForbidden)
 			return
 		}
-		tx, err := db.Begin()
+		tenantDB, err := handlers.RequestTenantDB(r, db)
+		if err != nil {
+			http.Error(w, "Tenant database unavailable", http.StatusInternalServerError)
+			return
+		}
+		tx, err := tenantDB.Begin()
 		if err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
@@ -390,20 +418,10 @@ func RunServer() {
 			return
 		}
 
-		// Preserve admin profiles during reset
-		err = os.Rename("./uploads/profiles", "./profiles_temp")
-
-		os.RemoveAll("./uploads")
-		os.MkdirAll("./uploads", os.ModePerm)
-
-		if err == nil {
-			os.MkdirAll("./uploads/profiles", os.ModePerm)
-			os.Rename("./profiles_temp", "./uploads/profiles")
-		}
-
 		w.WriteHeader(http.StatusOK)
 	})
 
+	setupLiffHandler()
 	setupStaticHandler()
 
 	// [เพิ่มใหม่] Reverse Proxy สำหรับส่งต่อคำสั่งเกี่ยวกับ WiFi ไปยัง backend-network (Port 8911) แบบซ่อนหลังบ้าน
@@ -477,12 +495,26 @@ func InitializeDatabase(db *sql.DB) {
 		token TEXT,
 		expires_at DATETIME
 	)`)
+	// One active OTP per normalized email. Remove legacy duplicates before
+	// enforcing the invariant so concurrent requests cannot leave many valid
+	// reset codes for one account.
+	db.Exec(`DELETE FROM password_resets
+		WHERE id NOT IN (SELECT MAX(id) FROM password_resets GROUP BY LOWER(email))`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_password_resets_email
+		ON password_resets(email COLLATE NOCASE)`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		admin_id INTEGER,
 		token TEXT UNIQUE,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS auth_rate_limits (
+		scope TEXT NOT NULL,
+		identifier TEXT NOT NULL,
+		attempts INTEGER NOT NULL,
+		expires_at TEXT NOT NULL,
+		PRIMARY KEY (scope, identifier)
 	)`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS sync_snapshots (

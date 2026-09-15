@@ -39,12 +39,8 @@ struct RoomsTabView: View {
         .padding(.horizontal, 20)
         .sheet(item: $movingTenant) { tenant in
             MoveTenantRoomSheet(tenant: tenant, rooms: vacantRooms(including: tenant.roomNumber)) { newRoomNumber in
-                let oldRoomNumber = tenant.roomNumber
-                tenant.roomNumber = newRoomNumber
-                tenant.isDirty = true
-                tenant.lastUpdated = Date()
-                modelContext.insert(LocalSystemLog(action: "ย้ายห้อง", details: "\(tenant.firstName) \(tenant.lastName) จากห้อง \(oldRoomNumber) ไปห้อง \(newRoomNumber)"))
-                saveAndPush()
+                try RoomTransferService.move(tenant, to: newRoomNumber, in: modelContext)
+                Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
             }
             .iphoneSheetStyle()
         }
@@ -149,11 +145,12 @@ private struct MoveTenantRoomSheet: View {
     @Environment(\.dismiss) private var dismiss
     let tenant: DormUser
     let rooms: [Room]
-    let onSave: (String) -> Void
+    let onSave: (String) throws -> Void
+    @State private var errorMessage: String?
     @State private var selectedRoom: String
     @State private var selectedDetent: PresentationDetent = .medium
 
-    init(tenant: DormUser, rooms: [Room], onSave: @escaping (String) -> Void) {
+    init(tenant: DormUser, rooms: [Room], onSave: @escaping (String) throws -> Void) {
         self.tenant = tenant
         self.rooms = rooms
         self.onSave = onSave
@@ -163,6 +160,7 @@ private struct MoveTenantRoomSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
                 Section("ลูกบ้าน") {
                     Text("\(tenant.firstName) \(tenant.lastName)")
                     Text("ห้องปัจจุบัน \(tenant.roomNumber)")
@@ -186,8 +184,10 @@ private struct MoveTenantRoomSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
-                        onSave(selectedRoom)
-                        dismiss()
+                        do {
+                            try onSave(selectedRoom)
+                            dismiss()
+                        } catch { errorMessage = error.localizedDescription }
                     }
                     .fontWeight(.semibold)
                     .disabled(selectedRoom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

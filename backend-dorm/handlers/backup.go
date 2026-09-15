@@ -3,9 +3,11 @@ package handlers
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"dorm_os/models"
 	"dorm_os/utils"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,7 +33,7 @@ func PerformRestore(db *sql.DB, filePath string) error {
 		RoomConditions []models.RoomCondition `json:"room_conditions"`
 		DepositRefunds []models.DepositRefund `json:"deposit_refunds"`
 		Maintenances   []models.Maintenance   `json:"maintenances"`
-		Admins []struct {
+		Admins         []struct {
 			ID           int    `json:"id"`
 			Username     string `json:"username"`
 			Password     string `json:"password"`
@@ -193,7 +195,7 @@ func StartBackupScheduler(db *sql.DB, dbPath, uploadsDir, backupBaseDir string) 
 
 		log.Println("[Backup Scheduler] Starting automatic backup...")
 
-		if err := PerformZipBackup(db, "./backups_zip"); err != nil {
+		if _, err := PerformServerBackup(db, dbPath, "./dorm_data", uploadsDir, "./backups_zip"); err != nil {
 			log.Printf("[Backup Scheduler] Error performing ZIP backup: %v", err)
 		} else {
 			log.Println("[Backup Scheduler] Automatic ZIP backup completed successfully.")
@@ -201,9 +203,198 @@ func StartBackupScheduler(db *sql.DB, dbPath, uploadsDir, backupBaseDir string) 
 	}
 }
 
+type serverBackupFile struct {
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+	Size   int64  `json:"size"`
+}
+
+type serverBackupManifest struct {
+	FormatVersion int                `json:"format_version"`
+	CreatedAt     string             `json:"created_at"`
+	Files         []serverBackupFile `json:"files"`
+}
+
+// PerformServerBackup creates consistent SQLite snapshots of the master and
+// every tenant database. It is deliberately separate from the legacy JSON
+// export, which expects users/payments in the master DB and cannot represent a
+// multi-tenant installation.
+func PerformServerBackup(master *sql.DB, masterPath, tenantDir, uploadsDir, backupDir string) (string, error) {
+	if err := os.MkdirAll(backupDir, 0700); err != nil {
+		return "", fmt.Errorf("create server backup directory: %w", err)
+	}
+	if err := os.Chmod(backupDir, 0700); err != nil {
+		return "", fmt.Errorf("protect server backup directory: %w", err)
+	}
+	stagingDir, err := os.MkdirTemp("", "dorminet-server-backup-*")
+	if err != nil {
+		return "", fmt.Errorf("create backup staging directory: %w", err)
+	}
+	defer os.RemoveAll(stagingDir)
+
+	masterCopy := filepath.Join(stagingDir, "master.db")
+	if err := snapshotSQLite(master, masterCopy); err != nil {
+		return "", fmt.Errorf("snapshot master database: %w", err)
+	}
+	databaseFiles := []struct {
+		source  string
+		archive string
+	}{{source: masterCopy, archive: "databases/master.db"}}
+
+	tenantEntries, err := os.ReadDir(tenantDir)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("list tenant databases: %w", err)
+	}
+	for _, entry := range tenantEntries {
+		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "tenant_") || filepath.Ext(entry.Name()) != ".db" {
+			continue
+		}
+		sourcePath := filepath.Join(tenantDir, entry.Name())
+		tenantDB, openErr := sql.Open("sqlite3", sourcePath+"?_busy_timeout=5000")
+		if openErr != nil {
+			return "", fmt.Errorf("open tenant database %s: %w", entry.Name(), openErr)
+		}
+		copyPath := filepath.Join(stagingDir, entry.Name())
+		copyErr := snapshotSQLite(tenantDB, copyPath)
+		closeErr := tenantDB.Close()
+		if copyErr != nil {
+			return "", fmt.Errorf("snapshot tenant database %s: %w", entry.Name(), copyErr)
+		}
+		if closeErr != nil {
+			return "", fmt.Errorf("close tenant database %s: %w", entry.Name(), closeErr)
+		}
+		databaseFiles = append(databaseFiles, struct {
+			source  string
+			archive string
+		}{source: copyPath, archive: filepath.ToSlash(filepath.Join("databases", entry.Name()))})
+	}
+
+	createdAt := time.Now().UTC()
+	finalName := fmt.Sprintf("server_backup_%s.zip", createdAt.Format("2006-01-02_15-04-05"))
+	finalPath := filepath.Join(backupDir, finalName)
+	temporary, err := os.CreateTemp(backupDir, ".server-backup-*.tmp")
+	if err != nil {
+		return "", fmt.Errorf("create temporary backup archive: %w", err)
+	}
+	temporaryPath := temporary.Name()
+	committed := false
+	defer func() {
+		temporary.Close()
+		if !committed {
+			os.Remove(temporaryPath)
+		}
+	}()
+	if err := temporary.Chmod(0600); err != nil {
+		return "", fmt.Errorf("protect backup archive: %w", err)
+	}
+
+	zipWriter := zip.NewWriter(temporary)
+	manifest := serverBackupManifest{FormatVersion: 1, CreatedAt: createdAt.Format(time.RFC3339)}
+	for _, file := range databaseFiles {
+		item, addErr := addServerBackupFile(zipWriter, file.source, file.archive)
+		if addErr != nil {
+			zipWriter.Close()
+			return "", addErr
+		}
+		manifest.Files = append(manifest.Files, item)
+	}
+	if info, statErr := os.Stat(uploadsDir); statErr == nil && info.IsDir() {
+		walkErr := filepath.Walk(uploadsDir, func(path string, info os.FileInfo, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if !info.Mode().IsRegular() {
+				return nil
+			}
+			relative, relErr := filepath.Rel(uploadsDir, path)
+			if relErr != nil {
+				return relErr
+			}
+			item, addErr := addServerBackupFile(zipWriter, path, filepath.ToSlash(filepath.Join("uploads", relative)))
+			if addErr == nil {
+				manifest.Files = append(manifest.Files, item)
+			}
+			return addErr
+		})
+		if walkErr != nil {
+			zipWriter.Close()
+			return "", fmt.Errorf("archive uploads: %w", walkErr)
+		}
+	}
+	manifestData, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		zipWriter.Close()
+		return "", fmt.Errorf("encode backup manifest: %w", err)
+	}
+	manifestEntry, err := zipWriter.Create("manifest.json")
+	if err != nil {
+		zipWriter.Close()
+		return "", fmt.Errorf("create backup manifest: %w", err)
+	}
+	if _, err = manifestEntry.Write(manifestData); err != nil {
+		zipWriter.Close()
+		return "", fmt.Errorf("write backup manifest: %w", err)
+	}
+	if err = zipWriter.Close(); err != nil {
+		return "", fmt.Errorf("close backup archive: %w", err)
+	}
+	if err = temporary.Sync(); err != nil {
+		return "", fmt.Errorf("sync backup archive: %w", err)
+	}
+	if err = temporary.Close(); err != nil {
+		return "", fmt.Errorf("close backup file: %w", err)
+	}
+	if err = os.Rename(temporaryPath, finalPath); err != nil {
+		return "", fmt.Errorf("commit backup archive: %w", err)
+	}
+	committed = true
+	log.Printf("[Backup Scheduler] Multi-tenant backup saved to %s", finalPath)
+	return finalPath, nil
+}
+
+func snapshotSQLite(db *sql.DB, destination string) error {
+	if _, err := db.Exec("VACUUM INTO ?", destination); err != nil {
+		return err
+	}
+	check, err := sql.Open("sqlite3", destination+"?mode=ro")
+	if err != nil {
+		return err
+	}
+	defer check.Close()
+	var result string
+	if err = check.QueryRow("PRAGMA quick_check").Scan(&result); err != nil {
+		return err
+	}
+	if result != "ok" {
+		return fmt.Errorf("SQLite integrity check failed: %s", result)
+	}
+	return nil
+}
+
+func addServerBackupFile(writer *zip.Writer, source, archivePath string) (serverBackupFile, error) {
+	input, err := os.Open(source)
+	if err != nil {
+		return serverBackupFile{}, fmt.Errorf("open backup input %s: %w", archivePath, err)
+	}
+	defer input.Close()
+	entry, err := writer.Create(archivePath)
+	if err != nil {
+		return serverBackupFile{}, fmt.Errorf("create backup entry %s: %w", archivePath, err)
+	}
+	hash := sha256.New()
+	size, err := io.Copy(io.MultiWriter(entry, hash), input)
+	if err != nil {
+		return serverBackupFile{}, fmt.Errorf("write backup entry %s: %w", archivePath, err)
+	}
+	return serverBackupFile{Path: archivePath, SHA256: hex.EncodeToString(hash.Sum(nil)), Size: size}, nil
+}
+
 func PerformZipBackup(db *sql.DB, backupZipDir string) error {
-	if err := os.MkdirAll(backupZipDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(backupZipDir, 0700); err != nil {
 		return fmt.Errorf("failed to create zip backup directory: %w", err)
+	}
+	if err := os.Chmod(backupZipDir, 0700); err != nil {
+		return fmt.Errorf("failed to protect zip backup directory: %w", err)
 	}
 
 	zipData, err := GenerateZipBackupData(db)
@@ -214,7 +405,7 @@ func PerformZipBackup(db *sql.DB, backupZipDir string) error {
 	fileName := fmt.Sprintf("backup_%s.zip", time.Now().Format("2006-01-02_15-04-05"))
 	filePath := filepath.Join(backupZipDir, fileName)
 
-	if err := os.WriteFile(filePath, zipData, 0644); err != nil {
+	if err := os.WriteFile(filePath, zipData, 0600); err != nil {
 		return fmt.Errorf("failed to write zip backup file: %w", err)
 	}
 
@@ -231,7 +422,7 @@ func GenerateZipBackupData(db *sql.DB) ([]byte, error) {
 		RoomConditions []models.RoomCondition `json:"room_conditions"`
 		DepositRefunds []models.DepositRefund `json:"deposit_refunds"`
 		Maintenances   []models.Maintenance   `json:"maintenances"`
-		Admins []struct {
+		Admins         []struct {
 			ID           int    `json:"id"`
 			Username     string `json:"username"`
 			Password     string `json:"password"`

@@ -49,5 +49,5 @@ func stableLocalUserID(for user: DormUser) -> Int {
     let value = user.id.uuidString.unicodeScalars.reduce(Int32(17)) { result, scalar in
         result &* 31 &+ Int32(scalar.value)
     }
-    return max(1, Int(abs(value)))
+    return max(1, abs(Int(value)))
 }

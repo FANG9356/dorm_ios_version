@@ -9,95 +9,82 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/resend/resend-go/v3"
-	"golang.org/x/crypto/bcrypt"
-)
-
-// Rate limiter for OTP brute-force protection
-var (
-	otpAttempts   = make(map[string]int)
-	otpLockUntil  = make(map[string]time.Time)
-	otpAttemptsMu sync.Mutex
 )
 
 const maxOTPAttempts = 5
 const otpLockDuration = 15 * time.Minute
-
-// Rate limiter for OTP request flood protection (ป้องกันการขอ OTP รัวๆ)
-var (
-	otpRequestCount = make(map[string]int)
-	otpRequestLock  = make(map[string]time.Time)
-	otpRequestMu    sync.Mutex
-)
-
 const maxOTPRequests = 3
 const otpRequestCooldown = 15 * time.Minute
 
-func checkOTPRequestLimit(email string) bool {
-	otpRequestMu.Lock()
-	defer otpRequestMu.Unlock()
-	if lockTime, ok := otpRequestLock[email]; ok && time.Now().Before(lockTime) {
-		return false
-	}
-	// Reset if cooldown expired
-	if lockTime, ok := otpRequestLock[email]; ok && time.Now().After(lockTime) {
-		delete(otpRequestCount, email)
-		delete(otpRequestLock, email)
-	}
-	return true
+func ensureAuthRateLimitTable(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS auth_rate_limits (
+		scope TEXT NOT NULL,
+		identifier TEXT NOT NULL,
+		attempts INTEGER NOT NULL,
+		expires_at TEXT NOT NULL,
+		PRIMARY KEY (scope, identifier)
+	)`)
+	return err
 }
 
-func recordOTPRequest(email string) bool {
-	otpRequestMu.Lock()
-	defer otpRequestMu.Unlock()
-	otpRequestCount[email]++
-	if otpRequestCount[email] >= maxOTPRequests {
-		otpRequestLock[email] = time.Now().Add(otpRequestCooldown)
-		otpRequestCount[email] = 0
-		return true // locked
+// recordAuthRateLimit uses a single SQLite upsert so limits survive restarts
+// and are shared by every process using the same master database.
+func recordAuthRateLimit(db *sql.DB, scope, identifier string, window time.Duration) (int, error) {
+	if err := ensureAuthRateLimitTable(db); err != nil {
+		return 0, err
 	}
-	return false
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	expiresAt := time.Now().UTC().Add(window).Format(time.RFC3339Nano)
+	if _, err := db.Exec("DELETE FROM auth_rate_limits WHERE expires_at <= ?", now); err != nil {
+		return 0, err
+	}
+	var attempts int
+	err := db.QueryRow(`
+		INSERT INTO auth_rate_limits (scope, identifier, attempts, expires_at)
+		VALUES (?, ?, 1, ?)
+		ON CONFLICT(scope, identifier) DO UPDATE SET
+			attempts = CASE WHEN auth_rate_limits.expires_at <= ? THEN 1 ELSE auth_rate_limits.attempts + 1 END,
+			expires_at = CASE WHEN auth_rate_limits.expires_at <= ? THEN excluded.expires_at ELSE auth_rate_limits.expires_at END
+		RETURNING attempts
+	`, scope, identifier, expiresAt, now, now).Scan(&attempts)
+	return attempts, err
 }
 
-func checkOTPRateLimit(email string) bool {
-	otpAttemptsMu.Lock()
-	defer otpAttemptsMu.Unlock()
-	if lockTime, ok := otpLockUntil[email]; ok && time.Now().Before(lockTime) {
-		return false // still locked
+func authRateLimitLocked(db *sql.DB, scope, identifier string, threshold int) (bool, error) {
+	if err := ensureAuthRateLimitTable(db); err != nil {
+		return false, err
 	}
-	return true
+	var attempts int
+	err := db.QueryRow(`
+		SELECT attempts FROM auth_rate_limits
+		WHERE scope = ? AND identifier = ? AND expires_at > ?
+	`, scope, identifier, time.Now().UTC().Format(time.RFC3339Nano)).Scan(&attempts)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return attempts >= threshold, err
 }
 
-func recordOTPFailure(email string) bool {
-	otpAttemptsMu.Lock()
-	defer otpAttemptsMu.Unlock()
-	otpAttempts[email]++
-	if otpAttempts[email] >= maxOTPAttempts {
-		otpLockUntil[email] = time.Now().Add(otpLockDuration)
-		otpAttempts[email] = 0
-		return true // locked now
+func clearOTPAttempts(db *sql.DB, email string) error {
+	if err := ensureAuthRateLimitTable(db); err != nil {
+		return err
 	}
-	return false
-}
-
-func clearOTPAttempts(email string) {
-	otpAttemptsMu.Lock()
-	defer otpAttemptsMu.Unlock()
-	delete(otpAttempts, email)
-	delete(otpLockUntil, email)
+	_, err := db.Exec("DELETE FROM auth_rate_limits WHERE scope = 'otp_failure' AND identifier = ?", email)
+	return err
 }
 
 // generateOTP creates a random 6-digit string
-func generateOTP() string {
+func generateOTP() (string, error) {
 	max := big.NewInt(1000000)
 	n, err := rand.Int(rand.Reader, max)
 	if err != nil {
-		return "123456" // fallback if crypto rand fails
+		return "", err
 	}
-	return fmt.Sprintf("%06d", n.Int64())
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
 // sendEmailOTP sends an email using Resend API
@@ -198,13 +185,27 @@ func SetupAuthResetRoutes(db *sql.DB) {
 		var req struct {
 			Email string `json:"email"`
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
 			http.Error(w, `{"error": "กรุณาระบุอีเมล"}`, http.StatusBadRequest)
 			return
 		}
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if !isValidEmail(req.Email) {
+			http.Error(w, `{"error":"กรุณาระบุอีเมล"}`, http.StatusBadRequest)
+			return
+		}
 
-		// Rate limit: ป้องกันการขอ OTP รัวๆ (สูงสุด 3 ครั้ง / 15 นาที)
-		if !checkOTPRequestLimit(req.Email) {
+		if !allowRequestAttempt(r, "forgot-password-ip", 20, time.Hour) {
+			http.Error(w, `{"error": "คุณขอรหัส OTP บ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่"}`, http.StatusTooManyRequests)
+			return
+		}
+		attempts, err := recordAuthRateLimit(db, "otp_request", req.Email, otpRequestCooldown)
+		if err != nil {
+			http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
+			return
+		}
+		if attempts > maxOTPRequests {
 			http.Error(w, `{"error": "คุณขอรหัส OTP บ่อยเกินไป กรุณารอ 15 นาทีแล้วลองใหม่"}`, http.StatusTooManyRequests)
 			return
 		}
@@ -214,25 +215,24 @@ func SetupAuthResetRoutes(db *sql.DB) {
 
 		// Check if email exists in admins table
 		var id int
-		err := db.QueryRow("SELECT id FROM admins WHERE email = ?", req.Email).Scan(&id)
+		err = db.QueryRow("SELECT id FROM admins WHERE email = ?", req.Email).Scan(&id)
 		if err != nil {
 			// Email not found — but respond with same message to prevent enumeration
-			recordOTPRequest(req.Email)
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"message": successMsg})
 			return
 		}
 
-		recordOTPRequest(req.Email)
-
-		otp := generateOTP()
+		otp, err := generateOTP()
+		if err != nil {
+			http.Error(w, `{"error":"สร้างรหัสยืนยันไม่สำเร็จ กรุณาลองใหม่"}`, http.StatusInternalServerError)
+			return
+		}
 		expiresAt := time.Now().Add(15 * time.Minute).Format(time.RFC3339)
 
-		// Delete old OTPs for this email to prevent spam
-		db.Exec("DELETE FROM password_resets WHERE email = ?", req.Email)
-
-		// Insert new OTP
-		_, err = db.Exec("INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)", req.Email, otp, expiresAt)
+		// The unique email index plus one statement guarantees that concurrent
+		// requests leave exactly one active OTP for the account.
+		_, err = db.Exec("INSERT OR REPLACE INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)", req.Email, otp, expiresAt)
 		if err != nil {
 			http.Error(w, `{"error": "ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
 			return
@@ -262,22 +262,36 @@ func SetupAuthResetRoutes(db *sql.DB) {
 			Email string `json:"email"`
 			OTP   string `json:"otp"`
 		}
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" || req.OTP == "" {
 			http.Error(w, `{"error": "ข้อมูลไม่ครบถ้วน"}`, http.StatusBadRequest)
 			return
 		}
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if !isValidEmail(req.Email) || len(req.OTP) != 6 {
+			http.Error(w, `{"error":"ข้อมูลไม่ถูกต้อง"}`, http.StatusBadRequest)
+			return
+		}
 
 		// Rate limit check
-		if !checkOTPRateLimit(req.Email) {
+		locked, err := authRateLimitLocked(db, "otp_failure", req.Email, maxOTPAttempts)
+		if err != nil {
+			http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
+			return
+		}
+		if locked {
 			http.Error(w, `{"error": "กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาทีแล้วลองใหม่"}`, http.StatusTooManyRequests)
 			return
 		}
 
 		// Verify OTP
 		var expiresAtStr string
-		err := db.QueryRow("SELECT expires_at FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP).Scan(&expiresAtStr)
+		err = db.QueryRow("SELECT expires_at FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP).Scan(&expiresAtStr)
 		if err != nil {
-			if recordOTPFailure(req.Email) {
+			attempts, rateErr := recordAuthRateLimit(db, "otp_failure", req.Email, otpLockDuration)
+			if rateErr != nil {
+				http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
+			} else if attempts >= maxOTPAttempts {
 				http.Error(w, `{"error": "กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาทีแล้วลองใหม่"}`, http.StatusTooManyRequests)
 			} else {
 				http.Error(w, `{"error": "รหัส OTP ไม่ถูกต้อง"}`, http.StatusUnauthorized)
@@ -293,64 +307,13 @@ func SetupAuthResetRoutes(db *sql.DB) {
 			return
 		}
 
-		clearOTPAttempts(req.Email)
+		if err := clearOTPAttempts(db, req.Email); err != nil {
+			http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "รหัส OTP ถูกต้อง"})
 	})
 
-	http.HandleFunc("/api/reset-password", func(w http.ResponseWriter, r *http.Request) {
-		utils.EnableCORS(w)
-		if r.Method == "OPTIONS" {
-			return
-		}
-		if r.Method != "POST" {
-			http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			Email       string `json:"email"`
-			OTP         string `json:"otp"`
-			NewPassword string `json:"new_password"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" || req.OTP == "" || req.NewPassword == "" {
-			http.Error(w, `{"error": "ข้อมูลไม่ครบถ้วน"}`, http.StatusBadRequest)
-			return
-		}
-
-		// Verify OTP again just to be safe
-		var expiresAtStr string
-		err := db.QueryRow("SELECT expires_at FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP).Scan(&expiresAtStr)
-		if err != nil {
-			http.Error(w, `{"error": "รหัส OTP ไม่ถูกต้อง"}`, http.StatusUnauthorized)
-			return
-		}
-
-		expiresAt, _ := time.Parse(time.RFC3339, expiresAtStr)
-
-		if time.Now().After(expiresAt) {
-			db.Exec("DELETE FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP)
-			http.Error(w, `{"error": "รหัส OTP หมดอายุแล้ว กรุณาขอใหม่"}`, http.StatusUnauthorized)
-			return
-		}
-
-		// Valid OTP, update password
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
-		if err != nil {
-			http.Error(w, `{"error": "ระบบขัดข้องในการเข้ารหัสผ่าน"}`, http.StatusInternalServerError)
-			return
-		}
-
-		_, err = db.Exec("UPDATE admins SET password = ?, must_change_password = 0 WHERE email = ?", string(hashedPassword), req.Email)
-		if err != nil {
-			http.Error(w, `{"error": "ไม่สามารถอัปเดตรหัสผ่านได้"}`, http.StatusInternalServerError)
-			return
-		}
-
-		// Clean up used OTP
-		db.Exec("DELETE FROM password_resets WHERE email = ?", req.Email)
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "รีเซ็ตรหัสผ่านสำเร็จ คุณสามารถเข้าสู่ระบบด้วยรหัสใหม่ได้ทันที"})
-	})
+	http.HandleFunc("/api/reset-password", HandlePasswordReset(db))
 }

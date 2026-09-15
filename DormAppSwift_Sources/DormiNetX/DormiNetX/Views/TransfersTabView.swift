@@ -9,6 +9,7 @@ struct TransfersTabView: View {
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
     @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
     @State private var editingPayment: Payment?
+    @State private var ledgerErrorMessage: String?
 
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
     private var paymentsWithEvidence: [Payment] {
@@ -51,28 +52,44 @@ struct TransfersTabView: View {
         .padding(.horizontal, 20)
         .sheet(item: $editingPayment) { payment in
             PaymentEditor(payment: payment, users: users, rooms: rooms, roomTypes: roomTypes, defaultMonth: payment.month) { draft in
-                payment.userId = draft.userId
-                payment.roomNumber = draft.roomNumber
-                payment.rentFee = draft.rentFee
-                payment.waterFee = draft.waterFee
-                payment.electricFee = draft.electricFee
-                payment.commonFee = draft.commonFee
-                payment.lateFee = draft.lateFee
-                payment.applianceFee = draft.applianceFee
-                payment.amount = draft.amount
-                payment.month = draft.month
-                payment.paymentDate = draft.paymentDate
-                payment.method = draft.method
-                payment.slipPath = draft.slipPath
-                payment.slipPathArray = draft.slipPathArray
-                payment.dueDate = draft.dueDate
-                payment.paymentStatus = draft.paymentStatus
-                payment.paidAmount = draft.paidAmount
-                payment.lastUpdated = Date()
-                payment.isDirty = true
-                saveAndPush()
+                do {
+                    payment.userId = draft.userId
+                    payment.roomNumber = draft.roomNumber
+                    payment.rentFee = draft.rentFee
+                    payment.depositFee = draft.depositFee
+                    payment.waterFee = draft.waterFee
+                    payment.electricFee = draft.electricFee
+                    payment.commonFee = draft.commonFee
+                    payment.lateFee = draft.lateFee
+                    payment.applianceFee = draft.applianceFee
+                    payment.amount = draft.amount
+                    payment.month = draft.month
+                    payment.paymentDate = draft.paymentDate
+                    payment.method = draft.method
+                    payment.slipPath = draft.slipPath
+                    payment.slipPathArray = draft.slipPathArray
+                    payment.dueDate = draft.dueDate
+                    payment.paymentStatus = draft.paymentStatus
+                    payment.paidAmount = draft.paidAmount
+                    payment.lastUpdated = Date()
+                    payment.isDirty = true
+                    _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "transfer-editor")
+                    try modelContext.save()
+                } catch {
+                    modelContext.rollback()
+                    throw error
+                }
+                Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
             }
             .iphoneSheetStyle()
+        }
+        .alert("ไม่สามารถแก้ประวัติรับเงิน", isPresented: Binding(
+            get: { ledgerErrorMessage != nil },
+            set: { if !$0 { ledgerErrorMessage = nil } }
+        )) {
+            Button("ตกลง", role: .cancel) { ledgerErrorMessage = nil }
+        } message: {
+            Text(ledgerErrorMessage ?? "")
         }
     }
 
@@ -82,10 +99,26 @@ struct TransfersTabView: View {
         payment.paymentDate = currentDateString()
         payment.lastUpdated = Date()
         payment.isDirty = true
-        saveAndPush()
+        do {
+            _ = try PaymentLedger.recordUnrecordedBalance(for: payment, in: modelContext, source: "slip-approval")
+            try modelContext.save()
+            Task { await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext) }
+        } catch {
+            modelContext.rollback()
+            ledgerErrorMessage = error.localizedDescription
+        }
     }
 
     private func reject(_ payment: Payment) {
+        do {
+            guard try PaymentLedger.recordedTotal(for: payment.id, in: modelContext) == 0 else {
+                ledgerErrorMessage = "รายการนี้รับเงินและออกใบเสร็จแล้ว ต้องใช้ขั้นตอนคืนเงินหรือปรับยอดแทนการปฏิเสธสลิป"
+                return
+            }
+        } catch {
+            ledgerErrorMessage = error.localizedDescription
+            return
+        }
         payment.paymentStatus = "pending"
         payment.paidAmount = 0
         payment.lastUpdated = Date()
