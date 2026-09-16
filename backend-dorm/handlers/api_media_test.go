@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -80,6 +82,10 @@ func TestSignedLineMediaURLAndHandler(t *testing.T) {
 	HandleSignedLineMedia()(recorder, req)
 	if recorder.Code != http.StatusOK || recorder.Body.String() != "private-receipt" {
 		t.Fatalf("valid signed media response = %d %q", recorder.Code, recorder.Body.String())
+	}
+	wantDigest := sha256.Sum256([]byte("private-receipt"))
+	if got := recorder.Header().Get("X-Content-SHA256"); got != hex.EncodeToString(wantDigest[:]) {
+		t.Fatalf("media digest = %q; want %q", got, hex.EncodeToString(wantDigest[:]))
 	}
 
 	tampered := *parsed

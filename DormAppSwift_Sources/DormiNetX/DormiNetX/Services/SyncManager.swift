@@ -770,13 +770,30 @@ class SyncManager: ObservableObject {
                   let localURL = SlipImageManager.url(for: fileName),
                   !FileManager.default.fileExists(atPath: localURL.path) else { continue }
             do {
-                let data = try await api.fetchTenantMedia(storedPath: fileName)
+				let data = try await fetchTenantMediaWithRetry(fileName: fileName)
                 _ = try SlipImageManager.restoreImageData(data, fileName: fileName)
             } catch {
                 // Records remain usable even if an optional image cannot be downloaded.
             }
         }
     }
+
+	private func fetchTenantMediaWithRetry(fileName: String) async throws -> Data {
+		var lastError: Error = URLError(.unknown)
+		for attempt in 0..<3 {
+			do {
+				return try await api.fetchTenantMedia(storedPath: fileName)
+			} catch is CancellationError {
+				throw CancellationError()
+			} catch {
+				lastError = error
+				if attempt < 2 {
+					try await Task.sleep(for: .milliseconds(250 * (attempt + 1)))
+				}
+			}
+		}
+		throw lastError
+	}
 
     private func mediaCandidates(from snapshot: SyncEnvelope) -> [String] {
         var paths = snapshot.tenants.flatMap { $0.bookingSlips }

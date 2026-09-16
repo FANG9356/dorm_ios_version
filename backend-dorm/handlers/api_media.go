@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -121,7 +122,17 @@ func servePrivateUpload(w http.ResponseWriter, r *http.Request, fileName, cacheC
 		http.Error(w, "Media not found", http.StatusNotFound)
 		return
 	}
+	digest := sha256.New()
+	if _, err := io.Copy(digest, file); err != nil {
+		http.Error(w, "Media unavailable", http.StatusInternalServerError)
+		return
+	}
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		http.Error(w, "Media unavailable", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Cache-Control", cacheControl)
+	w.Header().Set("X-Content-SHA256", hex.EncodeToString(digest.Sum(nil)))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	http.ServeContent(w, r, fileName, info.ModTime(), file)
 }

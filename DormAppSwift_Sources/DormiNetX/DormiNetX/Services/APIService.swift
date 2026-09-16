@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 class APIService {
     static let shared = APIService()
@@ -278,6 +279,14 @@ class APIService {
               data.count <= 15 * 1_024 * 1_024 else {
             throw URLError(.badServerResponse)
         }
+		guard let expectedDigest = httpResponse.value(forHTTPHeaderField: "X-Content-SHA256")?.lowercased(),
+		      expectedDigest.count == 64 else {
+			throw URLError(.cannotDecodeRawData)
+		}
+		let actualDigest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+		guard actualDigest == expectedDigest else {
+			throw URLError(.cannotDecodeRawData)
+		}
         return data
     }
 
