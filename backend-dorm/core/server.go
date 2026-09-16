@@ -69,7 +69,8 @@ func RunServer() {
 	if err := os.Chmod("./backups_zip", 0700); err != nil {
 		log.Printf("Failed to protect backup directory: %v", err)
 	}
-	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+	http.HandleFunc("/uploads/", handlers.HandleLegacyPublicUploadsDisabled)
+	http.HandleFunc("/line-media/", handlers.HandleSignedLineMedia())
 
 	InitializeDatabase(db)
 	handlers.InitializeLineIntegration(db)

@@ -168,7 +168,7 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 								if baseURL == "" {
 									baseURL = "https://" + r.Host
 								}
-								imageURL = fmt.Sprintf("%s/uploads/%s", baseURL, dbSlipPath)
+								imageURL, _ = SignedLineMediaURL(baseURL, dbSlipPath, time.Now())
 							}
 							PushReceiptFlexMessage(lineUserID, fmt.Sprintf("%v", id), roomNumber, dateStr, cost, imageURL)
 						}

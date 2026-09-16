@@ -291,7 +291,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 						if baseURL == "" {
 							baseURL = "https://" + r.Host // Fallback
 						}
-						imageURL = fmt.Sprintf("%s/uploads/%s", baseURL, slipPathStr)
+						imageURL, _ = SignedLineMediaURL(baseURL, slipPathStr, time.Now())
 					}
 					go PushReceiptFlexMessage(lineUserID, paymentID, roomNumber, dateStr, amount, imageURL)
 				}
@@ -390,10 +390,8 @@ func SetupPaymentRoutes(db *sql.DB) {
 						if baseURL == "" {
 							baseURL = "https://" + r.Host // Fallback
 						}
-						imageURL = fmt.Sprintf("%s/uploads/%s", baseURL, slipPathStr)
+						imageURL, _ = SignedLineMediaURL(baseURL, slipPathStr, time.Now())
 					}
-					fmt.Println("Generated Image URL for LINE:", imageURL)
-					db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES ('DEBUG_URL', ?, ?)", imageURL, time.Now().Format("2006-01-02 15:04:05"))
 					go PushReceiptFlexMessage(lineUserID, fmt.Sprintf("%d", payload.PaymentID), roomNumber, dateStr, amount, imageURL)
 				} else {
 					fmt.Println("Error scanning user or empty lineUserID:", errScan, "lineUserID:", lineUserID)
