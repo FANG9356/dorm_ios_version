@@ -8,7 +8,7 @@
 
 > สรุปสถานะล่าสุดแบบ “ทำแล้ว / ทำบางส่วน / ยังเหลือ” อยู่ที่ [CURRENT_STATUS_2026-09-16.md](CURRENT_STATUS_2026-09-16.md)
 
-> อัปเดต 16 กันยายน 2569: LINE/LIFF, LINE → app media/snapshot sync, same-version self-healing, dirty-record rebase และ maintenance status notification ถูก deploy แล้ว ผลทดสอบปัจจุบัน iOS 44/44 และ backend race/vet ผ่าน ระบบยังเหลือ secret rotation, UAT สองเครื่อง, media ทุก flow, full financial refund/void ledger และ atomic online restore
+> อัปเดต 16 กันยายน 2569: LINE/LIFF, LINE → app media/snapshot sync, same-version self-healing, dirty-record rebase และ maintenance status notification ถูก deploy แล้ว ผลทดสอบปัจจุบัน iOS 52/52 และ backend race/vet ผ่าน ระบบยังเหลือ secret rotation, UAT สองเครื่อง, media ทุก flow, full financial refund/void ledger และ atomic online restore
 
 ## งานที่แก้ในรอบนี้
 
