@@ -9,6 +9,7 @@ struct MaintenanceTabView: View {
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
     @State private var editingMaintenance: Maintenance?
     @State private var deletingMaintenance: Maintenance?
+    @State private var searchText = ""
 
     private var maintenances: [Maintenance] {
         allMaintenances.filter { !$0.isDeletedLocally }
@@ -16,6 +17,24 @@ struct MaintenanceTabView: View {
 
     private var rooms: [Room] {
         allRooms.filter { !$0.isDeletedLocally }
+    }
+
+    private var visibleMaintenances: [Maintenance] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return maintenances }
+        return maintenances.filter { maintenance in
+            let status = maintenance.status.isEmpty ? "รอดำเนินการ" : maintenance.status
+            let searchable = [
+                maintenance.roomNumber,
+                maintenance.issue,
+                status,
+                maintenance.paymentMethod,
+                maintenance.reportedAt,
+                maintenance.resolvedAt,
+                maintenance.cost.formatted(.number.precision(.fractionLength(0...2)))
+            ].joined(separator: " ").lowercased()
+            return searchable.contains(query)
+        }
     }
 
     var body: some View {
@@ -31,6 +50,11 @@ struct MaintenanceTabView: View {
                 Spacer()
             }
 
+            ManagementSearchField(
+                text: $searchText,
+                placeholder: "ค้นหาห้อง, อาการ, สถานะงานซ่อม..."
+            )
+
             if maintenances.isEmpty {
                 GlassCard {
                     VStack(spacing: 12) {
@@ -44,8 +68,21 @@ struct MaintenanceTabView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 28)
                 }
+            } else if visibleMaintenances.isEmpty {
+                GlassCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 34))
+                            .foregroundStyle(.secondary)
+                        Text("ไม่พบงานซ่อมที่ค้นหา")
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                }
             } else {
-                ForEach(maintenances) { maintenance in
+                ForEach(visibleMaintenances) { maintenance in
                     MaintenanceRow(
                         maintenance: maintenance,
                         onStatus: { updateStatus(maintenance, to: $0) },

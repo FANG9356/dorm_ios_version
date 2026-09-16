@@ -14,9 +14,44 @@ struct PricingTabView: View {
     @State private var showCreateRoom = false
     @State private var editingRoom: Room?
     @State private var roomToDelete: Room?
+    @State private var searchText = ""
 
     private var rooms: [Room] {
         allRooms.filter { !$0.isDeletedLocally }
+    }
+
+    private var visibleRoomTypes: [RoomType] {
+        let query = normalizedSearchText
+        guard !query.isEmpty else { return roomTypes }
+        return roomTypes.filter { roomType in
+            let searchable = [
+                roomType.name,
+                roomType.price.formatted(.number.precision(.fractionLength(0...2))),
+                roomType.waterFee.formatted(.number.precision(.fractionLength(0...2))),
+                roomType.electricFee.formatted(.number.precision(.fractionLength(0...2))),
+                roomType.commonFee.formatted(.number.precision(.fractionLength(0...2)))
+            ].joined(separator: " ").lowercased()
+            return searchable.contains(query)
+        }
+    }
+
+    private var visibleRooms: [Room] {
+        let query = normalizedSearchText
+        guard !query.isEmpty else { return rooms }
+        return rooms.filter { room in
+            let tenant = tenant(for: room)
+            let searchable = [
+                room.roomNumber,
+                room.roomType,
+                tenant.map { "\($0.prefix)\($0.firstName) \($0.lastName)" } ?? "",
+                tenant == nil ? "ว่าง" : "มีผู้พัก"
+            ].joined(separator: " ").lowercased()
+            return searchable.contains(query)
+        }
+    }
+
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     var body: some View {
@@ -122,13 +157,23 @@ struct PricingTabView: View {
                 }
             }
 
+            ManagementSearchField(
+                text: $searchText,
+                placeholder: "ค้นหาประเภทห้อง, เลขห้อง, ชื่อลูกบ้าน..."
+            )
+
             depositPercentSettings
 
             sectionHeader("ประเภทห้อง")
-            if roomTypes.isEmpty {
-                GlassCard { Text("ยังไม่มีประเภทห้อง").foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 28) }
+            if roomTypes.isEmpty || visibleRoomTypes.isEmpty {
+                GlassCard {
+                    Text(roomTypes.isEmpty ? "ยังไม่มีประเภทห้อง" : "ไม่พบประเภทห้องที่ค้นหา")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+                }
             } else {
-                ForEach(roomTypes) { roomType in
+                ForEach(visibleRoomTypes) { roomType in
                     GlassCard {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
@@ -171,16 +216,18 @@ struct PricingTabView: View {
 
             sectionHeader("เลขห้อง")
                 .padding(.top, 8)
-            if rooms.isEmpty {
+            if rooms.isEmpty || visibleRooms.isEmpty {
                 GlassCard {
                     VStack(spacing: 8) {
                         Image(systemName: "door.left.hand.open")
                             .font(.system(size: 30))
                             .foregroundStyle(.secondary)
-                        Text("ยังไม่มีห้องพัก")
+                        Text(rooms.isEmpty ? "ยังไม่มีห้องพัก" : "ไม่พบห้องพักที่ค้นหา")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                             .foregroundStyle(.secondary)
-                        Text(roomTypes.isEmpty ? "สร้างประเภทห้องก่อน แล้วค่อยเพิ่มเลขห้อง" : "กดปุ่ม + เพื่อเพิ่มเลขห้องและเลือกประเภท")
+                        Text(rooms.isEmpty
+                             ? (roomTypes.isEmpty ? "สร้างประเภทห้องก่อน แล้วค่อยเพิ่มเลขห้อง" : "กดปุ่ม + เพื่อเพิ่มเลขห้องและเลือกประเภท")
+                             : "ลองเปลี่ยนคำค้นหาใหม่")
                             .font(.custom("SukhumvitSet-Text", size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -188,7 +235,7 @@ struct PricingTabView: View {
                     .padding(.vertical, 24)
                 }
             } else {
-                ForEach(rooms) { room in
+                ForEach(visibleRooms) { room in
                     PricingRoomRow(room: room, tenant: tenant(for: room)) {
                         editingRoom = room
                     } onDelete: {

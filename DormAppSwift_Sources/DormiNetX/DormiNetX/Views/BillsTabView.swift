@@ -11,28 +11,30 @@ struct BillsTabView: View {
     @State private var editingPayment: Payment?
     @State private var deletingPayment: Payment?
     @State private var ledgerErrorMessage: String?
+    @State private var searchText = ""
 
     private var payments: [Payment] { allPayments.filter { !$0.isDeletedLocally } }
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
+    private var visiblePayments: [Payment] { payments.filter(matchesSearch) }
     private var billSections: [(title: String, subtitle: String, icon: String, payments: [Payment])] {
         [
             (
                 "รอรับชำระ",
                 "รายการที่ยังต้องติดตาม",
                 "clock.fill",
-                payments.filter { $0.paymentStatus == "pending" }
+                visiblePayments.filter { $0.paymentStatus == "pending" }
             ),
             (
                 "ผ่อนชำระ",
                 "รายการที่รับบางส่วนหรืออยู่ในแผนผ่อน",
                 "circle.lefthalf.filled",
-                payments.filter { $0.paymentStatus == "partial" || $0.paymentPlan == "installment" }
+                visiblePayments.filter { $0.paymentStatus == "partial" || $0.paymentPlan == "installment" }
             ),
             (
                 "ชำระแล้ว",
                 "ประวัติรับเงินที่ปิดรายการแล้ว",
                 "checkmark.circle.fill",
-                payments.filter { $0.paymentStatus == "paid" && $0.paymentPlan != "installment" }
+                visiblePayments.filter { $0.paymentStatus == "paid" && $0.paymentPlan != "installment" }
             )
         ].map { section in
             (section.0, section.1, section.2, section.3.sorted { $0.lastUpdated > $1.lastUpdated })
@@ -52,8 +54,15 @@ struct BillsTabView: View {
                 Spacer()
             }
 
+            ManagementSearchField(
+                text: $searchText,
+                placeholder: "ค้นหาห้อง, ชื่อลูกบ้าน, รอบบิล..."
+            )
+
             if payments.isEmpty {
                 emptyState(icon: "doc.text.magnifyingglass", title: "ยังไม่มีข้อมูลบิล")
+            } else if visiblePayments.isEmpty {
+                emptyState(icon: "magnifyingglass", title: "ไม่พบบิลที่ค้นหา")
             } else {
                 ForEach(billSections, id: \.title) { section in
                     BillSectionView(
@@ -128,6 +137,34 @@ struct BillsTabView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 28)
         }
+    }
+
+    private func matchesSearch(_ payment: Payment) -> Bool {
+        let query = normalizedSearchText
+        guard !query.isEmpty else { return true }
+        let user = users.first { stableLocalUserID(for: $0) == payment.userId && payment.userId > 0 }
+            ?? users.first { $0.roomNumber == payment.roomNumber }
+        let status: String
+        switch payment.paymentStatus {
+        case "paid": status = "ชำระแล้ว"
+        case "partial": status = "ชำระบางส่วน ผ่อนชำระ"
+        default: status = "รอชำระ"
+        }
+        let searchable = [
+            payment.roomNumber,
+            user.map { "\($0.prefix)\($0.firstName) \($0.lastName)" } ?? "",
+            payment.month,
+            AppDate.thaiMonth(payment.month),
+            payment.method,
+            payment.paymentPlan,
+            status,
+            payment.amount.formatted(.number.precision(.fractionLength(0...2)))
+        ].joined(separator: " ").lowercased()
+        return searchable.contains(query)
+    }
+
+    private var normalizedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private func apply(_ draft: Payment, to payment: Payment) {

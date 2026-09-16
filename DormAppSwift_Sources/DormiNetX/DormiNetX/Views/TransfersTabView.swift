@@ -10,10 +10,29 @@ struct TransfersTabView: View {
     @Query(sort: \RoomType.name) private var roomTypes: [RoomType]
     @State private var editingPayment: Payment?
     @State private var ledgerErrorMessage: String?
+    @State private var searchText = ""
 
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
     private var paymentsWithEvidence: [Payment] {
         payments.filter { !$0.isDeletedLocally && (!$0.slipPath.isEmpty || !$0.slipPathArray.isEmpty) }
+    }
+
+    private var visiblePayments: [Payment] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return paymentsWithEvidence }
+        return paymentsWithEvidence.filter { payment in
+            let user = userFor(payment)
+            let status = payment.paymentStatus == "paid" ? "ตรวจแล้ว อนุมัติ" : "รอตรวจ"
+            let searchable = [
+                payment.roomNumber,
+                user.map { "\($0.prefix)\($0.firstName) \($0.lastName)" } ?? "",
+                payment.month,
+                AppDate.thaiMonth(payment.month),
+                payment.method,
+                status
+            ].joined(separator: " ").lowercased()
+            return searchable.contains(query)
+        }
     }
 
     var body: some View {
@@ -23,6 +42,11 @@ struct TransfersTabView: View {
             Text("อนุมัติ แก้ไข หรือส่งกลับรายการชำระเงินที่แนบหลักฐาน")
                 .font(.custom("SukhumvitSet-Text", size: 12))
                 .foregroundStyle(.secondary)
+
+            ManagementSearchField(
+                text: $searchText,
+                placeholder: "ค้นหาห้อง, ชื่อลูกบ้าน, รอบบิล..."
+            )
 
             if paymentsWithEvidence.isEmpty {
                 GlassCard {
@@ -37,8 +61,21 @@ struct TransfersTabView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 28)
                 }
+            } else if visiblePayments.isEmpty {
+                GlassCard {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 34))
+                            .foregroundStyle(.secondary)
+                        Text("ไม่พบหลักฐานการโอนที่ค้นหา")
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                }
             } else {
-                ForEach(paymentsWithEvidence) { payment in
+                ForEach(visiblePayments) { payment in
                     TransferEvidenceRow(
                         payment: payment,
                         onApprove: { approve(payment) },
@@ -139,6 +176,11 @@ struct TransfersTabView: View {
 
     private func currentDateString() -> String {
         AppDate.dateKey(from: Date())
+    }
+
+    private func userFor(_ payment: Payment) -> DormUser? {
+        users.first { stableLocalUserID(for: $0) == payment.userId && payment.userId > 0 }
+            ?? users.first { $0.roomNumber == payment.roomNumber }
     }
 }
 

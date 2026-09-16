@@ -7,9 +7,25 @@ struct RoomsTabView: View {
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
     @Query(sort: \DormUser.roomNumber) private var users: [DormUser]
     @State private var movingTenant: DormUser?
+    @State private var searchText = ""
 
     private var rooms: [Room] {
         allRooms.filter { !$0.isDeletedLocally }
+    }
+
+    private var visibleRooms: [Room] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return rooms }
+        return rooms.filter { room in
+            let tenant = tenant(for: room)
+            let searchable = [
+                room.roomNumber,
+                room.roomType,
+                tenant.map { "\($0.prefix)\($0.firstName) \($0.lastName)" } ?? "",
+                tenant == nil ? "ว่าง" : "มีผู้พัก"
+            ].joined(separator: " ").lowercased()
+            return searchable.contains(query)
+        }
     }
 
     var body: some View {
@@ -25,10 +41,17 @@ struct RoomsTabView: View {
                 Spacer()
             }
 
+            ManagementSearchField(
+                text: $searchText,
+                placeholder: "ค้นหาห้อง, ประเภทห้อง, ชื่อลูกบ้าน..."
+            )
+
             if rooms.isEmpty {
                 emptyState
+            } else if visibleRooms.isEmpty {
+                searchEmptyState
             } else {
-                ForEach(rooms) { room in
+                ForEach(visibleRooms) { room in
                     RoomManagementRow(room: room, tenant: tenant(for: room)) {
                         movingTenant = tenant(for: room)
                     }
@@ -53,6 +76,21 @@ struct RoomsTabView: View {
                     .font(.system(size: 34))
                     .foregroundStyle(.secondary)
                 Text("ยังไม่มีข้อมูลห้องพัก")
+                    .font(.custom("SukhumvitSet-Medium", size: 14))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+        }
+    }
+
+    private var searchEmptyState: some View {
+        GlassCard {
+            VStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 34))
+                    .foregroundStyle(.secondary)
+                Text("ไม่พบห้องพักที่ค้นหา")
                     .font(.custom("SukhumvitSet-Medium", size: 14))
                     .foregroundStyle(.secondary)
             }

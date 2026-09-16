@@ -13,6 +13,7 @@ struct FinanceTabView: View {
     @State private var selectedMonth = Date()
     @State private var selectedStatus = "ทั้งหมด"
     @State private var searchText = ""
+    @State private var showingMonthPicker = false
     @State private var selectedBillingUser: DormUser?
     @State private var paymentEditTarget: PaymentEditTarget?
     @State private var pendingPaymentEditTarget: PaymentEditTarget?
@@ -34,6 +35,13 @@ struct FinanceTabView: View {
         .padding(.top, 106)
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
+        .sheet(isPresented: $showingMonthPicker) {
+            FinanceMonthPicker(selection: $selectedMonth)
+                .presentationDetents([.height(360)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(32)
+                .presentationBackground(.ultraThinMaterial)
+        }
         .sheet(item: $selectedBillingUser, onDismiss: {
             guard let target = pendingPaymentEditTarget else { return }
             pendingPaymentEditTarget = nil
@@ -186,35 +194,13 @@ struct FinanceTabView: View {
     }
 
     private var filters: some View {
-        GlassCard {
-            VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("ค้นหาห้องหรือชื่อลูกบ้าน", text: $searchText)
-                        .font(.custom("SukhumvitSet-Text", size: 13))
-
-                    DatePicker("", selection: $selectedMonth, displayedComponents: [.date])
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "th_TH"))
-                }
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(statuses, id: \.self) { status in
-                            Button(status) {
-                                selectedStatus = status
-                            }
-                            .font(.custom("SukhumvitSet-Medium", size: 11))
-                            .foregroundStyle(selectedStatus == status ? .white : .secondary)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 8)
-                            .background(selectedStatus == status ? Color.indigo : Color.primary.opacity(0.07), in: Capsule())
-                        }
-                    }
-                }
-            }
-        }
+        FinanceFilterPanel(
+            searchText: $searchText,
+            selectedStatus: $selectedStatus,
+            statuses: statuses,
+            monthLabel: AppDate.thaiMonth(monthKey),
+            onSelectMonth: { showingMonthPicker = true }
+        )
     }
 
     private var paymentList: some View {
@@ -269,9 +255,12 @@ struct FinanceTabView: View {
     private var billingUserList: some View {
         let visibleUsers = usersForBilling.filter { user in
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            guard !query.isEmpty else { return true }
             let name = "\(user.prefix)\(user.firstName) \(user.lastName)".lowercased()
-            return user.roomNumber.lowercased().contains(query) || name.contains(query)
+            let matchesSearch = query.isEmpty || user.roomNumber.lowercased().contains(query) || name.contains(query) || user.phone.lowercased().contains(query)
+            let currentPayment = paymentFor(user, month: monthKey)
+            let currentStatus = currentPayment.map(statusLabel) ?? "รอชำระ"
+            let matchesStatus = selectedStatus == "ทั้งหมด" || currentStatus == selectedStatus
+            return matchesSearch && matchesStatus
         }
 
         return VStack(alignment: .leading, spacing: 10) {
@@ -290,7 +279,9 @@ struct FinanceTabView: View {
                         Image(systemName: "person.text.rectangle")
                             .font(.system(size: 30))
                             .foregroundStyle(.secondary)
-                        Text("ยังไม่มีลูกบ้านที่ต้องออกบิล")
+                        Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                             ? "ยังไม่มีลูกบ้านที่ต้องออกบิล"
+                             : "ไม่พบรายการการเงินที่ค้นหา")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                             .foregroundStyle(.secondary)
                     }
@@ -553,6 +544,276 @@ struct FinanceTabView: View {
 
     private func currentDateString() -> String {
         AppDate.dateKey(from: Date())
+    }
+}
+
+private struct FinanceFilterPanel: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Binding var searchText: String
+    @Binding var selectedStatus: String
+    let statuses: [String]
+    let monthLabel: String
+    let onSelectMonth: () -> Void
+    @State private var dragX: CGFloat = 0
+    @State private var isDraggingStatus = false
+    @State private var hoveredStatus: String?
+    @State private var statusFrames: [String: CGRect] = [:]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.secondary)
+
+                TextField("ค้นหาห้อง, ชื่อลูกบ้าน, เบอร์โทร...", text: $searchText)
+                    .font(.custom("SukhumvitSet-Text", size: 14))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                if !searchText.isEmpty {
+                    Button { searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("ล้างคำค้นหา")
+                }
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 48)
+
+            panelDivider
+
+            Button(action: onSelectMonth) {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Text("รอบบิล")
+                        .font(.custom("SukhumvitSet-Medium", size: 14))
+                    Spacer()
+                    Text(monthLabel)
+                        .font(.custom("SukhumvitSet-Medium", size: 14))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 14)
+                .frame(height: 48)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("เลือกรอบบิล \(monthLabel)")
+
+            panelDivider
+
+            HStack(spacing: 0) {
+                ForEach(statuses, id: \.self) { status in
+                    let isHovered = isDraggingStatus && hoveredStatus == status
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            selectedStatus = status
+                        }
+                    } label: {
+                        Text(status)
+                            .font(.custom("SukhumvitSet-Bold", size: 13))
+                            .foregroundStyle(selectedStatus == status ? Color.primary : Color.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.68)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                Capsule().fill(selectedStatus == status ? activeTabFill : Color.clear)
+                            )
+                            .overlay(
+                                Capsule().stroke(selectedStatus == status ? activeTabBorder : Color.clear, lineWidth: 1)
+                            )
+                            .opacity(isHovered ? 0 : 1)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selectedStatus == status ? .isSelected : [])
+                    .background(
+                        GeometryReader { geometry in
+                            Color.clear
+                                .onAppear {
+                                    statusFrames[status] = geometry.frame(in: .named("FinanceStatusTabs"))
+                                }
+                                .onChange(of: geometry.frame(in: .named("FinanceStatusTabs"))) { _, frame in
+                                    statusFrames[status] = frame
+                                }
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .frame(height: 52)
+            .coordinateSpace(name: "FinanceStatusTabs")
+            .overlay {
+                GeometryReader { geometry in
+                    if isDraggingStatus, let hoveredStatus {
+                        Text(hoveredStatus)
+                            .font(.custom("SukhumvitSet-Bold", size: 12))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(
+                                Capsule()
+                                    .fill(.ultraThickMaterial)
+                                    .shadow(color: .black.opacity(0.14), radius: 8, x: 0, y: 4)
+                            )
+                            .overlay(Capsule().stroke(activeTabBorder, lineWidth: 1))
+                            .position(
+                                x: min(max(dragX, 34), max(34, geometry.size.width - 34)),
+                                y: geometry.size.height / 2
+                            )
+                            .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.8), value: dragX)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 10, coordinateSpace: .named("FinanceStatusTabs"))
+                    .onChanged { value in
+                        isDraggingStatus = true
+                        dragX = value.location.x
+                        guard value.location.x >= 0,
+                              let nearest = statusFrames.min(by: {
+                                  abs($0.value.midX - value.location.x) < abs($1.value.midX - value.location.x)
+                              }) else { return }
+                        if hoveredStatus != nearest.key {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            hoveredStatus = nearest.key
+                        }
+                    }
+                    .onEnded { _ in
+                        if isDraggingStatus, let hoveredStatus {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                selectedStatus = hoveredStatus
+                            }
+                        }
+                        isDraggingStatus = false
+                        hoveredStatus = nil
+                    }
+            )
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: colorScheme == .dark ? .black.opacity(0.08) : .clear, radius: 18, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.18), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var panelDivider: some View {
+        Divider()
+            .opacity(colorScheme == .dark ? 0.35 : 0.14)
+            .padding(.horizontal, 12)
+    }
+
+    private var activeTabFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.10) : Color.white.opacity(0.46)
+    }
+
+    private var activeTabBorder: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.14) : Color.white.opacity(0.20)
+    }
+}
+
+private struct FinanceMonthPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selection: Date
+    @State private var month: Int
+    @State private var year: Int
+
+    private static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Bangkok") ?? .current
+        return calendar
+    }
+
+    private let monthNames = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ]
+
+    init(selection: Binding<Date>) {
+        _selection = selection
+        let components = Self.calendar.dateComponents([.year, .month], from: selection.wrappedValue)
+        _month = State(initialValue: components.month ?? 1)
+        _year = State(initialValue: components.year ?? 2026)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack {
+                Button("ยกเลิก") { dismiss() }
+                    .font(.custom("SukhumvitSet-Medium", size: 15))
+
+                Spacer()
+
+                VStack(spacing: 2) {
+                    Text("เลือกรอบบิล")
+                        .font(.custom("SukhumvitSet-Bold", size: 17))
+                    Text("\(monthNames[max(0, min(11, month - 1))]) \(year + 543)")
+                        .font(.custom("SukhumvitSet-Text", size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("เลือก") {
+                    var components = DateComponents()
+                    components.calendar = Self.calendar
+                    components.timeZone = Self.calendar.timeZone
+                    components.year = year
+                    components.month = month
+                    components.day = 1
+                    components.hour = 12
+                    if let date = Self.calendar.date(from: components) {
+                        selection = date
+                    }
+                    dismiss()
+                }
+                .font(.custom("SukhumvitSet-Bold", size: 15))
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 12)
+
+            HStack(spacing: 0) {
+                Picker("เดือน", selection: $month) {
+                    ForEach(Array(monthNames.enumerated()), id: \.offset) { index, name in
+                        Text(name).tag(index + 1)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+
+                Picker("ปี", selection: $year) {
+                    ForEach((currentYear - 20)...(currentYear + 30), id: \.self) { value in
+                        Text(String(value + 543)).tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+            }
+            .labelsHidden()
+            .padding(.horizontal, 12)
+        }
+    }
+
+    private var currentYear: Int {
+        Self.calendar.component(.year, from: Date())
     }
 }
 
