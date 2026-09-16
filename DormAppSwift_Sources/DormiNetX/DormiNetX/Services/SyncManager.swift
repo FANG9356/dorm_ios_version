@@ -37,7 +37,7 @@ struct SyncEnvelope: Codable {
     var logs: [SystemLogSnapshot]
 }
 
-struct RoomSnapshot: Codable {
+struct RoomSnapshot: Codable, Identifiable {
     var id: UUID
     var serverId: Int?
     var roomNumber: String
@@ -45,7 +45,7 @@ struct RoomSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct TenantSnapshot: Codable {
+struct TenantSnapshot: Codable, Identifiable {
     var id: UUID
     var serverId: Int?
     var prefix: String
@@ -73,7 +73,7 @@ struct TenantSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct PaymentSnapshot: Codable {
+struct PaymentSnapshot: Codable, Identifiable {
     var id: UUID
     var serverId: Int?
     var userId: Int
@@ -103,7 +103,7 @@ struct PaymentSnapshot: Codable {
     var depositFee: Double? = nil
 }
 
-struct PaymentTransactionSnapshot: Codable {
+struct PaymentTransactionSnapshot: Codable, Identifiable {
     var id: UUID
     var paymentID: UUID
     var amount: Double
@@ -116,7 +116,7 @@ struct PaymentTransactionSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct FinancialReceiptSnapshot: Codable {
+struct FinancialReceiptSnapshot: Codable, Identifiable {
     var id: UUID
     var transactionID: UUID
     var paymentID: UUID
@@ -133,7 +133,7 @@ struct FinancialReceiptSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct MaintenanceSnapshot: Codable {
+struct MaintenanceSnapshot: Codable, Identifiable {
     var id: UUID
     var serverId: Int?
     var roomNumber: String
@@ -148,7 +148,7 @@ struct MaintenanceSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct RoomTypeSnapshot: Codable {
+struct RoomTypeSnapshot: Codable, Identifiable {
     var id: UUID
     var serverId: Int?
     var name: String
@@ -160,7 +160,7 @@ struct RoomTypeSnapshot: Codable {
     var lastUpdated: Date
 }
 
-struct SystemLogSnapshot: Codable {
+struct SystemLogSnapshot: Codable, Identifiable {
     var id: UUID
     var action: String
     var details: String
@@ -313,10 +313,11 @@ class SyncManager: ObservableObject {
         }
 
         do {
-            guard !hasDirtyLocalChanges(), !hasDirtyRecords(modelContext) else {
-                message = "มีข้อมูลในเครื่องที่ยังบันทึกขึ้น cloud อยู่"
-                state = .failed(message)
-                return
+            if hasDirtyLocalChanges(), !hasDirtyRecords(modelContext) {
+                // A stale pending flag/outbox must not permanently block a
+                // manual recovery when every local record is already clean.
+                try outbox.remove(accountID: accountID)
+                checkpoint.pending = false
             }
 
             state = .downloading
@@ -615,7 +616,7 @@ class SyncManager: ObservableObject {
         let content = try contentSignature(buildSnapshot(modelContext: modelContext))
         let data = try await api.fetchLatestSyncSnapshot()
         guard accountID == startingAccount, api.authToken == token else { throw SyncError.sessionChanged }
-        guard !hasDirtyLocalChanges(), revision == checkpoint.revision,
+        guard revision == checkpoint.revision,
               content == (try contentSignature(buildSnapshot(modelContext: modelContext))) else { throw SyncError.localChanges }
         let response = try decoder().decode(SyncLatestResponse.self, from: data)
         guard response.hasSnapshot, let snapshot = response.payload else {
@@ -623,13 +624,34 @@ class SyncManager: ObservableObject {
             return
         }
 
-        let currentVersion = checkpoint.version
         guard let version = response.version else { throw SyncError.invalidServerResponse }
+        let payload: Data
+        if let raw = response.payloadBase64 {
+            guard let decoded = Data(base64Encoded: raw) else { throw SyncError.invalidServerResponse }
+            payload = decoded
+        } else { payload = try encoded(snapshot) }
+        if let checksum = response.checksum {
+            try verifyChecksum(payload: payload, checksum: checksum)
+        }
+        let verifiedSnapshot = try decoder().decode(SyncEnvelope.self, from: payload)
+
+        let currentVersion = checkpoint.version
         if version < currentVersion {
             throw SyncError.invalidServerResponse
         }
 
-        let remoteContent = try contentSignature(snapshot)
+        if !onlyIfRecent, hasDirtyRecords(modelContext) {
+            try await rebasePendingLocalChanges(
+                onto: verifiedSnapshot,
+                remoteVersion: version,
+                expectedRevision: revision,
+                expectedContent: content,
+                modelContext: modelContext
+            )
+            return
+        }
+
+        let remoteContent = try contentSignature(verifiedSnapshot)
         let localContent = try contentSignature(buildSnapshot(modelContext: modelContext))
         if version == currentVersion && remoteContent == localContent {
             if !silentWhenUnchanged { message = "ข้อมูลเป็นล่าสุดแล้ว" }
@@ -642,23 +664,100 @@ class SyncManager: ObservableObject {
             guard Date().timeIntervalSince(snapshot.createdAt) <= recentRemoteAutoPullWindow else { return }
         }
 
-        let payload: Data
-        if let raw = response.payloadBase64 {
-            guard let decoded = Data(base64Encoded: raw) else { throw SyncError.invalidServerResponse }
-            payload = decoded
-        } else { payload = try encoded(snapshot) }
-        if let checksum = response.checksum {
-            try verifyChecksum(payload: payload, checksum: checksum)
-        }
         state = .applying
         message = onlyIfRecent ? "รับข้อมูลใหม่จากเครื่องอื่น" : "เขียนทับข้อมูลในเครื่อง"
-        let verifiedSnapshot = try decoder().decode(SyncEnvelope.self, from: payload)
         try applySnapshot(verifiedSnapshot, modelContext: modelContext)
         await downloadMissingRemoteMedia(from: verifiedSnapshot)
         checkpoint.version = version
         if !onlyIfRecent {
             message = version == currentVersion ? "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว" : "ดึงข้อมูลล่าสุดแล้ว"
         }
+    }
+
+    private func rebasePendingLocalChanges(
+        onto remote: SyncEnvelope,
+        remoteVersion: Int,
+        expectedRevision: String,
+        expectedContent: Data,
+        modelContext: ModelContext
+    ) async throws {
+        let local = try buildSnapshot(modelContext: modelContext)
+        var merged = remote
+
+        let dirtyRooms = try modelContext.fetch(FetchDescriptor<Room>()).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyTenants = try modelContext.fetch(FetchDescriptor<DormUser>()).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyPayments = try modelContext.fetch(FetchDescriptor<Payment>()).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyTransactions = try modelContext.fetch(FetchDescriptor<PaymentTransaction>()).filter(\.isDirty)
+        let dirtyReceipts = try modelContext.fetch(FetchDescriptor<FinancialReceipt>()).filter(\.isDirty)
+        let dirtyMaintenance = try modelContext.fetch(FetchDescriptor<Maintenance>()).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyRoomTypes = try modelContext.fetch(FetchDescriptor<RoomType>()).filter(\.isDirty)
+
+        merged.rooms = mergeSnapshots(remote: remote.rooms, local: local.rooms,
+                                      changed: Set(dirtyRooms.filter { !$0.isDeletedLocally }.map(\.id)),
+                                      deleted: Set(dirtyRooms.filter(\.isDeletedLocally).map(\.id)))
+        merged.tenants = mergeSnapshots(remote: remote.tenants, local: local.tenants,
+                                        changed: Set(dirtyTenants.filter { !$0.isDeletedLocally }.map(\.id)),
+                                        deleted: Set(dirtyTenants.filter(\.isDeletedLocally).map(\.id)))
+        merged.payments = mergeSnapshots(remote: remote.payments, local: local.payments,
+                                         changed: Set(dirtyPayments.filter { !$0.isDeletedLocally }.map(\.id)),
+                                         deleted: Set(dirtyPayments.filter(\.isDeletedLocally).map(\.id)))
+        merged.paymentTransactions = mergeSnapshots(remote: remote.paymentTransactions ?? [],
+                                                     local: local.paymentTransactions ?? [],
+                                                     changed: Set(dirtyTransactions.map(\.id)), deleted: [])
+        merged.financialReceipts = mergeSnapshots(remote: remote.financialReceipts ?? [],
+                                                  local: local.financialReceipts ?? [],
+                                                  changed: Set(dirtyReceipts.map(\.id)), deleted: [])
+        merged.maintenance = mergeSnapshots(remote: remote.maintenance, local: local.maintenance,
+                                            changed: Set(dirtyMaintenance.filter { !$0.isDeletedLocally }.map(\.id)),
+                                            deleted: Set(dirtyMaintenance.filter(\.isDeletedLocally).map(\.id)))
+        merged.roomTypes = mergeSnapshots(remote: remote.roomTypes, local: local.roomTypes,
+                                          changed: Set(dirtyRoomTypes.map(\.id)), deleted: [])
+        merged.logs = mergeSnapshotLogs(remote: remote.logs, local: local.logs)
+        merged.snapshotID = UUID().uuidString
+        merged.version = remoteVersion + 1
+        merged.createdAt = Date()
+        merged.deviceID = deviceID()
+
+        try validateSnapshot(merged)
+        let mergedPayload = try encoded(merged)
+        state = .uploading
+        message = "กำลังรวมข้อมูลในเครื่องกับ cloud"
+        let responseData = try await api.pushSyncSnapshot(
+            payload: mergedPayload,
+            deviceID: merged.deviceID,
+            baseVersion: remoteVersion
+        )
+        guard expectedRevision == checkpoint.revision,
+              expectedContent == (try contentSignature(buildSnapshot(modelContext: modelContext))) else {
+            throw SyncError.localChanges
+        }
+        let response = try JSONDecoder().decode(SyncPushResponse.self, from: responseData)
+        guard response.status == "success", response.version == remoteVersion + 1 else {
+            throw SyncError.invalidServerResponse
+        }
+        try verifyChecksum(payload: mergedPayload, checksum: response.checksum)
+        state = .applying
+        try applySnapshot(merged, modelContext: modelContext)
+        await downloadMissingRemoteMedia(from: merged)
+        checkpoint.version = response.version
+        try outbox.remove(accountID: accountID)
+        message = "รวมข้อมูลในเครื่องกับ cloud แล้ว"
+    }
+
+    private func mergeSnapshots<T: Identifiable>(
+        remote: [T],
+        local: [T],
+        changed: Set<T.ID>,
+        deleted: Set<T.ID>
+    ) -> [T] where T.ID: Hashable {
+        var result = remote.filter { !deleted.contains($0.id) && !changed.contains($0.id) }
+        result.append(contentsOf: local.filter { changed.contains($0.id) })
+        return result
+    }
+
+    private func mergeSnapshotLogs(remote: [SystemLogSnapshot], local: [SystemLogSnapshot]) -> [SystemLogSnapshot] {
+        var seen = Set(remote.map(\.id))
+        return remote + local.filter { seen.insert($0.id).inserted }
     }
 
     private func downloadMissingRemoteMedia(from snapshot: SyncEnvelope) async {

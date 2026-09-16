@@ -334,6 +334,38 @@ final class CoreDataSafetyTests: XCTestCase {
         }
     }
 
+    func testManualPullRebasesDirtyLocalRecordsOntoRemoteSnapshot() async throws {
+        try await withDefaults { defaults in
+            let remote = try AccountScopedStore.makeGuestContainer()
+            let maintenance = Maintenance(roomNumber: "103", issue: "ไฟดับ")
+            maintenance.isDirty = false
+            remote.mainContext.insert(maintenance)
+            try remote.mainContext.save()
+
+            let api = SyncTestAPI()
+            let manager = manager(api: api, defaults: defaults)
+            let backupData = try manager.exportLocalBackupData(modelContext: remote.mainContext)
+            let backup = try XCTUnwrap(JSONSerialization.jsonObject(with: backupData) as? [String: Any])
+            let payload = try JSONSerialization.data(withJSONObject: XCTUnwrap(backup["snapshot"]))
+            api.onFetch = { try self.snapshotResponse(payload) }
+
+            let local = try AccountScopedStore.makeGuestContainer()
+            let localRoom = Room(roomNumber: "local-room")
+            localRoom.isDirty = true
+            local.mainContext.insert(localRoom)
+            try local.mainContext.save()
+
+            await manager.pullLatestSnapshot(modelContext: local.mainContext)
+
+            XCTAssertEqual(manager.state, .completed)
+            XCTAssertEqual(api.bases, [1])
+            XCTAssertEqual(SyncCheckpoint(accountID: 1, defaults: defaults).version, 2)
+            XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<Maintenance>()).map(\.issue), ["ไฟดับ"])
+            XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<Room>()).map(\.roomNumber), ["local-room"])
+            XCTAssertEqual(manager.message, "รวมข้อมูลในเครื่องกับ cloud แล้ว")
+        }
+    }
+
     func testPullingLegacyPaidBalanceQueuesGeneratedLedgerForUpload() async throws {
         try await withDefaults { defaults in
             let remote = try AccountScopedStore.makeGuestContainer()

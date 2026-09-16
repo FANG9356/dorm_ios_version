@@ -30,6 +30,7 @@
 - เพิ่ม authenticated tenant-scoped media hydration สำหรับไฟล์ที่ฐานข้อมูลของบัญชีนั้นอ้างถึงเท่านั้น แอป build ใหม่ดาวน์โหลดสลิป/รูปแจ้งซ่อมที่ขาดมาเก็บใน local `PaymentSlips`; path traversal และไฟล์ของบัญชีอื่นถูกปฏิเสธ โดยยังคงใช้ server เป็นตัวกลางและไม่ฝัง binary media ลงใน snapshot
 - production สร้าง snapshot `v66` จาก `line-bot` สำเร็จ ครอบคลุมสลิปสถานะ `checking` และรายการแจ้งซ่อมที่ทดสอบก่อนแก้ พร้อมกำหนด UUID ให้รายการแจ้งซ่อมเพื่อให้ sync ต่อเนื่องโดยไม่สร้างข้อมูลซ้ำ
 - หลัง UAT พบว่า checkpoint ใน iPhone อาจเท่ากับ remote version ทั้งที่ local store ขาดบางรายการ จึงเพิ่ม manual-sync self-healing ให้เทียบ content signature และ apply snapshot ซ้ำเมื่อเนื้อหาไม่ตรง พร้อมแก้ overlay ไม่ให้แสดง “ซิงค์สำเร็จ” ตามเวลาเมื่อการทำงานจริงล้มเหลว; republish production เป็น `v67` เพื่อให้อุปกรณ์ที่ติดตั้ง build เดิมดึงข้อมูลได้ทันที โดยไม่ได้เปลี่ยนรายละเอียดรายการแจ้งซ่อม
+- UAT รอบถัดมาพบ local dirty records ทำให้ pull ถูกปฏิเสธตาม data-safety guard จึงเพิ่ม manual-sync rebase: รวมเฉพาะ local records ที่ dirty/deleted เข้ากับ remote snapshot ล่าสุด, push ด้วย remote base version แล้ว apply ผลรวมกลับเข้า SwiftData; stale pending flag ที่ไม่มี dirty record จะถูกล้างอย่างปลอดภัย แอป Debug รุ่นนี้ build/sign/install ทับบน iPhone “F” สำเร็จโดยคง app container เดิม
 - deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `2e6486679666bfe10640ac2ac60f6ed349603481b9aa3728b3750d2880f15386`
 - production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
@@ -137,6 +138,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | LINE → app snapshot publish | ผ่าน unit/race tests และ production reconciliation; snapshot เพิ่มจาก v65 เป็น v66, `device_id=line-bot`, มีสลิป `checking` และ maintenance 1 รายการโดย publish ซ้ำไม่เพิ่ม version |
 | Tenant-scoped media API | ผ่าน unit/race tests; ต้องมี session, ไฟล์ต้องถูกอ้างถึงในฐานข้อมูล tenant และ unauthenticated production request ถูกปฏิเสธ HTTP 401 |
 | iOS build หลังเพิ่ม remote media hydration/self-healing | ผ่าน Debug Simulator build; sync regression tests รวมกรณี version เท่ากันแต่ local ขาดข้อมูลผ่าน และ XCTest ผ่าน 42/43 โดย 1 test เป็น Keychain Simulator entitlement `-34018` ไม่เกี่ยวกับ sync/media |
+| iOS pending-local + LINE remote rebase | CoreDataSafetyTests ผ่าน 18/18 รวม preservation ของ local dirty room และ remote maintenance; signed Debug device build/install บน iPhone 11 ผ่าน |
 | iOS unit tests หลังบังคับ month key เป็น Gregorian | ผ่านทุก test ใน scheme `DormiNetX` |
 | Production LIFF page/assets + LINE redirect หลังเปลี่ยน endpoint | ผ่าน, HTTP 200 และชี้ `api.dorminet.studio/liff` |
 | Production room-list endpoint เดิม | ปิดการเปิดเผยรายการห้อง, HTTP 410 |
