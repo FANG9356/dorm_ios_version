@@ -35,7 +35,11 @@
 - UAT รอบถัดมาพบ local dirty records ทำให้ pull ถูกปฏิเสธตาม data-safety guard จึงเพิ่ม manual-sync rebase: รวมเฉพาะ local records ที่ dirty/deleted เข้ากับ remote snapshot ล่าสุด, push ด้วย remote base version แล้ว apply ผลรวมกลับเข้า SwiftData; stale pending flag ที่ไม่มี dirty record จะถูกล้างอย่างปลอดภัย แอป Debug รุ่นนี้ build/sign/install ทับบน iPhone “F” สำเร็จโดยคง app container เดิม
 - วันที่ 16 กันยายน 2569 เพิ่มการแจ้ง LINE เมื่อสถานะงานซ่อมถูกเปลี่ยนจากแอปผ่าน sync snapshot: ส่งหลัง transaction commit เท่านั้น, ไม่ส่งซ้ำเมื่อค่าสถานะเดิม และไม่ส่งย้อนหลังในช่วง startup materialization; production binary SHA-256 เป็น `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และ external health ตอบ HTTP 200
 - ปรับหน้าแก้ไขงานซ่อมใน iOS ให้ห้องของรายการเดิมเป็นข้อความแก้ไขไม่ได้, ปุ่มสถานะกว้างเท่ากัน, ช่องทางชำระเป็นตัวเลือก และรูปอาการเสีย/สลิปเปิดดูเต็มจอพร้อม pinch/double-tap zoom ได้; build/sign/install ทับบน iPhone “F” สำเร็จ
-- deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `2e6486679666bfe10640ac2ac60f6ed349603481b9aa3728b3750d2880f15386`
+- วันที่ 16 กันยายน 2569 deploy maintenance-mode atomic restore/rollback command เป็น production binary SHA-256 `2f069031e35d1a57eb5cefa8760849f651c5c6c57eaccc79f683f9b7660e5d6b`; backend tests/vet ผ่านบน Linux/amd64, archive `server_backup_2026-09-16_05-00-00.zip` ผ่าน verify-only จริง (2 databases, 2 media), service และ health ทั้ง loopback/โดเมนภายนอกตอบปกติ โดยยังไม่ได้สั่ง restore ข้อมูล production
+- ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production หลัง snapshot จากอุปกรณ์ปัจจุบันเดินถึง v76, LINE ถึง v77 และไม่พบ log รับ legacy push ตั้งแต่ 15 กันยายน; เก็บ `.env` และ binary เดิมไว้ใน rollback set และยังต้องยืนยัน manual sync จาก iPhone หลัง cutover
+- วันที่ 16 กันยายน 2569 ปิด public `/uploads`, เพิ่ม tenant ownership สำหรับสลิป/รูปแจ้งซ่อม/รูปจอง/หลักฐานสภาพห้อง, เปลี่ยนรูปใบเสร็จที่ LINE ต้องอ่านเป็น HMAC URL อายุ 24 ชั่วโมง และเพิ่ม SHA-256 response verification กับ retry 3 ครั้งใน iOS; production binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`
+- ผลกระทบที่ยอมรับจากการปิดช่องโหว่: รูปในข้อความ LINE เก่าที่ฝัง URL `/uploads/...` อาจเปิดซ้ำไม่ได้ แต่ไฟล์ต้นฉบับไม่ถูกลบและยังเข้าถึงได้ผ่านแอปที่ยืนยันสิทธิ์; ข้อความใหม่ใช้ signed URL
+- deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบล่าสุดที่ตรวจหลัง restart มี SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`
 - production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
 - LINE webhook ที่ลงลายเซ็นถูกต้องผ่านบน production
@@ -74,6 +78,8 @@
 - `/home/fang/line_migration_backups/20260915_195516_pre_line_snapshot_sync` (SQLite-native master/tenant backup และ binary ก่อน deploy LINE-to-app snapshot sync รอบสำเร็จ)
 - `/home/fang/line_migration_backups/20260915_200616_pre_line_republish` (SQLite-native master/tenant backup ก่อน republish snapshot v67 สำหรับ device UAT)
 - `/home/fang/line_migration_backups/20260916_1038_pre_maintenance_notifications` (binary และ SQLite-native master/tenant backup ก่อนเพิ่ม LINE status notification จาก app sync)
+- `/home/fang/line_migration_backups/20260916_1530_pre_atomic_restore` (binary SHA เดิม `a7d882c...` และ environment ก่อน deploy atomic restore/ปิด legacy sync)
+- `/home/fang/line_migration_backups/20260916_2032_pre_private_media` (binary ก่อน private-media deployment, environment และ binary ระหว่างรอบก่อนเพิ่ม checksum header)
 
 ชุดก่อนหน้าเก็บ master database, tenant database และ server binary เดิม; ชุด predeploy เก็บ environment เดิมด้วย ส่วนชุด `pre_phone_lookup` เก็บเฉพาะ binary เพราะ deployment นี้ไม่เปลี่ยน schema หรือข้อมูล ไฟล์ถูกจำกัดสิทธิ์ตามประเภท
 
@@ -123,6 +129,9 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | OTP lockout persistence บน production | ครั้งที่ 5 ตอบ 429 และหลัง restart ยังตอบ 429; ลบ test row แล้ว |
 | Production multi-tenant backup + restore drill | ผ่าน |
 | Maintenance-mode atomic restore/rollback automated tests | ผ่าน: verify-only ไม่แตะ live data, ปฏิเสธ archive ถูกแก้และ active WAL, สลับ master/tenant/media และ rollback กลับครบชุด |
+| Production restore archive verify-only ด้วย binary ใหม่ | ผ่าน: manifest/hash/size/SQLite ของ 2 databases และ 2 media files โดยไม่แตะ live data |
+| Production protocol-2 server cutover | ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false` แล้วและ health ผ่าน; รอ manual-sync UAT จาก iPhone หลัง cutover |
+| Public media closure | ผ่าน: known file ที่ `/uploads` ตอบ 404, `/api/media` ไม่มี session ตอบ 401, unsigned `/line-media` ตอบ 404; signed/expired/tampered/traversal/checksum มี automated tests |
 | Production automatic backup scheduler เวลา 22:00 | ผ่านต่อเนื่อง; archive ล่าสุด permission 0600 และ `unzip -t` ผ่านทุก entry |
 | Production backup list เห็น `server_backup_*.zip` | ผ่าน, พบ 1 ไฟล์ |
 | Backup directory/archive permission | 0700 / 0600 |
@@ -171,8 +180,8 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 ## สิ่งที่ยังไม่ถือว่าผ่าน 100%
 
 - ยังไม่ได้ UAT บน iPhone จริงสองเครื่อง, ทดสอบตัดเน็ตระหว่าง sync, Photos/AirPrint และ profile memory กับข้อมูลขนาดใหญ่
-- ต้องปิด `ALLOW_LEGACY_SYNC_PUSH` หลังยืนยันว่าอุปกรณ์ใช้งานทุกเครื่องเป็น protocol 2
-- รูปสลิป/รูปแจ้งซ่อมจาก LINE มี ownership-aware hydration เข้าแอป build ใหม่แล้ว แต่ media ประเภทอื่นยังไม่มี transfer ข้ามอุปกรณ์ครบทุก flow และ URL `/uploads` ฝั่งเว็บเดิมยังเป็น public compatibility path
+- ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production แล้ว; ยังต้องยืนยัน manual sync จาก iPhone หลัง cutover และตรวจ journal ว่าไม่มี protocol rejection จากอุปกรณ์ใช้งานจริง
+- สื่อธุรกิจที่อยู่ใน snapshot มี ownership-aware hydration, checksum และ retry แล้ว และ `/uploads` ถูกปิดบน production; ยังต้อง UAT ข้ามสองเครื่องและกำหนด orphan cleanup/retention ส่วนพื้นหลัง/วิดีโอเป็น client-local ตามสถาปัตยกรรมและอยู่ใน local backup
 - ยังต้องทำ invoice/refund/void ledger เต็มรูปแบบ; ตอนนี้เพิ่ม transaction/receipt แบบ append-only และป้องกันลบบิลที่รับเงินแล้ว แต่ `Payment` ยังเป็น compatibility invoice
 - APNs, localization เต็มระบบ และ maintenance SLA ไม่ใช่ core flow ที่ปิดในรอบนี้
 - secret ที่เคยอยู่ใน Git history ต้องหมุนที่ผู้ให้บริการ LINE/Resend และเปลี่ยน JWT โดยวางแผน session cutover; การถอนจาก index ไม่ได้ลบ commit เก่า

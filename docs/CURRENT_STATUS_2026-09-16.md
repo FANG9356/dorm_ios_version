@@ -37,7 +37,7 @@
 - manual sync ซ่อม local data ที่ขาดแม้ version เท่ากันได้
 - manual sync รวม local dirty/deleted records เข้ากับ remote snapshot แล้ว push บน remote base version ได้
 - เมื่อ LINE รับสลิปหรือแจ้งซ่อม backend รวมการเปลี่ยนแปลงกลับเข้า immutable snapshot ทันที
-- มี tenant-scoped authenticated media hydration สำหรับสลิป/รูปแจ้งซ่อมที่มาจาก LINE
+- มี tenant-scoped authenticated media hydration สำหรับสลิป รูปแจ้งซ่อม รูปจอง และหลักฐานสภาพห้อง พร้อมตรวจ SHA-256 และ retry สูงสุด 3 ครั้งก่อนบันทึกลงเครื่อง
 
 ### Backend และความปลอดภัย
 
@@ -49,6 +49,7 @@
 - server backup รวม master/tenant database, uploads, manifest, checksum และ scheduler
 - offline restore drill ผ่านการตรวจ archive/hash/size และ SQLite `PRAGMA quick_check`
 - online restore รุ่นที่ไม่ปลอดภัยถูกปิดแบบ fail closed ด้วย HTTP 501
+- ปิด static `/uploads` แบบสาธารณะแล้ว; LINE ใช้ HMAC signed URL อายุ 24 ชั่วโมง ส่วนแอปใช้ `/api/media` ที่ตรวจ session, account และการอ้างอิงไฟล์ใน tenant database
 
 ### LINE, LIFF และลูกบ้าน
 
@@ -66,8 +67,11 @@
 - iOS unit tests ล่าสุดผ่าน **44/44**
 - backend `go test -count=1 -race ./...` และ `go vet ./...` ผ่าน
 - Debug device build/sign/install บน iPhone “F” ผ่าน และมี UAT จริงบาง flow
-- production backend ใช้ binary SHA-256 `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51`
+- production binary ก่อนรอบ restore/media hardening คือ SHA-256 `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และถูกเก็บไว้ใน rollback set
 - production health ที่ `https://api.dorminet.studio/api/system/ping` ตอบ HTTP 200
+- production deploy binary ที่มี maintenance-mode restore/rollback แล้ว SHA-256 `2f069031e35d1a57eb5cefa8760849f651c5c6c57eaccc79f683f9b7660e5d6b`; archive ล่าสุดผ่าน `--verify-only` โดยพบ 2 databases และ 2 media files
+- production deploy private-media/checksum binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`; health ทั้ง loopback/โดเมนตอบ 200, known public upload ตอบ 404, tenant media ที่ไม่มี session ตอบ 401 และ unsigned LINE media ตอบ 404
+- ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production แล้ว หลังไม่พบ legacy push ใน journal ตั้งแต่ 15 กันยายนและ snapshot จากอุปกรณ์ปัจจุบันเดินต่อถึง v76; ยังต้องกด manual sync จาก iPhone หลัง cutover เพื่อบันทึกหลักฐานปลายทาง
 - มี rollback set ก่อน deployment สำคัญและตรวจ SQLite master/tenant เป็น `ok`
 - CI workflow ถูก commit/push แล้ว แต่การประเมินรอบนี้ไม่สามารถอ่านผล GitHub Actions ของ private repository ได้ จึงไม่อ้างว่า online CI ผ่าน
 
@@ -76,10 +80,10 @@
 | หัวข้อ | ส่วนที่มีแล้ว | ส่วนที่ยังขาด |
 | --- | --- | --- |
 | Financial ledger | append-only transaction/receipt, migration จากยอดเก่า, delete guard | Invoice migration เต็มรูปแบบ, refund, void, credit adjustment และ actor/reason audit |
-| Media | LINE slip/maintenance hydration แบบ tenant-scoped | สลิป/พื้นหลัง/วิดีโอ/สื่ออื่นข้ามอุปกรณ์, checksum/lifecycle ทุก flow และปิด public `/uploads` |
+| Media | tenant-scoped hydration สำหรับสื่อธุรกิจ, SHA-256 verification, bounded retry, signed LINE URL และปิด public `/uploads` | orphan cleanup/retention policy และ UAT ดาวน์โหลดจริงข้ามสองเครื่อง; พื้นหลัง/วิดีโอเป็น client-local ตามสถาปัตยกรรมและรวมใน local backup |
 | Sync conflict | atomic version check, exact retry, backup-before-replace, self-healing, dirty rebase | UAT ชนกันจริงสองเครื่อง และ record-level merge/policy |
 | LINE delivery | core linking/invoice/payment/maintenance ทำงาน | delivery log/retry/idempotency ครบทุก message, opt-out และ monitoring |
-| Restore | archive/manifest/checksum/offline drill และคำสั่ง maintenance-mode atomic swap/rollback พร้อม automated tests | deploy คำสั่งใหม่และทำ production maintenance-window drill พร้อม health checklist |
+| Restore | archive/manifest/checksum/offline drill, คำสั่ง maintenance-mode atomic swap/rollback, automated tests, production deploy และ verify-only ผ่าน | ทำ production maintenance-window restore/rollback drill พร้อม health checklist |
 | Device UAT | ทดสอบบาง flow บน iPhone จริงหนึ่งเครื่อง | สองเครื่อง/สองบัญชี, offline/interruption, Photos/AirPrint, disk-full และ performance soak |
 
 ## งานที่ยังเหลือ
@@ -88,10 +92,10 @@
 
 1. หมุน/revoke JWT, LINE, Resend/email และ secret อื่นที่เคยอยู่ใน Git history พร้อม session cutover และบันทึกหลักฐานจาก provider
 2. ทำ UAT สอง iPhone/สองบัญชี: เพิ่ม/แก้ record เดียวกันและคนละ record, ตัดเน็ตกลาง push/pull, force quit และกู้จาก backup
-3. อัปเดตทุกอุปกรณ์เป็น sync protocol 2 แล้วปิด `ALLOW_LEGACY_SYNC_PUSH`
-4. ทำ media ownership/transfer ทุก flow ให้ครบ พร้อม checksum, account boundary, retry, cleanup/retention และปิด public `/uploads`
+3. ยืนยัน manual sync จาก iPhone หลัง production ปิด `ALLOW_LEGACY_SYNC_PUSH` และเฝ้าดู rejection/log; ฝั่ง server cutover เป็น `false` แล้ว
+4. ทำ media lifecycle ส่วนสุดท้าย: orphan cleanup/retention และ UAT ข้ามสองเครื่อง; ownership, checksum, retry และ public `/uploads` closure deploy แล้ว
 5. ทำ Invoice/refund/void/credit-adjustment workflow และ immutable actor/reason audit พร้อม migration จาก `Payment` compatibility model
-6. Deploy และทำ production drill ของ atomic restore ใน maintenance mode ตาม [SERVER_RESTORE_RUNBOOK_2026-09-16.md](SERVER_RESTORE_RUNBOOK_2026-09-16.md); ตัวคำสั่ง verify/swap/rollback และ automated tests มีแล้ว แต่ยังต้องมีหลักฐานจาก maintenance window จริง
+6. ทำ production drill ของ atomic restore ใน maintenance mode ตาม [SERVER_RESTORE_RUNBOOK_2026-09-16.md](SERVER_RESTORE_RUNBOOK_2026-09-16.md); ตัวคำสั่ง deploy แล้วและ verify-only ผ่าน archive จริง แต่ยังต้องมีหลักฐาน restore, health checklist และ rollback จาก maintenance window
 
 ### P1 — ต้องปิดก่อน rollout วงกว้าง
 
@@ -114,7 +118,7 @@
 
 1. Secret rotation/session cutover
 2. UAT สองเครื่องและ protocol-2 cutover
-3. Media transfer/ownership ทุก flow และปิด public uploads
+3. Media lifecycle/UAT ส่วนที่เหลือ หลัง ownership/checksum/retry และ public-upload closure deploy แล้ว
 4. Financial refund/void/full invoice migration
 5. Atomic restore drill
 6. UI automation, monitoring และ release hardening

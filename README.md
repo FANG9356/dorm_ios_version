@@ -2,7 +2,7 @@
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
 
-> สถานะ ณ 16 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup และการแจ้งสถานะงานซ่อมถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media transfer ทุก flow, protocol-2 cutover, financial refund/void ledger และ atomic restore
+> สถานะ ณ 16 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover และ public-media closure ถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
 
 อ่านสรุปว่าทำอะไรแล้วและยังเหลืออะไรได้ที่ [CURRENT_STATUS_2026-09-16.md](docs/CURRENT_STATUS_2026-09-16.md) ส่วนการประเมินรายหน้าและ roadmap ตั้งต้นอยู่ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขใน baseline นั้นไม่ใช่สถานะปัจจุบัน
 
@@ -101,7 +101,7 @@ SQLite sync_snapshots แยก account_id และ version
 
 การดึงข้อมูลอัตโนมัติจะเกิดเฉพาะเมื่อไม่มี local changes ค้างอยู่และ snapshot จากเครื่องอื่นใหม่ไม่เกิน 120 วินาที ผู้ใช้สามารถสั่งดึงข้อมูลล่าสุดด้วยตนเองได้ เวอร์ชัน/งานที่ยังส่งไม่สำเร็จแยกตามบัญชี ผลตอบกลับของบัญชีเก่าจะไม่ถูกนำไปใช้กับบัญชีใหม่
 
-**ข้อกำหนดการปล่อยรุ่น:** production backend รองรับ `sync_protocol: 2` แล้ว แต่เปิด `ALLOW_LEGACY_SYNC_PUSH=true` ชั่วคราว ต้องอัปเดตและตรวจอุปกรณ์ทุกเครื่องก่อนปิด compatibility flag; แอปจะเก็บข้อมูล local และแจ้งรออัปเดตเมื่อพบ backend ที่ไม่รองรับ protocol ใหม่
+**ข้อกำหนดการปล่อยรุ่น:** production backend รองรับ `sync_protocol: 2` และปิด `ALLOW_LEGACY_SYNC_PUSH=false` แล้ว ต้องยืนยัน manual sync จากอุปกรณ์ใช้งานจริงหลัง cutover และตรวจ log ว่าไม่มี protocol rejection; แอปจะเก็บข้อมูล local และแจ้งรออัปเดตเมื่อพบ backend ที่ไม่รองรับ protocol ใหม่
 
 ## วิธีเปิดและตรวจสอบ
 

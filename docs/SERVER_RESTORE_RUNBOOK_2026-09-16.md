@@ -105,7 +105,7 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 
 ## สิ่งที่ยังต้องพิสูจน์บน production
 
-- deploy binary ที่มีคำสั่ง restore/rollback นี้
+- production deploy binary ที่มีคำสั่ง restore/rollback แล้ว และ `--verify-only` ผ่าน archive จริงโดยไม่แตะ live data
 - ทำ drill ด้วยสำเนา production ใน maintenance environment
 - ทำ production maintenance-window drill ที่มีผู้รับผิดชอบ, health checklist และเวลาการกู้คืนที่บันทึกไว้
 - ยืนยัน retention และสิทธิ์ filesystem ของ `restore_rollbacks`
