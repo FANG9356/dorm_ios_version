@@ -29,6 +29,7 @@
 - วันที่ 16 กันยายน 2569 แก้เส้นทางข้อมูลจาก LINE เข้าสู่แอป: เมื่อบอทรอรับสลิปหรือรายการแจ้งซ่อม ระบบจะรวมการเปลี่ยนแปลงกลับเข้า immutable sync snapshot ของบัญชีแบบ optimistic versioning ทันที และก่อน startup materialization จะกู้การเปลี่ยนแปลงจาก LINE ที่ยังไม่เคย publish เพื่อไม่ให้ snapshot เก่าเขียนทับ
 - เพิ่ม authenticated tenant-scoped media hydration สำหรับไฟล์ที่ฐานข้อมูลของบัญชีนั้นอ้างถึงเท่านั้น แอป build ใหม่ดาวน์โหลดสลิป/รูปแจ้งซ่อมที่ขาดมาเก็บใน local `PaymentSlips`; path traversal และไฟล์ของบัญชีอื่นถูกปฏิเสธ โดยยังคงใช้ server เป็นตัวกลางและไม่ฝัง binary media ลงใน snapshot
 - production สร้าง snapshot `v66` จาก `line-bot` สำเร็จ ครอบคลุมสลิปสถานะ `checking` และรายการแจ้งซ่อมที่ทดสอบก่อนแก้ พร้อมกำหนด UUID ให้รายการแจ้งซ่อมเพื่อให้ sync ต่อเนื่องโดยไม่สร้างข้อมูลซ้ำ
+- หลัง UAT พบว่า checkpoint ใน iPhone อาจเท่ากับ remote version ทั้งที่ local store ขาดบางรายการ จึงเพิ่ม manual-sync self-healing ให้เทียบ content signature และ apply snapshot ซ้ำเมื่อเนื้อหาไม่ตรง พร้อมแก้ overlay ไม่ให้แสดง “ซิงค์สำเร็จ” ตามเวลาเมื่อการทำงานจริงล้มเหลว; republish production เป็น `v67` เพื่อให้อุปกรณ์ที่ติดตั้ง build เดิมดึงข้อมูลได้ทันที โดยไม่ได้เปลี่ยนรายละเอียดรายการแจ้งซ่อม
 - deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `2e6486679666bfe10640ac2ac60f6ed349603481b9aa3728b3750d2880f15386`
 - production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
@@ -66,6 +67,7 @@
 - `/home/fang/line_migration_backups/20260915_225228_pre_line_invoice_layout` (server binary ก่อนจัด layout Flex Message ให้กระชับและไม่ตัดข้อความ/ยอดเงิน)
 - `/home/fang/line_migration_backups/20260915_195350_pre_line_snapshot_sync` (rollback จาก deployment validation รอบแรก; binary/master/tenant database)
 - `/home/fang/line_migration_backups/20260915_195516_pre_line_snapshot_sync` (SQLite-native master/tenant backup และ binary ก่อน deploy LINE-to-app snapshot sync รอบสำเร็จ)
+- `/home/fang/line_migration_backups/20260915_200616_pre_line_republish` (SQLite-native master/tenant backup ก่อน republish snapshot v67 สำหรับ device UAT)
 
 ชุดก่อนหน้าเก็บ master database, tenant database และ server binary เดิม; ชุด predeploy เก็บ environment เดิมด้วย ส่วนชุด `pre_phone_lookup` เก็บเฉพาะ binary เพราะ deployment นี้ไม่เปลี่ยน schema หรือข้อมูล ไฟล์ถูกจำกัดสิทธิ์ตามประเภท
 
@@ -134,7 +136,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | LINE invoice Flex Message | ผ่าน unit/race tests และ Messaging API `validate/push` ตอบ HTTP 200; ครอบคลุมปี ค.ศ./พ.ศ., รายการค่าใช้จ่าย, ยอดชำระ/คงเหลือ, การเลือกบิลด้วย stable user ID และ layout `mega` ที่เพิ่มพื้นที่ให้ข้อความ/ยอดเงิน |
 | LINE → app snapshot publish | ผ่าน unit/race tests และ production reconciliation; snapshot เพิ่มจาก v65 เป็น v66, `device_id=line-bot`, มีสลิป `checking` และ maintenance 1 รายการโดย publish ซ้ำไม่เพิ่ม version |
 | Tenant-scoped media API | ผ่าน unit/race tests; ต้องมี session, ไฟล์ต้องถูกอ้างถึงในฐานข้อมูล tenant และ unauthenticated production request ถูกปฏิเสธ HTTP 401 |
-| iOS build หลังเพิ่ม remote media hydration | ผ่าน Debug Simulator build; XCTest ผ่าน 41/42 โดย 1 test เป็น Keychain Simulator entitlement `-34018` ไม่เกี่ยวกับ sync/media |
+| iOS build หลังเพิ่ม remote media hydration/self-healing | ผ่าน Debug Simulator build; sync regression tests รวมกรณี version เท่ากันแต่ local ขาดข้อมูลผ่าน และ XCTest ผ่าน 42/43 โดย 1 test เป็น Keychain Simulator entitlement `-34018` ไม่เกี่ยวกับ sync/media |
 | iOS unit tests หลังบังคับ month key เป็น Gregorian | ผ่านทุก test ใน scheme `DormiNetX` |
 | Production LIFF page/assets + LINE redirect หลังเปลี่ยน endpoint | ผ่าน, HTTP 200 และชี้ `api.dorminet.studio/liff` |
 | Production room-list endpoint เดิม | ปิดการเปิดเผยรายการห้อง, HTTP 410 |

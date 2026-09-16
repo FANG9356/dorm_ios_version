@@ -624,10 +624,18 @@ class SyncManager: ObservableObject {
         }
 
         let currentVersion = checkpoint.version
-        guard let version = response.version, version > currentVersion else {
+        guard let version = response.version else { throw SyncError.invalidServerResponse }
+        if version < currentVersion {
+            throw SyncError.invalidServerResponse
+        }
+
+        let remoteContent = try contentSignature(snapshot)
+        let localContent = try contentSignature(buildSnapshot(modelContext: modelContext))
+        if version == currentVersion && remoteContent == localContent {
             if !silentWhenUnchanged { message = "ข้อมูลเป็นล่าสุดแล้ว" }
             return
         }
+        if onlyIfRecent && version == currentVersion { return }
 
         if onlyIfRecent {
             guard snapshot.deviceID != deviceID() else { return }
@@ -648,6 +656,9 @@ class SyncManager: ObservableObject {
         try applySnapshot(verifiedSnapshot, modelContext: modelContext)
         await downloadMissingRemoteMedia(from: verifiedSnapshot)
         checkpoint.version = version
+        if !onlyIfRecent {
+            message = version == currentVersion ? "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว" : "ดึงข้อมูลล่าสุดแล้ว"
+        }
     }
 
     private func downloadMissingRemoteMedia(from snapshot: SyncEnvelope) async {

@@ -165,7 +165,7 @@ struct RoomListView: View {
         }
         .overlay {
             if showSyncOverlay {
-                SyncAnimationOverlay()
+                SyncAnimationOverlay(state: syncManager.state, message: syncManager.message)
                     .transition(.opacity)
                     .zIndex(999)
             }
@@ -554,6 +554,8 @@ struct CloudOutlineShape: Shape {
 }
 
 struct SyncAnimationOverlay: View {
+    let state: SyncState
+    let message: String
     @State private var cloudProgress: CGFloat = 0.0
     @State private var arrowOffset: CGFloat = -40
     @State private var arrowOpacity: Double = 0.0
@@ -566,7 +568,6 @@ struct SyncAnimationOverlay: View {
         CGSize(width: 170, height: -30)
     ]
     @State private var dotOpacities: [Double] = Array(repeating: 0.0, count: 6)
-    @State private var statusText = "กำลังเชื่อมต่อ..."
     @State private var statusOpacity: Double = 0.0
     @State private var pulseArrow = false
     @State private var bgOpacity: Double = 0.0
@@ -579,6 +580,23 @@ struct SyncAnimationOverlay: View {
         CGSize(width: -160, height: 20),
         CGSize(width: 170, height: -30)
     ]
+
+    private var statusText: String {
+        switch state {
+        case .failed:
+            return message.isEmpty ? "ซิงค์ข้อมูลไม่สำเร็จ" : message
+        case .completed:
+            return message.isEmpty ? "ซิงค์ข้อมูลสำเร็จ" : message
+        case .applying:
+            return "กำลังอัปเดตข้อมูลในเครื่อง..."
+        case .downloading:
+            return "กำลังดาวน์โหลดข้อมูล..."
+        case .preparing, .uploading:
+            return message.isEmpty ? "กำลังเตรียมข้อมูล..." : message
+        case .idle:
+            return "กำลังเชื่อมต่อ..."
+        }
+    }
     
     var body: some View {
         ZStack {
@@ -655,12 +673,6 @@ struct SyncAnimationOverlay: View {
             }
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true).delay(0.3)) {
                 pulseArrow = true
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                statusText = "ซิงค์ข้อมูลสำเร็จ"
             }
         }
 

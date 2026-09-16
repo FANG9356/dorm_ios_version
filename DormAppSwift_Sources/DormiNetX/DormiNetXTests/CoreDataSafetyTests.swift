@@ -309,6 +309,31 @@ final class CoreDataSafetyTests: XCTestCase {
         }
     }
 
+    func testManualPullRepairsMissingLocalDataAtSameVersion() async throws {
+        try await withDefaults { defaults in
+            let remote = try AccountScopedStore.makeGuestContainer()
+            let maintenance = Maintenance(roomNumber: "103", issue: "ไฟดับ")
+            maintenance.isDirty = false
+            remote.mainContext.insert(maintenance)
+            try remote.mainContext.save()
+
+            let api = SyncTestAPI()
+            let manager = manager(api: api, defaults: defaults)
+            let backupData = try manager.exportLocalBackupData(modelContext: remote.mainContext)
+            let backup = try XCTUnwrap(JSONSerialization.jsonObject(with: backupData) as? [String: Any])
+            let payload = try JSONSerialization.data(withJSONObject: XCTUnwrap(backup["snapshot"]))
+            api.onFetch = { try self.snapshotResponse(payload) }
+
+            let local = try AccountScopedStore.makeGuestContainer()
+            SyncCheckpoint(accountID: 1, defaults: defaults).version = 1
+            await manager.pullLatestSnapshot(modelContext: local.mainContext)
+
+            XCTAssertEqual(manager.state, .completed)
+            XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<Maintenance>()).map(\.issue), ["ไฟดับ"])
+            XCTAssertEqual(manager.message, "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว")
+        }
+    }
+
     func testPullingLegacyPaidBalanceQueuesGeneratedLedgerForUpload() async throws {
         try await withDefaults { defaults in
             let remote = try AccountScopedStore.makeGuestContainer()
