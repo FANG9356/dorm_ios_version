@@ -242,172 +242,79 @@ private struct BillRow: View {
     let user: DormUser?
     let onEdit: () -> Void
     let onDelete: () -> Void
-    @State private var horizontalOffset: CGFloat = 0
-    @State private var isActionsOpen = false
-
-    private let actionWidth: CGFloat = 136
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            GlassCard {
-                VStack(spacing: 12) {
-                    HStack(alignment: .top, spacing: 12) {
-                        VStack(spacing: 2) {
-                            Text(payment.roomNumber)
-                                .font(.custom("SukhumvitSet-Bold", size: 22))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.72)
-                            Text("ห้อง")
+        GlassCard {
+            VStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(spacing: 2) {
+                        Text(payment.roomNumber)
+                            .font(.custom("SukhumvitSet-Bold", size: 22))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.72)
+                        Text("ห้อง")
+                            .font(.custom("SukhumvitSet-Text", size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(width: 64, height: 58)
+                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(tenantName)
+                            .font(.custom("SukhumvitSet-Bold", size: 15))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(detailText)
+                            .font(.custom("SukhumvitSet-Text", size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                        if !dateText.isEmpty {
+                            Label(dateText, systemImage: "calendar")
                                 .font(.custom("SukhumvitSet-Text", size: 10))
                                 .foregroundStyle(.secondary)
-                        }
-                        .frame(width: 64, height: 58)
-                        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(tenantName)
-                                .font(.custom("SukhumvitSet-Bold", size: 15))
-                                .foregroundStyle(.primary)
                                 .lineLimit(1)
-                            Text(detailText)
-                                .font(.custom("SukhumvitSet-Text", size: 11))
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                            if !dateText.isEmpty {
-                                Label(dateText, systemImage: "calendar")
-                                    .font(.custom("SukhumvitSet-Text", size: 10))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        Spacer(minLength: 8)
-
-                        VStack(alignment: .trailing, spacing: 6) {
-                            Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
-                                .font(.custom("SukhumvitSet-Bold", size: 16))
-                                .foregroundStyle(.primary)
-                            Text(statusText)
-                                .font(.custom("SukhumvitSet-Bold", size: 10))
-                                .foregroundStyle(statusColor)
-                                .padding(.horizontal, 9)
-                                .frame(height: 24)
-                                .background(statusColor.opacity(0.12), in: Capsule())
                         }
                     }
 
-                    HStack(spacing: 8) {
-                        Button(action: onEdit) {
-                            Label("แก้ไข", systemImage: "pencil")
-                                .font(.custom("SukhumvitSet-Bold", size: 11))
-                                .foregroundStyle(.blue)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 34)
-                                .background(Color.blue.opacity(0.1), in: Capsule())
-                        }
-                        .buttonStyle(.plain)
+                    Spacer(minLength: 8)
 
-                        Button(role: .destructive, action: onDelete) {
-                            Label("ลบ", systemImage: "trash")
-                                .font(.custom("SukhumvitSet-Bold", size: 11))
-                                .foregroundStyle(.red)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 34)
-                                .background(Color.red.opacity(0.1), in: Capsule())
-                        }
-                        .buttonStyle(.plain)
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
+                            .font(.custom("SukhumvitSet-Bold", size: 16))
+                            .foregroundStyle(.primary)
+                        Text(statusText)
+                            .font(.custom("SukhumvitSet-Bold", size: 10))
+                            .foregroundStyle(statusColor)
+                            .padding(.horizontal, 9)
+                            .frame(height: 24)
+                            .background(statusColor.opacity(0.12), in: Capsule())
                     }
                 }
-            }
-            .offset(x: horizontalOffset)
-            .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .simultaneousGesture(swipeGesture)
-            .onTapGesture {
-                if isActionsOpen {
-                    closeActions()
+
+                HStack(spacing: 8) {
+                    Button(action: onEdit) {
+                        Label("แก้ไข", systemImage: "pencil")
+                            .font(.custom("SukhumvitSet-Bold", size: 11))
+                            .foregroundStyle(.blue)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(Color.blue.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(role: .destructive, action: onDelete) {
+                        Label("ลบ", systemImage: "trash")
+                            .font(.custom("SukhumvitSet-Bold", size: 11))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 34)
+                            .background(Color.red.opacity(0.1), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .zIndex(0)
-
-            HStack(spacing: 10) {
-                Button {
-                    closeActions()
-                    onEdit()
-                } label: {
-                    actionButton(icon: "pencil", title: "แก้ไข", accent: .indigo)
-                }
-                .buttonStyle(.plain)
-
-                Button(role: .destructive) {
-                    closeActions()
-                    onDelete()
-                } label: {
-                    actionButton(icon: "trash", title: "ลบ", accent: .red)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.trailing, 4)
-            .opacity(actionRevealProgress)
-            .scaleEffect(0.94 + (0.06 * actionRevealProgress), anchor: .trailing)
-            .allowsHitTesting(isActionsOpen)
-            .zIndex(1)
         }
-        .contextMenu {
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
-            }
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
-            }
-        }
-    }
-
-    private var actionRevealProgress: CGFloat {
-        min(1, max(0, abs(horizontalOffset) / actionWidth))
-    }
-
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 12, coordinateSpace: .local)
-            .onChanged { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                let base = isActionsOpen ? -actionWidth : 0
-                horizontalOffset = max(-actionWidth, min(0, base + value.translation.width))
-            }
-            .onEnded { value in
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                let shouldOpen = horizontalOffset < -56 || value.predictedEndTranslation.width < -92
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-                    isActionsOpen = shouldOpen
-                    horizontalOffset = shouldOpen ? -actionWidth : 0
-                }
-            }
-    }
-
-    private func closeActions() {
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-            isActionsOpen = false
-            horizontalOffset = 0
-        }
-    }
-
-    private func actionButton(icon: String, title: String, accent: Color) -> some View {
-        VStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .bold))
-            Text(title)
-                .font(.custom("SukhumvitSet-Bold", size: 10))
-        }
-        .foregroundStyle(accent)
-        .frame(width: 58, height: 58)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.primary.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(accent.opacity(0.18), lineWidth: 1)
-        )
     }
 
     private var statusText: String {
