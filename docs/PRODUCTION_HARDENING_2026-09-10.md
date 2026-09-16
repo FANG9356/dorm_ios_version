@@ -122,6 +122,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | Login rate limit บน production | ครั้งที่ 11 ของบัญชีทดสอบถูกปฏิเสธ HTTP 429 |
 | OTP lockout persistence บน production | ครั้งที่ 5 ตอบ 429 และหลัง restart ยังตอบ 429; ลบ test row แล้ว |
 | Production multi-tenant backup + restore drill | ผ่าน |
+| Maintenance-mode atomic restore/rollback automated tests | ผ่าน: verify-only ไม่แตะ live data, ปฏิเสธ archive ถูกแก้และ active WAL, สลับ master/tenant/media และ rollback กลับครบชุด |
 | Production automatic backup scheduler เวลา 22:00 | ผ่านต่อเนื่อง; archive ล่าสุด permission 0600 และ `unzip -t` ผ่านทุก entry |
 | Production backup list เห็น `server_backup_*.zip` | ผ่าน, พบ 1 ไฟล์ |
 | Backup directory/archive permission | 0700 / 0600 |
@@ -175,6 +176,6 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 - ยังต้องทำ invoice/refund/void ledger เต็มรูปแบบ; ตอนนี้เพิ่ม transaction/receipt แบบ append-only และป้องกันลบบิลที่รับเงินแล้ว แต่ `Payment` ยังเป็น compatibility invoice
 - APNs, localization เต็มระบบ และ maintenance SLA ไม่ใช่ core flow ที่ปิดในรอบนี้
 - secret ที่เคยอยู่ใน Git history ต้องหมุนที่ผู้ให้บริการ LINE/Resend และเปลี่ยน JWT โดยวางแผน session cutover; การถอนจาก index ไม่ได้ลบ commit เก่า
-- online restore ของ server archive ยังต้องทำเป็น workflow ที่ตรวจ manifest แล้วสลับฐานข้อมูลแบบ atomic; รอบนี้พิสูจน์ archive ด้วยการแตกไฟล์ ตรวจ hash/ขนาด และเปิดสำเนาด้วย `PRAGMA quick_check` โดยไม่เขียนทับ production
+- เพิ่มคำสั่ง maintenance-mode restore/rollback ที่ตรวจ manifest, hash, ขนาด และ SQLite ทุกฐานก่อนสลับ master/tenant/media พร้อมย้อนกลับอัตโนมัติและเก็บ rollback set แล้วตาม [SERVER_RESTORE_RUNBOOK_2026-09-16.md](SERVER_RESTORE_RUNBOOK_2026-09-16.md); online endpoint ยังคงปิดแบบ fail closed และยังต้อง deploy/ทำ production maintenance-window drill ก่อนนับว่าปิด blocker
 
 ดังนั้น backend production และ LINE domain migration พร้อมใช้งานในขอบเขตที่ทดสอบแล้ว แต่ยังไม่ควรเรียกระบบทั้งชุดว่า 100% จนกว่าจะผ่าน device UAT, media transfer, protocol-2 cutover และ provider secret rotation

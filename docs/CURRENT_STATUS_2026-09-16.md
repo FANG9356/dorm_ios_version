@@ -79,7 +79,7 @@
 | Media | LINE slip/maintenance hydration แบบ tenant-scoped | สลิป/พื้นหลัง/วิดีโอ/สื่ออื่นข้ามอุปกรณ์, checksum/lifecycle ทุก flow และปิด public `/uploads` |
 | Sync conflict | atomic version check, exact retry, backup-before-replace, self-healing, dirty rebase | UAT ชนกันจริงสองเครื่อง และ record-level merge/policy |
 | LINE delivery | core linking/invoice/payment/maintenance ทำงาน | delivery log/retry/idempotency ครบทุก message, opt-out และ monitoring |
-| Restore | archive/manifest/checksum/offline drill ผ่าน | maintenance-mode atomic database/media swap และ rollback drill |
+| Restore | archive/manifest/checksum/offline drill และคำสั่ง maintenance-mode atomic swap/rollback พร้อม automated tests | deploy คำสั่งใหม่และทำ production maintenance-window drill พร้อม health checklist |
 | Device UAT | ทดสอบบาง flow บน iPhone จริงหนึ่งเครื่อง | สองเครื่อง/สองบัญชี, offline/interruption, Photos/AirPrint, disk-full และ performance soak |
 
 ## งานที่ยังเหลือ
@@ -91,7 +91,7 @@
 3. อัปเดตทุกอุปกรณ์เป็น sync protocol 2 แล้วปิด `ALLOW_LEGACY_SYNC_PUSH`
 4. ทำ media ownership/transfer ทุก flow ให้ครบ พร้อม checksum, account boundary, retry, cleanup/retention และปิด public `/uploads`
 5. ทำ Invoice/refund/void/credit-adjustment workflow และ immutable actor/reason audit พร้อม migration จาก `Payment` compatibility model
-6. ทำ atomic restore ใน maintenance mode: verify manifest, สลับ master/tenant/media เป็นชุด, health check และ rollback เมื่อล้มเหลว
+6. Deploy และทำ production drill ของ atomic restore ใน maintenance mode ตาม [SERVER_RESTORE_RUNBOOK_2026-09-16.md](SERVER_RESTORE_RUNBOOK_2026-09-16.md); ตัวคำสั่ง verify/swap/rollback และ automated tests มีแล้ว แต่ยังต้องมีหลักฐานจาก maintenance window จริง
 
 ### P1 — ต้องปิดก่อน rollout วงกว้าง
 
