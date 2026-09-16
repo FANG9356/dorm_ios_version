@@ -124,9 +124,7 @@ struct MaintenanceTabView: View {
     }
 
     private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        AppDate.dateKey(from: Date())
     }
 }
 
@@ -445,9 +443,7 @@ private struct MaintenanceEditor: View {
     }
 
     private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        AppDate.dateKey(from: Date())
     }
 }
 

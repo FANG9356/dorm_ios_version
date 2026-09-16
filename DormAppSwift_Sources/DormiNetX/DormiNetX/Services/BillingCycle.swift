@@ -23,10 +23,7 @@ struct BillingCycle {
     }
 
     static func date(_ value: String) -> Date? {
-        let key = String(value.prefix(10))
-        let formatter = formatter("yyyy-MM-dd")
-        guard let date = formatter.date(from: key), formatter.string(from: date) == key else { return nil }
-        return date
+        AppDate.date(fromStorageDate: value)
     }
 
     /// Returns the canonical Gregorian storage key for month values created by
@@ -34,21 +31,7 @@ struct BillingCycle {
     /// (`2569-09`). The stored payment is left untouched; normalization is used
     /// when grouping and presenting billing history.
     static func normalizedMonthKey(_ value: String) -> String? {
-        let components = value.trimmingCharacters(in: .whitespacesAndNewlines)
-            .split(separator: "-", omittingEmptySubsequences: false)
-        guard components.count == 2,
-              var year = Int(components[0]),
-              let month = Int(components[1]),
-              (1...12).contains(month) else { return nil }
-
-        if year > 2400 {
-            year -= 543
-        }
-        guard (1...9999).contains(year) else { return nil }
-
-        let key = String(format: "%04d-%02d", year, month)
-        guard date("\(key)-01") != nil else { return nil }
-        return key
+        AppDate.normalizedMonthKey(value)
     }
 
     static func dueDateKey(month: String, moveInDate: String) -> String {

@@ -99,13 +99,7 @@ enum PaymentLedger {
     }
 
     private static func date(from value: String) -> Date? {
-        guard !value.isEmpty else { return nil }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: value)
+        AppDate.date(fromStorageDate: value)
     }
 
     enum LedgerError: LocalizedError {

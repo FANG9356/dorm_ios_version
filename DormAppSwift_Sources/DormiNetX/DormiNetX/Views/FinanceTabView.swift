@@ -172,7 +172,7 @@ struct FinanceTabView: View {
     }
 
     private var summaryGrid: some View {
-        let monthPayments = payments.filter { $0.month == monthKey }
+        let monthPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == monthKey }
         let received = monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
         let pending = monthPayments.filter { $0.paymentStatus == "pending" }.reduce(0) { $0 + $1.amount }
         let partial = monthPayments.filter { $0.paymentStatus == "partial" }.reduce(0) { $0 + $1.paidAmount }
@@ -219,7 +219,7 @@ struct FinanceTabView: View {
 
     private var paymentList: some View {
         let visiblePayments = payments.filter { payment in
-            let matchesMonth = payment.month == monthKey
+            let matchesMonth = BillingCycle.normalizedMonthKey(payment.month) == monthKey
             let matchesStatus = selectedStatus == "ทั้งหมด" || statusLabel(for: payment) == selectedStatus
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let user = userFor(payment)
@@ -314,12 +314,7 @@ struct FinanceTabView: View {
     }
 
     private var monthKey: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
-        formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: selectedMonth)
+        AppDate.monthKey(from: selectedMonth)
     }
 
     private func userFor(_ payment: Payment) -> DormUser? {
@@ -341,7 +336,11 @@ struct FinanceTabView: View {
     }
 
     private func paymentFor(_ user: DormUser, month: String) -> Payment? {
-        payments.first { isPayment($0, for: user) && $0.month == month && $0.paymentPlan != "installment" }
+        payments.first {
+            isPayment($0, for: user) &&
+            BillingCycle.normalizedMonthKey($0.month) == BillingCycle.normalizedMonthKey(month) &&
+            $0.paymentPlan != "installment"
+        }
     }
 
     private func isPayment(_ payment: Payment, for user: DormUser) -> Bool {
@@ -447,12 +446,12 @@ struct FinanceTabView: View {
         var didCreate = false
         for user in activeUsers {
             let hasMoveInInstallment = monthKey == moveInMonth(for: user) && payments.contains { payment in
-                payment.month == monthKey &&
+                BillingCycle.normalizedMonthKey(payment.month) == monthKey &&
                 payment.paymentPlan == "installment" &&
                 isPayment(payment, for: user)
             }
             let hasRegularPayment = payments.contains { payment in
-                payment.month == monthKey &&
+                BillingCycle.normalizedMonthKey(payment.month) == monthKey &&
                 payment.paymentPlan != "installment" &&
                 isPayment(payment, for: user)
             }
@@ -484,7 +483,8 @@ struct FinanceTabView: View {
         guard BillingCycle.date("\(month)-01") != nil,
               BillingCycle.date(user.moveInDate) != nil else { return false }
         if user.indefiniteContract != 1, !user.contractEndDate.isEmpty,
-           month > String(user.contractEndDate.prefix(7)) { return false }
+           let contractMonth = BillingCycle.normalizedMonthKey(String(user.contractEndDate.prefix(7))),
+           month > contractMonth { return false }
         if user.status == "จอง" {
             return month == moveInMonth(for: user)
         }
@@ -544,7 +544,7 @@ struct FinanceTabView: View {
     }
 
     private func moveInMonth(for user: DormUser) -> String {
-        String(user.moveInDate.prefix(7))
+        BillingCycle.normalizedMonthKey(String(user.moveInDate.prefix(7))) ?? ""
     }
 
     private func clean(_ value: String) -> String {
@@ -552,9 +552,7 @@ struct FinanceTabView: View {
     }
 
     private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        AppDate.dateKey(from: Date())
     }
 }
 
@@ -1240,34 +1238,11 @@ private struct ReceiptExportCard: View {
     }
 
     private var generatedDateText: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "th_TH")
-        formatter.calendar = Calendar(identifier: .buddhist)
-        formatter.dateFormat = "d MMMM yyyy เวลา HH:mm น."
-        return formatter.string(from: Date())
+        AppDate.thaiDateTime(Date())
     }
 
     private func thaiDate(_ rawValue: String) -> String {
-        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "-" }
-
-        let inputFormatter = DateFormatter()
-        inputFormatter.locale = Locale(identifier: "en_US_POSIX")
-        inputFormatter.calendar = Calendar(identifier: .gregorian)
-
-        let outputFormatter = DateFormatter()
-        outputFormatter.locale = Locale(identifier: "th_TH")
-        outputFormatter.calendar = Calendar(identifier: .buddhist)
-        outputFormatter.dateFormat = "d MMMM yyyy"
-
-        for format in ["yyyy-MM-dd", "yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ"] {
-            inputFormatter.dateFormat = format
-            if let date = inputFormatter.date(from: trimmed) {
-                return outputFormatter.string(from: date)
-            }
-        }
-
-        return trimmed
+        AppDate.thaiDate(rawValue)
     }
 }
 
@@ -2116,43 +2091,23 @@ struct PaymentEditor: View {
     }
 
     private func thaiDateLabel(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "th_TH")
-        formatter.calendar = Calendar(identifier: .buddhist)
-        formatter.dateFormat = "d MMMM yyyy"
-        return formatter.string(from: date)
+        AppDate.thaiDate(AppDate.dateKey(from: date))
     }
 
     private static func monthKey(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: date)
+        AppDate.monthKey(from: date)
     }
 
     private static func dateKey(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
+        AppDate.dateKey(from: date)
     }
 
     private static func dateFromMonthKey(_ value: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: "\(value)-01")
+        AppDate.date(fromStorageMonth: value)
     }
 
     private static func dateFromDateKey(_ value: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: value)
+        AppDate.date(fromStorageDate: value)
     }
 
     private func removeSlip(at index: Int) {
@@ -2267,7 +2222,7 @@ private struct PaymentEditorContextCard: View {
                     Label(roomType, systemImage: "door.left.hand.open")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
-                    Label("รอบบิล \(month)", systemImage: "calendar")
+                    Label("รอบบิล \(AppDate.thaiMonth(month))", systemImage: "calendar")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                     Label(planText, systemImage: "doc.text")

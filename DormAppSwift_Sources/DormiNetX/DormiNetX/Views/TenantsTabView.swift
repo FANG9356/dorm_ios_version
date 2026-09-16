@@ -574,15 +574,8 @@ struct PremiumTenantCard: View {
     }
 
     private func shortDate(_ dateStr: String?) -> String {
-        guard let dateStr, !dateStr.isEmpty else { return "-" }
-        let parts = dateStr.split(separator: "-")
-        if parts.count == 3, let month = Int(parts[1]), let day = Int(parts[2]) {
-            let monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
-            if month >= 1 && month <= 12 {
-                return "\(day) \(monthNames[month - 1])"
-            }
-        }
-        return dateStr
+        guard let dateStr else { return "-" }
+        return AppDate.thaiDayMonth(dateStr)
     }
 }
 
@@ -771,15 +764,8 @@ struct TenantDetailSheet: View {
     }
     
     private func formatDate(_ dateStr: String?) -> String {
-        guard let d = dateStr, !d.isEmpty else { return "-" }
-        let parts = d.split(separator: "-")
-        if parts.count == 3, let y = Int(parts[0]), let m = Int(parts[1]), let day = Int(parts[2]) {
-            let monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
-            if m >= 1 && m <= 12 {
-                return "\(day) \(monthNames[m-1]) \(y + 543)"
-            }
-        }
-        return d
+        guard let dateStr else { return "-" }
+        return AppDate.thaiDate(dateStr)
     }
     
     private func paymentMethodText(_ method: String?) -> String {
@@ -1092,13 +1078,9 @@ struct TenantFormSheet: View {
                     bookingSlipPaths = u.booking_slips ?? []
                     indefiniteContract = (u.indefinite_contract ?? 0) == 1
                     
-                    let df = DateFormatter()
-                    df.dateFormat = "yyyy-MM-dd"
-                    df.locale = Locale(identifier: "en_US_POSIX")
-                    df.calendar = Calendar(identifier: .gregorian)
-                    if let d = u.move_in_date, let date = df.date(from: d) { moveInDate = date }
-                    if let d = u.booking_end_date, let date = df.date(from: d) { bookingEndDate = date }
-                    if let d = u.contract_end_date, let date = df.date(from: d) { contractEndDate = date }
+                    if let d = u.move_in_date, let date = AppDate.date(fromStorageDate: d) { moveInDate = date }
+                    if let d = u.booking_end_date, let date = AppDate.date(fromStorageDate: d) { bookingEndDate = date }
+                    if let d = u.contract_end_date, let date = AppDate.date(fromStorageDate: d) { contractEndDate = date }
                 } else {
                     applyExistingRoomTypeIfNeeded()
                     applySuggestedDepositIfNeeded()
@@ -1436,11 +1418,6 @@ struct TenantFormSheet: View {
             }
         }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.calendar = Calendar(identifier: .gregorian)
-
         do {
             let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
             let user: DormUser
@@ -1467,11 +1444,11 @@ struct TenantFormSheet: View {
             user.nationalID = clean(nationalID)
             user.address = clean(address)
             user.status = status
-            user.moveInDate = dateFormatter.string(from: moveInDate)
-            user.contractEndDate = (status == "จอง" || indefiniteContract) ? "" : dateFormatter.string(from: contractEndDate)
+            user.moveInDate = AppDate.dateKey(from: moveInDate)
+            user.contractEndDate = (status == "จอง" || indefiniteContract) ? "" : AppDate.dateKey(from: contractEndDate)
             user.deposit = Double(deposit) ?? 0
             user.bookingStatus = status == "จอง" ? "reserved" : ""
-            user.bookingEndDate = status == "จอง" ? dateFormatter.string(from: bookingEndDate) : ""
+            user.bookingEndDate = status == "จอง" ? AppDate.dateKey(from: bookingEndDate) : ""
             user.indefiniteContract = status == "จอง" ? 0 : (indefiniteContract ? 1 : 0)
             user.paymentMethod = paymentMethod
             user.paymentChannel = paymentChannel
@@ -1561,7 +1538,7 @@ struct TenantFormSheet: View {
 
         let existingPayment = localPayments.first {
             !$0.isDeletedLocally &&
-            $0.month == month &&
+            BillingCycle.normalizedMonthKey($0.month) == month &&
             $0.paymentPlan != "installment" &&
             isPayment($0, for: user, userID: userID)
         }
@@ -1677,7 +1654,7 @@ struct TenantFormSheet: View {
     }
 
     private func markRegularMoveInPaymentDeleted(for user: DormUser, userID: Int, month: String, payments: [Payment]) {
-        for payment in payments where isPayment(payment, for: user, userID: userID) && payment.month == month && payment.paymentPlan != "installment" {
+        for payment in payments where isPayment(payment, for: user, userID: userID) && BillingCycle.normalizedMonthKey(payment.month) == month && payment.paymentPlan != "installment" {
             payment.isDeletedLocally = true
             payment.isDirty = true
             payment.lastUpdated = Date()
@@ -1696,11 +1673,7 @@ struct TenantFormSheet: View {
     }
 
     private func monthKey(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        return formatter.string(from: date)
+        AppDate.monthKey(from: date)
     }
 
     private func dueDateKey(for date: Date) -> String {
@@ -1715,11 +1688,7 @@ struct TenantFormSheet: View {
     }
 
     private func dateKey(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        return formatter.string(from: date)
+        AppDate.dateKey(from: date)
     }
 
     private func paymentMethodText(_ value: String) -> String {

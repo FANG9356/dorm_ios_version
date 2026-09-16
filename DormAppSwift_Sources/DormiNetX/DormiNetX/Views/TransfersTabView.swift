@@ -138,9 +138,7 @@ struct TransfersTabView: View {
     }
 
     private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+        AppDate.dateKey(from: Date())
     }
 }
 
@@ -161,7 +159,7 @@ private struct TransferEvidenceRow: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("ห้อง \(payment.roomNumber)")
                             .font(.custom("SukhumvitSet-Bold", size: 15))
-                        Text("รอบบิล \(payment.month)")
+                        Text("รอบบิล \(AppDate.thaiMonth(payment.month))")
                             .font(.custom("SukhumvitSet-Text", size: 11))
                             .foregroundStyle(.secondary)
                     }

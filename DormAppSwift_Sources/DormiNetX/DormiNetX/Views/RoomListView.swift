@@ -289,22 +289,17 @@ struct RoomListView: View {
         }
         lastBookingPromotionCheck = Date()
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-
-        let today = Calendar(identifier: .gregorian).startOfDay(for: Date())
+        let today = AppDate.gregorianCalendar.startOfDay(for: Date())
         let bookedUsers = users
         var didPromote = false
         var promotedRooms: [String] = []
 
         for user in bookedUsers where !user.isDeletedLocally && user.status == "จอง" {
-            guard let moveInDate = formatter.date(from: String(user.moveInDate.prefix(10))) else {
+            guard let moveInDate = AppDate.date(fromStorageDate: user.moveInDate) else {
                 continue
             }
 
-            if Calendar(identifier: .gregorian).startOfDay(for: moveInDate) <= today {
+            if AppDate.gregorianCalendar.startOfDay(for: moveInDate) <= today {
                 user.status = "กำลังพักอาศัย"
                 user.bookingStatus = "auto_converted"
                 user.lastUpdated = Date()
@@ -344,12 +339,12 @@ struct RoomListView: View {
 
         for user in activeUsers {
             let hasMoveInInstallment = month == moveInMonth(for: user) && payments.contains { payment in
-                payment.month == month &&
+                BillingCycle.normalizedMonthKey(payment.month) == month &&
                 payment.paymentPlan == "installment" &&
                 isPayment(payment, for: user)
             }
             let hasRegularPayment = payments.contains { payment in
-                payment.month == month &&
+                BillingCycle.normalizedMonthKey(payment.month) == month &&
                 payment.paymentPlan != "installment" &&
                 isPayment(payment, for: user)
             }
@@ -452,37 +447,25 @@ struct RoomListView: View {
     }
 
     private func moveInMonth(for user: DormUser) -> String {
-        String(user.moveInDate.prefix(7))
+        BillingCycle.normalizedMonthKey(String(user.moveInDate.prefix(7))) ?? ""
     }
 
     private func currentMonthKey() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        return formatter.string(from: Date())
+        AppDate.monthKey(from: Date())
     }
 
     private func dueDateKey(for month: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        guard let date = formatter.date(from: "\(month)-01") else { return "" }
+        guard let date = AppDate.date(fromStorageMonth: month) else { return "" }
 
-        var components = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: date)
+        var components = AppDate.gregorianCalendar.dateComponents([.year, .month], from: date)
         components.month = (components.month ?? 1) + 1
         components.day = 0
-        let dueDate = Calendar(identifier: .gregorian).date(from: components) ?? date
-        return formatter.string(from: dueDate)
+        let dueDate = AppDate.gregorianCalendar.date(from: components) ?? date
+        return AppDate.dateKey(from: dueDate)
     }
 
     private func currentDateString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        return formatter.string(from: Date())
+        AppDate.dateKey(from: Date())
     }
 
     private func clean(_ value: String) -> String {

@@ -187,7 +187,7 @@ class DashboardViewModel: ObservableObject {
         let maintenances = rawMaintenances.filter { !$0.isDeletedLocally }
         let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
         let currentMonth = monthKey(for: Date())
-        let currentPayments = payments.filter { $0.month == currentMonth }
+        let currentPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == currentMonth }
         let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
         let pending = currentPayments.filter { $0.paymentStatus != "paid" }
 
@@ -206,19 +206,16 @@ class DashboardViewModel: ObservableObject {
             APIUser(id: stableLocalUserID(for: user), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
         }
         applyMaintenanceCounts(Self.maintenanceCounts(for: maintenances.map { $0.status }))
-        depositThisMonth = users.filter { $0.moveInDate.hasPrefix(currentMonth) }.reduce(0) { $0 + $1.deposit }
+        depositThisMonth = users.filter {
+            BillingCycle.normalizedMonthKey(String($0.moveInDate.prefix(7))) == currentMonth
+        }.reduce(0) { $0 + $1.deposit }
         financialStats = financialStatsFrom(payments: payments)
         moveInStats = moveInStatsFrom(users: users)
         isLoading = false
     }
 
     private func monthKey(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
-        formatter.dateFormat = "yyyy-MM"
-        return formatter.string(from: date)
+        AppDate.monthKey(from: date)
     }
 
     static func maintenanceCounts(for statuses: [String?]) -> MaintenanceCounts {
@@ -248,17 +245,21 @@ class DashboardViewModel: ObservableObject {
     }
 
     private func financialStatsFrom(payments: [Payment]) -> [FinancialStat] {
-        let grouped = Dictionary(grouping: payments, by: { $0.month })
+        let grouped = Dictionary(grouping: payments) {
+            BillingCycle.normalizedMonthKey($0.month) ?? $0.month
+        }
         return grouped.keys.sorted().suffix(6).map { month in
             let monthPayments = grouped[month] ?? []
-            return FinancialStat(month: month, name: month, income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
+            return FinancialStat(month: month, name: AppDate.thaiShortMonth(month), income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
         }
     }
 
     private func moveInStatsFrom(users: [DormUser]) -> [MoveInStat] {
-        let grouped = Dictionary(grouping: users.filter { !$0.moveInDate.isEmpty }, by: { String($0.moveInDate.prefix(7)) })
+        let grouped = Dictionary(grouping: users.filter { !$0.moveInDate.isEmpty }) {
+            BillingCycle.normalizedMonthKey(String($0.moveInDate.prefix(7))) ?? String($0.moveInDate.prefix(7))
+        }
         return grouped.keys.sorted().suffix(6).map { month in
-            MoveInStat(name: month, monthKey: month, newResidents: grouped[month]?.count ?? 0)
+            MoveInStat(name: AppDate.thaiShortMonth(month), monthKey: month, newResidents: grouped[month]?.count ?? 0)
         }
     }
     
@@ -304,18 +305,16 @@ class DashboardViewModel: ObservableObject {
             // Pending Bills
             let unpaid = activeUsers.filter { u in
                 !payments.contains(where: { p in
-                    p.user_id == u.id && p.month == currentMonthString && p.payment_status == "paid"
+                    p.user_id == u.id && BillingCycle.normalizedMonthKey(p.month ?? "") == currentMonthString && p.payment_status == "paid"
                 })
             }
             self.pendingUsers = unpaid.sorted { ($0.room_number ?? "") < ($1.room_number ?? "") }
             
             // Expiring Contracts
-            let dfFull = DateFormatter()
-            dfFull.dateFormat = "yyyy-MM-dd"
             let upcoming = activeUsers.filter { $0.contract_end_date != nil && $0.contract_end_date != "" }
                 .sorted {
-                    let d1 = dfFull.date(from: $0.contract_end_date!) ?? Date.distantFuture
-                    let d2 = dfFull.date(from: $1.contract_end_date!) ?? Date.distantFuture
+                    let d1 = AppDate.date(fromStorageDate: $0.contract_end_date!) ?? Date.distantFuture
+                    let d2 = AppDate.date(fromStorageDate: $1.contract_end_date!) ?? Date.distantFuture
                     return d1 < d2
                 }
             self.expiringContracts = Array(upcoming.prefix(5))
@@ -326,7 +325,7 @@ class DashboardViewModel: ObservableObject {
             
             for u in users {
                 guard let moveIn = u.move_in_date, u.status != "ยกเลิก", u.status != "ย้ายออกแล้ว", moveIn.count >= 7 else { continue }
-                let monthKey = String(moveIn.prefix(7))
+                guard let monthKey = BillingCycle.normalizedMonthKey(String(moveIn.prefix(7))) else { continue }
                 
                 let dep = u.deposit ?? 0
                 if monthlyMoveIn[monthKey] == nil {
@@ -344,15 +343,7 @@ class DashboardViewModel: ObservableObject {
             // Sort Move-In Stats
             let sortedMoveInKeys = monthlyMoveIn.keys.sorted().suffix(6)
             self.moveInStats = sortedMoveInKeys.map { key in
-                let parts = key.split(separator: "-")
-                var name = key
-                if parts.count == 2, let m = Int(parts[1]), let y = Int(parts[0]) {
-                    let monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
-                    if m >= 1 && m <= 12 {
-                        name = "\(monthNames[m-1]) \(y % 100)"
-                    }
-                }
-                return MoveInStat(name: name, monthKey: key, newResidents: monthlyMoveIn[key]!.0)
+                MoveInStat(name: AppDate.thaiShortMonth(key), monthKey: key, newResidents: monthlyMoveIn[key]!.0)
             }
             
             // Financial Trends
@@ -371,14 +362,14 @@ class DashboardViewModel: ObservableObject {
                 let amt = p.amount ?? 0
                 if amt > 0 {
                     if p.payment_status == "paid" {
-                        var dateKey = p.month ?? "Unknown"
+                        var dateKey = BillingCycle.normalizedMonthKey(p.month ?? "") ?? "Unknown"
                         if let pd = p.payment_date, pd.count >= 7 {
-                            dateKey = String(pd.prefix(7))
+                            dateKey = BillingCycle.normalizedMonthKey(String(pd.prefix(7))) ?? dateKey
                         }
                         if payStats[dateKey] == nil { payStats[dateKey] = (0, 0) }
                         payStats[dateKey]!.0 += amt
                     } else {
-                        let mKey = p.month ?? "Unknown"
+                        let mKey = BillingCycle.normalizedMonthKey(p.month ?? "") ?? "Unknown"
                         if payStats[mKey] == nil { payStats[mKey] = (0, 0) }
                         payStats[mKey]!.1 += amt
                     }
@@ -387,15 +378,7 @@ class DashboardViewModel: ObservableObject {
             
             let sortedPayKeys = payStats.keys.sorted().suffix(6)
             self.financialStats = sortedPayKeys.map { key in
-                let parts = key.split(separator: "-")
-                var name = key
-                if parts.count == 2, let m = Int(parts[1]), let y = Int(parts[0]) {
-                    let monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
-                    if m >= 1 && m <= 12 {
-                        name = "\(monthNames[m-1]) \(y % 100)"
-                    }
-                }
-                return FinancialStat(month: key, name: name, income: payStats[key]!.0, pending: payStats[key]!.1)
+                FinancialStat(month: key, name: AppDate.thaiShortMonth(key), income: payStats[key]!.0, pending: payStats[key]!.1)
             }
             
         } catch {

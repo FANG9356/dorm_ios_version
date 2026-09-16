@@ -334,7 +334,7 @@ private struct BillRow: View {
     }
 
     private var detailText: String {
-        var parts = ["รอบบิล \(payment.month)"]
+        var parts = ["รอบบิล \(AppDate.thaiMonth(payment.month))"]
         if payment.paymentPlan == "installment" {
             let phase = payment.installmentPhase > 0 ? "งวด \(payment.installmentPhase)" : "ผ่อนชำระ"
             parts.append(phase)
@@ -356,10 +356,10 @@ private struct BillRow: View {
 
     private var dateText: String {
         if !payment.paymentDate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "ชำระวันที่ \(payment.paymentDate)"
+            return "ชำระวันที่ \(AppDate.thaiDate(payment.paymentDate))"
         }
         if !payment.dueDate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "ครบกำหนด \(payment.dueDate)"
+            return "ครบกำหนด \(AppDate.thaiDate(payment.dueDate))"
         }
         return ""
     }
