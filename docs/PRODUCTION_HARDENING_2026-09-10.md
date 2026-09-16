@@ -76,7 +76,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 
 บังคับ directory ของ backup เป็น permission 0700 และ archive เป็น 0600 รวม legacy ZIP export ด้วย ส่วน online restore endpoint เดิมถูกปิดแบบ fail closed ด้วย HTTP 501 เพราะ implementation เดิมแทนที่ uploads ก่อนยืนยันว่า transaction ฐานข้อมูลสำเร็จและไม่รองรับ archive แบบ master+tenant การกู้คืนจริงต้องทำใน maintenance window จนกว่า atomic restore จะเสร็จ
 
-ก่อนแก้รอบนี้ scheduler เดิมล้มเหลวทุกคืนเพราะค้นหาตาราง `users` ใน master database หลังระบบแยก tenant แล้ว โค้ดและ production binary ปัจจุบันเปลี่ยน scheduler มาใช้ server backup แบบ multi-tenant จึงไม่เรียก legacy JSON backup นั้นแล้ว ต้องตรวจ job เวลา 22:00 อีกครั้งจาก journal หลังรอบอัตโนมัติถัดไป
+ก่อนแก้รอบนี้ scheduler เดิมล้มเหลวทุกคืนเพราะค้นหาตาราง `users` ใน master database หลังระบบแยก tenant แล้ว โค้ดและ production binary ปัจจุบันเปลี่ยน scheduler มาใช้ server backup แบบ multi-tenant จึงไม่เรียก legacy JSON backup นั้นแล้ว ตรวจ journal หลังรอบอัตโนมัติจริงพบว่า job เวลา 22:00 สำเร็จต่อเนื่อง พร้อมสร้าง `server_backup_2026-09-14_05-00-00.zip` และ `server_backup_2026-09-15_05-00-00.zip`; archive ล่าสุดมี master/tenant database และ manifest ครบ ทดสอบ ZIP แล้วไม่พบข้อผิดพลาด
 
 ## Security/session ที่แก้และ deploy แล้ว
 
@@ -109,6 +109,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | Login rate limit บน production | ครั้งที่ 11 ของบัญชีทดสอบถูกปฏิเสธ HTTP 429 |
 | OTP lockout persistence บน production | ครั้งที่ 5 ตอบ 429 และหลัง restart ยังตอบ 429; ลบ test row แล้ว |
 | Production multi-tenant backup + restore drill | ผ่าน |
+| Production automatic backup scheduler เวลา 22:00 | ผ่านต่อเนื่อง; archive ล่าสุด permission 0600 และ `unzip -t` ผ่านทุก entry |
 | Production backup list เห็น `server_backup_*.zip` | ผ่าน, พบ 1 ไฟล์ |
 | Backup directory/archive permission | 0700 / 0600 |
 | Legacy unsafe online restore | ปิดแบบ fail closed, HTTP 501 และไม่แก้ uploads |
