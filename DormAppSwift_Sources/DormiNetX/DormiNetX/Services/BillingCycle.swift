@@ -29,8 +29,31 @@ struct BillingCycle {
         return date
     }
 
+    /// Returns the canonical Gregorian storage key for month values created by
+    /// both current app versions (`2026-09`) and legacy Thai-calendar versions
+    /// (`2569-09`). The stored payment is left untouched; normalization is used
+    /// when grouping and presenting billing history.
+    static func normalizedMonthKey(_ value: String) -> String? {
+        let components = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "-", omittingEmptySubsequences: false)
+        guard components.count == 2,
+              var year = Int(components[0]),
+              let month = Int(components[1]),
+              (1...12).contains(month) else { return nil }
+
+        if year > 2400 {
+            year -= 543
+        }
+        guard (1...9999).contains(year) else { return nil }
+
+        let key = String(format: "%04d-%02d", year, month)
+        guard date("\(key)-01") != nil else { return nil }
+        return key
+    }
+
     static func dueDateKey(month: String, moveInDate: String) -> String {
-        guard let first = date("\(month)-01"), let moveIn = date(moveInDate),
+        guard let normalizedMonth = normalizedMonthKey(month),
+              let first = date("\(normalizedMonth)-01"), let moveIn = date(moveInDate),
               let days = calendar.range(of: .day, in: .month, for: first) else { return "" }
         let day = min(calendar.component(.day, from: moveIn), days.count)
         guard let due = calendar.date(byAdding: .day, value: day - 1, to: first) else { return "" }

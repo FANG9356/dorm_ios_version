@@ -10,6 +10,18 @@ final class BillingCycleTests: XCTestCase {
         XCTAssertEqual(BillingCycle.dueDateKey(month: "2026-04", moveInDate: "2026-01-31"), "2026-04-30")
     }
 
+    func testLegacyBuddhistAndGregorianMonthsShareOneCanonicalKey() {
+        XCTAssertEqual(BillingCycle.normalizedMonthKey("2026-08"), "2026-08")
+        XCTAssertEqual(BillingCycle.normalizedMonthKey("2569-08"), "2026-08")
+        XCTAssertEqual(BillingCycle.normalizedMonthKey(" 2569-09 "), "2026-09")
+        XCTAssertEqual(BillingCycle.dueDateKey(month: "2569-02", moveInDate: "2026-01-31"), "2026-02-28")
+    }
+
+    func testInvalidMonthKeysAreRejected() {
+        XCTAssertNil(BillingCycle.normalizedMonthKey("2026-13"))
+        XCTAssertNil(BillingCycle.normalizedMonthKey("not-a-month"))
+    }
+
     func testFixedContractIncludesItsFinalMonthAndThaiYear() throws {
         let now = try XCTUnwrap(BillingCycle.date("2026-02-12"))
         let cycles = BillingCycle.generate(moveInDate: "2026-01-31", contractEndDate: "2026-03-31", indefiniteContract: false, now: now)

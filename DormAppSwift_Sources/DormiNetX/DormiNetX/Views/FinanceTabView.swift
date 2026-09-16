@@ -677,15 +677,19 @@ private struct BillingHistorySheet: View {
             indefiniteContract: user.indefiniteContract == 1
         )
         let scheduledMonths = Set(cycles.map(\.monthId))
+        let activePayments = payments.filter { !$0.isDeletedLocally }
+        let paymentMonths = Set(activePayments.compactMap { BillingCycle.normalizedMonthKey($0.month) })
         // Historical invoices remain accessible even after contract dates are edited.
-        for month in Set(payments.filter { !$0.isDeletedLocally }.map(\.month)).subtracting(scheduledMonths) {
+        for month in paymentMonths.subtracting(scheduledMonths) {
             guard let date = BillingCycle.date("\(month)-01") else { continue }
             let due = BillingCycle.dueDateKey(month: month, moveInDate: user.moveInDate)
             cycles.append(BillingCycle(monthId: month, label: BillingCycle.monthLabel(for: date),
                                        dueDay: Int(due.suffix(2)) ?? 1, isFuture: false))
         }
         self.cycles = cycles.sorted { $0.monthId < $1.monthId }
-        self.paymentsByMonth = Dictionary(grouping: payments.filter { !$0.isDeletedLocally }, by: \.month).mapValues { payments in
+        self.paymentsByMonth = Dictionary(grouping: activePayments) {
+            BillingCycle.normalizedMonthKey($0.month) ?? $0.month
+        }.mapValues { payments in
             payments.sorted {
                 if $0.installmentPhase != $1.installmentPhase { return $0.installmentPhase < $1.installmentPhase }
                 return $0.id.uuidString < $1.id.uuidString
@@ -1289,11 +1293,9 @@ private struct FinanceSummaryCard: View {
                 Text(isCount ? String(Int(amount)) : amount.formatted(.number.precision(.fractionLength(0))))
                     .font(.custom("SukhumvitSet-Bold", size: 21))
                     .foregroundStyle(.primary)
-                if !isCount {
-                    Text("บาท")
-                        .font(.custom("SukhumvitSet-Text", size: 10))
-                        .foregroundStyle(.secondary)
-                }
+                Text(isCount ? "รายการ" : "บาท")
+                    .font(.custom("SukhumvitSet-Text", size: 10))
+                    .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

@@ -4,7 +4,7 @@
 
 ## ผลประเมินล่าสุด: 16 กันยายน 2569
 
-ภาคผนวกนี้ใช้แทนคะแนนเดิมด้านล่างสำหรับการตัดสินใจปัจจุบัน หลังมีการเพิ่ม LINE/LIFF, tenant-scoped media hydration, immutable snapshot publication, same-version self-healing, dirty-record rebase, production backup validation, maintenance status notification และการทดสอบบน iPhone จริงบาง flow
+ภาคผนวกนี้ใช้แทนคะแนนเดิมด้านล่างสำหรับการตัดสินใจปัจจุบัน หลังมีการเพิ่ม LINE/LIFF, tenant-scoped media hydration, immutable snapshot publication, same-version self-healing, dirty-record rebase, production backup validation, maintenance status notification, public-media closure, protocol-2 cutover และการทดสอบบน iPhone จริงบาง flow
 
 ### คะแนนปัจจุบัน
 
@@ -12,10 +12,10 @@
 |---|---:|
 | ความครบของฟีเจอร์ | 9.0/10 |
 | สถาปัตยกรรม | 8.6/10 |
-| ความปลอดภัยและข้อมูล | 7.4/10 |
-| Operational readiness | 8.2/10 |
+| ความปลอดภัยและข้อมูล | 8.0/10 |
+| Operational readiness | 8.3/10 |
 | Controlled pilot | 8.8/10 |
-| Production readiness | **7.8/10 (78%)** |
+| Production readiness | **8.0/10 (80%)** |
 
 ### สิ่งที่ดีขึ้นจากรีวิวเดิม
 
@@ -24,23 +24,25 @@
 - LINE/LIFF ตรวจ tenant, account, client ID และ access token พร้อม phone-first linking
 - สลิปและรูปแจ้งซ่อมจาก LINE มี authenticated tenant-scoped media hydration เข้าแอป
 - มี append-only `PaymentTransaction` และ `FinancialReceipt` เริ่มแยกประวัติการรับเงินออกจากบิลเดิม
-- มี iOS tests 44/44, backend race tests, `go vet`, device build และ production backup validation
+- มี iOS tests 46/46, backend race tests, `go vet`, device build และ production backup validation
+- ปิด static `/uploads` สาธารณะแล้ว ใช้ authenticated `/api/media` และ signed LINE URL พร้อม SHA-256 verification
+- ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production แล้ว และ snapshot ปัจจุบันเดินต่อถึง v76
 - การแจ้งสถานะงานซ่อมไป LINE ทำหลัง transaction commit และป้องกันการส่งซ้ำจาก snapshot เดิม
 
 ### Release blockers ที่ยังเหลือ
 
 1. Rotate/revoke JWT, LINE, Resend/email และ secret อื่นที่เคยอยู่ใน Git history พร้อม session cutover
 2. ทดสอบ UAT สอง iPhone/สองบัญชี ทั้งการแก้พร้อมกัน ตัดเน็ตกลาง sync, force quit และกู้จาก backup
-3. อัปเดตทุกอุปกรณ์เป็น sync protocol 2 แล้วปิด `ALLOW_LEGACY_SYNC_PUSH`
-4. ทำ media ownership/transfer ให้ครบทุก flow พร้อม checksum, retry, cleanup/retention และปิด public `/uploads`
+3. ยืนยัน manual sync จาก iPhone หลังปิด `ALLOW_LEGACY_SYNC_PUSH=false` พร้อมตรวจ log ว่าไม่มี protocol rejection
+4. ทำ media lifecycle ส่วนที่เหลือ: orphan cleanup, retention policy และ UAT ดาวน์โหลดข้ามสองเครื่อง
 5. ทำ Invoice/refund/void/credit-adjustment และ immutable actor/reason audit ให้ครบ
 6. ทำ atomic online restore ใน maintenance mode พร้อม health check และ rollback
 
 ### คำตัดสินปัจจุบัน
 
-ระบบขยับจาก “มีแนวคิดดีแต่ยังเสี่ยง” เป็น “มี hardening และ reliability จริงในหลายส่วน” แล้ว เหมาะสำหรับ controlled pilot ที่มี backup และผู้ดูแลติดตามปัญหาใกล้ชิด แต่ยังไม่ควรเปิด production แบบเต็มรูปแบบจนกว่า release blockers ข้างต้นจะมีหลักฐานผ่านจริง
+ระบบขยับจาก “มีแนวคิดดีแต่ยังเสี่ยง” เป็น “มี hardening และ reliability จริงในหลายส่วน” แล้ว เหมาะสำหรับ controlled pilot ที่มี backup และผู้ดูแลติดตามปัญหาใกล้ชิด และใกล้ production มากขึ้นหลังปิด public media กับ legacy protocol แต่ยังไม่ควรเปิด production แบบเต็มรูปแบบจนกว่า release blockers ข้างต้นจะมีหลักฐานผ่านจริง
 
-> คะแนนเดิม 5.5/10 ในเนื้อหาด้านล่างเป็น baseline ก่อนการแก้ไขรอบล่าสุด ไม่ใช่สถานะปัจจุบัน ให้ยึด [docs/CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) เป็นหลัก
+> คะแนนเดิม 5.5/10 ในเนื้อหาด้านล่างเป็น baseline ก่อนการแก้ไขรอบล่าสุด ไม่ใช่สถานะปัจจุบัน ให้ยึด [docs/CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และ [project-tracking/PENDING_WORK.md](../project-tracking/PENDING_WORK.md) เป็นหลัก
 
 ## 1. สรุปผลแบบสั้น
 
@@ -51,7 +53,7 @@
 - ความครบของฟีเจอร์: 8.5/10
 - ความซับซ้อนของสถาปัตยกรรม: 8.5/10
 - ความปลอดภัยและข้อมูล: 7.5/10
-- ความพร้อม production ณ 15 กันยายน: 5.5/10 (ถูกแทนด้วย 7.8/10 ในภาคผนวกด้านบน)
+- ความพร้อม production ณ 15 กันยายน: 5.5/10 (เป็น baseline เดิม; สถานะล่าสุดคือ 8.0/10 ในภาคผนวกด้านบน)
 - ความน่าเชื่อถือสำหรับใช้งานจริง: 6.5/10
 
 สรุปแบบตรงไปตรงมา: โปรเจคนี้ “พร้อมสำหรับ pilot, ยังไม่พร้อมสำหรับ production จริงแบบเปิดใช้งานเต็มรูปแบบ”
