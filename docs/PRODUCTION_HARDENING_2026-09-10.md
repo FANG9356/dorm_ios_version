@@ -26,7 +26,10 @@
 - แก้ DateFormatter ของหน้าการเงินและ dashboard ในแอป iOS ให้สร้าง month key ด้วย `en_US_POSIX` + Gregorian + Asia/Bangkok เสมอ ป้องกันข้อมูลใหม่ใช้ปี พ.ศ. เป็น storage key และชนกับรอบเดือนแบบ ค.ศ.
 - ปรับ Flex Message ใบแจ้งหนี้ของบอทให้ใช้แม่แบบเดียวกันทั้งคำสั่ง `การเงิน`, การส่งจากแอดมิน และการ push อัตโนมัติ: ใช้เลขบิล `INV-%05d` ตรงกับหน้า LIFF, แสดงรอบบิล/วันครบกำหนด/วัน–เวลาอัปเดต/สถานะ/รายการค่าใช้จ่าย/ยอดบิล/ยอดชำระ/ยอดคงเหลือครบ, รองรับทั้ง storage year แบบ ค.ศ. และ พ.ศ. โดยไม่เกิดปี 3112 และเปลี่ยนการค้นหาบิลจากเลขห้องเป็น stable user ID เพื่อไม่ปนกับผู้เช่าคนก่อน
 - จัด layout Flex Message รอบ UAT ให้กระชับและอ่านยอดเต็ม: ใช้ bubble ขนาด `mega`, นำยอดคงเหลือขึ้นเป็นข้อมูลหลัก, วางรอบบิลคู่กับสถานะ, ขยายสัดส่วนคอลัมน์ข้อมูล/ยอดเงินเพื่อไม่เกิด ellipsis และแยกข้อมูลบิล รายละเอียดค่าใช้จ่าย และยอดรวมด้วยเส้นคั่นแทนพื้นที่ว่างขนาดใหญ่
-- deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `12547f941a4ecacba03e3fd9bf55853a3dbc0e389f3572117222dda05a99a374`
+- วันที่ 16 กันยายน 2569 แก้เส้นทางข้อมูลจาก LINE เข้าสู่แอป: เมื่อบอทรอรับสลิปหรือรายการแจ้งซ่อม ระบบจะรวมการเปลี่ยนแปลงกลับเข้า immutable sync snapshot ของบัญชีแบบ optimistic versioning ทันที และก่อน startup materialization จะกู้การเปลี่ยนแปลงจาก LINE ที่ยังไม่เคย publish เพื่อไม่ให้ snapshot เก่าเขียนทับ
+- เพิ่ม authenticated tenant-scoped media hydration สำหรับไฟล์ที่ฐานข้อมูลของบัญชีนั้นอ้างถึงเท่านั้น แอป build ใหม่ดาวน์โหลดสลิป/รูปแจ้งซ่อมที่ขาดมาเก็บใน local `PaymentSlips`; path traversal และไฟล์ของบัญชีอื่นถูกปฏิเสธ โดยยังคงใช้ server เป็นตัวกลางและไม่ฝัง binary media ลงใน snapshot
+- production สร้าง snapshot `v66` จาก `line-bot` สำเร็จ ครอบคลุมสลิปสถานะ `checking` และรายการแจ้งซ่อมที่ทดสอบก่อนแก้ พร้อมกำหนด UUID ให้รายการแจ้งซ่อมเพื่อให้ sync ต่อเนื่องโดยไม่สร้างข้อมูลซ้ำ
+- deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `2e6486679666bfe10640ac2ac60f6ed349603481b9aa3728b3750d2880f15386`
 - production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
 - LINE webhook ที่ลงลายเซ็นถูกต้องผ่านบน production
@@ -61,6 +64,8 @@
 - `/home/fang/line_migration_backups/20260915_2222_pre_snapshot_date_normalization` (server binary และฐานข้อมูลก่อนทดสอบ normalize storage key ฝั่ง server; ยกเลิก binary ทดลองและกลับมาใช้ SHA รอบก่อนหลังพบว่าข้อมูลซ้ำเดิมชน unique constraint โดย transaction ไม่ได้เปลี่ยนฐานข้อมูล)
 - `/home/fang/line_migration_backups/20260915_2245_pre_line_invoice_redesign` (server binary ก่อนปรับ Flex Message ใบแจ้งหนี้ของบอท)
 - `/home/fang/line_migration_backups/20260915_225228_pre_line_invoice_layout` (server binary ก่อนจัด layout Flex Message ให้กระชับและไม่ตัดข้อความ/ยอดเงิน)
+- `/home/fang/line_migration_backups/20260915_195350_pre_line_snapshot_sync` (rollback จาก deployment validation รอบแรก; binary/master/tenant database)
+- `/home/fang/line_migration_backups/20260915_195516_pre_line_snapshot_sync` (SQLite-native master/tenant backup และ binary ก่อน deploy LINE-to-app snapshot sync รอบสำเร็จ)
 
 ชุดก่อนหน้าเก็บ master database, tenant database และ server binary เดิม; ชุด predeploy เก็บ environment เดิมด้วย ส่วนชุด `pre_phone_lookup` เก็บเฉพาะ binary เพราะ deployment นี้ไม่เปลี่ยน schema หรือข้อมูล ไฟล์ถูกจำกัดสิทธิ์ตามประเภท
 
@@ -127,6 +132,9 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | LIFF `ข้อมูลของฉัน` แบบลด visual noise ที่ viewport 390×844 | ผ่าน; สูงพอดี viewport, ไม่ scroll, ไม่มี horizontal overflow และฟอร์มผูกบัญชียังคงถูกซ่อน |
 | LIFF invoice detail ที่ viewport 390×844 | ผ่าน; แสดงบิลค้าง 2 ใบ, ใบล่าสุดเปิดอยู่, รายการค่าใช้จ่ายครบ, ปี `2569` ไม่ถูกแปลงเป็น `3112`, แสดงวัน–เวลา และไม่มี horizontal overflow |
 | LINE invoice Flex Message | ผ่าน unit/race tests และ Messaging API `validate/push` ตอบ HTTP 200; ครอบคลุมปี ค.ศ./พ.ศ., รายการค่าใช้จ่าย, ยอดชำระ/คงเหลือ, การเลือกบิลด้วย stable user ID และ layout `mega` ที่เพิ่มพื้นที่ให้ข้อความ/ยอดเงิน |
+| LINE → app snapshot publish | ผ่าน unit/race tests และ production reconciliation; snapshot เพิ่มจาก v65 เป็น v66, `device_id=line-bot`, มีสลิป `checking` และ maintenance 1 รายการโดย publish ซ้ำไม่เพิ่ม version |
+| Tenant-scoped media API | ผ่าน unit/race tests; ต้องมี session, ไฟล์ต้องถูกอ้างถึงในฐานข้อมูล tenant และ unauthenticated production request ถูกปฏิเสธ HTTP 401 |
+| iOS build หลังเพิ่ม remote media hydration | ผ่าน Debug Simulator build; XCTest ผ่าน 41/42 โดย 1 test เป็น Keychain Simulator entitlement `-34018` ไม่เกี่ยวกับ sync/media |
 | iOS unit tests หลังบังคับ month key เป็น Gregorian | ผ่านทุก test ใน scheme `DormiNetX` |
 | Production LIFF page/assets + LINE redirect หลังเปลี่ยน endpoint | ผ่าน, HTTP 200 และชี้ `api.dorminet.studio/liff` |
 | Production room-list endpoint เดิม | ปิดการเปิดเผยรายการห้อง, HTTP 410 |
@@ -142,7 +150,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 
 - ยังไม่ได้ UAT บน iPhone จริงสองเครื่อง, ทดสอบตัดเน็ตระหว่าง sync, Photos/AirPrint และ profile memory กับข้อมูลขนาดใหญ่
 - ต้องปิด `ALLOW_LEGACY_SYNC_PUSH` หลังยืนยันว่าอุปกรณ์ใช้งานทุกเครื่องเป็น protocol 2
-- รูปสลิป/สื่อยังไม่มี ownership-aware transfer ข้ามอุปกรณ์ และ URL `/uploads` ฝั่งเว็บเดิมยังเป็น public compatibility path
+- รูปสลิป/รูปแจ้งซ่อมจาก LINE มี ownership-aware hydration เข้าแอป build ใหม่แล้ว แต่ media ประเภทอื่นยังไม่มี transfer ข้ามอุปกรณ์ครบทุก flow และ URL `/uploads` ฝั่งเว็บเดิมยังเป็น public compatibility path
 - ยังต้องทำ invoice/refund/void ledger เต็มรูปแบบ; ตอนนี้เพิ่ม transaction/receipt แบบ append-only และป้องกันลบบิลที่รับเงินแล้ว แต่ `Payment` ยังเป็น compatibility invoice
 - APNs, localization เต็มระบบ และ maintenance SLA ไม่ใช่ core flow ที่ปิดในรอบนี้
 - secret ที่เคยอยู่ใน Git history ต้องหมุนที่ผู้ให้บริการ LINE/Resend และเปลี่ยน JWT โดยวางแผน session cutover; การถอนจาก index ไม่ได้ลบ commit เก่า

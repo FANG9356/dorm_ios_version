@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -126,7 +127,7 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 			}
 
 			if event.Type == "message" {
-				tenantDB, _, _, linkErr := resolveLineTenantDB(db, lineUserID)
+				tenantDB, accountID, _, linkErr := resolveLineTenantDB(db, lineUserID)
 				if linkErr != nil {
 					replyToLine(event.ReplyToken, "บัญชี LINE นี้ยังไม่ได้เชื่อมกับลูกบ้านในระบบใหม่ กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่างแล้วเลือกห้องอีกครั้งค่ะ")
 					continue
@@ -137,9 +138,9 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 						scheme = "https://"
 					}
 					serverURL := scheme + r.Host
-					handleTextMessage(tenantDB, event.ReplyToken, lineUserID, event.Message.Text, serverURL)
+					handleTextMessage(db, tenantDB, accountID, event.ReplyToken, lineUserID, event.Message.Text, serverURL)
 				} else if event.Message.Type == "image" {
-					handleImageMessage(tenantDB, event.ReplyToken, lineUserID, event.Message.ID)
+					handleImageMessage(db, tenantDB, accountID, event.ReplyToken, lineUserID, event.Message.ID)
 				}
 			} else if event.Type == "postback" {
 				tenantDB, _, _, linkErr := resolveLineTenantDB(db, lineUserID)
@@ -158,7 +159,7 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL string) {
+func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID, text, serverURL string) {
 	text = strings.TrimSpace(text)
 
 	// Command: ผูกบัญชี [เลขบัตรประชาชน] [เบอร์โทร] (Deprecated for security reasons)
@@ -216,11 +217,13 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 				return
 			}
 
-			_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at) VALUES (?, ?, 'รอดำเนินการ', ?)", roomNumber, issue, time.Now().Format("2006-01-02 15:04:05"))
+			now := time.Now()
+			_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?)", roomNumber, issue, now.Format("2006-01-02 15:04:05"), now.UTC().Format(time.RFC3339Nano))
 			if err != nil {
 				replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้งค่ะ")
 				return
 			}
+			publishLineChanges(master, db, accountID)
 
 			db.Exec("UPDATE users SET bot_state = 'maintenance_wait_image' WHERE line_user_id = ?", lineUserID)
 			replyToLineWithQuickReply(replyToken, "บันทึกรายละเอียดเรียบร้อยค่ะ หากมีรูปภาพปัญหาประกอบสามารถส่งรูปมาได้เลยนะคะ (หากไม่มี กด 'ข้าม')", []string{"ข้าม"})
@@ -239,10 +242,12 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 	} else if botState == "maintenance_wait_text" {
 		if text != "เมนู" && text != "การเงิน" && text != "แจ้งซ่อม" && !strings.HasPrefix(text, "ผูกบัญชี") {
 			if text != "ข้าม" {
-				db.Exec("UPDATE maintenances SET issue = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", strings.TrimSpace(text), roomNumber)
+				db.Exec("UPDATE maintenances SET issue = ?, last_updated = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", strings.TrimSpace(text), time.Now().UTC().Format(time.RFC3339Nano), roomNumber)
+				publishLineChanges(master, db, accountID)
 				replyToLine(replyToken, "บันทึกรายละเอียดเพิ่มเติมเรียบร้อยค่ะ แอดมินจะรีบตรวจสอบและดำเนินการให้นะคะ")
 			} else {
-				db.Exec("UPDATE maintenances SET issue = 'แจ้งซ่อมผ่านรูปภาพ' WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", roomNumber)
+				db.Exec("UPDATE maintenances SET issue = 'แจ้งซ่อมผ่านรูปภาพ', last_updated = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", time.Now().UTC().Format(time.RFC3339Nano), roomNumber)
+				publishLineChanges(master, db, accountID)
 				replyToLine(replyToken, "รับเรื่องแจ้งซ่อมเรียบร้อยแล้วค่ะ แอดมินจะรีบตรวจสอบและส่งช่างเข้าไปดำเนินการให้นะคะ")
 			}
 			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
@@ -257,7 +262,7 @@ func handleTextMessage(db *sql.DB, replyToken, lineUserID, text, serverURL strin
 	replyToLine(replyToken, "สวัสดีค่ะ\nยินดีต้อนรับสู่บริการผู้ช่วยหอพัก\nคุณสามารถกดเลือกเมนูด้านล่างเพื่อทำรายการได้เลยค่ะ")
 }
 
-func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
+func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserID, messageID string) {
 	var roomNumber, botState string
 	var userID int
 	err := db.QueryRow("SELECT user_id, room_number, bot_state FROM users WHERE line_user_id = ?", lineUserID).Scan(&userID, &roomNumber, &botState)
@@ -300,7 +305,7 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 	if botState == "slip" {
 		var paymentID int
 		var amount float64
-		err = db.QueryRow("SELECT payment_id, amount FROM payments WHERE room_number = ? AND payment_status IN ('pending', 'partial') ORDER BY payment_id DESC LIMIT 1", roomNumber).Scan(&paymentID, &amount)
+		err = db.QueryRow("SELECT payment_id, amount FROM payments WHERE user_id = ? AND payment_status IN ('pending', 'partial') ORDER BY month DESC, installment_phase DESC, payment_id DESC LIMIT 1", userID).Scan(&paymentID, &amount)
 		if err != nil {
 			replyToLine(replyToken, "คุณไม่มียอดค้างชำระในขณะนี้ หรือบิลได้รับการชำระเรียบร้อยแล้วค่ะ")
 			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
@@ -308,7 +313,7 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		}
 
 		slipArrayJSON := fmt.Sprintf(`["%s"]`, newFileName)
-		res, err := db.Exec("UPDATE payments SET payment_status = 'checking', slip_path = ?, slip_path_array = ?, payment_date = ? WHERE payment_id = ? AND payment_status != 'paid'", newFileName, slipArrayJSON, time.Now().Format("2006-01-02"), paymentID)
+		res, err := db.Exec("UPDATE payments SET payment_status = 'checking', slip_path = ?, slip_path_array = ?, payment_date = ?, last_updated = ? WHERE payment_id = ? AND payment_status != 'paid'", newFileName, slipArrayJSON, time.Now().Format("2006-01-02"), time.Now().UTC().Format(time.RFC3339Nano), paymentID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
@@ -320,6 +325,7 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 			return
 		}
 		db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES (?, ?, ?)", "Auto Slip Upload", fmt.Sprintf("Line Bot received slip for Room %s", roomNumber), time.Now().Format("2006-01-02 15:04:05"))
+		publishLineChanges(master, db, accountID)
 
 		dateStr := time.Now().Format("02/01/2006 15:04")
 		receiptNo := fmt.Sprintf("REC-%05d", paymentID)
@@ -365,11 +371,13 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		// go VerifySlipMock(db, paymentID, filepath, false)
 
 	} else if botState == "maintenance" {
-		_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, issue_image) VALUES (?, ?, 'รอดำเนินการ', ?, ?)", roomNumber, "รอรายละเอียดเพิ่มเติม", time.Now().Format("2006-01-02 15:04:05"), "/uploads/"+newFileName)
+		now := time.Now()
+		_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, issue_image, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?, ?)", roomNumber, "รอรายละเอียดเพิ่มเติม", now.Format("2006-01-02 15:04:05"), "/uploads/"+newFileName, now.UTC().Format(time.RFC3339Nano))
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกข้อมูลแจ้งซ่อม กรุณาลองใหม่อีกครั้งค่ะ")
 			return
 		}
+		publishLineChanges(master, db, accountID)
 		replyToLineWithQuickReply(replyToken, "ได้รับรูปภาพแล้วค่ะ กรุณาพิมพ์รายละเอียดปัญหาเพิ่มเติม หรือส่งรูปเพิ่มเข้ามาได้เลยนะคะ (หากไม่มี กด 'ข้าม')", []string{"ข้าม"})
 		db.Exec("UPDATE users SET bot_state = 'maintenance_wait_text' WHERE line_user_id = ?", lineUserID)
 	} else if botState == "maintenance_wait_image" {
@@ -381,11 +389,12 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		}
 		newImages += "/uploads/" + newFileName
 
-		_, err = db.Exec("UPDATE maintenances SET issue_image = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", newImages, roomNumber)
+		_, err = db.Exec("UPDATE maintenances SET issue_image = ?, last_updated = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", newImages, time.Now().UTC().Format(time.RFC3339Nano), roomNumber)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้งค่ะ")
 			return
 		}
+		publishLineChanges(master, db, accountID)
 
 		if currentImages == "" {
 			// ส่งกลับเฉพาะรูปแรก เพื่อไม่ให้ส่งข้อความซ้ำซ้อนเมื่อลูกบ้านส่งหลายรูปพร้อมกัน
@@ -400,7 +409,8 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		}
 		newImages += "/uploads/" + newFileName
 
-		_, err = db.Exec("UPDATE maintenances SET issue_image = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", newImages, roomNumber)
+		_, err = db.Exec("UPDATE maintenances SET issue_image = ?, last_updated = ? WHERE id = (SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอดำเนินการ' ORDER BY id DESC LIMIT 1)", newImages, time.Now().UTC().Format(time.RFC3339Nano), roomNumber)
+		publishLineChanges(master, db, accountID)
 
 		if currentImages == "" {
 			replyToLineWithQuickReply(replyToken, "เพิ่มรูปภาพประกอบเรียบร้อยค่ะ กรุณาพิมพ์รายละเอียดปัญหา หรือส่งรูปภาพเพิ่มเติมนะคะ (หากไม่มี กด 'ข้าม')", []string{"ข้าม"})
@@ -417,11 +427,12 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 			return
 		}
 
-		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, status = 'รอตรวจสอบชำระเงิน' WHERE id = ?", newFileName, maintID)
+		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, status = 'รอตรวจสอบชำระเงิน', last_updated = ? WHERE id = ?", newFileName, time.Now().UTC().Format(time.RFC3339Nano), maintID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
 		}
+		publishLineChanges(master, db, accountID)
 
 		db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
 		replyToLine(replyToken, "รับสลิปค่าซ่อมแซมเรียบร้อยแล้วค่ะ แอดมินจะตรวจสอบและยืนยันให้เร็วที่สุดค่ะ")
@@ -429,6 +440,12 @@ func handleImageMessage(db *sql.DB, replyToken, lineUserID, messageID string) {
 		// Trigger automated slip verification (Disabled by user request)
 		// mID, _ := strconv.Atoi(maintID)
 		// go VerifySlipMock(db, mID, filepath, true)
+	}
+}
+
+func publishLineChanges(master, tenantDB *sql.DB, accountID int) {
+	if err := PublishLineTenantChanges(master, tenantDB, accountID); err != nil {
+		log.Printf("[LINE] publish tenant changes for account %d failed: %v", accountID, err)
 	}
 }
 

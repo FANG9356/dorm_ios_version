@@ -93,6 +93,7 @@ func InitializeTenantDatabase(db *sql.DB) {
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS maintenances (id INTEGER PRIMARY KEY AUTOINCREMENT, room_number TEXT, issue TEXT, status TEXT DEFAULT 'รอดำเนินการ', cost REAL DEFAULT 0, reported_at TEXT, resolved_at TEXT, payment_method TEXT DEFAULT '', slip_path TEXT DEFAULT '')`)
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN issue_image TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE maintenances ADD COLUMN last_updated TEXT DEFAULT ''`)
 
 	db.Exec(`ALTER TABLE users ADD COLUMN booking_status TEXT`)
 	db.Exec(`ALTER TABLE users ADD COLUMN payment_method TEXT`)

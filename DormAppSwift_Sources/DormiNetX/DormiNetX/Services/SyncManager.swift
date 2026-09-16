@@ -524,18 +524,10 @@ class SyncManager: ObservableObject {
     }
 
     private func collectSlipFiles(from snapshot: SyncEnvelope) -> [LocalBackupFilePayload] {
-        let rawPaths = snapshot.tenants.flatMap(\.bookingSlips) +
-            snapshot.payments.flatMap { payment in
-                var paths = payment.slipPathArray
-                if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
-                    paths.append(payment.slipPath)
-                }
-                return paths
-            } + (snapshot.paymentTransactions ?? []).flatMap(\.slipPaths) +
-            snapshot.maintenance.flatMap { [$0.slipPath, $0.issueImage] }
+        let rawPaths = mediaCandidates(from: snapshot)
 
         var seen = Set<String>()
-        return rawPaths.compactMap { path in
+        return rawPaths.compactMap { path -> LocalBackupFilePayload? in
             guard let url = SlipImageManager.url(for: path),
                   FileManager.default.fileExists(atPath: url.path) else {
                 return nil
@@ -654,7 +646,52 @@ class SyncManager: ObservableObject {
         message = onlyIfRecent ? "รับข้อมูลใหม่จากเครื่องอื่น" : "เขียนทับข้อมูลในเครื่อง"
         let verifiedSnapshot = try decoder().decode(SyncEnvelope.self, from: payload)
         try applySnapshot(verifiedSnapshot, modelContext: modelContext)
+        await downloadMissingRemoteMedia(from: verifiedSnapshot)
         checkpoint.version = version
+    }
+
+    private func downloadMissingRemoteMedia(from snapshot: SyncEnvelope) async {
+        let candidates = mediaCandidates(from: snapshot)
+
+        var seen = Set<String>()
+        for storedPath in candidates {
+            let fileName = URL(fileURLWithPath: storedPath).lastPathComponent
+            guard !fileName.isEmpty, seen.insert(fileName).inserted,
+                  let localURL = SlipImageManager.url(for: fileName),
+                  !FileManager.default.fileExists(atPath: localURL.path) else { continue }
+            do {
+                let data = try await api.fetchTenantMedia(storedPath: fileName)
+                _ = try SlipImageManager.restoreImageData(data, fileName: fileName)
+            } catch {
+                // Records remain usable even if an optional image cannot be downloaded.
+            }
+        }
+    }
+
+    private func mediaCandidates(from snapshot: SyncEnvelope) -> [String] {
+        var paths = snapshot.tenants.flatMap { $0.bookingSlips }
+        for payment in snapshot.payments {
+            paths.append(contentsOf: payment.slipPathArray)
+            if !payment.slipPath.isEmpty && !payment.slipPathArray.contains(payment.slipPath) {
+                paths.append(payment.slipPath)
+            }
+        }
+        for transaction in snapshot.paymentTransactions ?? [] {
+            paths.append(contentsOf: transaction.slipPaths)
+        }
+        for maintenance in snapshot.maintenance {
+            if !maintenance.slipPath.isEmpty {
+                paths.append(maintenance.slipPath)
+            }
+            paths.append(contentsOf: mediaPaths(in: maintenance.issueImage))
+        }
+        return paths
+    }
+
+    private func mediaPaths(in value: String) -> [String] {
+        value.split(separator: ",").map {
+            String($0).trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty }
     }
 
     private func applySnapshot(_ snapshot: SyncEnvelope, modelContext: ModelContext) throws {

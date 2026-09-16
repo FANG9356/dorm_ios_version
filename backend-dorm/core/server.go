@@ -73,6 +73,9 @@ func RunServer() {
 
 	InitializeDatabase(db)
 	handlers.InitializeLineIntegration(db)
+	if err := handlers.ReconcileLineTenantChanges(db); err != nil {
+		log.Printf("LINE change reconciliation failed: %v", err)
+	}
 	if err := handlers.MaterializeLatestLineSnapshots(db); err != nil {
 		log.Printf("LINE snapshot preparation failed: %v", err)
 	}
@@ -92,6 +95,7 @@ func RunServer() {
 	http.HandleFunc("/api/webhook/line", handlers.HandleLineWebhook(db))
 	http.Handle("/api/admin/push-invoices", handlers.AuthMiddleware(db, handlers.HandlePushInvoices(db)))
 	http.Handle("/api/line/invoices/send", handlers.AuthMiddleware(db, handlers.HandleSendLineInvoice(db)))
+	http.HandleFunc("/api/media/", handlers.HandleTenantMedia(db))
 	http.HandleFunc("/api/liff/rooms", handlers.HandleLiffRooms(db))
 	http.HandleFunc("/api/liff/status", handlers.HandleLiffStatus(db))
 	http.HandleFunc("/api/liff/verify-tenant", handlers.HandleLiffVerify(db))

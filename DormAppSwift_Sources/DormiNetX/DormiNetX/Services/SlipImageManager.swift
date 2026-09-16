@@ -18,7 +18,9 @@ enum SlipImageManager {
             return url
         }
 
-        return try? slipsDirectory().appendingPathComponent(trimmedPath)
+        let fileName = URL(fileURLWithPath: trimmedPath).lastPathComponent
+        guard !fileName.isEmpty else { return nil }
+        return try? slipsDirectory().appendingPathComponent(fileName)
     }
 
     static func saveImageData(_ data: Data) throws -> String {

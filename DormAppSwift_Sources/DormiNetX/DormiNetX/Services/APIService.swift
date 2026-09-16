@@ -263,6 +263,24 @@ class APIService {
         return try await performGetRequest(path: "/maintenances")
     }
 
+    func fetchTenantMedia(storedPath: String) async throws -> Data {
+        let fileName = URL(fileURLWithPath: storedPath).lastPathComponent
+        guard !fileName.isEmpty,
+              let apiURL = URL(string: baseURL) else { throw URLError(.badURL) }
+        let url = apiURL.appendingPathComponent("media").appendingPathComponent(fileName)
+        var request = URLRequest(url: url)
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode),
+              data.count <= 15 * 1_024 * 1_024 else {
+            throw URLError(.badServerResponse)
+        }
+        return data
+    }
+
     func fetchLatestSyncSnapshot() async throws -> Data {
         return try await performGetRequest(path: "/sync/latest")
     }

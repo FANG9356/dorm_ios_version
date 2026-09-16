@@ -2,12 +2,16 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -87,6 +91,7 @@ type lineMaintenanceSnapshot struct {
 	PaymentMethod string  `json:"paymentMethod"`
 	SlipPath      string  `json:"slipPath"`
 	IssueImage    string  `json:"issueImage"`
+	LastUpdated   string  `json:"lastUpdated"`
 }
 
 type lineRoomTypeSnapshot struct {
@@ -129,6 +134,7 @@ func ensureLineTenantSchema(db *sql.DB) {
 	db.Exec(`ALTER TABLE payments ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN deposit_fee REAL DEFAULT 0`)
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN external_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE maintenances ADD COLUMN last_updated TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE rooms ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id) WHERE external_id != ''`)
@@ -291,15 +297,15 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 	}
 	for _, maintenance := range snapshot.Maintenance {
 		_, err = tx.Exec(`INSERT INTO maintenances
-			(room_number, issue, status, cost, reported_at, resolved_at, payment_method, slip_path, issue_image, external_id)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			(room_number, issue, status, cost, reported_at, resolved_at, payment_method, slip_path, issue_image, last_updated, external_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(external_id) WHERE external_id != '' DO UPDATE SET room_number=excluded.room_number, issue=excluded.issue,
 			 status=excluded.status, cost=excluded.cost, reported_at=excluded.reported_at,
 			 resolved_at=excluded.resolved_at, payment_method=excluded.payment_method,
-			 slip_path=excluded.slip_path, issue_image=excluded.issue_image`,
+			 slip_path=excluded.slip_path, issue_image=excluded.issue_image, last_updated=excluded.last_updated`,
 			maintenance.RoomNumber, maintenance.Issue, maintenance.Status, maintenance.Cost,
 			maintenance.ReportedAt, maintenance.ResolvedAt, maintenance.PaymentMethod,
-			maintenance.SlipPath, maintenance.IssueImage, maintenance.ID)
+			maintenance.SlipPath, maintenance.IssueImage, maintenance.LastUpdated, maintenance.ID)
 		if err != nil {
 			return fmt.Errorf("upsert maintenance: %w", err)
 		}
@@ -323,6 +329,234 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 		}
 	}
 	return tx.Commit()
+}
+
+// ReconcileLineTenantChanges publishes operational changes made through LINE
+// before the latest app snapshot is materialized. This prevents a restart from
+// replacing a newly uploaded slip or maintenance request with an older snapshot.
+func ReconcileLineTenantChanges(master *sql.DB) error {
+	rows, err := master.Query(`SELECT DISTINCT account_id FROM sync_snapshots ORDER BY account_id`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var accountIDs []int
+	for rows.Next() {
+		var accountID int
+		if err := rows.Scan(&accountID); err != nil {
+			return err
+		}
+		accountIDs = append(accountIDs, accountID)
+	}
+	for _, accountID := range accountIDs {
+		tenantDB, err := GetTenantDB(accountID)
+		if err != nil {
+			return err
+		}
+		if err := PublishLineTenantChanges(master, tenantDB, accountID); err != nil && err != sql.ErrNoRows {
+			return fmt.Errorf("publish LINE changes for account %d: %w", accountID, err)
+		}
+	}
+	return nil
+}
+
+// PublishLineTenantChanges creates a new immutable sync snapshot containing
+// payment and maintenance changes accepted by the LINE webhook. The conditional
+// INSERT uses the same optimistic version rule as an app push, so a concurrent
+// device write cannot be overwritten.
+func PublishLineTenantChanges(master, tenantDB *sql.DB, accountID int) error {
+	if accountID <= 0 {
+		return errors.New("invalid account id")
+	}
+	ensureLineTenantSchema(tenantDB)
+	if err := ensureMaintenanceExternalIDs(tenantDB); err != nil {
+		return err
+	}
+
+	for attempt := 0; attempt < 5; attempt++ {
+		var baseVersion int
+		var rawPayload string
+		err := master.QueryRow(`SELECT version, payload FROM sync_snapshots
+			WHERE account_id = ? ORDER BY version DESC LIMIT 1`, accountID).Scan(&baseVersion, &rawPayload)
+		if err != nil {
+			return err
+		}
+		var payload map[string]interface{}
+		if err := json.Unmarshal([]byte(rawPayload), &payload); err != nil {
+			return fmt.Errorf("decode latest snapshot: %w", err)
+		}
+		changed, err := mergeTenantOperationalState(tenantDB, payload)
+		if err != nil {
+			return err
+		}
+		if !changed {
+			return nil
+		}
+
+		nextVersion := baseVersion + 1
+		now := time.Now().UTC()
+		payload["snapshotID"] = "line-" + newLineSnapshotUUID()
+		payload["accountID"] = accountID
+		payload["version"] = nextVersion
+		payload["createdAt"] = now.Format(time.RFC3339Nano)
+		payload["deviceID"] = "line-bot"
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		sum := sha256.Sum256(encoded)
+		checksum := hex.EncodeToString(sum[:])
+		snapshotID, _ := payload["snapshotID"].(string)
+		result, err := master.Exec(`INSERT INTO sync_snapshots
+			(snapshot_id, account_id, version, payload, checksum, size, device_id, created_at, created_by_admin_id)
+			SELECT ?, ?, ?, ?, ?, ?, 'line-bot', ?, ?
+			WHERE (SELECT COALESCE(MAX(version), 0) FROM sync_snapshots WHERE account_id = ?) = ?`,
+			snapshotID, accountID, nextVersion, string(encoded), checksum, len(encoded),
+			now.Format(time.RFC3339), accountID, accountID, baseVersion)
+		if err != nil {
+			return err
+		}
+		affected, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected == 1 {
+			return nil
+		}
+	}
+	return errors.New("snapshot changed repeatedly while publishing LINE data")
+}
+
+func ensureMaintenanceExternalIDs(db *sql.DB) error {
+	rows, err := db.Query(`SELECT id FROM maintenances WHERE COALESCE(external_id, '') = '' ORDER BY id`)
+	if err != nil {
+		return err
+	}
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	for _, id := range ids {
+		if _, err := db.Exec(`UPDATE maintenances SET external_id = ?,
+			last_updated = CASE WHEN COALESCE(last_updated, '') = '' THEN ? ELSE last_updated END
+			WHERE id = ? AND COALESCE(external_id, '') = ''`, newLineSnapshotUUID(), time.Now().UTC().Format(time.RFC3339Nano), id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bool, error) {
+	changed := false
+	paymentObjects := snapshotObjectsByID(payload["payments"])
+	rows, err := db.Query(`SELECT external_id, COALESCE(payment_date, ''), COALESCE(method, ''),
+		COALESCE(slip_path, ''), COALESCE(payment_status, 'pending'), COALESCE(slip_path_array, '[]'),
+		COALESCE(paid_amount, 0), COALESCE(last_updated, '')
+		FROM payments WHERE COALESCE(external_id, '') != ''`)
+	if err != nil {
+		return false, err
+	}
+	for rows.Next() {
+		var id, paymentDate, method, slipPath, status, slipJSON, lastUpdated string
+		var paidAmount float64
+		if err := rows.Scan(&id, &paymentDate, &method, &slipPath, &status, &slipJSON, &paidAmount, &lastUpdated); err != nil {
+			rows.Close()
+			return false, err
+		}
+		item := paymentObjects[id]
+		if item == nil {
+			continue
+		}
+		var slips []interface{}
+		if json.Unmarshal([]byte(slipJSON), &slips) != nil {
+			slips = []interface{}{}
+		}
+		changed = setSnapshotField(item, "paymentDate", paymentDate) || changed
+		changed = setSnapshotField(item, "method", method) || changed
+		changed = setSnapshotField(item, "slipPath", slipPath) || changed
+		changed = setSnapshotField(item, "paymentStatus", status) || changed
+		changed = setSnapshotField(item, "slipPathArray", slips) || changed
+		changed = setSnapshotField(item, "paidAmount", paidAmount) || changed
+		if lastUpdated != "" {
+			changed = setSnapshotField(item, "lastUpdated", lastUpdated) || changed
+		}
+	}
+	rows.Close()
+
+	maintenance, _ := payload["maintenance"].([]interface{})
+	maintenanceObjects := snapshotObjectsByID(maintenance)
+	rows, err = db.Query(`SELECT id, external_id, room_number, issue, status, COALESCE(cost, 0),
+		COALESCE(reported_at, ''), COALESCE(resolved_at, ''), COALESCE(payment_method, ''),
+		COALESCE(slip_path, ''), COALESCE(issue_image, ''), COALESCE(last_updated, '')
+		FROM maintenances WHERE COALESCE(external_id, '') != '' ORDER BY id`)
+	if err != nil {
+		return false, err
+	}
+	for rows.Next() {
+		var serverID int
+		var id, room, issue, status, reportedAt, resolvedAt, paymentMethod, slipPath, issueImage, lastUpdated string
+		var cost float64
+		if err := rows.Scan(&serverID, &id, &room, &issue, &status, &cost, &reportedAt, &resolvedAt,
+			&paymentMethod, &slipPath, &issueImage, &lastUpdated); err != nil {
+			rows.Close()
+			return false, err
+		}
+		item := maintenanceObjects[id]
+		if item == nil {
+			item = map[string]interface{}{"id": id}
+			maintenance = append(maintenance, item)
+			maintenanceObjects[id] = item
+			changed = true
+		}
+		fields := map[string]interface{}{
+			"serverId": float64(serverID), "roomNumber": room, "issue": issue, "status": status, "cost": cost,
+			"reportedAt": reportedAt, "resolvedAt": resolvedAt, "paymentMethod": paymentMethod,
+			"slipPath": slipPath, "issueImage": issueImage, "lastUpdated": lastUpdated,
+		}
+		for key, value := range fields {
+			changed = setSnapshotField(item, key, value) || changed
+		}
+	}
+	rows.Close()
+	payload["maintenance"] = maintenance
+	return changed, nil
+}
+
+func snapshotObjectsByID(value interface{}) map[string]map[string]interface{} {
+	result := map[string]map[string]interface{}{}
+	items, _ := value.([]interface{})
+	for _, raw := range items {
+		item, _ := raw.(map[string]interface{})
+		id, _ := item["id"].(string)
+		if id != "" {
+			result[id] = item
+		}
+	}
+	return result
+}
+
+func setSnapshotField(item map[string]interface{}, key string, value interface{}) bool {
+	if reflect.DeepEqual(item[key], value) {
+		return false
+	}
+	item[key] = value
+	return true
+}
+
+func newLineSnapshotUUID() string {
+	value := make([]byte, 16)
+	if _, err := rand.Read(value); err != nil {
+		return fmt.Sprintf("%d-0000-4000-8000-000000000000", time.Now().UnixNano())
+	}
+	value[6] = (value[6] & 0x0f) | 0x40
+	value[8] = (value[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", value[0:4], value[4:6], value[6:8], value[8:10], value[10:16])
 }
 
 func stableSnapshotUserID(tenant lineTenantSnapshot) int {
