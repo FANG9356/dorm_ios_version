@@ -31,6 +31,8 @@
 - production สร้าง snapshot `v66` จาก `line-bot` สำเร็จ ครอบคลุมสลิปสถานะ `checking` และรายการแจ้งซ่อมที่ทดสอบก่อนแก้ พร้อมกำหนด UUID ให้รายการแจ้งซ่อมเพื่อให้ sync ต่อเนื่องโดยไม่สร้างข้อมูลซ้ำ
 - หลัง UAT พบว่า checkpoint ใน iPhone อาจเท่ากับ remote version ทั้งที่ local store ขาดบางรายการ จึงเพิ่ม manual-sync self-healing ให้เทียบ content signature และ apply snapshot ซ้ำเมื่อเนื้อหาไม่ตรง พร้อมแก้ overlay ไม่ให้แสดง “ซิงค์สำเร็จ” ตามเวลาเมื่อการทำงานจริงล้มเหลว; republish production เป็น `v67` เพื่อให้อุปกรณ์ที่ติดตั้ง build เดิมดึงข้อมูลได้ทันที โดยไม่ได้เปลี่ยนรายละเอียดรายการแจ้งซ่อม
 - UAT รอบถัดมาพบ local dirty records ทำให้ pull ถูกปฏิเสธตาม data-safety guard จึงเพิ่ม manual-sync rebase: รวมเฉพาะ local records ที่ dirty/deleted เข้ากับ remote snapshot ล่าสุด, push ด้วย remote base version แล้ว apply ผลรวมกลับเข้า SwiftData; stale pending flag ที่ไม่มี dirty record จะถูกล้างอย่างปลอดภัย แอป Debug รุ่นนี้ build/sign/install ทับบน iPhone “F” สำเร็จโดยคง app container เดิม
+- วันที่ 16 กันยายน 2569 เพิ่มการแจ้ง LINE เมื่อสถานะงานซ่อมถูกเปลี่ยนจากแอปผ่าน sync snapshot: ส่งหลัง transaction commit เท่านั้น, ไม่ส่งซ้ำเมื่อค่าสถานะเดิม และไม่ส่งย้อนหลังในช่วง startup materialization; production binary SHA-256 เป็น `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และ external health ตอบ HTTP 200
+- ปรับหน้าแก้ไขงานซ่อมใน iOS ให้ห้องของรายการเดิมเป็นข้อความแก้ไขไม่ได้, ปุ่มสถานะกว้างเท่ากัน, ช่องทางชำระเป็นตัวเลือก และรูปอาการเสีย/สลิปเปิดดูเต็มจอพร้อม pinch/double-tap zoom ได้; build/sign/install ทับบน iPhone “F” สำเร็จ
 - deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบสุดท้ายที่ตรวจหลัง restart มี SHA-256 `2e6486679666bfe10640ac2ac60f6ed349603481b9aa3728b3750d2880f15386`
 - production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
@@ -69,6 +71,7 @@
 - `/home/fang/line_migration_backups/20260915_195350_pre_line_snapshot_sync` (rollback จาก deployment validation รอบแรก; binary/master/tenant database)
 - `/home/fang/line_migration_backups/20260915_195516_pre_line_snapshot_sync` (SQLite-native master/tenant backup และ binary ก่อน deploy LINE-to-app snapshot sync รอบสำเร็จ)
 - `/home/fang/line_migration_backups/20260915_200616_pre_line_republish` (SQLite-native master/tenant backup ก่อน republish snapshot v67 สำหรับ device UAT)
+- `/home/fang/line_migration_backups/20260916_1038_pre_maintenance_notifications` (binary และ SQLite-native master/tenant backup ก่อนเพิ่ม LINE status notification จาก app sync)
 
 ชุดก่อนหน้าเก็บ master database, tenant database และ server binary เดิม; ชุด predeploy เก็บ environment เดิมด้วย ส่วนชุด `pre_phone_lookup` เก็บเฉพาะ binary เพราะ deployment นี้ไม่เปลี่ยน schema หรือข้อมูล ไฟล์ถูกจำกัดสิทธิ์ตามประเภท
 

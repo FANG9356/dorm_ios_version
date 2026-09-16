@@ -94,6 +94,14 @@ type lineMaintenanceSnapshot struct {
 	LastUpdated   string  `json:"lastUpdated"`
 }
 
+type maintenanceStatusNotifier func(lineUserID, roomNumber, issue, status string)
+
+type maintenanceStatusChange struct {
+	RoomNumber string
+	Issue      string
+	Status     string
+}
+
 type lineRoomTypeSnapshot struct {
 	ID          string  `json:"id"`
 	Name        string  `json:"name"`
@@ -170,6 +178,19 @@ func MaterializeLatestLineSnapshots(master *sql.DB) error {
 }
 
 func MaterializeLineSnapshot(master *sql.DB, accountID int, payload []byte) error {
+	return materializeLineSnapshotPayload(master, accountID, payload, nil)
+}
+
+// MaterializeLineSnapshotAndNotify is used only for a newly accepted app push.
+// Startup reconciliation uses MaterializeLineSnapshot so it cannot resend old
+// LINE notifications after every server restart.
+func MaterializeLineSnapshotAndNotify(master *sql.DB, accountID int, payload []byte) error {
+	return materializeLineSnapshotPayload(master, accountID, payload, func(lineUserID, roomNumber, issue, status string) {
+		go PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status)
+	})
+}
+
+func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byte, notifier maintenanceStatusNotifier) error {
 	var snapshot lineSyncEnvelope
 	if err := json.Unmarshal(payload, &snapshot); err != nil {
 		return err
@@ -184,10 +205,14 @@ func MaterializeLineSnapshot(master *sql.DB, accountID int, payload []byte) erro
 	if err != nil {
 		return err
 	}
-	return materializeLineSnapshotInto(master, tenantDB, accountID, snapshot)
+	return materializeLineSnapshotIntoWithNotifier(master, tenantDB, accountID, snapshot, notifier)
 }
 
 func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapshot lineSyncEnvelope) error {
+	return materializeLineSnapshotIntoWithNotifier(master, tenantDB, accountID, snapshot, nil)
+}
+
+func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID int, snapshot lineSyncEnvelope, notifier maintenanceStatusNotifier) error {
 	ensureLineTenantSchema(tenantDB)
 	tx, err := tenantDB.Begin()
 	if err != nil {
@@ -295,7 +320,21 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 			return fmt.Errorf("upsert payment: %w", err)
 		}
 	}
+	statusChanges := make([]maintenanceStatusChange, 0)
 	for _, maintenance := range snapshot.Maintenance {
+		var previousStatus string
+		hadExistingMaintenance := false
+		if strings.TrimSpace(maintenance.ID) != "" {
+			err = tx.QueryRow(`SELECT COALESCE(status, '') FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus)
+			switch {
+			case err == nil:
+				hadExistingMaintenance = true
+			case errors.Is(err, sql.ErrNoRows):
+				err = nil
+			default:
+				return fmt.Errorf("read previous maintenance status: %w", err)
+			}
+		}
 		_, err = tx.Exec(`INSERT INTO maintenances
 			(room_number, issue, status, cost, reported_at, resolved_at, payment_method, slip_path, issue_image, last_updated, external_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -308,6 +347,13 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 			maintenance.SlipPath, maintenance.IssueImage, maintenance.LastUpdated, maintenance.ID)
 		if err != nil {
 			return fmt.Errorf("upsert maintenance: %w", err)
+		}
+		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
+			statusChanges = append(statusChanges, maintenanceStatusChange{
+				RoomNumber: maintenance.RoomNumber,
+				Issue:      maintenance.Issue,
+				Status:     maintenance.Status,
+			})
 		}
 	}
 
@@ -328,7 +374,26 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 			return err
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	if notifier == nil {
+		return nil
+	}
+	for _, change := range statusChanges {
+		var lineUserID string
+		err := tenantDB.QueryRow(`SELECT COALESCE(line_user_id, '') FROM users
+			WHERE room_number = ? AND line_user_id != ''
+				AND status IN ('กำลังพักอาศัย', 'จอง')
+			ORDER BY CASE status WHEN 'กำลังพักอาศัย' THEN 0 ELSE 1 END
+			LIMIT 1`, change.RoomNumber).Scan(&lineUserID)
+		if err == nil && lineUserID != "" {
+			notifier(lineUserID, change.RoomNumber, change.Issue, change.Status)
+		} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("resolve LINE recipient for maintenance status: %w", err)
+		}
+	}
+	return nil
 }
 
 // ReconcileLineTenantChanges publishes operational changes made through LINE

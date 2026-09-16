@@ -256,12 +256,15 @@ private struct MaintenanceEditor: View {
     @State private var slipPath: String
     @State private var issueImage: String
     @State private var selectedDetent: PresentationDetent = .large
+    private let isEditing: Bool
 
     private let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
+    private let paymentMethods = [(value: "", title: "ยังไม่ระบุ"), (value: "เงินสด", title: "เงินสด"), (value: "โอนเงิน", title: "โอนผ่านธนาคาร")]
 
     init(maintenance: Maintenance? = nil, rooms: [Room], onSave: @escaping (Maintenance) -> Void) {
         self.rooms = rooms
         self.onSave = onSave
+        self.isEditing = maintenance != nil
         _roomNumber = State(initialValue: maintenance?.roomNumber ?? rooms.first?.roomNumber ?? "")
         _issue = State(initialValue: maintenance?.issue ?? "")
         _status = State(initialValue: maintenance?.status.isEmpty == false ? maintenance?.status ?? "รอดำเนินการ" : "รอดำเนินการ")
@@ -275,7 +278,17 @@ private struct MaintenanceEditor: View {
         NavigationStack {
             Form {
                 Section("ห้องและรายละเอียด") {
-                    if rooms.isEmpty {
+                    if isEditing {
+                        HStack {
+                            Text("ห้อง")
+                                .font(.custom("SukhumvitSet-Medium", size: 16))
+                            Spacer()
+                            Text(roomNumber)
+                                .font(.custom("SukhumvitSet-Bold", size: 18))
+                        }
+                        .frame(minHeight: 50)
+                        .accessibilityElement(children: .combine)
+                    } else if rooms.isEmpty {
                         TextField("เลขห้อง", text: $roomNumber)
                             .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
                             .font(.custom("SukhumvitSet-Text", size: 17))
@@ -304,7 +317,7 @@ private struct MaintenanceEditor: View {
                 }
 
                 Section("อัปเดตสถานะ") {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    VStack(spacing: 10) {
                         ForEach(statuses, id: \.self) { item in
                             Button {
                                 status = item
@@ -317,7 +330,7 @@ private struct MaintenanceEditor: View {
                                 }
                                 .font(.custom("SukhumvitSet-Medium", size: 13))
                                 .foregroundStyle(status == item ? Color.white : Color.primary)
-                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .frame(maxWidth: .infinity, minHeight: 52)
                                 .background(status == item ? Color.indigo : Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
                             }
                             .buttonStyle(.plain)
@@ -348,12 +361,33 @@ private struct MaintenanceEditor: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("ช่องทางชำระ")
                             .font(.custom("SukhumvitSet-Medium", size: 15))
-                        TextField("เช่น เงินสด หรือโอนผ่านธนาคาร", text: $paymentMethod)
+                        Menu {
+                            ForEach(paymentMethods, id: \.value) { method in
+                                Button {
+                                    paymentMethod = method.value
+                                } label: {
+                                    if paymentMethod == method.value {
+                                        Label(method.title, systemImage: "checkmark")
+                                    } else {
+                                        Text(method.title)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: paymentMethod == "เงินสด" ? "banknote" : "building.columns")
+                                Text(paymentMethodTitle)
+                                    .foregroundStyle(paymentMethod.isEmpty ? Color.secondary : Color.primary)
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
                             .font(.custom("SukhumvitSet-Text", size: 16))
                             .padding(.horizontal, 14)
-                            .frame(minHeight: 54)
+                            .frame(maxWidth: .infinity, minHeight: 54)
                             .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
-                            .limitedText($paymentMethod, maxLength: 60, trimNewlines: true)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
@@ -400,6 +434,10 @@ private struct MaintenanceEditor: View {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var paymentMethodTitle: String {
+        paymentMethods.first(where: { $0.value == paymentMethod })?.title ?? paymentMethod
+    }
+
     private func mediaPaths(_ value: String) -> [String] {
         value.split(separator: ",").map {
             String($0).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -417,6 +455,7 @@ private struct MaintenanceEvidenceView: View {
     let title: String
     let paths: [String]
     let emptyText: String
+    @State private var preview: MaintenanceEvidencePreview?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -439,18 +478,34 @@ private struct MaintenanceEvidenceView: View {
             }
         }
         .padding(.vertical, 4)
+        .fullScreenCover(item: $preview) { item in
+            MaintenanceImageViewer(item: item)
+        }
     }
 
     @ViewBuilder
     private func evidence(_ path: String) -> some View {
         if let url = SlipImageManager.url(for: path),
            let image = UIImage(contentsOfFile: url.path) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 112, height: 88)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .accessibilityLabel(title)
+            Button {
+                preview = MaintenanceEvidencePreview(title: title, image: image)
+            } label: {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 128, height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(.black.opacity(0.62), in: Circle())
+                            .padding(7)
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("ดู\(title)แบบเต็มจอ")
         } else {
             VStack(spacing: 6) {
                 Image(systemName: "photo.badge.exclamationmark")
@@ -461,6 +516,55 @@ private struct MaintenanceEvidenceView: View {
             .foregroundStyle(.secondary)
             .frame(width: 130, height: 88)
             .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        }
+    }
+}
+
+private struct MaintenanceEvidencePreview: Identifiable {
+    let id = UUID()
+    let title: String
+    let image: UIImage
+}
+
+private struct MaintenanceImageViewer: View {
+    @Environment(\.dismiss) private var dismiss
+    let item: MaintenanceEvidencePreview
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                Image(uiImage: item.image)
+                    .resizable()
+                    .scaledToFit()
+                    .scaleEffect(scale)
+                    .gesture(
+                        MagnificationGesture()
+                            .onChanged { value in
+                                scale = min(max(lastScale * value, 1), 5)
+                            }
+                            .onEnded { _ in lastScale = scale }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            scale = scale > 1 ? 1 : 2
+                            lastScale = scale
+                        }
+                    }
+            }
+            .navigationTitle(item.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.black, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("ปิด") { dismiss() }
+                        .foregroundStyle(.white)
+                }
+            }
         }
     }
 }

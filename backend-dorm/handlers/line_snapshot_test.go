@@ -98,6 +98,71 @@ func TestMaterializeLineSnapshotMarksRemovedTenantUnlinked(t *testing.T) {
 	}
 }
 
+func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.T) {
+	master, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	InitializeLineIntegration(master)
+	if _, err := master.Exec(`INSERT INTO line_links(line_user_id, account_id, tenant_id, status)
+		VALUES ('line-one', 7, 'tenant-one', 'linked')`); err != nil {
+		t.Fatal(err)
+	}
+	tenantDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tenantDB.Close()
+
+	snapshot := lineSyncEnvelope{
+		SnapshotID: "snapshot-1",
+		AccountID:  7,
+		Tenants: []lineTenantSnapshot{{
+			ID: "tenant-one", ServerID: intPointer(44), FirstName: "หนึ่ง", RoomNumber: "103",
+			Status: "กำลังพักอาศัย",
+		}},
+		Maintenance: []lineMaintenanceSnapshot{{
+			ID: "maintenance-one", RoomNumber: "103", Issue: "ไฟดับ", Status: "รอดำเนินการ",
+		}},
+	}
+
+	var notifications []maintenanceStatusChange
+	notifier := func(lineUserID, roomNumber, issue, status string) {
+		if lineUserID != "line-one" {
+			t.Fatalf("line user = %q", lineUserID)
+		}
+		notifications = append(notifications, maintenanceStatusChange{RoomNumber: roomNumber, Issue: issue, Status: status})
+	}
+	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
+		t.Fatal(err)
+	}
+	if len(notifications) != 0 {
+		t.Fatalf("new maintenance sent %d notifications", len(notifications))
+	}
+
+	snapshot.SnapshotID = "snapshot-2"
+	snapshot.Maintenance[0].Status = "กำลังติดต่อช่าง"
+	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
+		t.Fatal(err)
+	}
+	if len(notifications) != 1 {
+		t.Fatalf("changed maintenance sent %d notifications", len(notifications))
+	}
+	got := notifications[0]
+	if got.RoomNumber != "103" || got.Issue != "ไฟดับ" || got.Status != "กำลังติดต่อช่าง" {
+		t.Fatalf("notification = %+v", got)
+	}
+
+	snapshot.SnapshotID = "snapshot-3"
+	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
+		t.Fatal(err)
+	}
+	if len(notifications) != 1 {
+		t.Fatalf("unchanged maintenance resent notification: %d", len(notifications))
+	}
+}
+
 func TestSingleLineAccountRejectsAmbiguousAccounts(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
