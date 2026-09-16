@@ -4,7 +4,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 
 > สถานะ ณ 16 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup และการแจ้งสถานะงานซ่อมถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media transfer ทุก flow, protocol-2 cutover, financial refund/void ledger และ atomic restore
 
-อ่านการประเมินรายหน้าและ roadmap ตั้งต้นได้ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขเปอร์เซ็นต์ในรายงานนั้นเป็นประมาณการก่อนรอบแก้ไขนี้ ไม่ใช่สัดส่วนการทดสอบที่ผ่าน
+อ่านสรุปว่าทำอะไรแล้วและยังเหลืออะไรได้ที่ [CURRENT_STATUS_2026-09-16.md](docs/CURRENT_STATUS_2026-09-16.md) ส่วนการประเมินรายหน้าและ roadmap ตั้งต้นอยู่ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขใน baseline นั้นไม่ใช่สถานะปัจจุบัน
 
 ## จุดประสงค์ของระบบ
 

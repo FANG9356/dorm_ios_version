@@ -2,7 +2,7 @@
 
 > รายงานนี้เป็น baseline ก่อนรอบ hardening ของวันที่เดียวกัน รายการ “ไม่มี tests”, “เก็บ token ใน UserDefaults”, “ไม่มี conflict protection” และ “save รูปแจ้งสำเร็จทันที” ด้านล่างได้รับการแก้ไขในโค้ดแล้ว อ่านผลปัจจุบันและข้อจำกัดที่ยังเหลือใน [CORE_HARDENING_2026-09-09.md](CORE_HARDENING_2026-09-09.md) ไม่ใช้คะแนนเดิมเป็นผลรับรองรุ่นใหม่
 
-> **อัปเดต 16 กันยายน 2569:** ผลประเมิน production readiness ปัจจุบันคือ **78%** และ controlled-pilot readiness **88%** ตัวเลข 82/75/64 ใน baseline นี้ไม่ใช่สถานะปัจจุบัน ให้ใช้ [PRODUCTION_HARDENING_2026-09-10.md](PRODUCTION_HARDENING_2026-09-10.md) และภาคผนวกล่าสุดใน `project-review/` สำหรับการตัดสินใจ
+> **อัปเดต 16 กันยายน 2569:** ผลประเมิน production readiness ปัจจุบันคือ **78%** และ controlled-pilot readiness **88%** ตัวเลข 82/75/64 ใน baseline นี้ไม่ใช่สถานะปัจจุบัน ให้ใช้ [CURRENT_STATUS_2026-09-16.md](CURRENT_STATUS_2026-09-16.md), [PRODUCTION_HARDENING_2026-09-10.md](PRODUCTION_HARDENING_2026-09-10.md) และภาคผนวกล่าสุดใน `project-review/` สำหรับการตัดสินใจ
 
 วันที่ประเมิน: 9 กันยายน 2569
 

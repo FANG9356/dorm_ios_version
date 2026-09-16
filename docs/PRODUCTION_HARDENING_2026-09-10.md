@@ -4,6 +4,8 @@
 
 ขอบเขต: ตรวจระบบจริงที่ `202.29.232.28`, ทดสอบ staging จากสำเนาฐานข้อมูล production, deploy backend ที่ `api.dorminet.studio` และย้าย LINE webhook จากโดเมนเดิม โดยไม่ย้อนหรือลบการแก้ไขใน working tree
 
+> สรุปสถานะแบบ “ทำแล้ว / ทำบางส่วน / ยังเหลือ” อยู่ที่ [CURRENT_STATUS_2026-09-16.md](CURRENT_STATUS_2026-09-16.md)
+
 ## ผลที่ใช้งานจริงแล้ว
 
 - เปลี่ยน LINE Messaging API webhook จาก `https://dorminet.me/api/webhook/line` เป็น `https://api.dorminet.studio/api/webhook/line`
