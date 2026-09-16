@@ -2,6 +2,29 @@
 
 วันที่ประเมิน: 15 กันยายน 2569
 
+> **ภาคผนวกอัปเดต 16 กันยายน 2569:** รีวิวเดิมด้านล่างเป็น snapshot ก่อนงาน LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup validation และ maintenance status notification รอบล่าสุด ห้ามใช้คะแนน production 5.5/10 เป็นสถานะปัจจุบัน
+
+### ผลประเมินปัจจุบัน
+
+- ความครบของฟีเจอร์: **9.0/10**
+- สถาปัตยกรรม: **8.6/10**
+- ความปลอดภัยและข้อมูล: **7.4/10**
+- ความพร้อม controlled pilot: **8.8/10**
+- ความพร้อม production: **7.8/10 (78%)**
+
+หลักฐานที่เพิ่มหลังรีวิวเดิมคือ LINE/LIFF ที่ใช้กับ production, tenant-scoped media hydration, immutable snapshot publish จาก LINE, same-version local repair, dirty-local rebase, สำรอง/rollback ก่อน deploy, iOS tests 44/44, backend race/vet และ device UAT บาง flow บน iPhone จริง ส่วนตัวกดคะแนนที่ยังเหลือคือ provider secret rotation, UAT สองเครื่อง/สองบัญชี, media transfer ทุก flow, record-level conflict strategy, refund/void ledger, public `/uploads` compatibility path และ atomic online restore
+
+### สถานะข้อเสนอแนะจากรีวิวเดิม
+
+| ประเด็น | สถานะปัจจุบัน |
+| --- | --- |
+| Secret history/rotation | ยังเปิด |
+| Media ownership/transfer | แก้สำหรับ LINE slip/maintenance แล้ว; flow อื่นยังเปิด |
+| Whole-snapshot conflict | มี protection/self-healing/rebase แล้ว; record merge ยังเปิด |
+| Financial ledger | มี append-only transaction/receipt บางส่วน; refund/void/full migration ยังเปิด |
+| Backup/restore | archive/offline drill ผ่าน; atomic online restore ยังเปิด |
+| LINE integration | core linking/invoice/payment/maintenance ใช้ได้แล้ว; delivery operations ยังไม่ครบ |
+
 ## 1. สรุปผลแบบสั้น
 
 โปรเจคนี้มีความเป็น “ระบบจัดการหอพักระดับผลิตภัณฑ์ที่พัฒนาอย่างจริงจัง” มากกว่าระบบ demo หรือ prototype แต่ยังไม่พร้อมใช้งานจริงแบบ full production หากมองในเชิงความเสี่ยง ความปลอดภัย และความพร้อมของ data integrity และ device UAT อย่างแท้จริง
@@ -11,7 +34,7 @@
 - ความครบของฟีเจอร์: 8.5/10
 - ความซับซ้อนของสถาปัตยกรรม: 8.5/10
 - ความปลอดภัยและข้อมูล: 7.5/10
-- ความพร้อม production: 5.5/10
+- ความพร้อม production ณ 15 กันยายน: 5.5/10 (ถูกแทนด้วย 7.8/10 ในภาคผนวกด้านบน)
 - ความน่าเชื่อถือสำหรับใช้งานจริง: 6.5/10
 
 สรุปแบบตรงไปตรงมา: โปรเจคนี้ “พร้อมสำหรับ pilot, ยังไม่พร้อมสำหรับ production จริงแบบเปิดใช้งานเต็มรูปแบบ”
@@ -20,7 +43,7 @@
 
 ## 2. ภาพรวมของโปรเจค
 
-จากโครงสร้างโปรเจคและเอกสารใน repository หลัก ได้แก่ [README.md](README.md), [docs/CORE_HARDENING_2026-09-09.md](docs/CORE_HARDENING_2026-09-09.md), [docs/PRODUCTION_HARDENING_2026-09-10.md](docs/PRODUCTION_HARDENING_2026-09-10.md) และ [docs/SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) สามารถเห็นได้ว่าโปรเจคมีเป้าหมายชัดเจน:
+จากโครงสร้างโปรเจคและเอกสารใน repository หลัก ได้แก่ [README.md](../README.md), [docs/CORE_HARDENING_2026-09-09.md](../docs/CORE_HARDENING_2026-09-09.md), [docs/PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md) และ [docs/SYSTEM_READINESS_2026-09-09.md](../docs/SYSTEM_READINESS_2026-09-09.md) สามารถเห็นได้ว่าโปรเจคมีเป้าหมายชัดเจน:
 
 - แอป iOS สำหรับการจัดการหอพัก
 - Backend Go สำหรับ auth / sync / backup / tenant data
@@ -62,7 +85,7 @@
 
 ### 3.3 เอกสารและ status report ระดับดี
 
-เอกสารใน [README.md](README.md) และ docs ต่างๆ มีลักษณะ “truthful assessment” มากกว่าการอวดแอป ไม่ปิดความจริงว่ามีอะไรยังติดอยู่ และมีอะไรที่ยังไม่ได้ production-ready ซึ่งเป็นคุณสมบัติที่ดีมากสำหรับทีมที่ต้องตัดสินใจ
+เอกสารใน [README.md](../README.md) และ docs ต่างๆ มีลักษณะ “truthful assessment” มากกว่าการอวดแอป ไม่ปิดความจริงว่ามีอะไรยังติดอยู่ และมีอะไรที่ยังไม่ได้ production-ready ซึ่งเป็นคุณสมบัติที่ดีมากสำหรับทีมที่ต้องตัดสินใจ
 
 ### 3.4 ฟีเจอร์ธุรกิจครอบคลุมมาก
 
@@ -134,7 +157,7 @@
 | ความปลอดภัย | 7.5/10 | มีหลายมาตรการดี แต่ยังไม่จบและยังต้อง rotate secret / hardening ต่อ |
 | ความสามารถบำรุงรักษา | 7.5/10 | เอกสารดี โครงสร้างดี แต่ยังต้องมี test/operational discipline มากขึ้น |
 | ความพร้อม pilot | 8/10 | เหมาะสำหรับ pilot หรือ sandbox กับหอพักจำกัด |
-| ความพร้อม production | 5.5/10 | ยังไม่ควรเปิดใช้เต็มรูปแบบโดยไม่ผ่าน UAT และ hardening รอบต่อไป |
+| ความพร้อม production ณ 15 กันยายน | 5.5/10 | เป็นคะแนนเดิมก่อนงานรอบล่าสุด; คะแนนปัจจุบันคือ 7.8/10 |
 
 ---
 

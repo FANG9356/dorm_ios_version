@@ -2,7 +2,7 @@
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
 
-> สถานะ ณ 10 กันยายน 2569: backend hardening และการย้าย LINE webhook ไป `api.dorminet.studio` ถูก deploy แล้ว มี automated tests และ backup/restore drill แต่ **ยังไม่ใช่ production-ready 100%** จนกว่าจะผ่าน device UAT, media transfer, protocol-2 cutover และ provider secret rotation อ่าน [ผล production ล่าสุด](docs/PRODUCTION_HARDENING_2026-09-10.md), [งานการเงิน](docs/FINANCE_HARDENING_2026-09-10.md) และ [ข้อกำหนดระบบหลัก](docs/CORE_HARDENING_2026-09-09.md)
+> สถานะ ณ 16 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup และการแจ้งสถานะงานซ่อมถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media transfer ทุก flow, protocol-2 cutover, financial refund/void ledger และ atomic restore
 
 อ่านการประเมินรายหน้าและ roadmap ตั้งต้นได้ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขเปอร์เซ็นต์ในรายงานนั้นเป็นประมาณการก่อนรอบแก้ไขนี้ ไม่ใช่สัดส่วนการทดสอบที่ผ่าน
 
@@ -55,16 +55,16 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 
 ## สิ่งที่ยังไม่เสร็จ
 
-- แอป iOS ยังไม่ได้เชื่อมปุ่ม LINE กับ backend จริง และ snapshot ของแอปยังไม่มี `line_user_id`
+- LINE/LIFF ผูกบัญชีได้แล้ว แสดงข้อมูลลูกบ้าน/บิล รับสลิป/แจ้งซ่อม และแจ้งสถานะงานซ่อมจากแอปกลับไป LINE ได้ แต่ยังขาด delivery log/retry ครบทุกข้อความและ opt-out policy
 - ยังไม่มี APNs/Push Notification และการจัดตาราง local notification
 - หน้าเลือกภาษาบันทึกตัวเลือกได้ แต่ยังไม่ได้แปลข้อความด้วย localization resources จริง
-- Cloud snapshot ซิงก์เพียงชื่อ/พาธสื่อ ไม่ส่งไฟล์จริง สถาปัตยกรรมกำหนดให้สื่ออยู่ในเครื่องและส่งตรง/relay ชั่วคราว ไม่ฝากไฟล์ถาวรบน backend; การรับส่งสื่อระหว่างเครื่องยังไม่เสร็จ
-- การซิงก์เป็น snapshot ทั้งชุด ตรวจพบ conflict และให้เลือกใช้ข้อมูลเซิร์ฟเวอร์หลังสร้าง backup ได้ แต่ยังไม่ merge ระดับ record
+- สลิปและรูปแจ้งซ่อมจาก LINE มี tenant-scoped authenticated hydration เข้าแอปแล้ว แต่สื่อประเภทอื่นยังไม่มี transfer ข้ามอุปกรณ์ครบทุก flow และ `/uploads` แบบ public compatibility ยังต้องปิด
+- การซิงก์ยังเป็น snapshot ทั้งชุด มี optimistic conflict protection, exact retry, same-version self-healing และ manual dirty-record rebase แล้ว แต่ยังไม่มี record-level merge เต็มรูปแบบ
 - เส้นทางลืมรหัสผ่านยังต้องทดสอบการส่งอีเมลจริงบน staging และ concurrency หลาย instance
 - ยังต้องหมุน secret ที่เคยอยู่ใน Git และเพิ่ม regression test ให้ authorization endpoint ที่เหลือ
 - Online server restore ถูกปิดไว้แบบ fail closed จนกว่าจะมี maintenance-mode restore ที่ตรวจ manifest และสลับฐานข้อมูล/สื่อแบบ atomic; archive ปัจจุบันผ่าน offline restore drill แล้ว
-- มี iOS unit tests, backend tests และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว แต่ยังไม่มี UI automation ครบทุกหน้า; CI จะเริ่มทำงานเมื่อ commit/push
-- ต้องทดสอบ Photos, Share Sheet, Print, alternate icons, video background และการซิงก์บน iPhone จริง
+- มี iOS unit tests, backend race tests/vet และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว; ผล local ล่าสุด iOS ผ่าน 44/44 และ backend `go test -count=1 -race ./...`/`go vet ./...` ผ่าน แต่ยังไม่มี UI automation ครบทุกหน้า
+- มี device UAT บน iPhone จริงหนึ่งเครื่องแล้ว แต่ยังต้องทดสอบ Photos, Share Sheet, AirPrint, alternate icons, video background, พื้นที่เต็ม และ sync บน iPhone สองเครื่อง
 
 ## โครงสร้างโปรเจกต์
 
@@ -153,7 +153,7 @@ Backend ใช้ environment variables เช่น `DB_PATH`, `PORT`, `JWT_SEC
 1. ตรวจและปล่อย sync protocol ใหม่แบบควบคุมรุ่น พร้อมสำรองข้อมูลก่อนอัปเกรดและทดสอบเครื่องเก่า/ใหม่
 2. ปิดงาน data safety/security ที่เหลือ: หมุน secret, แผนล้าง secret จาก history, schema migration/recovery, media transfer แบบไม่เก็บถาวร และเพิ่ม tests ของ ledger/สิทธิ์/ทุกหน้าจอ
 3. ทดสอบ end-to-end บน iPhone จริงอย่างน้อยสองเครื่องและบัญชีอย่างน้อยสองบัญชี
-4. เชื่อม LINE ในแอปกับ backend เดิม พร้อมเก็บการเชื่อมต่อโดย tenant ID ไม่อิงเลขห้องอย่างเดียว
+4. ทำ LINE delivery log/retry/idempotency/opt-out ให้ครบทุกข้อความ และปิด public compatibility media path
 5. เพิ่ม APNs/local notifications สำหรับบิลใกล้ครบกำหนด ค้างชำระ งานซ่อม และผลตรวจสลิป
 6. ทำ localization จริงด้วย String Catalog แล้วจึงเปิดหน้าเลือกภาษา
 7. ทำ release hardening: accessibility, performance, privacy, retention, monitoring, backup drill และ TestFlight

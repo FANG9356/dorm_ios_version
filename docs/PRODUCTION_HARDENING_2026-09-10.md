@@ -151,7 +151,19 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | Staff creation/account-scope regression test | ผ่าน; production request ที่ไม่มี password ตอบ 400 และจำนวนบัญชีไม่เปลี่ยน |
 | iOS tests หลังแก้ staff flow/CI | ผ่าน 42/42 |
 | iOS Release build + analyzer หลังแก้ staff flow | ผ่าน |
-| CI workflow syntax และคำสั่ง local equivalent | ผ่าน; จะเริ่มทำงานบน GitHub หลัง commit/push |
+| CI workflow syntax และคำสั่ง local equivalent | ผ่าน; workflow commit/push เข้า `main` แล้ว แต่การประเมินรอบนี้ไม่สามารถอ่านผล GitHub Actions ของ private repository ได้ |
+
+## ผลประเมินความพร้อมล่าสุด
+
+ประเมินซ้ำวันที่ 16 กันยายน 2569 จาก README, เอกสาร hardening, รีวิวใน `project-review/`, โค้ดปัจจุบัน และผลทดสอบรอบล่าสุด:
+
+| มิติ | ความพร้อม | สถานะ |
+| --- | ---: | --- |
+| ความครบของฟีเจอร์ | 90% | งานหลักห้อง/ลูกบ้าน/การเงิน/ซ่อม/LINE มีแล้ว |
+| controlled pilot | 88% | เหมาะกับหอจำกัดที่มี backup และติดตามปัญหาใกล้ชิด |
+| production readiness | **78%** | ยังมี release blockers ด้าน secret, multi-device, media, ledger และ restore |
+
+คะแนน 78% ไม่ใช่ test coverage หรือ SLA แต่เป็น risk-weighted readiness ที่หักคะแนนหนักจาก P0/P1 ที่ยังขาดหลักฐาน แม้ build และ automated tests จะผ่านแล้วก็ตาม
 
 ## สิ่งที่ยังไม่ถือว่าผ่าน 100%
 

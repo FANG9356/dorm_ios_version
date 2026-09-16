@@ -2,6 +2,19 @@
 
 วันที่ประเมิน: 15 กันยายน 2569
 
+> **ภาคผนวกด้านความปลอดภัย 16 กันยายน 2569:** สถาปัตยกรรมปัจจุบันดีขึ้นจากการเพิ่ม tenant-scoped media API, LINE → immutable snapshot publication, same-version repair, dirty-record rebase และการส่ง maintenance status หลัง transaction commit เท่านั้น แต่ความเสี่ยงระดับ P0 ยังไม่ปิดทั้งหมด
+
+### สรุปปัจจุบัน
+
+- สถาปัตยกรรม: **8.6/10**
+- ความปลอดภัย/ข้อมูล: **7.4/10**
+- operational readiness: **8.2/10**
+- production readiness รวม: **7.8/10**
+
+สิ่งที่พิสูจน์แล้ว: account-scoped store/session, optimistic sync version/checksum, exact retry/outbox, backup manifest/checksum/offline restore drill, Keychain, rate limit/session revocation, admin/system-operator boundary, LINE signature/LIFF validation, tenant-scoped media hydration และ regression tests สำหรับ authorization หลัก
+
+สิ่งที่ยังเป็น release blocker: rotate/revoke secrets ที่เคยอยู่ใน Git history, ปิด public `/uploads` compatibility path, พิสูจน์ media ข้ามอุปกรณ์ทุก flow, UAT สองเครื่อง/สองบัญชี, record-level conflict strategy, full financial refund/void audit และ atomic online restore
+
 ## 1. สรุปแบบสั้น
 
 ระบบนี้มีคุณภาพด้านสถาปัตยกรรมและการออกแบบความปลอดภัยที่ดีกว่าระบบหอพักทั่วไปหลายระบบ เพราะมีความคิดเรื่อง:

@@ -6,6 +6,8 @@
 
 แก้ความถูกต้องของฟอร์ม PaymentEditor ที่ใช้ร่วมกันในหน้าการเงิน บิล และหลักฐานการโอน ยังไม่ใช่การเปลี่ยนเป็น financial ledger เต็มรูปแบบ ส่วน backend hardening ถูก deploy ภายหลังตาม [บันทึก production](PRODUCTION_HARDENING_2026-09-10.md) แต่ iOS ledger ในเอกสารนี้ยังต้องผ่าน device UAT ก่อนแจกจ่ายจริง
 
+> อัปเดต 16 กันยายน 2569: iOS suite ปัจจุบันผ่าน 44/44 และมี device UAT บาง flow บน iPhone จริงหนึ่งเครื่องแล้ว แต่เกณฑ์ production ยังต้องผ่าน UAT สองเครื่อง/สองบัญชี และทำ refund/void/credit adjustment workflow พร้อม audit trail ให้ครบ
+
 ### สิ่งที่แก้แล้ว
 
 - เพิ่ม `Payment.depositFee` และส่งผ่าน snapshot/backup; บิลใหม่แบบเต็มจำนวนและจองแยกเงินมัดจำจากค่าเช่า

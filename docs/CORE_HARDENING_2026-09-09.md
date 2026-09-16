@@ -6,6 +6,8 @@
 
 เอกสารนี้อัปเดตข้อเท็จจริงจาก README และรายงาน baseline สถานะ deploy และการตรวจ production ที่เกิดภายหลังอยู่ใน [PRODUCTION_HARDENING_2026-09-10.md](PRODUCTION_HARDENING_2026-09-10.md)
 
+> อัปเดต 16 กันยายน 2569: LINE/LIFF, LINE → app media/snapshot sync, same-version self-healing, dirty-record rebase และ maintenance status notification ถูก deploy แล้ว ผลทดสอบปัจจุบัน iOS 44/44 และ backend race/vet ผ่าน ระบบยังเหลือ secret rotation, UAT สองเครื่อง, media ทุก flow, full financial refund/void ledger และ atomic online restore
+
 ## งานที่แก้ในรอบนี้
 
 ### การเงิน ห้อง และลูกบ้าน
