@@ -176,19 +176,39 @@ struct OverviewTabView: View {
                             
                             let maintData: [(String, Int, Color)] = [
                                 ("รอดำเนินการ", viewModel.pendingMaints, .red),
-                                ("กำลังซ่อม", viewModel.inProgressMaints, .orange),
+                                ("กำลังดำเนินงาน", viewModel.inProgressMaints, .orange),
                                 ("เสร็จสิ้น", viewModel.completedMaints, .green)
                             ]
-                            
-                            Chart(maintData, id: \.0) { item in
-                                BarMark(
-                                    x: .value("สถานะ", item.0),
-                                    y: .value("จำนวน", item.1)
+
+                            let maintenanceTotal = maintData.reduce(0) { $0 + $1.1 }
+                            if maintenanceTotal > 0 {
+                                Text("รวม \(maintenanceTotal) รายการ")
+                                    .font(.custom("SukhumvitSet-Text", size: 12))
+                                    .foregroundStyle(.secondary)
+
+                                Chart(maintData, id: \.0) { item in
+                                    BarMark(
+                                        x: .value("สถานะ", item.0),
+                                        y: .value("จำนวน", item.1)
+                                    )
+                                    .foregroundStyle(item.2)
+                                    .cornerRadius(4)
+                                    .annotation(position: .top) {
+                                        Text("\(item.1)")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(item.2)
+                                    }
+                                }
+                                .chartYScale(domain: 0...max(1, (maintData.map { $0.1 }.max() ?? 0) + 1))
+                                .frame(height: 180)
+                            } else {
+                                ContentUnavailableView(
+                                    "ยังไม่มีรายการแจ้งซ่อม",
+                                    systemImage: "wrench.and.screwdriver",
+                                    description: Text("เมื่อมีรายการ สถิติทุกสถานะจะแสดงที่นี่")
                                 )
-                                .foregroundStyle(item.2)
-                                .cornerRadius(4)
+                                .frame(height: 180)
                             }
-                            .frame(height: 180)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()

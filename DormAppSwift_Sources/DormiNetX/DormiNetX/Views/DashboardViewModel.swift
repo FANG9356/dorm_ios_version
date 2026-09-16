@@ -133,6 +133,14 @@ struct FinancialStat: Identifiable {
     let pending: Double
 }
 
+struct MaintenanceCounts: Equatable {
+    let pending: Int
+    let inProgress: Int
+    let completed: Int
+
+    var total: Int { pending + inProgress + completed }
+}
+
 @MainActor
 class DashboardViewModel: ObservableObject {
     @Published var stats = APIDashboardStats(total_residents: 0, empty_rooms: 0, income_this_month: 0, billing_cycle_income: 0, pending_bills: 0)
@@ -197,9 +205,7 @@ class DashboardViewModel: ObservableObject {
         }.map { user in
             APIUser(id: stableLocalUserID(for: user), prefix: user.prefix, first_name: user.firstName, last_name: user.lastName, room_number: user.roomNumber, status: user.status, phone: user.phone, move_in_date: user.moveInDate, booking_end_date: user.bookingEndDate, payment_method: user.paymentMethod, payment_channel: user.paymentChannel, installment_months: user.installmentMonths, installment_amount: user.installmentAmount, booking_slips: user.bookingSlips)
         }
-        pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
-        inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count
-        completedMaints = maintenances.filter { $0.status == "เสร็จสิ้น" }.count
+        applyMaintenanceCounts(Self.maintenanceCounts(for: maintenances.map { $0.status }))
         depositThisMonth = users.filter { $0.moveInDate.hasPrefix(currentMonth) }.reduce(0) { $0 + $1.deposit }
         financialStats = financialStatsFrom(payments: payments)
         moveInStats = moveInStatsFrom(users: users)
@@ -213,6 +219,32 @@ class DashboardViewModel: ObservableObject {
         formatter.timeZone = TimeZone(identifier: "Asia/Bangkok")
         formatter.dateFormat = "yyyy-MM"
         return formatter.string(from: date)
+    }
+
+    static func maintenanceCounts(for statuses: [String?]) -> MaintenanceCounts {
+        var pending = 0
+        var inProgress = 0
+        var completed = 0
+
+        for rawStatus in statuses {
+            switch rawStatus?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "" {
+            case "", "รอดำเนินการ":
+                pending += 1
+            case "เสร็จสิ้น":
+                completed += 1
+            default:
+                // Includes กำลังดำเนินการ, กำลังติดต่อช่าง, กำลังซ่อม,
+                // รอตรวจสอบชำระเงิน and any future non-final workflow state.
+                inProgress += 1
+            }
+        }
+        return MaintenanceCounts(pending: pending, inProgress: inProgress, completed: completed)
+    }
+
+    private func applyMaintenanceCounts(_ counts: MaintenanceCounts) {
+        pendingMaints = counts.pending
+        inProgressMaints = counts.inProgress
+        completedMaints = counts.completed
     }
 
     private func financialStatsFrom(payments: [Payment]) -> [FinancialStat] {
@@ -255,9 +287,7 @@ class DashboardViewModel: ObservableObject {
             }
             
             // Maintenance stats
-            self.pendingMaints = maintenances.filter { $0.status == "รอดำเนินการ" }.count
-            self.inProgressMaints = maintenances.filter { $0.status == "กำลังดำเนินการ" || $0.status == "กำลังซ่อม" }.count
-            self.completedMaints = maintenances.filter { $0.status == "เสร็จสิ้น" }.count
+            self.applyMaintenanceCounts(Self.maintenanceCounts(for: maintenances.map(\.status)))
             
             self.recentLogs = Array(logs.prefix(10))
             
