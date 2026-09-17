@@ -40,8 +40,8 @@ func TestPublishLineTenantChangesCreatesAppSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := tenant.Exec(`INSERT INTO maintenances
-		(room_number, issue, status, cost, reported_at, issue_image)
-		VALUES ('103', 'ไฟดับ', 'รอดำเนินการ', 0, '2026-09-15 08:59:54', '/uploads/problem.jpg')`); err != nil {
+		(room_number, issue, status, cost, reported_at, issue_image, quote_approved_at)
+		VALUES ('103', 'ไฟดับ', 'กำลังติดต่อช่าง', 200, '2026-09-15 08:59:54', '/uploads/problem.jpg', '2026-09-17T12:11:00Z')`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -94,6 +94,9 @@ func TestPublishLineTenantChangesCreatesAppSnapshot(t *testing.T) {
 	}
 	if item["issue"] != "ไฟดับ" || item["issueImage"] != "/uploads/problem.jpg" {
 		t.Fatalf("maintenance was not copied from LINE: %#v", item)
+	}
+	if item["quoteApprovedAt"] != "2026-09-17T12:11:00Z" {
+		t.Fatalf("maintenance quote approval was not copied to app snapshot: %#v", item)
 	}
 
 	// Publishing the exact same tenant state must not generate endless versions.

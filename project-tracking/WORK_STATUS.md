@@ -22,17 +22,19 @@
 - ปรับ Flex งานซ่อมเป็นโทนขาว–เทา กระชับ แสดงวันที่แจ้ง วัน–เวลาอัปเดต ค่าใช้จ่าย ช่องทางชำระ และ progress `n/6`
 - ปรับ UI รายการงานซ่อมให้เป็น read-only status timeline แตะการ์ดเพื่อแก้ไข ลดสี ลด action ที่กดพลาด และย้ายการลบไปท้ายหน้ารายละเอียดพร้อม system alert
 - แก้วัน/รอบบิล ค.ศ.–พ.ศ. ทั้งระบบด้วยตัวแปลงกลาง และเพิ่มช่องค้นหา/กรองในหน้ารายการหลัก
-- production backend รุ่นล่าสุด SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`; rollback set `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`
-- build/sign/install แอปรอบ workflow ล่าสุดบน iPhone “F” สำเร็จ
+- production backend รุ่นล่าสุด SHA-256 `d4e0f718ff73c371796f8ca5adc4f9964d755d132cced1e9a94de7cc66db4351`; rollback set `/home/fang/line_migration_backups/20260917-052357-pre-flex-ui`
+- แก้ LINE API 400 ของ Flex ใบเสนอราคาและบิลค่าซ่อม: เปลี่ยน amount row จาก `alignItems: baseline` ที่ LINE ไม่รองรับเป็น baseline layout, เพิ่ม response body ใน delivery error และส่ง outbox ใบเสนอราคาห้อง 103 ยอด 200 บาทซ้ำสำเร็จเป็น `sent`
+- แก้การอนุมัติราคาไม่ให้ข้ามไป “กำลังซ่อม”: LINE เปลี่ยนกลับเป็น “กำลังติดต่อช่าง”, เก็บ `quote_approved_at` เป็นสิทธิ์เริ่มซ่อมภายใน, ส่งข้อความและการ์ดสถานะ และให้แอดมินเป็นผู้บันทึก “กำลังซ่อม” เอง; ซ่อมข้อมูลห้อง 103 แล้วที่ snapshot v129 และ outbox 34 ส่งสำเร็จ
+- build/sign/install แอปรอบ workflow ล่าสุดบน iPhone “F” สำเร็จ รวมการอ่านธงอนุมัติและล็อกยอดที่อนุมัติแล้ว
 
 ## หลักฐานทดสอบล่าสุด
 
 | พื้นที่ | ผล |
 | --- | --- |
 | Backend | `go test ./...`, `go test -race ./handlers` และ `go vet ./...` ผ่าน |
-| LINE maintenance payload | automated tests ครอบคลุม status, quote, approve/reject, bill, JSON/date และ outbox persistence/retry |
-| iOS maintenance/sync | `MaintenanceWorkflowTests` + `CoreDataSafetyTests` รวม 21 tests ผ่านหลังเพิ่มกฎงานฟรี |
-| Production | external health HTTP 200; outbox schema มีฟิลด์รายละเอียดและ `maintenance_record_id`; deploy มี backup/rollback |
+| LINE maintenance payload | automated tests ครอบคลุม status, quote, approve/reject, bill, JSON/date, outbox persistence/retry และป้องกัน `alignItems: baseline` ที่ LINE ปฏิเสธ |
+| iOS maintenance/sync | `MaintenanceWorkflowTests` + `CoreDataSafetyTests` รวม 21 tests ผ่าน รวม paid repair เริ่มได้หลังมี approval marker เท่านั้น |
+| Production | external health HTTP 200; tenant schema มี `quote_approved_at`; snapshot v129 เป็น “กำลังติดต่อช่าง”; outbox 34 `sent`; deploy มี backup/rollback |
 | ข้อจำกัดหลักฐาน | ยังไม่ได้ทำ live quote/payment UAT ครบวงจร เพราะไม่ควรเปลี่ยนสถานะงานของลูกบ้านจริงโดยพลการ |
 
 ## สิ่งที่ต้องทำต่อทันที

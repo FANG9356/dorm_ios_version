@@ -74,6 +74,9 @@ func TestMaintenanceQuoteFlexRequiresApprovalBeforeRepair(t *testing.T) {
 			t.Fatalf("quote Flex payload does not contain %q: %s", expected, text)
 		}
 	}
+	if strings.Contains(text, `"alignItems":"baseline"`) {
+		t.Fatalf("quote Flex payload contains unsupported LINE alignment: %s", text)
+	}
 }
 
 func TestMaintenancePaymentFlexContainsSlipAction(t *testing.T) {
@@ -95,6 +98,9 @@ func TestMaintenancePaymentFlexContainsSlipAction(t *testing.T) {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("payment Flex payload does not contain %q: %s", expected, text)
 		}
+	}
+	if strings.Contains(text, `"alignItems":"baseline"`) {
+		t.Fatalf("payment Flex payload contains unsupported LINE alignment: %s", text)
 	}
 }
 

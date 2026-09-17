@@ -1033,34 +1033,44 @@ func handlePostbackEvent(master, db *sql.DB, accountID int, replyToken, lineUser
 
 func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToken, lineUserID, maintenanceID string, approved bool) {
 	maintenanceID = strings.TrimSpace(maintenanceID)
-	var status string
-	var cost float64
-	err := db.QueryRow(`SELECT m.status, m.cost FROM maintenances m
+	var notification maintenanceStatusNotification
+	var quoteApprovedAt string
+	err := db.QueryRow(`SELECT m.status, m.cost, m.room_number, m.issue,
+		COALESCE(m.reported_at, ''), COALESCE(m.resolved_at, ''), COALESCE(m.payment_method, ''),
+		COALESCE(m.quote_approved_at, '') FROM maintenances m
 		JOIN users u ON u.room_number = m.room_number
 		WHERE m.id = ? AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
-		LIMIT 1`, maintenanceID, lineUserID).Scan(&status, &cost)
+		LIMIT 1`, maintenanceID, lineUserID).Scan(
+		&notification.Status, &notification.Cost, &notification.RoomNumber, &notification.Issue,
+		&notification.ReportedAt, &notification.ResolvedAt, &notification.PaymentMethod, &quoteApprovedAt,
+	)
 	if err != nil {
 		replyToLine(replyToken, "ไม่พบใบเสนอราคานี้ หรือบัญชีไม่มีสิทธิ์ทำรายการค่ะ")
 		return
 	}
-	if status != "รออนุมัติค่าใช้จ่าย" {
+	if notification.Status != "รออนุมัติค่าใช้จ่าย" {
+		if approved && notification.Status == "กำลังติดต่อช่าง" && quoteApprovedAt != "" {
+			replyToLine(replyToken, "ใบเสนอราคานี้อนุมัติแล้วค่ะ ขณะนี้แอดมินกำลังติดต่อช่าง")
+			return
+		}
 		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับหรือสถานะเปลี่ยนไปแล้วค่ะ")
 		return
 	}
-	if cost <= 0 {
+	if notification.Cost <= 0 {
 		replyToLine(replyToken, "ยอดในใบเสนอราคาไม่ถูกต้อง กรุณาติดต่อผู้ดูแลค่ะ")
 		return
 	}
 
 	nextStatus := "กำลังติดต่อช่าง"
 	reply := "ปฏิเสธค่าใช้จ่ายแล้วค่ะ ระบบส่งรายการกลับให้แอดมินตรวจสอบราคาใหม่"
+	approvedAt := ""
 	if approved {
-		nextStatus = "กำลังซ่อม"
-		reply = fmt.Sprintf("อนุมัติค่าใช้จ่าย %s แล้วค่ะ แอดมินสามารถเริ่มงานซ่อมได้", formatLineMoney(cost))
+		approvedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		reply = fmt.Sprintf("อนุมัติค่าใช้จ่าย %s แล้วค่ะ ขณะนี้แอดมินกำลังติดต่อช่าง", formatLineMoney(notification.Cost))
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	result, err := db.Exec(`UPDATE maintenances SET status = ?, last_updated = ?
-		WHERE id = ? AND status = 'รออนุมัติค่าใช้จ่าย'`, nextStatus, now, maintenanceID)
+	result, err := db.Exec(`UPDATE maintenances SET status = ?, quote_approved_at = ?, last_updated = ?
+		WHERE id = ? AND status = 'รออนุมัติค่าใช้จ่าย'`, nextStatus, approvedAt, now, maintenanceID)
 	if err != nil {
 		replyToLine(replyToken, "ระบบบันทึกคำตอบไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ")
 		return
@@ -1070,8 +1080,21 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับไปแล้วค่ะ")
 		return
 	}
+	if approved {
+		notification.EventKey = fmt.Sprintf("maintenance-quote-approved:%d:%s:%s", accountID, maintenanceID, now)
+		notification.MaintenanceID = maintenanceID
+		notification.LineUserID = lineUserID
+		notification.Status = nextStatus
+		notification.LastUpdated = now
+		if err := EnqueueMaintenanceStatusNotification(master, accountID, notification); err != nil {
+			log.Printf("[LINE] queue approved maintenance status failed (account=%d maintenance=%s): %v", accountID, maintenanceID, err)
+		}
+	}
 	publishLineChanges(master, db, accountID)
 	replyToLine(replyToken, reply)
+	if approved {
+		go ProcessPendingLineNotifications(master)
+	}
 }
 
 func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue string, cost float64) {
@@ -1295,7 +1318,7 @@ func buildMaintenanceQuoteFlexMessage(notification maintenanceStatusNotification
 		map[string]interface{}{"type": "text", "text": strings.TrimSpace(notification.Issue), "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
 		map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
 		map[string]interface{}{
-			"type": "box", "layout": "horizontal", "alignItems": "baseline",
+			"type": "box", "layout": "baseline",
 			"contents": []interface{}{
 				map[string]interface{}{"type": "text", "text": "ยอดที่ขออนุมัติ", "size": "sm", "color": "#6B7280", "flex": 2},
 				map[string]interface{}{"type": "text", "text": formatLineMoney(notification.Cost), "size": "xl", "color": "#111827", "weight": "bold", "align": "end", "flex": 3},
@@ -1336,7 +1359,7 @@ func buildMaintenancePaymentFlexMessage(notification maintenanceStatusNotificati
 				map[string]interface{}{"type": "text", "text": strings.TrimSpace(notification.Issue), "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
 				map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
 				map[string]interface{}{
-					"type": "box", "layout": "horizontal", "alignItems": "baseline",
+					"type": "box", "layout": "baseline",
 					"contents": []interface{}{
 						map[string]interface{}{"type": "text", "text": "ยอดชำระ", "size": "sm", "color": "#6B7280", "flex": 2},
 						map[string]interface{}{"type": "text", "text": formatLineMoney(notification.Cost), "size": "xl", "color": "#111827", "weight": "bold", "align": "end", "flex": 3},

@@ -15,6 +15,7 @@ final class Maintenance: Identifiable {
     var paymentMethod: String = ""
     var slipPath: String = ""
     var issueImage: String = ""
+    var quoteApprovedAt: String = ""
     
     // Sync Metadata
     var lastUpdated: Date = Date()

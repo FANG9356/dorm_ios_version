@@ -145,6 +145,7 @@ struct MaintenanceSnapshot: Codable, Identifiable {
     var paymentMethod: String
     var slipPath: String
     var issueImage: String
+    var quoteApprovedAt: String? = nil
     var lastUpdated: Date
 }
 
@@ -519,7 +520,7 @@ class SyncManager: ObservableObject {
                 FinancialReceiptSnapshot(id: $0.id, transactionID: $0.transactionID, paymentID: $0.paymentID, receiptNumber: $0.receiptNumber, userID: $0.userID, roomNumber: $0.roomNumber, billingMonth: $0.billingMonth, invoiceAmount: $0.invoiceAmount, receivedAmount: $0.receivedAmount, balanceAfter: $0.balanceAfter, method: $0.method, slipPaths: $0.slipPaths, issuedAt: $0.issuedAt, lastUpdated: $0.lastUpdated)
             },
             maintenance: try modelContext.fetch(FetchDescriptor<Maintenance>()).filter { !$0.isDeletedLocally }.map {
-                MaintenanceSnapshot(id: $0.id, serverId: $0.serverId, roomNumber: $0.roomNumber, issue: $0.issue, status: $0.status, cost: $0.cost, reportedAt: $0.reportedAt, resolvedAt: $0.resolvedAt, paymentMethod: $0.paymentMethod, slipPath: $0.slipPath, issueImage: $0.issueImage, lastUpdated: $0.lastUpdated)
+                MaintenanceSnapshot(id: $0.id, serverId: $0.serverId, roomNumber: $0.roomNumber, issue: $0.issue, status: $0.status, cost: $0.cost, reportedAt: $0.reportedAt, resolvedAt: $0.resolvedAt, paymentMethod: $0.paymentMethod, slipPath: $0.slipPath, issueImage: $0.issueImage, quoteApprovedAt: $0.quoteApprovedAt, lastUpdated: $0.lastUpdated)
             },
             roomTypes: try modelContext.fetch(FetchDescriptor<RoomType>()).map {
                 RoomTypeSnapshot(id: $0.id, serverId: $0.serverId, name: $0.name, price: $0.price, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, lastUpdated: $0.lastUpdated)
@@ -933,6 +934,7 @@ class SyncManager: ObservableObject {
             maintenance.paymentMethod = item.paymentMethod
             maintenance.slipPath = item.slipPath
             maintenance.issueImage = item.issueImage
+            maintenance.quoteApprovedAt = item.quoteApprovedAt ?? ""
             maintenance.lastUpdated = item.lastUpdated
             modelContext.insert(maintenance)
         }

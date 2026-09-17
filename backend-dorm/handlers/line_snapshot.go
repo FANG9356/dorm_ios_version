@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"reflect"
@@ -82,17 +83,18 @@ type linePaymentSnapshot struct {
 }
 
 type lineMaintenanceSnapshot struct {
-	ID            string  `json:"id"`
-	RoomNumber    string  `json:"roomNumber"`
-	Issue         string  `json:"issue"`
-	Status        string  `json:"status"`
-	Cost          float64 `json:"cost"`
-	ReportedAt    string  `json:"reportedAt"`
-	ResolvedAt    string  `json:"resolvedAt"`
-	PaymentMethod string  `json:"paymentMethod"`
-	SlipPath      string  `json:"slipPath"`
-	IssueImage    string  `json:"issueImage"`
-	LastUpdated   string  `json:"lastUpdated"`
+	ID              string  `json:"id"`
+	RoomNumber      string  `json:"roomNumber"`
+	Issue           string  `json:"issue"`
+	Status          string  `json:"status"`
+	Cost            float64 `json:"cost"`
+	ReportedAt      string  `json:"reportedAt"`
+	ResolvedAt      string  `json:"resolvedAt"`
+	PaymentMethod   string  `json:"paymentMethod"`
+	SlipPath        string  `json:"slipPath"`
+	IssueImage      string  `json:"issueImage"`
+	QuoteApprovedAt string  `json:"quoteApprovedAt,omitempty"`
+	LastUpdated     string  `json:"lastUpdated"`
 }
 
 type maintenanceStatusNotification struct {
@@ -193,6 +195,7 @@ func ensureLineTenantSchema(db *sql.DB) {
 	db.Exec(`ALTER TABLE payments ADD COLUMN deposit_fee REAL DEFAULT 0`)
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN last_updated TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE maintenances ADD COLUMN quote_approved_at TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE rooms ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE room_types ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id) WHERE external_id != ''`)
@@ -378,12 +381,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 	}
 	statusChanges := make([]maintenanceStatusChange, 0)
 	for _, maintenance := range snapshot.Maintenance {
-		var previousStatus string
+		var previousStatus, quoteApprovedAt string
 		var previousCost float64
 		hadExistingMaintenance := false
 		if strings.TrimSpace(maintenance.ID) != "" {
-			err = tx.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0)
-				FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus, &previousCost)
+			err = tx.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0), COALESCE(quote_approved_at, '')
+				FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus, &previousCost, &quoteApprovedAt)
 			switch {
 			case err == nil:
 				hadExistingMaintenance = true
@@ -394,12 +397,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			}
 		}
 		if hadExistingMaintenance {
-			if err := validateMaintenanceCostChange(previousStatus, maintenance.Status, previousCost, maintenance.Cost); err != nil {
+			if err := validateMaintenanceCostChange(previousStatus, maintenance.Status, previousCost, maintenance.Cost, quoteApprovedAt != ""); err != nil {
 				return fmt.Errorf("maintenance %s cost change: %w", maintenance.ID, err)
 			}
 		}
 		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
-			if err := validateMaintenanceAppTransition(previousStatus, maintenance.Status, maintenance.Cost); err != nil {
+			if err := validateMaintenanceAppTransition(previousStatus, maintenance.Status, maintenance.Cost, quoteApprovedAt != ""); err != nil {
 				return fmt.Errorf("maintenance %s transition: %w", maintenance.ID, err)
 			}
 			if maintenance.Status == "รออนุมัติค่าใช้จ่าย" {
@@ -425,6 +428,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			maintenance.SlipPath, maintenance.IssueImage, maintenance.LastUpdated, maintenance.ID)
 		if err != nil {
 			return fmt.Errorf("upsert maintenance: %w", err)
+		}
+		if hadExistingMaintenance && maintenance.Status == "รออนุมัติค่าใช้จ่าย" && previousStatus != maintenance.Status {
+			if _, err := tx.Exec(`UPDATE maintenances SET quote_approved_at = '' WHERE external_id = ?`, maintenance.ID); err != nil {
+				return fmt.Errorf("reset maintenance quote approval: %w", err)
+			}
 		}
 		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
 			var maintenanceRecordID int64
@@ -493,9 +501,15 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 	return nil
 }
 
-func validateMaintenanceCostChange(previousStatus, nextStatus string, previousCost, nextCost float64) error {
+func validateMaintenanceCostChange(previousStatus, nextStatus string, previousCost, nextCost float64, quoteApproved bool) error {
 	if math.Abs(previousCost-nextCost) < 0.005 {
 		return nil
+	}
+	if quoteApproved && previousStatus == "กำลังติดต่อช่าง" {
+		if nextStatus == "รออนุมัติค่าใช้จ่าย" {
+			return nil
+		}
+		return fmt.Errorf("approved quote cost is locked; issue a replacement quote")
 	}
 	quoteIndex := 2
 	previousIndex := maintenanceStatusIndex(previousStatus)
@@ -522,7 +536,7 @@ func maintenanceStatusIndex(value string) int {
 	return -1
 }
 
-func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost float64) error {
+func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost float64, quoteApproved bool) error {
 	previousIndex := maintenanceStatusIndex(previousStatus)
 	nextIndex := maintenanceStatusIndex(nextStatus)
 	if previousIndex < 0 || nextIndex < 0 {
@@ -532,6 +546,12 @@ func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost fl
 		return nil
 	}
 	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {
+		return fmt.Errorf("resident approval is required before repair")
+	}
+	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" && cost > 0 {
+		if quoteApproved {
+			return nil
+		}
 		return fmt.Errorf("resident approval is required before repair")
 	}
 	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" && cost <= 0 {
@@ -712,17 +732,17 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 	maintenanceObjects := snapshotObjectsByID(maintenance)
 	rows, err = db.Query(`SELECT id, external_id, room_number, issue, status, COALESCE(cost, 0),
 		COALESCE(reported_at, ''), COALESCE(resolved_at, ''), COALESCE(payment_method, ''),
-		COALESCE(slip_path, ''), COALESCE(issue_image, ''), COALESCE(last_updated, '')
+		COALESCE(slip_path, ''), COALESCE(issue_image, ''), COALESCE(quote_approved_at, ''), COALESCE(last_updated, '')
 		FROM maintenances WHERE COALESCE(external_id, '') != '' ORDER BY id`)
 	if err != nil {
 		return false, err
 	}
 	for rows.Next() {
 		var serverID int
-		var id, room, issue, status, reportedAt, resolvedAt, paymentMethod, slipPath, issueImage, lastUpdated string
+		var id, room, issue, status, reportedAt, resolvedAt, paymentMethod, slipPath, issueImage, quoteApprovedAt, lastUpdated string
 		var cost float64
 		if err := rows.Scan(&serverID, &id, &room, &issue, &status, &cost, &reportedAt, &resolvedAt,
-			&paymentMethod, &slipPath, &issueImage, &lastUpdated); err != nil {
+			&paymentMethod, &slipPath, &issueImage, &quoteApprovedAt, &lastUpdated); err != nil {
 			rows.Close()
 			return false, err
 		}
@@ -737,7 +757,7 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 		fields := map[string]interface{}{
 			"serverId": float64(serverID), "roomNumber": room, "issue": issue, "status": status, "cost": cost,
 			"reportedAt": reportedAt, "resolvedAt": resolvedAt, "paymentMethod": paymentMethod,
-			"slipPath": slipPath, "issueImage": issueImage, "lastUpdated": lastUpdated,
+			"slipPath": slipPath, "issueImage": issueImage, "quoteApprovedAt": quoteApprovedAt, "lastUpdated": lastUpdated,
 		}
 		for key, value := range fields {
 			changed = setSnapshotField(item, key, value) || changed
@@ -994,6 +1014,10 @@ func pushLinePayload(lineUserID string, message map[string]interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		detail, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if readErr == nil && strings.TrimSpace(string(detail)) != "" {
+			return fmt.Errorf("LINE API status %d: %s", resp.StatusCode, strings.TrimSpace(string(detail)))
+		}
 		return fmt.Errorf("LINE API status %d", resp.StatusCode)
 	}
 	return nil

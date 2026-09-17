@@ -185,6 +185,27 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	if quote.MaintenanceID == "" || quote.Status != "รออนุมัติค่าใช้จ่าย" || quote.Cost != 850 {
 		t.Fatalf("quote notification = %+v", quote)
 	}
+
+	// LINE approval returns the visible status to contacting the technician,
+	// while the internal approval marker permits the admin to start repair.
+	if _, err := tenantDB.Exec(`UPDATE maintenances
+		SET status = 'กำลังติดต่อช่าง', quote_approved_at = '2026-09-17T08:31:00Z'
+		WHERE external_id = ?`, snapshot.Maintenance[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	snapshot.SnapshotID = "snapshot-5"
+	snapshot.Maintenance[0].Status = "กำลังซ่อม"
+	snapshot.Maintenance[0].LastUpdated = "2026-09-17T08:32:00Z"
+	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
+		t.Fatalf("approved quote could not start repair: %v", err)
+	}
+	var persistedStatus string
+	if err := tenantDB.QueryRow(`SELECT status FROM maintenances WHERE external_id = ?`, snapshot.Maintenance[0].ID).Scan(&persistedStatus); err != nil {
+		t.Fatal(err)
+	}
+	if persistedStatus != "กำลังซ่อม" {
+		t.Fatalf("persisted status = %q, want กำลังซ่อม", persistedStatus)
+	}
 }
 
 func TestSingleLineAccountRejectsAmbiguousAccounts(t *testing.T) {

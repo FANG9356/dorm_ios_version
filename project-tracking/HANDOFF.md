@@ -75,11 +75,13 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 
 ## Production และ rollback
 
-- production binary ปัจจุบัน: SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`
-- rollback set ล่าสุด: `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`
+- production binary ปัจจุบัน: SHA-256 `d4e0f718ff73c371796f8ca5adc4f9964d755d132cced1e9a94de7cc66db4351`
+- rollback set ล่าสุด: `/home/fang/line_migration_backups/20260917-052357-pre-flex-ui` (รวม master และ tenant databases)
 - health endpoint: `https://api.dorminet.studio/api/system/ping`
 - safe deployment script จะสำรอง binary/master DB ตรวจ health และตรวจ schema additive ของ outbox
 - credential deploy อยู่ในไฟล์ ignored ของเครื่องพัฒนา ห้ามพิมพ์ค่าออก log หรือ commit
+- ตรวจ outbox production แบบไม่แสดง LINE user ID ด้วย `backend-dorm/scripts/inspect_line_outbox.exp`; บังคับ retry เฉพาะรายการที่ยืนยัน ID แล้วด้วย `backend-dorm/scripts/retry_line_outbox.exp OUTBOX_ID`
+- ตรวจสถานะงานซ่อมทั้ง tenant DB และ snapshot ที่แอปจะดึงด้วย `backend-dorm/scripts/inspect_maintenance_workflow.exp MAINTENANCE_ID`
 - ทุก production deploy ต้องบันทึก SHA, backup path, health, database check และขอบเขต UAT ลง `docs/PRODUCTION_HARDENING_2026-09-10.md`
 
 ## วิธีทำ controlled maintenance UAT

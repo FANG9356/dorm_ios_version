@@ -53,6 +53,8 @@
 - [x] Deploy backend production รุ่นล่าสุด SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`; service/public health และ schema checks ผ่าน มี rollback set `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`; ยังเหลือ controlled E2E UAT ของ quote/approval/bill/slip
 - [x] เพิ่ม workflow งานซ่อม 6 ขั้น: งานมีค่าใช้จ่ายต้องส่ง Flex ใบเสนอราคาและรอ linked resident อนุมัติก่อนซ่อม, ปฏิเสธเพื่อออกยอดใหม่ได้, ล็อกยอดที่เสนอ, ส่ง Flex บิลตอนรอตรวจชำระ และให้งานฟรีข้าม quote/payment ได้
 - [x] เพิ่ม maintenance LINE action authorization, stale-action protection, snapshot publish กลับแอป, outbox internal record ID และแก้ retry due-time comparison ด้วย SQLite `julianday`
+- [x] แก้ Flex ใบเสนอราคา/บิลถูก LINE API ปฏิเสธ 400 เพราะใช้ `alignItems: baseline`; เปลี่ยนเป็น baseline layout, เก็บ response body ใน error, deploy SHA-256 `2566537a63a22d3d591f2e845fe6389afc0412664094436999eaabb45e3aec4d` และ retry ใบเสนอราคาห้อง 103 ยอด 200 บาทสำเร็จ (`sent`)
+- [x] แก้ callback อนุมัติราคาไม่ให้ข้ามจาก “รออนุมัติค่าใช้จ่าย” ไป “กำลังซ่อม”: กลับไปแสดง “กำลังติดต่อช่าง”, เก็บ approval marker ฝั่ง server, ล็อกยอด, ส่งการ์ดสถานะ และรอแอดมินเริ่มซ่อม; production/data ห้อง 103/snapshot v129/iPhone build อัปเดตแล้ว
 - [x] แก้รายการแจ้งซ่อมจาก LINE ไม่เข้าแอปเพราะ UUID ต่างตัวพิมพ์: canonicalize/deduplicate โดยเก็บแถวล่าสุด, สำรองฐานข้อมูลก่อน cleanup และออก snapshot production `v82` ที่มี 2 รายการถูกต้อง; binary SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`
 - [x] Dashboard นับงานซ่อมครบทุกสถานะ รวม “กำลังติดต่อช่าง” และ “รอตรวจสอบชำระเงิน”
 - [x] Dashboard แสดงยอดรวม ตัวเลขบนกราฟ และ empty state ที่ชัดเจน

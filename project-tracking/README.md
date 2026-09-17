@@ -6,12 +6,13 @@
 
 ## เริ่มอ่านตามลำดับนี้
 
-1. [PROJECT_VISION.md](PROJECT_VISION.md) — เป้าหมายของผู้สร้าง หลักคิดผลิตภัณฑ์ และสิ่งที่ไม่ควรเปลี่ยนโดยไม่คุยกันก่อน
-2. [WORK_STATUS.md](WORK_STATUS.md) — ภาพรวมว่าทำอะไรแล้ว กำลังทำอะไร และหลักฐานล่าสุด
-3. [PENDING_WORK.md](PENDING_WORK.md) — backlog ตาม P0/P1/P2 พร้อมเกณฑ์ปิดงาน
-4. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
-5. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-6. [DormiNetX-Assessment-2026-09-17.md](../project-review/DormiNetX-Assessment-2026-09-17.md) — แบบประเมินความพร้อมล่าสุด
+1. [ACTIVITY_REPORT.md](ACTIVITY_REPORT.md) — รายงานทุกการดำเนินงานแบบ append-only และกติกาการบันทึก
+2. [PROJECT_VISION.md](PROJECT_VISION.md) — เป้าหมายของผู้สร้าง หลักคิดผลิตภัณฑ์ และสิ่งที่ไม่ควรเปลี่ยนโดยไม่คุยกันก่อน
+3. [WORK_STATUS.md](WORK_STATUS.md) — ภาพรวมว่าทำอะไรแล้ว กำลังทำอะไร และหลักฐานล่าสุด
+4. [PENDING_WORK.md](PENDING_WORK.md) — backlog ตาม P0/P1/P2 พร้อมเกณฑ์ปิดงาน
+5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
+6. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
+7. [DormiNetX-Assessment-2026-09-17.md](../project-review/DormiNetX-Assessment-2026-09-17.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 
@@ -27,6 +28,8 @@
 
 ## กติกาการอัปเดต
 
+- ทุกคำขอและทุกการดำเนินงานต้องเพิ่มรายการใหม่ใน `ACTIVITY_REPORT.md` ก่อนส่งมอบผล แม้ไม่มีไฟล์หรือข้อมูลเปลี่ยนแปลง
+- `ACTIVITY_REPORT.md` เป็น append-only ห้ามลบหรือเขียนทับประวัติเดิม
 - ใช้สถานะ `รอดำเนินการ`, `กำลังทำ`, `รอตรวจ`, `ติดเงื่อนไข` หรือ `เสร็จแล้ว`
 - ทุกงานที่เป็น `เสร็จแล้ว` ต้องระบุผลทดสอบ, รุ่นแอป/backend, commit หรือหลักฐาน UAT อย่างน้อยหนึ่งรายการ
 - งาน production ต้องแยก “deploy แล้ว” ออกจาก “UAT จริงผ่านแล้ว” เสมอ

@@ -73,13 +73,13 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 					return
 				}
 				var prevCost float64
-				var prevStatus string
-				db.QueryRow("SELECT cost, status FROM maintenances WHERE id=?", m.ID).Scan(&prevCost, &prevStatus)
-				if err := validateMaintenanceAppTransition(prevStatus, m.Status, m.Cost); err != nil {
+				var prevStatus, quoteApprovedAt string
+				db.QueryRow("SELECT cost, status, COALESCE(quote_approved_at, '') FROM maintenances WHERE id=?", m.ID).Scan(&prevCost, &prevStatus, &quoteApprovedAt)
+				if err := validateMaintenanceAppTransition(prevStatus, m.Status, m.Cost, quoteApprovedAt != ""); err != nil {
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
 				}
-				if err := validateMaintenanceCostChange(prevStatus, m.Status, prevCost, m.Cost); err != nil {
+				if err := validateMaintenanceCostChange(prevStatus, m.Status, prevCost, m.Cost, quoteApprovedAt != ""); err != nil {
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
 				}
@@ -98,6 +98,9 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 						http.Error(w, "Database error", http.StatusInternalServerError)
 						return
 					}
+				}
+				if m.Status == "รออนุมัติค่าใช้จ่าย" && prevStatus != m.Status {
+					db.Exec("UPDATE maintenances SET quote_approved_at = '' WHERE id = ?", m.ID)
 				}
 
 				go notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
@@ -123,13 +126,13 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				}
 
 				var prevCost float64
-				var prevStatus string
-				db.QueryRow("SELECT cost, status FROM maintenances WHERE id=?", id).Scan(&prevCost, &prevStatus)
-				if err := validateMaintenanceAppTransition(prevStatus, status, cost); err != nil {
+				var prevStatus, quoteApprovedAt string
+				db.QueryRow("SELECT cost, status, COALESCE(quote_approved_at, '') FROM maintenances WHERE id=?", id).Scan(&prevCost, &prevStatus, &quoteApprovedAt)
+				if err := validateMaintenanceAppTransition(prevStatus, status, cost, quoteApprovedAt != ""); err != nil {
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
 				}
-				if err := validateMaintenanceCostChange(prevStatus, status, prevCost, cost); err != nil {
+				if err := validateMaintenanceCostChange(prevStatus, status, prevCost, cost, quoteApprovedAt != ""); err != nil {
 					http.Error(w, err.Error(), http.StatusConflict)
 					return
 				}
@@ -150,6 +153,9 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				if err != nil {
 					http.Error(w, "Database error", http.StatusInternalServerError)
 					return
+				}
+				if status == "รออนุมัติค่าใช้จ่าย" && prevStatus != status {
+					db.Exec("UPDATE maintenances SET quote_approved_at = '' WHERE id = ?", id)
 				}
 
 				if prevStatus == "รอตรวจสอบชำระเงิน" && status == "เสร็จสิ้น" && paymentMethod == "โอนเงิน" {

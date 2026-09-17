@@ -29,7 +29,8 @@ DormiNetX พร้อมสำหรับ **controlled pilot** ที่จำ
 - persistent outbox, idempotency, retry/backoff, recovery และ internal maintenance ID ลด silent failure
 - Flex งานซ่อมใช้ขาว–เทาแบบกระชับ แสดงวันที่/เวลาไทย ข้อมูลค่าใช้จ่าย และ progress `n/6`
 - UI งานซ่อมเป็น read-only timeline บนหน้ารายการ ต้องเข้ารายละเอียดจึงแก้ ลดโอกาสกดผิด
-- backend รุ่น `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6` deploy พร้อม backup/rollback และ health ผ่าน
+- backend รุ่น workflow `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6` deploy แล้ว และ hotfix LINE Flex quote/payment รุ่น `2566537a63a22d3d591f2e845fe6389afc0412664094436999eaabb45e3aec4d` ส่งใบเสนอราคาที่ค้างสำเร็จ พร้อม backup/rollback และ health ผ่าน
+- approval workflow รุ่น `d4e0f718ff73c371796f8ca5adc4f9964d755d132cced1e9a94de7cc66db4351` แยก “ลูกบ้านอนุมัติราคา” ออกจาก “แอดมินเริ่มซ่อม” ด้วย server-side marker และ durable status notification; ข้อมูลจริงห้อง 103 ถูก reconcile และแอป signed รุ่นใหม่ติดตั้งแล้ว
 
 ## จุดแข็งที่ควรรักษา
 

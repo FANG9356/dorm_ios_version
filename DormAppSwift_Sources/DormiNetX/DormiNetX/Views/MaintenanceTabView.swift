@@ -16,7 +16,7 @@ enum MaintenanceWorkflow {
         }
     }
 
-    static func canTransition(from originalStatus: String, to newStatus: String, cost: Double = 0) -> Bool {
+    static func canTransition(from originalStatus: String, to newStatus: String, cost: Double = 0, quoteApproved: Bool = false) -> Bool {
         let original = originalStatus.isEmpty ? statuses[0] : originalStatus
         guard
             let originalIndex = statuses.firstIndex(of: original),
@@ -27,6 +27,9 @@ enum MaintenanceWorkflow {
         if originalIndex == newIndex { return true }
         if original == "รออนุมัติค่าใช้จ่าย", newStatus == "กำลังซ่อม" {
             return false
+        }
+        if original == "กำลังติดต่อช่าง", newStatus == "กำลังซ่อม", cost > 0 {
+            return quoteApproved
         }
         if original == "กำลังติดต่อช่าง", newStatus == "กำลังซ่อม", cost <= 0 {
             return true
@@ -153,6 +156,7 @@ struct MaintenanceTabView: View {
                 maintenance.paymentMethod = draft.paymentMethod
                 maintenance.slipPath = draft.slipPath
                 maintenance.issueImage = draft.issueImage
+                maintenance.quoteApprovedAt = draft.quoteApprovedAt
                 maintenance.resolvedAt = draft.resolvedAt
                 maintenance.lastUpdated = Date()
                 maintenance.isDirty = true
@@ -327,6 +331,7 @@ private struct MaintenanceEditor: View {
     @State private var paymentMethod: String
     @State private var slipPath: String
     @State private var issueImage: String
+    @State private var quoteApprovedAt: String
     @State private var selectedDetent: PresentationDetent = .large
     @State private var showingDeleteConfirmation = false
     private let isEditing: Bool
@@ -353,6 +358,7 @@ private struct MaintenanceEditor: View {
         _paymentMethod = State(initialValue: maintenance?.paymentMethod ?? "")
         _slipPath = State(initialValue: maintenance?.slipPath ?? "")
         _issueImage = State(initialValue: maintenance?.issueImage ?? "")
+        _quoteApprovedAt = State(initialValue: maintenance?.quoteApprovedAt ?? "")
     }
 
     var body: some View {
@@ -491,13 +497,14 @@ private struct MaintenanceEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
                         let parsedCost = Double(cost) ?? 0
-                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: parsedCost) else { return }
+                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: parsedCost, quoteApproved: !quoteApprovedAt.isEmpty) else { return }
                         let item = Maintenance(roomNumber: clean(roomNumber), issue: clean(issue))
                         item.status = status
                         item.cost = parsedCost
                         item.paymentMethod = clean(paymentMethod)
                         item.slipPath = clean(slipPath)
                         item.issueImage = clean(issueImage)
+                        item.quoteApprovedAt = status == "รออนุมัติค่าใช้จ่าย" && originalStatus != status ? "" : quoteApprovedAt
                         item.reportedAt = currentDateString()
                         if status == "เสร็จสิ้น" {
                             item.resolvedAt = currentDateString()
@@ -509,7 +516,7 @@ private struct MaintenanceEditor: View {
                     .disabled(
                         clean(roomNumber).isEmpty ||
                         clean(issue).isEmpty ||
-                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: Double(cost) ?? 0)
+                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: Double(cost) ?? 0, quoteApproved: !quoteApprovedAt.isEmpty)
                     )
                 }
             }
@@ -598,7 +605,7 @@ private struct MaintenanceEditor: View {
     private func statusRow(item: String, index: Int) -> some View {
         let selected = status == item
         let persisted = originalStatus == item
-        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item, cost: Double(cost) ?? 0)
+        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item, cost: Double(cost) ?? 0, quoteApproved: !quoteApprovedAt.isEmpty)
 
         return Button {
             status = item
@@ -720,6 +727,9 @@ private struct MaintenanceEditor: View {
             let selectedIndex = MaintenanceWorkflow.statuses.firstIndex(of: status)
         else { return true }
         let quoteIndex = MaintenanceWorkflow.statuses.firstIndex(of: "รออนุมัติค่าใช้จ่าย") ?? 2
+        if !quoteApprovedAt.isEmpty && originalStatus == "กำลังติดต่อช่าง" && status != "รออนุมัติค่าใช้จ่าย" {
+            return false
+        }
         return originalIndex < quoteIndex || selectedIndex < quoteIndex || (selectedIndex == quoteIndex && originalIndex != quoteIndex)
     }
 
