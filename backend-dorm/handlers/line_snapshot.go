@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -96,6 +97,7 @@ type lineMaintenanceSnapshot struct {
 
 type maintenanceStatusNotification struct {
 	EventKey      string
+	MaintenanceID string
 	LineUserID    string
 	RoomNumber    string
 	Issue         string
@@ -111,6 +113,7 @@ type maintenanceStatusNotifier func(notification maintenanceStatusNotification) 
 
 type maintenanceStatusChange struct {
 	EventKey      string
+	MaintenanceID string
 	RoomNumber    string
 	Issue         string
 	Status        string
@@ -175,6 +178,7 @@ func InitializeLineIntegration(db *sql.DB) {
 	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN resolved_at TEXT NOT NULL DEFAULT ''`)
 	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN payment_method TEXT NOT NULL DEFAULT ''`)
 	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN maintenance_updated_at TEXT NOT NULL DEFAULT ''`)
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN maintenance_record_id TEXT NOT NULL DEFAULT ''`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_line_notification_outbox_pending
 		ON line_notification_outbox(status, next_attempt_at)`)
 	// A process may stop after claiming a row but before sending it. Recover the
@@ -375,9 +379,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 	statusChanges := make([]maintenanceStatusChange, 0)
 	for _, maintenance := range snapshot.Maintenance {
 		var previousStatus string
+		var previousCost float64
 		hadExistingMaintenance := false
 		if strings.TrimSpace(maintenance.ID) != "" {
-			err = tx.QueryRow(`SELECT COALESCE(status, '') FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus)
+			err = tx.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0)
+				FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus, &previousCost)
 			switch {
 			case err == nil:
 				hadExistingMaintenance = true
@@ -385,6 +391,26 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 				err = nil
 			default:
 				return fmt.Errorf("read previous maintenance status: %w", err)
+			}
+		}
+		if hadExistingMaintenance {
+			if err := validateMaintenanceCostChange(previousStatus, maintenance.Status, previousCost, maintenance.Cost); err != nil {
+				return fmt.Errorf("maintenance %s cost change: %w", maintenance.ID, err)
+			}
+		}
+		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
+			if err := validateMaintenanceAppTransition(previousStatus, maintenance.Status, maintenance.Cost); err != nil {
+				return fmt.Errorf("maintenance %s transition: %w", maintenance.ID, err)
+			}
+			if maintenance.Status == "รออนุมัติค่าใช้จ่าย" {
+				var linkedResidents int
+				if err := tx.QueryRow(`SELECT COUNT(*) FROM users WHERE room_number = ?
+					AND line_user_id != '' AND status IN ('กำลังพักอาศัย','จอง')`, maintenance.RoomNumber).Scan(&linkedResidents); err != nil {
+					return fmt.Errorf("check maintenance quote recipient: %w", err)
+				}
+				if linkedResidents == 0 {
+					return fmt.Errorf("maintenance quote requires a linked LINE resident")
+				}
 			}
 		}
 		_, err = tx.Exec(`INSERT INTO maintenances
@@ -401,8 +427,13 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			return fmt.Errorf("upsert maintenance: %w", err)
 		}
 		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
+			var maintenanceRecordID int64
+			if err := tx.QueryRow(`SELECT id FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&maintenanceRecordID); err != nil {
+				return fmt.Errorf("read maintenance record id: %w", err)
+			}
 			statusChanges = append(statusChanges, maintenanceStatusChange{
 				EventKey:      fmt.Sprintf("maintenance:%d:%s:%s:%s", accountID, maintenance.ID, maintenance.LastUpdated, maintenance.Status),
+				MaintenanceID: strconv.FormatInt(maintenanceRecordID, 10),
 				RoomNumber:    maintenance.RoomNumber,
 				Issue:         maintenance.Issue,
 				Status:        maintenance.Status,
@@ -447,7 +478,8 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			LIMIT 1`, change.RoomNumber).Scan(&lineUserID)
 		if err == nil && lineUserID != "" {
 			if err := notifier(maintenanceStatusNotification{
-				EventKey: change.EventKey, LineUserID: lineUserID, RoomNumber: change.RoomNumber,
+				EventKey: change.EventKey, MaintenanceID: change.MaintenanceID,
+				LineUserID: lineUserID, RoomNumber: change.RoomNumber,
 				Issue: change.Issue, Status: change.Status, Cost: change.Cost,
 				ReportedAt: change.ReportedAt, ResolvedAt: change.ResolvedAt,
 				PaymentMethod: change.PaymentMethod, LastUpdated: change.LastUpdated,
@@ -457,6 +489,62 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("resolve LINE recipient for maintenance status: %w", err)
 		}
+	}
+	return nil
+}
+
+func validateMaintenanceCostChange(previousStatus, nextStatus string, previousCost, nextCost float64) error {
+	if math.Abs(previousCost-nextCost) < 0.005 {
+		return nil
+	}
+	quoteIndex := 2
+	previousIndex := maintenanceStatusIndex(previousStatus)
+	nextIndex := maintenanceStatusIndex(nextStatus)
+	if previousIndex < quoteIndex {
+		return nil
+	}
+	// A changed amount is safe only while returning to pre-quote work or while
+	// explicitly issuing a replacement quote. It must never mutate an amount
+	// already shown in LINE while the approved workflow continues.
+	if nextIndex < quoteIndex || (nextIndex == quoteIndex && previousIndex != quoteIndex) {
+		return nil
+	}
+	return fmt.Errorf("approved or pending quote cost is locked; issue a replacement quote")
+}
+
+func maintenanceStatusIndex(value string) int {
+	statuses := []string{"รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"}
+	for index, status := range statuses {
+		if strings.TrimSpace(value) == status {
+			return index
+		}
+	}
+	return -1
+}
+
+func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost float64) error {
+	previousIndex := maintenanceStatusIndex(previousStatus)
+	nextIndex := maintenanceStatusIndex(nextStatus)
+	if previousIndex < 0 || nextIndex < 0 {
+		return fmt.Errorf("unknown status")
+	}
+	if previousIndex == nextIndex {
+		return nil
+	}
+	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {
+		return fmt.Errorf("resident approval is required before repair")
+	}
+	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" && cost <= 0 {
+		return nil
+	}
+	if previousStatus == "กำลังซ่อม" && nextStatus == "เสร็จสิ้น" && cost <= 0 {
+		return nil
+	}
+	if nextStatus == "รออนุมัติค่าใช้จ่าย" && cost <= 0 {
+		return fmt.Errorf("quote cost must be greater than zero")
+	}
+	if previousIndex-nextIndex > 1 || nextIndex-previousIndex > 1 {
+		return fmt.Errorf("status must move one step at a time")
 	}
 	return nil
 }

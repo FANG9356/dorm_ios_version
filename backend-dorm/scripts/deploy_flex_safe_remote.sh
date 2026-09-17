@@ -59,4 +59,4 @@ sudo systemctl is-active dormitory.service
 curl --fail --silent --show-error http://127.0.0.1:4283/api/system/ping
 echo
 sudo sqlite3 "$master_database" \
-  "SELECT name FROM pragma_table_info('line_notification_outbox') WHERE name IN ('cost','reported_at','resolved_at','payment_method','maintenance_updated_at') ORDER BY name;"
+  "SELECT name FROM pragma_table_info('line_notification_outbox') WHERE name IN ('cost','reported_at','resolved_at','payment_method','maintenance_updated_at','maintenance_record_id') ORDER BY name;"

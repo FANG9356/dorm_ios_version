@@ -28,8 +28,7 @@ func TestMaintenanceFlexUsesSourceTimestampInBangkokTimezone(t *testing.T) {
 		`น้ำไม่ไหล \"ชั้นบน\"`,
 		"450.50 บาท",
 		"โอนผ่านธนาคาร",
-		"ขั้นที่ 3 จาก 5",
-		"เวลาในประเทศไทย (UTC+7)",
+		"4/6",
 	} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("Flex payload does not contain %q: %s", expected, text)
@@ -38,12 +37,75 @@ func TestMaintenanceFlexUsesSourceTimestampInBangkokTimezone(t *testing.T) {
 	if strings.Contains(text, "1 ม.ค. 2573") {
 		t.Fatal("Flex payload used retry time instead of maintenance event time")
 	}
+	for _, forbidden := range []string{"\"backgroundColor\":\"#111827\"", "#7C3AED", "#0284C7", "#D97706", "#059669", "\"footer\""} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("compact monochrome Flex payload contains legacy styling %q: %s", forbidden, text)
+		}
+	}
 }
 
 func TestMaintenanceFlexRejectsIncompleteDetail(t *testing.T) {
 	_, err := buildMaintenanceStatusFlexMessage(maintenanceStatusNotification{RoomNumber: "103"}, time.Now())
 	if err == nil {
 		t.Fatal("expected missing detail error")
+	}
+}
+
+func TestMaintenanceQuoteFlexRequiresApprovalBeforeRepair(t *testing.T) {
+	notification := maintenanceStatusNotification{
+		MaintenanceID: "44", LineUserID: "line-one", RoomNumber: "103",
+		Issue: "เครื่องซักผ้าเสีย", Status: "รออนุมัติค่าใช้จ่าย", Cost: 2750,
+		LastUpdated: "2026-09-17T07:15:00Z",
+	}
+	message, err := buildMaintenanceStatusFlexMessage(notification, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(payload)
+	for _, expected := range []string{
+		"ใบเสนอราคางานซ่อม", "2,750.00 บาท", "งานจะเริ่มหลังจากคุณอนุมัติเท่านั้น",
+		`action=maintenance_quote_reject\u0026id=44`, `action=maintenance_quote_approve\u0026id=44`,
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("quote Flex payload does not contain %q: %s", expected, text)
+		}
+	}
+}
+
+func TestMaintenancePaymentFlexContainsSlipAction(t *testing.T) {
+	notification := maintenanceStatusNotification{
+		MaintenanceID: "44", LineUserID: "line-one", RoomNumber: "103",
+		Issue: "เครื่องซักผ้าเสีย", Status: "รอตรวจสอบชำระเงิน", Cost: 2750,
+		LastUpdated: "2026-09-17T07:15:00Z",
+	}
+	message, err := buildMaintenanceStatusFlexMessage(notification, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(payload)
+	for _, expected := range []string{"ค่าซ่อมที่อนุมัติแล้ว", "2,750.00 บาท", `action=pay_maint\u0026id=44`} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("payment Flex payload does not contain %q: %s", expected, text)
+		}
+	}
+}
+
+func TestMaintenanceQuoteAndPaymentFlexRejectMissingRecordID(t *testing.T) {
+	for _, status := range []string{"รออนุมัติค่าใช้จ่าย", "รอตรวจสอบชำระเงิน"} {
+		_, err := buildMaintenanceStatusFlexMessage(maintenanceStatusNotification{
+			RoomNumber: "103", Issue: "น้ำไม่ไหล", Status: status, Cost: 20,
+		}, time.Now())
+		if err == nil {
+			t.Fatalf("status %q should require maintenance id", status)
+		}
 	}
 }
 

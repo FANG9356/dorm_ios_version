@@ -3,11 +3,12 @@ import SwiftData
 import UIKit
 
 enum MaintenanceWorkflow {
-    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
+    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
 
     static func shortTitle(for status: String) -> String {
         switch status {
         case "กำลังติดต่อช่าง": return "ติดต่อช่าง"
+        case "รออนุมัติค่าใช้จ่าย": return "อนุมัติราคา"
         case "กำลังซ่อม": return "ซ่อม"
         case "รอตรวจสอบชำระเงิน": return "ตรวจชำระ"
         case "เสร็จสิ้น": return "เสร็จ"
@@ -15,12 +16,25 @@ enum MaintenanceWorkflow {
         }
     }
 
-    static func canTransition(from originalStatus: String, to newStatus: String) -> Bool {
+    static func canTransition(from originalStatus: String, to newStatus: String, cost: Double = 0) -> Bool {
         let original = originalStatus.isEmpty ? statuses[0] : originalStatus
         guard
             let originalIndex = statuses.firstIndex(of: original),
             let newIndex = statuses.firstIndex(of: newStatus)
         else {
+            return false
+        }
+        if originalIndex == newIndex { return true }
+        if original == "รออนุมัติค่าใช้จ่าย", newStatus == "กำลังซ่อม" {
+            return false
+        }
+        if original == "กำลังติดต่อช่าง", newStatus == "กำลังซ่อม", cost <= 0 {
+            return true
+        }
+        if original == "กำลังซ่อม", newStatus == "เสร็จสิ้น", cost <= 0 {
+            return true
+        }
+        if newStatus == "รออนุมัติค่าใช้จ่าย", cost <= 0 {
             return false
         }
         return abs(newIndex - originalIndex) <= 1
@@ -376,7 +390,7 @@ private struct MaintenanceEditor: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("ทำงานตามลำดับ")
                                         .font(.custom("SukhumvitSet-Medium", size: 13))
-                                    Text("เลือกได้เฉพาะขั้นก่อนหน้าหรือขั้นถัดไป แล้วกดบันทึก")
+                                    Text("ถ้ามีค่าใช้จ่าย ต้องส่งราคาให้ลูกบ้านอนุมัติใน LINE ก่อนเริ่มซ่อม")
                                         .font(.custom("SukhumvitSet-Text", size: 11))
                                         .foregroundStyle(.secondary)
                                 }
@@ -400,6 +414,7 @@ private struct MaintenanceEditor: View {
                                     .font(.system(size: 28, weight: .semibold, design: .rounded))
                                     .keyboardType(.decimalPad)
                                     .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
+                                    .disabled(!canEditCost)
                                 Spacer()
                                 Text("บาท")
                                     .font(.custom("SukhumvitSet-Medium", size: 15))
@@ -408,6 +423,18 @@ private struct MaintenanceEditor: View {
                             .padding(.horizontal, 16)
                             .frame(minHeight: 70)
                             .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        }
+
+                        if (Double(cost) ?? 0) > 0 {
+                            Label("เลือก “รออนุมัติค่าใช้จ่าย” เพื่อส่งใบเสนอราคาไปยัง LINE", systemImage: "checkmark.message")
+                                .font(.custom("SukhumvitSet-Text", size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if !canEditCost {
+                            Label("ยอดนี้ถูกส่งให้ลูกบ้านแล้ว หากต้องแก้ให้ย้อนกลับไปออกใบเสนอราคาใหม่", systemImage: "lock.fill")
+                                .font(.custom("SukhumvitSet-Text", size: 11))
+                                .foregroundStyle(.secondary)
                         }
 
                         Divider().overlay(Color.primary.opacity(0.08))
@@ -463,10 +490,11 @@ private struct MaintenanceEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
-                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status) else { return }
+                        let parsedCost = Double(cost) ?? 0
+                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: parsedCost) else { return }
                         let item = Maintenance(roomNumber: clean(roomNumber), issue: clean(issue))
                         item.status = status
-                        item.cost = Double(cost) ?? 0
+                        item.cost = parsedCost
                         item.paymentMethod = clean(paymentMethod)
                         item.slipPath = clean(slipPath)
                         item.issueImage = clean(issueImage)
@@ -481,7 +509,7 @@ private struct MaintenanceEditor: View {
                     .disabled(
                         clean(roomNumber).isEmpty ||
                         clean(issue).isEmpty ||
-                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status)
+                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: Double(cost) ?? 0)
                     )
                 }
             }
@@ -570,7 +598,7 @@ private struct MaintenanceEditor: View {
     private func statusRow(item: String, index: Int) -> some View {
         let selected = status == item
         let persisted = originalStatus == item
-        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item)
+        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item, cost: Double(cost) ?? 0)
 
         return Button {
             status = item
@@ -684,6 +712,15 @@ private struct MaintenanceEditor: View {
 
     private var paymentMethodTitle: String {
         paymentMethods.first(where: { $0.value == paymentMethod })?.title ?? paymentMethod
+    }
+
+    private var canEditCost: Bool {
+        guard
+            let originalIndex = MaintenanceWorkflow.statuses.firstIndex(of: originalStatus),
+            let selectedIndex = MaintenanceWorkflow.statuses.firstIndex(of: status)
+        else { return true }
+        let quoteIndex = MaintenanceWorkflow.statuses.firstIndex(of: "รออนุมัติค่าใช้จ่าย") ?? 2
+        return originalIndex < quoteIndex || selectedIndex < quoteIndex || (selectedIndex == quoteIndex && originalIndex != quoteIndex)
     }
 
     private func mediaPaths(_ value: String) -> [String] {

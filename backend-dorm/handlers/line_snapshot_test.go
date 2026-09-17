@@ -136,7 +136,8 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 			t.Fatal("empty notification event key")
 		}
 		notifications = append(notifications, maintenanceStatusChange{
-			RoomNumber: notification.RoomNumber, Issue: notification.Issue, Status: notification.Status,
+			MaintenanceID: notification.MaintenanceID,
+			RoomNumber:    notification.RoomNumber, Issue: notification.Issue, Status: notification.Status,
 			Cost: notification.Cost, ReportedAt: notification.ReportedAt,
 			PaymentMethod: notification.PaymentMethod, LastUpdated: notification.LastUpdated,
 		})
@@ -158,7 +159,7 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 		t.Fatalf("changed maintenance sent %d notifications", len(notifications))
 	}
 	got := notifications[0]
-	if got.RoomNumber != "103" || got.Issue != "ไฟดับ" || got.Status != "กำลังติดต่อช่าง" {
+	if got.MaintenanceID == "" || got.RoomNumber != "103" || got.Issue != "ไฟดับ" || got.Status != "กำลังติดต่อช่าง" {
 		t.Fatalf("notification = %+v", got)
 	}
 
@@ -168,6 +169,21 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	}
 	if len(notifications) != 1 {
 		t.Fatalf("unchanged maintenance resent notification: %d", len(notifications))
+	}
+
+	snapshot.SnapshotID = "snapshot-4"
+	snapshot.Maintenance[0].Status = "รออนุมัติค่าใช้จ่าย"
+	snapshot.Maintenance[0].Cost = 850
+	snapshot.Maintenance[0].LastUpdated = "2026-09-17T08:30:00Z"
+	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
+		t.Fatal(err)
+	}
+	if len(notifications) != 2 {
+		t.Fatalf("quote transition sent %d notifications, want 2 total", len(notifications))
+	}
+	quote := notifications[1]
+	if quote.MaintenanceID == "" || quote.Status != "รออนุมัติค่าใช้จ่าย" || quote.Cost != 850 {
+		t.Fatalf("quote notification = %+v", quote)
 	}
 }
 

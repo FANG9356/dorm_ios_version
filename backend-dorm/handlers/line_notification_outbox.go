@@ -22,12 +22,13 @@ func EnqueueMaintenanceStatusNotification(db *sql.DB, accountID int, notificatio
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := db.Exec(`INSERT INTO line_notification_outbox
-		(event_key, account_id, line_user_id, room_number, issue, maintenance_status,
+		(event_key, account_id, maintenance_record_id, line_user_id, room_number, issue, maintenance_status,
 		 cost, reported_at, resolved_at, payment_method, maintenance_updated_at,
 		 status, next_attempt_at, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
 		ON CONFLICT(event_key) DO NOTHING`,
-		notification.EventKey, accountID, notification.LineUserID, notification.RoomNumber,
+		notification.EventKey, accountID, notification.MaintenanceID,
+		notification.LineUserID, notification.RoomNumber,
 		notification.Issue, notification.Status, notification.Cost, notification.ReportedAt,
 		notification.ResolvedAt, notification.PaymentMethod, notification.LastUpdated, now, now)
 	return err
@@ -58,12 +59,13 @@ func processPendingLineNotifications(db *sql.DB, sender func(notification mainte
 		var id int64
 		var notification maintenanceStatusNotification
 		now := time.Now().UTC().Format(time.RFC3339Nano)
-		err := db.QueryRow(`SELECT id, event_key, line_user_id, room_number, issue, maintenance_status,
+		err := db.QueryRow(`SELECT id, event_key, maintenance_record_id, line_user_id, room_number, issue, maintenance_status,
 			cost, reported_at, resolved_at, payment_method, maintenance_updated_at
 			FROM line_notification_outbox
-			WHERE status = 'pending' AND next_attempt_at <= ?
+			WHERE status = 'pending' AND julianday(next_attempt_at) <= julianday(?)
 			ORDER BY id LIMIT 1`, now).Scan(
-			&id, &notification.EventKey, &notification.LineUserID, &notification.RoomNumber,
+			&id, &notification.EventKey, &notification.MaintenanceID,
+			&notification.LineUserID, &notification.RoomNumber,
 			&notification.Issue, &notification.Status, &notification.Cost, &notification.ReportedAt,
 			&notification.ResolvedAt, &notification.PaymentMethod, &notification.LastUpdated,
 		)

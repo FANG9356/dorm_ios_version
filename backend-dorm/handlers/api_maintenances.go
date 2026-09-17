@@ -75,6 +75,18 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				var prevCost float64
 				var prevStatus string
 				db.QueryRow("SELECT cost, status FROM maintenances WHERE id=?", m.ID).Scan(&prevCost, &prevStatus)
+				if err := validateMaintenanceAppTransition(prevStatus, m.Status, m.Cost); err != nil {
+					http.Error(w, err.Error(), http.StatusConflict)
+					return
+				}
+				if err := validateMaintenanceCostChange(prevStatus, m.Status, prevCost, m.Cost); err != nil {
+					http.Error(w, err.Error(), http.StatusConflict)
+					return
+				}
+				if m.Status == "รออนุมัติค่าใช้จ่าย" && !maintenanceHasLineRecipient(db, fmt.Sprintf("%v", m.ID)) {
+					http.Error(w, "maintenance quote requires a linked LINE resident", http.StatusConflict)
+					return
+				}
 
 				if m.Status == "เสร็จสิ้น" {
 					if _, err := db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=? WHERE id=?", m.Status, m.Cost, time.Now().Format("2006-01-02 15:04:05"), m.ID); err != nil {
@@ -88,21 +100,7 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 					}
 				}
 
-				if m.Status == "เสร็จสิ้น" && prevStatus != "เสร็จสิ้น" && prevStatus != "รอตรวจสอบชำระเงิน" {
-					go func() {
-						// แจ้งเตือนสถานะซ่อมเสร็จก่อน
-						notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
-
-						// ตามด้วยส่งบิล
-						var roomNumber, issue, lineUserID string
-						db.QueryRow("SELECT m.room_number, m.issue, u.line_user_id FROM maintenances m LEFT JOIN users u ON m.room_number = u.room_number WHERE m.id = ?", m.ID).Scan(&roomNumber, &issue, &lineUserID)
-						if lineUserID != "" {
-							PushMaintenanceBillFlexMessage(lineUserID, fmt.Sprintf("%v", m.ID), roomNumber, issue, m.Cost)
-						}
-					}()
-				} else {
-					go notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
-				}
+				go notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
 				w.WriteHeader(http.StatusOK)
 			} else {
 				id := r.FormValue("id")
@@ -127,6 +125,18 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				var prevCost float64
 				var prevStatus string
 				db.QueryRow("SELECT cost, status FROM maintenances WHERE id=?", id).Scan(&prevCost, &prevStatus)
+				if err := validateMaintenanceAppTransition(prevStatus, status, cost); err != nil {
+					http.Error(w, err.Error(), http.StatusConflict)
+					return
+				}
+				if err := validateMaintenanceCostChange(prevStatus, status, prevCost, cost); err != nil {
+					http.Error(w, err.Error(), http.StatusConflict)
+					return
+				}
+				if status == "รออนุมัติค่าใช้จ่าย" && !maintenanceHasLineRecipient(db, id) {
+					http.Error(w, "maintenance quote requires a linked LINE resident", http.StatusConflict)
+					return
+				}
 
 				if status == "เสร็จสิ้น" {
 					if slipPath != "" {
@@ -142,19 +152,7 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 					return
 				}
 
-				if status == "เสร็จสิ้น" && prevStatus != "เสร็จสิ้น" && prevStatus != "รอตรวจสอบชำระเงิน" {
-					go func() {
-						// แจ้งเตือนสถานะซ่อมเสร็จก่อน
-						notifyMaintenanceStatus(db, fmt.Sprintf("%v", id), status)
-
-						// ตามด้วยส่งบิล
-						var roomNumber, issue, lineUserID string
-						db.QueryRow("SELECT m.room_number, m.issue, u.line_user_id FROM maintenances m LEFT JOIN users u ON m.room_number = u.room_number WHERE m.id = ?", id).Scan(&roomNumber, &issue, &lineUserID)
-						if lineUserID != "" {
-							PushMaintenanceBillFlexMessage(lineUserID, fmt.Sprintf("%v", id), roomNumber, issue, cost)
-						}
-					}()
-				} else if prevStatus == "รอตรวจสอบชำระเงิน" && status == "เสร็จสิ้น" && paymentMethod == "โอนเงิน" {
+				if prevStatus == "รอตรวจสอบชำระเงิน" && status == "เสร็จสิ้น" && paymentMethod == "โอนเงิน" {
 					go func() {
 						var roomNumber, lineUserID string
 						db.QueryRow("SELECT m.room_number, COALESCE(u.line_user_id, '') FROM maintenances m LEFT JOIN users u ON m.room_number = u.room_number WHERE m.id=?", id).Scan(&roomNumber, &lineUserID)
@@ -223,20 +221,37 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 	})
 }
 
+func maintenanceHasLineRecipient(db *sql.DB, maintenanceID string) bool {
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM maintenances m JOIN users u ON u.room_number = m.room_number
+		WHERE m.id = ? AND u.line_user_id IS NOT NULL AND u.line_user_id != ''
+		AND u.status IN ('กำลังพักอาศัย','จอง')`, maintenanceID).Scan(&count)
+	return err == nil && count > 0
+}
+
 // [เพิ่มใหม่] ฟังก์ชันสำหรับแจ้งเตือนลูกบ้านเมื่อสถานะแจ้งซ่อมเปลี่ยน
 func notifyMaintenanceStatus(db *sql.DB, maintID string, status string) {
 	if status == "รอดำเนินการ" {
 		return // ไม่ต้องแจ้งถ้าเพิ่งกลับมารอดำเนินการ (หรือแจ้งก็ได้ แต่ปกติจะแจ้งแค่ตอนกำลังทำกับเสร็จ)
 	}
-	var roomNumber, issue string
-	err := db.QueryRow("SELECT room_number, issue FROM maintenances WHERE id = ?", maintID).Scan(&roomNumber, &issue)
+	var notification maintenanceStatusNotification
+	err := db.QueryRow(`SELECT CAST(id AS TEXT), room_number, issue, status, cost,
+		COALESCE(reported_at, ''), COALESCE(resolved_at, ''), COALESCE(payment_method, ''), COALESCE(last_updated, '')
+		FROM maintenances WHERE id = ?`, maintID).Scan(
+		&notification.MaintenanceID, &notification.RoomNumber, &notification.Issue,
+		&notification.Status, &notification.Cost, &notification.ReportedAt,
+		&notification.ResolvedAt, &notification.PaymentMethod, &notification.LastUpdated,
+	)
 	if err != nil {
 		return
 	}
 
 	var lineUserID string
-	err = db.QueryRow("SELECT line_user_id FROM users WHERE room_number = ? AND status = 'กำลังพักอาศัย' AND line_user_id IS NOT NULL AND line_user_id != ''", roomNumber).Scan(&lineUserID)
+	err = db.QueryRow("SELECT line_user_id FROM users WHERE room_number = ? AND status = 'กำลังพักอาศัย' AND line_user_id IS NOT NULL AND line_user_id != ''", notification.RoomNumber).Scan(&lineUserID)
 	if err == nil && lineUserID != "" {
-		PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status)
+		notification.LineUserID = lineUserID
+		if err := sendMaintenanceStatusFlexMessage(notification); err != nil {
+			fmt.Println("Error sending maintenance status flex message:", err)
+		}
 	}
 }

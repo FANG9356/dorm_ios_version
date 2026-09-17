@@ -143,12 +143,12 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 					handleImageMessage(db, tenantDB, accountID, event.ReplyToken, lineUserID, event.Message.ID)
 				}
 			} else if event.Type == "postback" {
-				tenantDB, _, _, linkErr := resolveLineTenantDB(db, lineUserID)
+				tenantDB, accountID, _, linkErr := resolveLineTenantDB(db, lineUserID)
 				if linkErr != nil {
 					replyToLine(event.ReplyToken, "กรุณาผูกบัญชี LINE กับห้องพักในระบบใหม่ก่อนทำรายการค่ะ")
 					continue
 				}
-				handlePostbackEvent(tenantDB, event.ReplyToken, lineUserID, event.Postback.Data)
+				handlePostbackEvent(db, tenantDB, accountID, event.ReplyToken, lineUserID, event.Postback.Data)
 			} else if event.Type == "follow" {
 				welcomeMsg := "สวัสดีค่ะ! ยินดีต้อนรับสู่บริการหอพัก DormiNet นะคะ ✨\n\nหากคุณเป็นลูกบ้านของเรา กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่าง เพื่อรับข้อมูลบิลค่าเช่าและการแจ้งเตือนต่างๆ ได้เลยค่ะ "
 				replyToLine(event.ReplyToken, welcomeMsg)
@@ -420,7 +420,11 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		maintID := strings.TrimPrefix(botState, "pay_maint_")
 
 		var cost float64
-		err = db.QueryRow("SELECT cost FROM maintenances WHERE id = ?", maintID).Scan(&cost)
+		err = db.QueryRow(`SELECT m.cost FROM maintenances m
+			JOIN users u ON u.room_number = m.room_number
+			WHERE m.id = ? AND m.status = 'รอตรวจสอบชำระเงิน' AND m.cost > 0
+			AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
+			LIMIT 1`, maintID, lineUserID).Scan(&cost)
 		if err != nil || cost <= 0 {
 			replyToLine(replyToken, "ไม่พบข้อมูลบิลค่าซ่อมแซมนี้ หรือบิลนี้ถูกยกเลิกไปแล้วค่ะ")
 			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
@@ -1001,12 +1005,73 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 	fmt.Println("LINE Push Receipt response:", resp.Status, string(respBody))
 }
 
-func handlePostbackEvent(db *sql.DB, replyToken, lineUserID, data string) {
+func handlePostbackEvent(master, db *sql.DB, accountID int, replyToken, lineUserID, data string) {
+	if strings.HasPrefix(data, "action=maintenance_quote_approve&id=") {
+		handleMaintenanceQuoteDecision(master, db, accountID, replyToken, lineUserID,
+			strings.TrimPrefix(data, "action=maintenance_quote_approve&id="), true)
+		return
+	}
+	if strings.HasPrefix(data, "action=maintenance_quote_reject&id=") {
+		handleMaintenanceQuoteDecision(master, db, accountID, replyToken, lineUserID,
+			strings.TrimPrefix(data, "action=maintenance_quote_reject&id="), false)
+		return
+	}
 	if strings.HasPrefix(data, "action=pay_maint&id=") {
 		maintID := strings.TrimPrefix(data, "action=pay_maint&id=")
+		var count int
+		_ = db.QueryRow(`SELECT COUNT(*) FROM maintenances m JOIN users u ON u.room_number = m.room_number
+			WHERE m.id = ? AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
+			AND m.status = 'รอตรวจสอบชำระเงิน' AND m.cost > 0`, maintID, lineUserID).Scan(&count)
+		if count == 0 {
+			replyToLine(replyToken, "บิลนี้ไม่พร้อมรับชำระ หรือสถานะถูกเปลี่ยนไปแล้วค่ะ")
+			return
+		}
 		db.Exec("UPDATE users SET bot_state = ? WHERE line_user_id = ?", "pay_maint_"+maintID, lineUserID)
 		replyToLine(replyToken, "กรุณาอัปโหลดสลิปชำระเงินค่าซ่อมแซมเข้ามาในแชทนี้ได้เลยค่ะ")
 	}
+}
+
+func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToken, lineUserID, maintenanceID string, approved bool) {
+	maintenanceID = strings.TrimSpace(maintenanceID)
+	var status string
+	var cost float64
+	err := db.QueryRow(`SELECT m.status, m.cost FROM maintenances m
+		JOIN users u ON u.room_number = m.room_number
+		WHERE m.id = ? AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
+		LIMIT 1`, maintenanceID, lineUserID).Scan(&status, &cost)
+	if err != nil {
+		replyToLine(replyToken, "ไม่พบใบเสนอราคานี้ หรือบัญชีไม่มีสิทธิ์ทำรายการค่ะ")
+		return
+	}
+	if status != "รออนุมัติค่าใช้จ่าย" {
+		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับหรือสถานะเปลี่ยนไปแล้วค่ะ")
+		return
+	}
+	if cost <= 0 {
+		replyToLine(replyToken, "ยอดในใบเสนอราคาไม่ถูกต้อง กรุณาติดต่อผู้ดูแลค่ะ")
+		return
+	}
+
+	nextStatus := "กำลังติดต่อช่าง"
+	reply := "ปฏิเสธค่าใช้จ่ายแล้วค่ะ ระบบส่งรายการกลับให้แอดมินตรวจสอบราคาใหม่"
+	if approved {
+		nextStatus = "กำลังซ่อม"
+		reply = fmt.Sprintf("อนุมัติค่าใช้จ่าย %s แล้วค่ะ แอดมินสามารถเริ่มงานซ่อมได้", formatLineMoney(cost))
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	result, err := db.Exec(`UPDATE maintenances SET status = ?, last_updated = ?
+		WHERE id = ? AND status = 'รออนุมัติค่าใช้จ่าย'`, nextStatus, now, maintenanceID)
+	if err != nil {
+		replyToLine(replyToken, "ระบบบันทึกคำตอบไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ")
+		return
+	}
+	changed, _ := result.RowsAffected()
+	if changed != 1 {
+		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับไปแล้วค่ะ")
+		return
+	}
+	publishLineChanges(master, db, accountID)
+	replyToLine(replyToken, reply)
 }
 
 func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue string, cost float64) {
@@ -1129,27 +1194,27 @@ func buildMaintenanceStatusFlexMessage(notification maintenanceStatusNotificatio
 	if roomNumber == "" || issue == "" || status == "" {
 		return nil, fmt.Errorf("maintenance Flex message is missing required detail")
 	}
+	if status == "รออนุมัติค่าใช้จ่าย" {
+		return buildMaintenanceQuoteFlexMessage(notification, fallbackTime)
+	}
+	if status == "รอตรวจสอบชำระเงิน" && notification.Cost > 0 {
+		return buildMaintenancePaymentFlexMessage(notification, fallbackTime)
+	}
 
-	accent, tint, step := maintenanceStatusStyle(status)
+	step := maintenanceStatusStep(status)
 	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
 	reportedAt := formatThaiMaintenanceDateTime(notification.ReportedAt, time.Time{}, false)
-	steps := []string{"รับเรื่อง", "ติดต่อช่าง", "กำลังซ่อม", "ตรวจชำระ", "เสร็จสิ้น"}
-	progressContents := make([]interface{}, 0, len(steps))
-	for index, label := range steps {
+	const stepCount = 6
+	progressContents := make([]interface{}, 0, stepCount)
+	for index := 0; index < stepCount; index++ {
 		color := "#D1D5DB"
-		weight := "regular"
 		if index <= step {
-			color = accent
-		}
-		if index == step {
-			weight = "bold"
+			color = "#374151"
 		}
 		progressContents = append(progressContents, map[string]interface{}{
-			"type": "box", "layout": "vertical", "flex": 1, "spacing": "sm",
-			"contents": []interface{}{
-				map[string]interface{}{"type": "box", "layout": "vertical", "height": "5px", "backgroundColor": color, "cornerRadius": "3px", "contents": []interface{}{map[string]interface{}{"type": "filler"}}},
-				map[string]interface{}{"type": "text", "text": label, "size": "xxs", "color": color, "align": "center", "weight": weight, "wrap": true},
-			},
+			"type": "box", "layout": "vertical", "flex": 1, "height": "4px",
+			"backgroundColor": color, "cornerRadius": "2px",
+			"contents": []interface{}{map[string]interface{}{"type": "filler"}},
 		})
 	}
 
@@ -1169,40 +1234,32 @@ func buildMaintenanceStatusFlexMessage(notification maintenanceStatusNotificatio
 
 	contents := map[string]interface{}{
 		"type": "bubble", "size": "mega",
-		"header": map[string]interface{}{
-			"type": "box", "layout": "vertical", "backgroundColor": "#111827", "paddingAll": "20px", "spacing": "sm",
-			"contents": []interface{}{
-				map[string]interface{}{"type": "text", "text": "DormiNetX  •  งานซ่อม", "size": "xs", "color": "#9CA3AF", "weight": "bold"},
-				map[string]interface{}{"type": "text", "text": "อัปเดตสถานะการแจ้งซ่อม", "size": "xl", "color": "#FFFFFF", "weight": "bold", "wrap": true},
-				map[string]interface{}{"type": "text", "text": "ห้อง " + roomNumber, "size": "sm", "color": "#D1D5DB", "margin": "sm"},
-			},
-		},
 		"body": map[string]interface{}{
-			"type": "box", "layout": "vertical", "paddingAll": "20px", "spacing": "lg",
+			"type": "box", "layout": "vertical", "paddingAll": "18px", "spacing": "md",
 			"contents": []interface{}{
 				map[string]interface{}{
-					"type": "box", "layout": "vertical", "spacing": "sm",
+					"type": "box", "layout": "horizontal", "alignItems": "center",
 					"contents": []interface{}{
-						map[string]interface{}{"type": "text", "text": "รายการที่แจ้ง", "size": "xs", "color": "#9CA3AF"},
-						map[string]interface{}{"type": "text", "text": issue, "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
+						map[string]interface{}{"type": "text", "text": "แจ้งซ่อม", "size": "lg", "color": "#111827", "weight": "bold", "flex": 3},
+						map[string]interface{}{"type": "text", "text": "ห้อง " + roomNumber, "size": "sm", "color": "#6B7280", "weight": "bold", "align": "end", "flex": 2},
 					},
 				},
+				map[string]interface{}{"type": "text", "text": issue, "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
 				map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
-				map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "md", "contents": detailRows},
+				map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "sm", "contents": detailRows},
 				map[string]interface{}{
-					"type": "box", "layout": "vertical", "backgroundColor": tint, "cornerRadius": "14px", "paddingAll": "16px", "spacing": "md",
+					"type": "box", "layout": "vertical", "backgroundColor": "#F3F4F6", "cornerRadius": "12px", "paddingAll": "12px", "spacing": "sm",
 					"contents": []interface{}{
-						map[string]interface{}{"type": "text", "text": fmt.Sprintf("ความคืบหน้า  •  ขั้นที่ %d จาก %d", step+1, len(steps)), "size": "xs", "color": "#6B7280", "weight": "bold"},
+						map[string]interface{}{
+							"type": "box", "layout": "horizontal", "alignItems": "center",
+							"contents": []interface{}{
+								map[string]interface{}{"type": "text", "text": status, "size": "sm", "color": "#111827", "weight": "bold", "wrap": true, "flex": 4},
+								map[string]interface{}{"type": "text", "text": fmt.Sprintf("%d/%d", step+1, stepCount), "size": "xs", "color": "#6B7280", "align": "end", "flex": 1},
+							},
+						},
 						map[string]interface{}{"type": "box", "layout": "horizontal", "spacing": "xs", "contents": progressContents},
-						map[string]interface{}{"type": "text", "text": status, "size": "lg", "color": accent, "weight": "bold", "align": "center", "wrap": true, "margin": "sm"},
 					},
 				},
-			},
-		},
-		"footer": map[string]interface{}{
-			"type": "box", "layout": "vertical", "paddingAll": "16px", "backgroundColor": "#F9FAFB",
-			"contents": []interface{}{
-				map[string]interface{}{"type": "text", "text": "เวลาในประเทศไทย (UTC+7)  •  ส่งอัตโนมัติจาก DormiNetX", "size": "xxs", "color": "#9CA3AF", "align": "center", "wrap": true},
 			},
 		},
 	}
@@ -1227,18 +1284,104 @@ func maintenanceFlexDetailRow(label, value string) map[string]interface{} {
 	}
 }
 
-func maintenanceStatusStyle(status string) (accent, tint string, step int) {
+func buildMaintenanceQuoteFlexMessage(notification maintenanceStatusNotification, fallbackTime time.Time) (map[string]interface{}, error) {
+	maintenanceID := strings.TrimSpace(notification.MaintenanceID)
+	if maintenanceID == "" || notification.Cost <= 0 {
+		return nil, fmt.Errorf("maintenance quote is missing id or cost")
+	}
+	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
+	body := []interface{}{
+		maintenanceFlexCompactHeader("ใบเสนอราคางานซ่อม", notification.RoomNumber),
+		map[string]interface{}{"type": "text", "text": strings.TrimSpace(notification.Issue), "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
+		map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
+		map[string]interface{}{
+			"type": "box", "layout": "horizontal", "alignItems": "baseline",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ยอดที่ขออนุมัติ", "size": "sm", "color": "#6B7280", "flex": 2},
+				map[string]interface{}{"type": "text", "text": formatLineMoney(notification.Cost), "size": "xl", "color": "#111827", "weight": "bold", "align": "end", "flex": 3},
+			},
+		},
+		map[string]interface{}{"type": "text", "text": "งานจะเริ่มหลังจากคุณอนุมัติเท่านั้น", "size": "xs", "color": "#6B7280", "wrap": true},
+		maintenanceFlexDetailRow("อัปเดต", updatedAt),
+	}
+	contents := map[string]interface{}{
+		"type": "bubble", "size": "mega",
+		"body": map[string]interface{}{"type": "box", "layout": "vertical", "paddingAll": "18px", "spacing": "md", "contents": body},
+		"footer": map[string]interface{}{
+			"type": "box", "layout": "horizontal", "spacing": "sm", "paddingAll": "14px",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "button", "style": "secondary", "height": "sm", "action": map[string]interface{}{"type": "postback", "label": "ไม่อนุมัติ", "data": "action=maintenance_quote_reject&id=" + maintenanceID}},
+				map[string]interface{}{"type": "button", "style": "primary", "color": "#111827", "height": "sm", "action": map[string]interface{}{"type": "postback", "label": "อนุมัติ", "data": "action=maintenance_quote_approve&id=" + maintenanceID}},
+			},
+		},
+	}
+	return map[string]interface{}{
+		"type": "flex", "altText": fmt.Sprintf("ขออนุมัติค่าซ่อมห้อง %s • %s", notification.RoomNumber, formatLineMoney(notification.Cost)),
+		"contents": contents,
+	}, nil
+}
+
+func buildMaintenancePaymentFlexMessage(notification maintenanceStatusNotification, fallbackTime time.Time) (map[string]interface{}, error) {
+	maintenanceID := strings.TrimSpace(notification.MaintenanceID)
+	if maintenanceID == "" || notification.Cost <= 0 {
+		return nil, fmt.Errorf("maintenance payment request is missing id or cost")
+	}
+	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
+	contents := map[string]interface{}{
+		"type": "bubble", "size": "mega",
+		"body": map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingAll": "18px", "spacing": "md",
+			"contents": []interface{}{
+				maintenanceFlexCompactHeader("ค่าซ่อมที่อนุมัติแล้ว", notification.RoomNumber),
+				map[string]interface{}{"type": "text", "text": strings.TrimSpace(notification.Issue), "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
+				map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
+				map[string]interface{}{
+					"type": "box", "layout": "horizontal", "alignItems": "baseline",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "text", "text": "ยอดชำระ", "size": "sm", "color": "#6B7280", "flex": 2},
+						map[string]interface{}{"type": "text", "text": formatLineMoney(notification.Cost), "size": "xl", "color": "#111827", "weight": "bold", "align": "end", "flex": 3},
+					},
+				},
+				maintenanceFlexDetailRow("อัปเดต", updatedAt),
+			},
+		},
+		"footer": map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingAll": "14px",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "button", "style": "primary", "color": "#111827", "height": "sm", "action": map[string]interface{}{"type": "postback", "label": "ส่งหลักฐานการชำระ", "data": "action=pay_maint&id=" + maintenanceID}},
+			},
+		},
+	}
+	return map[string]interface{}{
+		"type": "flex", "altText": fmt.Sprintf("ค่าซ่อมห้อง %s • %s", notification.RoomNumber, formatLineMoney(notification.Cost)),
+		"contents": contents,
+	}, nil
+}
+
+func maintenanceFlexCompactHeader(title, roomNumber string) map[string]interface{} {
+	return map[string]interface{}{
+		"type": "box", "layout": "horizontal", "alignItems": "center",
+		"contents": []interface{}{
+			map[string]interface{}{"type": "text", "text": title, "size": "lg", "color": "#111827", "weight": "bold", "flex": 4, "wrap": true},
+			map[string]interface{}{"type": "text", "text": "ห้อง " + strings.TrimSpace(roomNumber), "size": "sm", "color": "#6B7280", "weight": "bold", "align": "end", "flex": 2},
+		},
+	}
+}
+
+func maintenanceStatusStep(status string) int {
 	switch strings.TrimSpace(status) {
 	case "กำลังติดต่อช่าง":
-		return "#7C3AED", "#F5F3FF", 1
+		return 1
+	case "รออนุมัติค่าใช้จ่าย":
+		return 2
 	case "กำลังซ่อม":
-		return "#0284C7", "#F0F9FF", 2
+		return 3
 	case "รอตรวจสอบชำระเงิน":
-		return "#D97706", "#FFFBEB", 3
+		return 4
 	case "เสร็จสิ้น":
-		return "#059669", "#ECFDF5", 4
+		return 5
 	default:
-		return "#4F46E5", "#EEF2FF", 0
+		return 0
 	}
 }
 

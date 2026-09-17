@@ -10,7 +10,7 @@ import (
 
 func testMaintenanceNotification(eventKey string) maintenanceStatusNotification {
 	return maintenanceStatusNotification{
-		EventKey: eventKey, LineUserID: "line-one", RoomNumber: "103", Issue: "ไฟดับ",
+		EventKey: eventKey, MaintenanceID: "44", LineUserID: "line-one", RoomNumber: "103", Issue: "ไฟดับ",
 		Status: "กำลังซ่อม", Cost: 450, ReportedAt: "2026-09-16",
 		PaymentMethod: "โอนผ่านธนาคาร", LastUpdated: "2026-09-17T02:30:00Z",
 	}
@@ -51,7 +51,7 @@ func TestProcessMaintenanceNotificationMarksSent(t *testing.T) {
 		if notification.LineUserID != "line-one" || notification.RoomNumber != "103" || notification.Issue != "ไฟดับ" || notification.Status != "กำลังซ่อม" {
 			t.Fatalf("unexpected notification: %+v", notification)
 		}
-		if notification.Cost != 450 || notification.ReportedAt != "2026-09-16" || notification.LastUpdated != "2026-09-17T02:30:00Z" {
+		if notification.MaintenanceID != "44" || notification.Cost != 450 || notification.ReportedAt != "2026-09-16" || notification.LastUpdated != "2026-09-17T02:30:00Z" {
 			t.Fatalf("notification detail was not persisted: %+v", notification)
 		}
 		return nil

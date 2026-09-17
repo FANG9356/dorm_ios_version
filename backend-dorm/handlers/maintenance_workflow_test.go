@@ -1,0 +1,59 @@
+package handlers
+
+import "testing"
+
+func TestValidateMaintenanceAppTransitionRequiresQuoteApproval(t *testing.T) {
+	tests := []struct {
+		name       string
+		from       string
+		to         string
+		cost       float64
+		shouldFail bool
+	}{
+		{name: "paid repair enters quote", from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", cost: 500},
+		{name: "zero quote rejected", from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", shouldFail: true},
+		{name: "paid repair cannot skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, shouldFail: true},
+		{name: "free repair can skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม"},
+		{name: "free repair can skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น"},
+		{name: "paid repair cannot skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500, shouldFail: true},
+		{name: "admin cannot approve quote", from: "รออนุมัติค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, shouldFail: true},
+		{name: "cannot skip to payment", from: "กำลังติดต่อช่าง", to: "รอตรวจสอบชำระเงิน", cost: 500, shouldFail: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMaintenanceAppTransition(test.from, test.to, test.cost)
+			if test.shouldFail && err == nil {
+				t.Fatal("expected transition rejection")
+			}
+			if !test.shouldFail && err != nil {
+				t.Fatalf("unexpected transition rejection: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateMaintenanceCostChangeLocksQuotedAmount(t *testing.T) {
+	tests := []struct {
+		name       string
+		from       string
+		to         string
+		shouldFail bool
+	}{
+		{name: "draft amount can change", from: "กำลังติดต่อช่าง", to: "กำลังติดต่อช่าง"},
+		{name: "pending quote amount is locked", from: "รออนุมัติค่าใช้จ่าย", to: "รออนุมัติค่าใช้จ่าย", shouldFail: true},
+		{name: "approved repair amount is locked", from: "กำลังซ่อม", to: "รอตรวจสอบชำระเงิน", shouldFail: true},
+		{name: "repair can issue replacement quote", from: "กำลังซ่อม", to: "รออนุมัติค่าใช้จ่าย"},
+		{name: "quote can return to draft with changed amount", from: "รออนุมัติค่าใช้จ่าย", to: "กำลังติดต่อช่าง"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMaintenanceCostChange(test.from, test.to, 500, 650)
+			if test.shouldFail && err == nil {
+				t.Fatal("expected cost change rejection")
+			}
+			if !test.shouldFail && err != nil {
+				t.Fatalf("unexpected cost change rejection: %v", err)
+			}
+		})
+	}
+}
