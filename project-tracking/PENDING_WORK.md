@@ -2,7 +2,7 @@
 
 อัปเดตล่าสุด: 17 กันยายน 2569
 
-สถานะอ้างอิงปัจจุบัน: Controlled pilot ประมาณ 88% และ Production readiness ประมาณ 78%
+สถานะอ้างอิงปัจจุบัน: ความครบของฟีเจอร์ 92%, Controlled pilot ประมาณ 89% และ Production readiness ประมาณ 79% ตาม [แบบประเมิน 17 กันยายน](../project-review/DormiNetX-Assessment-2026-09-17.md)
 
 ## P0 — ต้องปิดก่อน Production เต็มรูปแบบ
 
@@ -25,6 +25,7 @@
 | ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า | รอตรวจ UI | ไม่มี silent failure และผู้ใช้เข้าใจว่ารายการอยู่ในเครื่อง, กำลังซิงก์ หรือส่งไม่สำเร็จ |
 | Monitoring, alert, backup retention, incident runbook และ release rollback checklist | รอดำเนินการ | มี metric/log/alert และขั้นตอนตอบสนองที่ทดสอบได้ |
 | ยืนยัน deployment target `iOS 26.2` | รอดำเนินการ | ตรงกับอุปกรณ์เป้าหมาย หรือปรับลดแล้วผ่าน compatibility test |
+| UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE | รอตรวจ | paid flow ผ่าน quote approve/reject, re-quote, repair, bill, slip และ app sync; free flow ไม่ส่ง quote/bill; stale/unauthorized action ถูกปฏิเสธ |
 
 ## P2 — หลัง Controlled Pilot
 
@@ -36,18 +37,22 @@
 
 ## งานเอกสาร
 
-- [x] เปลี่ยนผล iOS tests ใน README/docs เป็นผลล่าสุด `52/52`
+- [x] บันทึกผล iOS full suite รอบก่อน `52/52` และผล targeted maintenance/sync ล่าสุด `21/21` แยกกัน ไม่อ้างว่าเป็นชุดเดียวกัน
 - [x] ลบข้อความเก่าที่ระบุว่า public `/uploads` ยังไม่ปิด เพราะ production ปิดแล้ว
+- [x] เพิ่มเอกสารวิสัยทัศน์, สถานะงาน, คู่มือส่งต่อ และแบบประเมินวันที่ 17 กันยายน พร้อมเชื่อมจาก README/Project Tracking
+- [x] เพิ่ม maintenance E2E checklist และ issue history `LINE-007`–`FLOW-011`
 - [ ] บันทึกผล manual sync หลัง protocol-2 cutover
 - [ ] อัปเดตคะแนนเมื่อมีหลักฐานปิด P0 เพิ่ม ไม่เพิ่มคะแนนจาก build/test เพียงอย่างเดียว
 
 ## ปิดแล้วในรอบนี้
 
-- [x] ออกแบบการ์ดแจ้งซ่อมใหม่เป็น read-only card แสดง timeline ครบ 5 ขั้นแบบ monochrome ตัดการเปลี่ยนสถานะ, swipe และเมนูกดค้างจากหน้ารายการ ให้แตะทั้งการ์ดก่อนแก้ไข บังคับเปลี่ยนสถานะครั้งละ 1 ขั้นพร้อม save validation และย้ายการลบเข้าไปในหน้ารายละเอียดพร้อม confirmation; ติดตั้ง build ใหม่บน iPhone “F” แล้ว
+- [x] ออกแบบการ์ดแจ้งซ่อมใหม่เป็น read-only card แสดง timeline ครบ 6 ขั้นแบบ monochrome รวมขั้นอนุมัติค่าใช้จ่าย ตัดการเปลี่ยนสถานะ, swipe และเมนูกดค้างจากหน้ารายการ ให้แตะทั้งการ์ดก่อนแก้ไข บังคับ workflow ตามกฎพร้อม save validation และย้ายการลบเข้าไปในหน้ารายละเอียดพร้อม confirmation; ติดตั้ง build ใหม่บน iPhone “F” แล้ว
 - [x] Redesign หน้าแก้ไขงานซ่อมเป็น premium thin-material cards ลดสีและกล่องซ้อน ทำสถานะเป็น vertical workflow timeline และปรับรายละเอียด ค่าใช้จ่าย ช่องทางชำระ หลักฐาน และปุ่มลบให้ใช้ visual language เดียวกัน
 - [x] เปลี่ยนการยืนยันลบงานซ่อมจาก adaptive confirmation popover เป็น system alert กลางจอ ไม่ลอยไปเตือนด้านบนตามตำแหน่งปุ่ม
 - [x] แก้สถานะแจ้งซ่อมไม่ส่ง Flex Card: เพิ่ม persistent outbox, event-key กันซ้ำ, retry สูงสุด 8 ครั้ง, startup recovery และ regression tests สำหรับส่งสำเร็จ/ล้มแล้วรอส่งใหม่
-- [x] Deploy backend production SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; service, public health และ master/tenant SQLite quick check ผ่าน เหลือ UAT เปลี่ยนสถานะจริงจากแอปเพื่อตรวจ LINE ปลายทาง
+- [x] Deploy backend production รุ่นล่าสุด SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`; service/public health และ schema checks ผ่าน มี rollback set `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`; ยังเหลือ controlled E2E UAT ของ quote/approval/bill/slip
+- [x] เพิ่ม workflow งานซ่อม 6 ขั้น: งานมีค่าใช้จ่ายต้องส่ง Flex ใบเสนอราคาและรอ linked resident อนุมัติก่อนซ่อม, ปฏิเสธเพื่อออกยอดใหม่ได้, ล็อกยอดที่เสนอ, ส่ง Flex บิลตอนรอตรวจชำระ และให้งานฟรีข้าม quote/payment ได้
+- [x] เพิ่ม maintenance LINE action authorization, stale-action protection, snapshot publish กลับแอป, outbox internal record ID และแก้ retry due-time comparison ด้วย SQLite `julianday`
 - [x] แก้รายการแจ้งซ่อมจาก LINE ไม่เข้าแอปเพราะ UUID ต่างตัวพิมพ์: canonicalize/deduplicate โดยเก็บแถวล่าสุด, สำรองฐานข้อมูลก่อน cleanup และออก snapshot production `v82` ที่มี 2 รายการถูกต้อง; binary SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`
 - [x] Dashboard นับงานซ่อมครบทุกสถานะ รวม “กำลังติดต่อช่าง” และ “รอตรวจสอบชำระเงิน”
 - [x] Dashboard แสดงยอดรวม ตัวเลขบนกราฟ และ empty state ที่ชัดเจน

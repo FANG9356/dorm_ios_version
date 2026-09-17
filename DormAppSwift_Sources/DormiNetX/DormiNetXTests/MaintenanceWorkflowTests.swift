@@ -25,7 +25,7 @@ final class MaintenanceWorkflowTests: XCTestCase {
 
         XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "รออนุมัติค่าใช้จ่าย", cost: 500))
         XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "รอตรวจสอบชำระเงิน"))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น"))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500))
 
         XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "เสร็จสิ้น", to: "รอตรวจสอบชำระเงิน"))
         XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "เสร็จสิ้น", to: "กำลังซ่อม"))

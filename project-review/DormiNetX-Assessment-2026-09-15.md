@@ -2,6 +2,8 @@
 
 วันที่ประเมิน: 15 กันยายน 2569
 
+> เอกสารนี้เป็นประวัติการประเมินก่อน workflow งานซ่อมรอบล่าสุด สำหรับคะแนนและคำตัดสินปัจจุบันให้ใช้ [DormiNetX-Assessment-2026-09-17.md](DormiNetX-Assessment-2026-09-17.md)
+
 ## ผลประเมินล่าสุด: 16 กันยายน 2569
 
 ภาคผนวกนี้ใช้แทนคะแนนเดิมด้านล่างสำหรับการตัดสินใจปัจจุบัน หลังมีการเพิ่ม LINE/LIFF, tenant-scoped media hydration, immutable snapshot publication, same-version self-healing, dirty-record rebase, production backup validation, maintenance status notification, public-media closure, protocol-2 cutover และการทดสอบบน iPhone จริงบาง flow

@@ -41,7 +41,7 @@
 - UAT รอบถัดมาพบ local dirty records ทำให้ pull ถูกปฏิเสธตาม data-safety guard จึงเพิ่ม manual-sync rebase: รวมเฉพาะ local records ที่ dirty/deleted เข้ากับ remote snapshot ล่าสุด, push ด้วย remote base version แล้ว apply ผลรวมกลับเข้า SwiftData; stale pending flag ที่ไม่มี dirty record จะถูกล้างอย่างปลอดภัย แอป Debug รุ่นนี้ build/sign/install ทับบน iPhone “F” สำเร็จโดยคง app container เดิม
 - วันที่ 16 กันยายน 2569 เพิ่มการแจ้ง LINE เมื่อสถานะงานซ่อมถูกเปลี่ยนจากแอปผ่าน sync snapshot: ส่งหลัง transaction commit เท่านั้น, ไม่ส่งซ้ำเมื่อค่าสถานะเดิม และไม่ส่งย้อนหลังในช่วง startup materialization; production binary SHA-256 เป็น `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และ external health ตอบ HTTP 200
 - วันที่ 17 กันยายน 2569 แก้ silent failure ของการแจ้งสถานะงานซ่อม: เปลี่ยนจาก goroutine ที่ทิ้ง error เป็น persistent `line_notification_outbox`, claim งานแบบมีสถานะ, event-key idempotency, exponential retry สูงสุด 8 ครั้ง และกู้แถว `processing` เมื่อ restart; deploy binary SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783` แล้ว โดย Linux tests, local race/vet, loopback/public health และ SQLite quick check ผ่าน แต่ยังไม่ส่งข้อความทดสอบเข้าบัญชีลูกบ้านจริงโดยพลการ
-- วันที่ 17 กันยายน 2569 ปรับ Flex Message สถานะงานซ่อมให้เป็นการ์ดข้อมูลเต็ม: แสดงห้อง อาการ วันที่แจ้ง วัน–เวลาเปลี่ยนสถานะ ค่าใช้จ่าย ช่องทางชำระ เวลาปิดงาน และ progress 5 ขั้น ใช้เวลา source event ในเขต `Asia/Bangkok`/ปี พ.ศ. แทนเวลา retry; outbox เพิ่มคอลัมน์รายละเอียดแบบ additive migration เพื่อคง payload เดิมระหว่าง retry และมี regression test ครอบคลุม UTC→ไทย, legacy timestamp, JSON escaping และ outbox persistence
+- วันที่ 17 กันยายน 2569 ปรับ Flex Message สถานะงานซ่อมให้แสดงห้อง อาการ วันที่แจ้ง วัน–เวลาเปลี่ยนสถานะ ค่าใช้จ่าย ช่องทางชำระ เวลาปิดงาน และ progress ซึ่งภายหลังขยายเป็น 6 ขั้น ใช้เวลา source event ในเขต `Asia/Bangkok`/ปี พ.ศ. แทนเวลา retry; outbox เพิ่มคอลัมน์รายละเอียดแบบ additive migration เพื่อคง payload เดิมระหว่าง retry และมี regression test ครอบคลุม UTC→ไทย, legacy timestamp, JSON escaping และ outbox persistence
 - UAT วันที่ 17 กันยายนพบว่าไม่มี outbox ใหม่เมื่อบันทึกสถานะระหว่าง iOS กำลัง pull: local save ตั้ง dirty checkpoint แล้ว แต่ immediate push คืนเพราะ sync slot ไม่ว่าง แก้ให้ manual/auto pull drain pending records ต่อเป็น push ทันทีหลังจบ พร้อมปรับ regression test; CoreDataSafetyTests ผ่าน 18/18, signed build ติดตั้งบน iPhone จริง และ requeue Flex รุ่นใหม่ไป LINE ปลายทางสำเร็จสถานะ `sent` โดยไม่ retry
 - หลังตรวจหน้าจอ LINE จริง ลด Flex งานซ่อมเป็น monochrome compact layout: พื้นขาว ตัวอักษรดำ/เทา ตัด header ดำ สี accent รายสถานะ ชื่อ progress ทั้ง 6 ขั้น และ footer ออก เหลือสถานะกับตัวเลข `n/6` และแถบบาง; deploy รุ่น monochrome แรก SHA-256 `b3f27cbe2696b9c6f809b8a6fa8e5145f3430890bdce1b70aa9004170838f908` พร้อม UAT push จริง `sent`, attempts `0`
 - เพิ่ม paid-maintenance approval workflow เป็น 6 ขั้น: ก่อนซ่อมระบบส่ง Flex ใบเสนอราคาโทนขาว–ดำ ลูกบ้านที่ผูกบัญชีเท่านั้นกดอนุมัติ/ปฏิเสธได้, แอดมินข้ามขั้นไม่ได้, ยอดที่ส่งแล้วถูกล็อก และหลังซ่อมส่ง Flex บิลพร้อมปุ่มอัปโหลดสลิป; งานไม่มีค่าใช้จ่ายข้ามขั้นใบเสนอราคาและชำระได้; production SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`, backup `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`, external health HTTP 200
@@ -188,11 +188,11 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 
 | มิติ | ความพร้อม | สถานะ |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 90% | งานหลักห้อง/ลูกบ้าน/การเงิน/ซ่อม/LINE มีแล้ว |
-| controlled pilot | 88% | เหมาะกับหอจำกัดที่มี backup และติดตามปัญหาใกล้ชิด |
-| production readiness | **78%** | ยังมี release blockers ด้าน secret, multi-device, media, ledger และ restore |
+| ความครบของฟีเจอร์ | 92% | งานหลักมีแล้ว และงานซ่อมมี quote/consent/billing flow ก่อนเริ่มงาน |
+| controlled pilot | 89% | เหมาะกับหอจำกัดที่มี backup และติดตามปัญหาใกล้ชิด |
+| production readiness | **79%** | ยังมี release blockers ด้าน secret, multi-device, media, ledger และ restore |
 
-คะแนน 78% ไม่ใช่ test coverage หรือ SLA แต่เป็น risk-weighted readiness ที่หักคะแนนหนักจาก P0/P1 ที่ยังขาดหลักฐาน แม้ build และ automated tests จะผ่านแล้วก็ตาม
+คะแนน 79% ไม่ใช่ test coverage หรือ SLA แต่เป็น risk-weighted readiness ที่หักคะแนนหนักจาก P0/P1 ที่ยังขาดหลักฐาน แม้ build และ automated tests จะผ่านแล้วก็ตาม รายละเอียดคะแนนล่าสุดอยู่ที่ [แบบประเมิน 17 กันยายน](../project-review/DormiNetX-Assessment-2026-09-17.md)
 
 ## สิ่งที่ยังไม่ถือว่าผ่าน 100%
 

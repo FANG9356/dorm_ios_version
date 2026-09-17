@@ -2,15 +2,15 @@
 
 วันที่อัปเดต: 17 กันยายน 2569
 
-เอกสารนี้เป็นสรุปสถานะล่าสุดสำหรับใช้ตัดสินใจ เอกสารวันที่ 9–15 กันยายนยังเก็บไว้เป็นประวัติการพัฒนา แต่คะแนนและรายการงานปัจจุบันให้ยึดเอกสารนี้และ [PRODUCTION_HARDENING_2026-09-10.md](PRODUCTION_HARDENING_2026-09-10.md) เป็นหลัก
+เอกสารนี้เป็นสรุปสถานะฉบับยาว เอกสารวันที่ 9–15 กันยายนยังเก็บไว้เป็นประวัติการพัฒนา สำหรับการรับช่วงงานให้เริ่มที่ [Project Tracking](../project-tracking/README.md) และใช้ [แบบประเมิน 17 กันยายน](../project-review/DormiNetX-Assessment-2026-09-17.md) เป็นคะแนนล่าสุด
 
 ## สรุปความพร้อม
 
 | ขอบเขต | ความพร้อม | คำตัดสิน |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 90% | งานหลักของห้อง ลูกบ้าน การเงิน งานซ่อม และ LINE มีแล้ว |
-| Controlled pilot | 88% | ใช้กับหอจำกัดได้เมื่อมี backup และผู้ดูแลติดตามปัญหา |
-| Production readiness | **78%** | ยังมี release blockers ด้าน secret, multi-device, media, ledger และ restore |
+| ความครบของฟีเจอร์ | 92% | งานหลักมีแล้ว และงานซ่อมเพิ่ม consent/quote/billing flow ก่อนซ่อม |
+| Controlled pilot | 89% | ใช้กับหอจำกัดได้เมื่อมี backup และผู้ดูแลติดตามปัญหา |
+| Production readiness | **79%** | ยังมี release blockers ด้าน secret, multi-device, media, ledger และ restore |
 
 คะแนนเป็น risk-weighted readiness ไม่ใช่ test coverage หรือ SLA ผล build/test ผ่านไม่ได้ทำให้ release blocker หายไปโดยอัตโนมัติ
 
@@ -28,7 +28,7 @@
 - บิลค้างตาม stable user ID เมื่อย้ายห้อง ส่วนบิลที่ชำระแล้วเก็บห้องเดิมเป็นประวัติ
 - มี local backup/import ที่ตรวจ account, format, UUID ซ้ำ และ ledger integrity ก่อนแทนที่ข้อมูล
 - หน้าจัดการงานซ่อมแสดงห้องแบบคงที่ มีปุ่มสถานะขนาดเท่ากัน ตัวเลือกช่องทางชำระ และเปิดรูปหลักฐานเต็มจอ/ซูมได้
-- การ์ดงานซ่อมออกแบบใหม่เป็น read-only card แสดงความคืบหน้าครบ 6 ขั้นด้วย timeline แบบ monochrome; ไม่มีปุ่มเปลี่ยนสถานะ, swipe หรือ context menu บนรายการ แตะทั้งการ์ดเพื่อเปิดรายละเอียดก่อนแก้ไข โดยสถานะเปลี่ยนได้ครั้งละ 1 ขั้นจากค่าที่บันทึกอยู่และตรวจซ้ำตอนบันทึก ส่วนการลบอยู่ท้ายหน้าแก้ไขและต้องยืนยันอีกครั้ง
+- การ์ดงานซ่อมออกแบบใหม่เป็น read-only card แสดงความคืบหน้าครบ 6 ขั้นด้วย timeline แบบ monochrome; ไม่มีปุ่มเปลี่ยนสถานะ, swipe หรือ context menu บนรายการ แตะทั้งการ์ดเพื่อเปิดรายละเอียดก่อนแก้ไข โดย validation บังคับเส้นทางงานมีค่าใช้จ่ายผ่าน consent/payment และอนุญาตทางลัดเฉพาะงานฟรี ส่วนการลบอยู่ท้ายหน้าแก้ไขและต้องยืนยันอีกครั้ง
 - หน้าแก้ไขงานซ่อมเปลี่ยนจาก Form กล่องใหญ่เป็น ScrollView ที่ใช้ material cards แบบบางและ spacing สม่ำเสมอ; สถานะเป็น timeline แนวตั้ง ใช้ indigo เฉพาะจุดที่เลือก แสดงสถานะเดิม/สถานะใหม่/ขั้นล็อกชัดเจน และปรับค่าใช้จ่าย ช่องทางชำระ หลักฐาน และปุ่มลบให้เป็น visual language เดียวกัน โดยยืนยันการลบด้วย system alert กลางจอแทน adaptive popover ที่ลอยตามตำแหน่งปุ่ม
 - หน้าบิล การเงิน ห้องพัก ตั้งราคา หลักฐานโอน และแจ้งซ่อมมีช่องค้นหารูปแบบเดียวกับทะเบียนลูกบ้าน พร้อมค้นเลขห้อง ชื่อ รอบบิล สถานะ และรายละเอียดที่เกี่ยวข้อง
 - หน้าการเงินรวมช่องค้นหา รอบบิล และตัวกรองสถานะไว้ในการ์ดกระจกฝ้าใบเดียว; รอบบิลแสดงเฉพาะเดือน–ปี และแท็บสถานะแตะหรือกดลากเลือกพร้อม haptic ได้
@@ -115,12 +115,13 @@
 
 ### P1 — ต้องปิดก่อน rollout วงกว้าง
 
-1. เพิ่ม UI automation สำหรับ login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup
-2. ทดสอบอีเมล forgot-password จริงบน staging และ concurrency หลาย instance
-3. เพิ่ม SwiftData schema migration/recovery UI เมื่อ store เปิดไม่ได้ หรือพื้นที่ไม่พอ
-4. ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า และไม่มี silent failure
-5. เพิ่ม structured monitoring/alert, backup retention, incident runbook, privacy/retention policy และ release rollback checklist
-6. ยืนยัน deployment target `iOS 26.2` กับอุปกรณ์เป้าหมายจริง หรือลด target พร้อม compatibility testing
+1. ทำ controlled E2E UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่าย ครอบคลุม approve/reject/re-quote, unauthorized/stale action, bill/slip และ sync กลับแอป
+2. เพิ่ม UI automation สำหรับ login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup
+3. ทดสอบอีเมล forgot-password จริงบน staging และ concurrency หลาย instance
+4. เพิ่ม SwiftData schema migration/recovery UI เมื่อ store เปิดไม่ได้ หรือพื้นที่ไม่พอ
+5. ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า และไม่มี silent failure
+6. เพิ่ม structured monitoring/alert, backup retention, incident runbook, privacy/retention policy และ release rollback checklist
+7. ยืนยัน deployment target `iOS 26.2` กับอุปกรณ์เป้าหมายจริง หรือลด target พร้อม compatibility testing
 
 ### P2 — หลัง pilot
 
@@ -132,13 +133,14 @@
 
 ## ลำดับที่ควรทำต่อ
 
-1. Secret rotation/session cutover
-2. UAT สองเครื่องและ protocol-2 cutover
-3. Media lifecycle/UAT ส่วนที่เหลือ หลัง ownership/checksum/retry และ public-upload closure deploy แล้ว
-4. Financial refund/void/full invoice migration
-5. Atomic restore drill
-6. UI automation, monitoring และ release hardening
-7. APNs, localization, accessibility และ TestFlight pilot
+1. Controlled UAT ของ maintenance quote approve/reject, re-quote, bill/slip, free-job bypass และ sync กลับแอป
+2. Secret rotation/session cutover
+3. UAT สองเครื่องและ protocol-2 cutover
+4. Media lifecycle/UAT ส่วนที่เหลือ หลัง ownership/checksum/retry และ public-upload closure deploy แล้ว
+5. Financial refund/void/full invoice migration
+6. Atomic restore drill
+7. UI automation, monitoring และ release hardening
+8. APNs, localization, accessibility และ TestFlight pilot
 
 ## เกณฑ์ที่จะขยับคะแนน
 

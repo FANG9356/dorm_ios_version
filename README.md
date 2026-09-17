@@ -2,9 +2,9 @@
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
 
-> สถานะ ณ 17 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, public-media closure และคิว retry สำหรับสถานะแจ้งซ่อมถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
+> สถานะ ณ 17 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, public-media closure, คิว retry และ workflow อนุมัติค่าซ่อม/ส่งบิลถูก deploy แล้ว ประเมินความครบของฟีเจอร์ **92%**, controlled pilot **89%** และ production readiness **79%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
 
-อ่านสรุปว่าทำอะไรแล้วและยังเหลืออะไรได้ที่ [CURRENT_STATUS_2026-09-16.md](docs/CURRENT_STATUS_2026-09-16.md) ส่วนการประเมินรายหน้าและ roadmap ตั้งต้นอยู่ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขใน baseline นั้นไม่ใช่สถานะปัจจุบัน
+เริ่มรับช่วงงานจาก [Project Tracking](project-tracking/README.md) ซึ่งรวม [วิสัยทัศน์](project-tracking/PROJECT_VISION.md), [สถานะปัจจุบัน](project-tracking/WORK_STATUS.md), [งานค้าง](project-tracking/PENDING_WORK.md), [คู่มือส่งต่อ](project-tracking/HANDOFF.md) และ [แบบประเมินล่าสุด](project-review/DormiNetX-Assessment-2026-09-17.md) ส่วน [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) เป็น baseline เดิม ไม่ใช่สถานะปัจจุบัน
 
 ## จุดประสงค์ของระบบ
 
@@ -33,7 +33,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - วันที่และรอบบิลใช้ตัวแปลงกลาง รองรับข้อมูลเก่าปี พ.ศ. และข้อมูลใหม่ปี ค.ศ. โดยบันทึกใหม่เป็น Gregorian และไม่แสดงปี 3112
 - ฟอร์มการเงินรักษาสตางค์และส่วนต่างบิลเก่า แยกมัดจำในบิลใหม่แบบเต็มจำนวน/จอง ตรวจสถานะกับยอด และไม่ปิดฟอร์มถ้าบันทึกลงเครื่องไม่สำเร็จ
 - หน้าบิล การเงิน ห้องพัก ตั้งราคา หลักฐานโอน และแจ้งซ่อมค้นหาข้อมูลได้ด้วย UI มาตรฐานเดียวกับหน้าจัดการลูกบ้าน
-- การ์ดแจ้งซ่อมเป็นแบบอ่านอย่างเดียว แสดงความคืบหน้าครบ 6 ขั้นด้วย timeline แบบ monochrome รวมขั้น “รออนุมัติค่าใช้จ่าย” ก่อนเริ่มซ่อม และเปิดหน้ารายละเอียดเมื่อแตะทั้งการ์ดเท่านั้น การเปลี่ยนสถานะถูกบังคับเป็น workflow ครั้งละ 1 ขั้น และการลบอยู่หลังหน้ารายละเอียดพร้อมการยืนยันเพื่อลดการกดพลาด
+- การ์ดแจ้งซ่อมเป็นแบบอ่านอย่างเดียว แสดงความคืบหน้าครบ 6 ขั้นด้วย timeline แบบ monochrome รวมขั้น “รออนุมัติค่าใช้จ่าย” ก่อนเริ่มซ่อม และเปิดหน้ารายละเอียดเมื่อแตะทั้งการ์ดเท่านั้น การเปลี่ยนสถานะถูกบังคับตาม workflow โดยงานมีค่าใช้จ่ายห้ามข้าม consent/payment ส่วนงานฟรีใช้ทางลัดที่กำหนดไว้ และการลบอยู่หลังหน้ารายละเอียดพร้อมการยืนยันเพื่อลดการกดพลาด
 - หน้าแก้ไขงานซ่อมใช้การ์ด material มุมโค้งและ visual hierarchy ชุดเดียวกันทั้งรายละเอียด, workflow, ค่าใช้จ่าย และหลักฐาน; workflow แสดงเป็น timeline แนวตั้งแบบ neutral พร้อมระบุสถานะปัจจุบัน สถานะใหม่ และขั้นที่ล็อกโดยไม่ใช้สีเต็มพื้นที่
 - ชุดค้นหา รอบบิล และสถานะในหน้าการเงินอยู่ในการ์ดกระจกฝ้าใบเดียว เลือกเดือน–ปีโดยตรง และแท็บสถานะรองรับทั้งการแตะกับกดลากเลือก
 - ตรวจหลักฐานการโอน เปิดดูรูปเต็ม แก้ไข อนุมัติ หรือปฏิเสธ
@@ -71,7 +71,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - เส้นทางลืมรหัสผ่านยังต้องทดสอบการส่งอีเมลจริงบน staging และ concurrency หลาย instance
 - ยังต้องหมุน secret ที่เคยอยู่ใน Git และเพิ่ม regression test ให้ authorization endpoint ที่เหลือ
 - Online server restore ถูกปิดไว้แบบ fail closed จนกว่าจะมี maintenance-mode restore ที่ตรวจ manifest และสลับฐานข้อมูล/สื่อแบบ atomic; archive ปัจจุบันผ่าน offline restore drill แล้ว
-- มี iOS unit tests, backend race tests/vet และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว; รอบล่าสุด test สถานะงานซ่อมใหม่ผ่านและรวมผ่าน 52 รายการ แต่ Keychain integration test เดิมบน Simulator ล้มด้วย entitlement environment `-34018` 1 รายการ ขณะที่ signed device build/install ผ่าน; backend `go test -count=1 -race ./...`/`go vet ./...` ผ่าน แต่ยังไม่มี UI automation ครบทุกหน้า
+- มี iOS unit tests, backend race tests/vet และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว; full suite รอบก่อนผ่าน 52 รายการ และรอบล่าสุด `MaintenanceWorkflowTests` + `CoreDataSafetyTests` ผ่าน 21/21 หลังเพิ่มทางลัดงานฟรี แต่ Keychain integration test บาง environment บน Simulator อาจล้มด้วย entitlement `-34018` ขณะที่ signed device build/install ผ่าน; backend `go test ./...`, `go test -race ./handlers` และ `go vet ./...` ผ่าน แต่ยังไม่มี UI automation ครบทุกหน้า
 - มี device UAT บน iPhone จริงหนึ่งเครื่องแล้ว แต่ยังต้องทดสอบ Photos, Share Sheet, AirPrint, alternate icons, video background, พื้นที่เต็ม และ sync บน iPhone สองเครื่อง
 
 ## โครงสร้างโปรเจกต์
