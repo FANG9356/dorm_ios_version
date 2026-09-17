@@ -43,7 +43,9 @@
 
 ## ปิดแล้วในรอบนี้
 
-- [x] ทำตัวเลือกสถานะบนการ์ดแจ้งซ่อมให้ครบ 5 ค่าเหมือนหน้าแก้ไข เลือกได้โดยตรง ปรับเป็น segmented glass แบบ monochrome ตามแนวทาง iOS ใช้ indigo เฉพาะสถานะปัจจุบัน ปุ่มปัจจุบันกดซ้ำไม่ได้ และติดตั้ง build ใหม่บน iPhone “F” แล้ว
+- [x] ออกแบบการ์ดแจ้งซ่อมใหม่เป็น read-only card แสดง timeline ครบ 5 ขั้นแบบ monochrome ตัดการเปลี่ยนสถานะ, swipe และเมนูกดค้างจากหน้ารายการ ให้แตะทั้งการ์ดก่อนแก้ไข บังคับเปลี่ยนสถานะครั้งละ 1 ขั้นพร้อม save validation และย้ายการลบเข้าไปในหน้ารายละเอียดพร้อม confirmation; ติดตั้ง build ใหม่บน iPhone “F” แล้ว
+- [x] Redesign หน้าแก้ไขงานซ่อมเป็น premium thin-material cards ลดสีและกล่องซ้อน ทำสถานะเป็น vertical workflow timeline และปรับรายละเอียด ค่าใช้จ่าย ช่องทางชำระ หลักฐาน และปุ่มลบให้ใช้ visual language เดียวกัน
+- [x] เปลี่ยนการยืนยันลบงานซ่อมจาก adaptive confirmation popover เป็น system alert กลางจอ ไม่ลอยไปเตือนด้านบนตามตำแหน่งปุ่ม
 - [x] แก้สถานะแจ้งซ่อมไม่ส่ง Flex Card: เพิ่ม persistent outbox, event-key กันซ้ำ, retry สูงสุด 8 ครั้ง, startup recovery และ regression tests สำหรับส่งสำเร็จ/ล้มแล้วรอส่งใหม่
 - [x] Deploy backend production SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; service, public health และ master/tenant SQLite quick check ผ่าน เหลือ UAT เปลี่ยนสถานะจริงจากแอปเพื่อตรวจ LINE ปลายทาง
 - [x] แก้รายการแจ้งซ่อมจาก LINE ไม่เข้าแอปเพราะ UUID ต่างตัวพิมพ์: canonicalize/deduplicate โดยเก็บแถวล่าสุด, สำรองฐานข้อมูลก่อน cleanup และออก snapshot production `v82` ที่มี 2 รายการถูกต้อง; binary SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`

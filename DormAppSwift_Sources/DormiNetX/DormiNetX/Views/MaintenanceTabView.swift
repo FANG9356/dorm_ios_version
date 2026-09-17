@@ -14,6 +14,17 @@ enum MaintenanceWorkflow {
         default: return "รอ"
         }
     }
+
+    static func canTransition(from originalStatus: String, to newStatus: String) -> Bool {
+        let original = originalStatus.isEmpty ? statuses[0] : originalStatus
+        guard
+            let originalIndex = statuses.firstIndex(of: original),
+            let newIndex = statuses.firstIndex(of: newStatus)
+        else {
+            return false
+        }
+        return abs(newIndex - originalIndex) <= 1
+    }
 }
 
 struct MaintenanceTabView: View {
@@ -22,7 +33,6 @@ struct MaintenanceTabView: View {
     @Query(sort: \Maintenance.lastUpdated, order: .reverse) private var allMaintenances: [Maintenance]
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
     @State private var editingMaintenance: Maintenance?
-    @State private var deletingMaintenance: Maintenance?
     @State private var searchText = ""
 
     private var maintenances: [Maintenance] {
@@ -99,9 +109,7 @@ struct MaintenanceTabView: View {
                 ForEach(visibleMaintenances) { maintenance in
                     MaintenanceRow(
                         maintenance: maintenance,
-                        onStatus: { updateStatus(maintenance, to: $0) },
-                        onEdit: { editingMaintenance = maintenance },
-                        onDelete: { deletingMaintenance = maintenance }
+                        onOpen: { editingMaintenance = maintenance }
                     )
                 }
             }
@@ -118,7 +126,12 @@ struct MaintenanceTabView: View {
             .iphoneSheetStyle()
         }
         .sheet(item: $editingMaintenance) { maintenance in
-            MaintenanceEditor(maintenance: maintenance, rooms: rooms) { draft in
+            MaintenanceEditor(maintenance: maintenance, rooms: rooms, onDelete: {
+                maintenance.isDeletedLocally = true
+                maintenance.isDirty = true
+                maintenance.lastUpdated = Date()
+                saveAndPush()
+            }) { draft in
                 maintenance.roomNumber = draft.roomNumber
                 maintenance.issue = draft.issue
                 maintenance.status = draft.status
@@ -133,36 +146,6 @@ struct MaintenanceTabView: View {
             }
             .iphoneSheetStyle()
         }
-        .confirmationDialog("ลบรายการแจ้งซ่อมนี้หรือไม่", isPresented: deleteDialogBinding) {
-            Button("ลบรายการห้อง \(deletingMaintenance?.roomNumber ?? "")", role: .destructive) {
-                guard let maintenance = deletingMaintenance else { return }
-                maintenance.isDeletedLocally = true
-                maintenance.isDirty = true
-                maintenance.lastUpdated = Date()
-                saveAndPush()
-                deletingMaintenance = nil
-            }
-            Button("ยกเลิก", role: .cancel) { }
-        }
-    }
-
-    private var deleteDialogBinding: Binding<Bool> {
-        Binding(
-            get: { deletingMaintenance != nil },
-            set: { if !$0 { deletingMaintenance = nil } }
-        )
-    }
-
-    private func updateStatus(_ maintenance: Maintenance, to status: String) {
-        maintenance.status = status
-        if status == "เสร็จสิ้น" {
-            maintenance.resolvedAt = currentDateString()
-        } else {
-            maintenance.resolvedAt = ""
-        }
-        maintenance.lastUpdated = Date()
-        maintenance.isDirty = true
-        saveAndPush()
     }
 
     private func saveAndPush() {
@@ -176,34 +159,29 @@ struct MaintenanceTabView: View {
         }
     }
 
-    private func currentDateString() -> String {
-        AppDate.dateKey(from: Date())
-    }
 }
 
 private struct MaintenanceRow: View {
     let maintenance: Maintenance
-    let onStatus: (String) -> Void
-    let onEdit: () -> Void
-    let onDelete: () -> Void
+    let onOpen: () -> Void
 
     private var status: String {
         maintenance.status.isEmpty ? "รอดำเนินการ" : maintenance.status
     }
 
-    private var statusColor: Color {
-        .primary
+    private var currentStatusIndex: Int {
+        MaintenanceWorkflow.statuses.firstIndex(of: status) ?? 0
     }
 
     var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Button(action: onEdit) {
+        Button(action: onOpen) {
+            GlassCard {
+                VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(.orange)
-                            .frame(width: 34, height: 34)
+                            .frame(width: 38, height: 38)
                             .background(Color.orange.opacity(0.12), in: Circle())
                         VStack(alignment: .leading, spacing: 4) {
                             Text("ห้อง \(maintenance.roomNumber)")
@@ -214,105 +192,114 @@ private struct MaintenanceRow: View {
                                 .lineLimit(2)
                         }
                         Spacer()
-                        Text(status)
-                            .font(.custom("SukhumvitSet-Medium", size: 12))
-                            .foregroundStyle(statusColor)
-                            .padding(.horizontal, 10)
-                            .frame(minHeight: 32)
-                            .background(statusColor.opacity(0.12), in: Capsule())
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("เปลี่ยนสถานะ")
-                        .font(.custom("SukhumvitSet-Medium", size: 12))
+                        HStack(spacing: 7) {
+                            Text(status)
+                                .font(.custom("SukhumvitSet-Medium", size: 12))
+                                .lineLimit(1)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
                         .foregroundStyle(.secondary)
+                        .padding(.horizontal, 11)
+                        .frame(minHeight: 34)
+                        .background(.ultraThinMaterial, in: Capsule())
+                    }
 
-                    HStack(spacing: 3) {
-                        ForEach(MaintenanceWorkflow.statuses, id: \.self) { item in
-                            let selected = status == item
-                            Button {
-                                onStatus(item)
-                            } label: {
-                                VStack(spacing: 5) {
-                                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundStyle(selected ? Color.indigo : Color.secondary.opacity(0.7))
-                                    Text(MaintenanceWorkflow.shortTitle(for: item))
-                                        .lineLimit(1)
-                                        .multilineTextAlignment(.center)
-                                        .minimumScaleFactor(0.68)
-                                }
-                                .font(.custom("SukhumvitSet-Medium", size: 10))
-                                .foregroundStyle(selected ? Color.primary : Color.secondary)
-                                .frame(maxWidth: .infinity, minHeight: 50)
-                                .background {
-                                    if selected {
-                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                            .fill(Color.primary.opacity(0.11))
-                                            .overlay {
-                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .stroke(Color.primary.opacity(0.14), lineWidth: 0.75)
-                                            }
-                                            .shadow(color: .black.opacity(0.12), radius: 5, y: 2)
-                                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("ความคืบหน้า")
+                            .font(.custom("SukhumvitSet-Medium", size: 12))
+                            .foregroundStyle(.secondary)
+
+                        MaintenanceProgressView(currentIndex: currentStatusIndex)
+                    }
+
+                    Divider()
+                        .overlay(Color.primary.opacity(0.08))
+
+                    HStack(spacing: 10) {
+                        if maintenance.cost > 0 {
+                            Label(
+                                maintenance.cost.formatted(.number.precision(.fractionLength(0...2))) + " บาท",
+                                systemImage: "banknote"
+                            )
+                            .font(.custom("SukhumvitSet-Medium", size: 12))
+                            .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Text("แตะเพื่อดูรายละเอียด")
+                            .font(.custom("SukhumvitSet-Medium", size: 12))
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("ห้อง \(maintenance.roomNumber), \(maintenance.issue), สถานะ \(status)")
+        .accessibilityHint("แตะเพื่อดูรายละเอียดและแก้ไข")
+    }
+}
+
+private struct MaintenanceProgressView: View {
+    let currentIndex: Int
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 0) {
+                ForEach(Array(MaintenanceWorkflow.statuses.indices), id: \.self) { index in
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(index == 0 ? Color.clear : connectorColor(at: index - 1))
+                            .frame(height: 2)
+
+                        Circle()
+                            .fill(dotFill(at: index))
+                            .frame(width: index == currentIndex ? 13 : 9, height: index == currentIndex ? 13 : 9)
+                            .overlay {
+                                if index == currentIndex {
+                                    Circle()
+                                        .stroke(Color.indigo.opacity(0.28), lineWidth: 5)
                                 }
                             }
-                            .buttonStyle(.plain)
-                            .disabled(selected)
-                            .accessibilityLabel("เปลี่ยนสถานะเป็น \(item)")
-                            .accessibilityAddTraits(selected ? [.isSelected] : [])
-                        }
-                    }
-                    .padding(4)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.75)
-                    }
-                }
 
-                Button(action: onEdit) {
-                    Label("ดูรายละเอียด / แก้ไข", systemImage: "pencil")
-                        .font(.custom("SukhumvitSet-Bold", size: 14))
-                        .frame(maxWidth: .infinity, minHeight: 46)
-                }
-                .buttonStyle(.bordered)
-                .tint(.secondary)
-
-                if maintenance.cost > 0 {
-                    HStack {
-                        Text("ค่าใช้จ่าย")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(maintenance.cost.formatted(.number.precision(.fractionLength(0...2))) + " บาท")
-                            .font(.custom("SukhumvitSet-Bold", size: 14))
+                        Rectangle()
+                            .fill(index == MaintenanceWorkflow.statuses.count - 1 ? Color.clear : connectorColor(at: index))
+                            .frame(height: 2)
                     }
-                    .font(.custom("SukhumvitSet-Text", size: 13))
+                    .frame(maxWidth: .infinity)
                 }
             }
-        }
-        .contextMenu {
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
+            .frame(height: 18)
+
+            HStack(spacing: 0) {
+                ForEach(Array(MaintenanceWorkflow.statuses.enumerated()), id: \.offset) { index, item in
+                    Text(MaintenanceWorkflow.shortTitle(for: item))
+                        .font(.custom("SukhumvitSet-Medium", size: 12))
+                        .foregroundStyle(index == currentIndex ? Color.primary : Color.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
             }
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
-            }
-        }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive, action: onDelete) {
-                Label("ลบ", systemImage: "trash")
-            }
-            Button(action: onEdit) {
-                Label("แก้ไข", systemImage: "pencil")
-            }
-            .tint(.indigo)
         }
     }
 
+    private func dotFill(at index: Int) -> Color {
+        if index == currentIndex { return .indigo }
+        if index < currentIndex { return .primary.opacity(0.56) }
+        return .secondary.opacity(0.28)
+    }
+
+    private func connectorColor(at index: Int) -> Color {
+        index < currentIndex ? .primary.opacity(0.32) : .secondary.opacity(0.16)
+    }
 }
 
 private struct MaintenanceEditor: View {
@@ -327,14 +314,24 @@ private struct MaintenanceEditor: View {
     @State private var slipPath: String
     @State private var issueImage: String
     @State private var selectedDetent: PresentationDetent = .large
+    @State private var showingDeleteConfirmation = false
     private let isEditing: Bool
+    private let onDelete: (() -> Void)?
+    private let originalStatus: String
 
     private let paymentMethods = [(value: "", title: "ยังไม่ระบุ"), (value: "เงินสด", title: "เงินสด"), (value: "โอนเงิน", title: "โอนผ่านธนาคาร")]
 
-    init(maintenance: Maintenance? = nil, rooms: [Room], onSave: @escaping (Maintenance) -> Void) {
+    init(
+        maintenance: Maintenance? = nil,
+        rooms: [Room],
+        onDelete: (() -> Void)? = nil,
+        onSave: @escaping (Maintenance) -> Void
+    ) {
         self.rooms = rooms
+        self.onDelete = onDelete
         self.onSave = onSave
         self.isEditing = maintenance != nil
+        self.originalStatus = maintenance?.status.isEmpty == false ? maintenance?.status ?? "รอดำเนินการ" : "รอดำเนินการ"
         _roomNumber = State(initialValue: maintenance?.roomNumber ?? rooms.first?.roomNumber ?? "")
         _issue = State(initialValue: maintenance?.issue ?? "")
         _status = State(initialValue: maintenance?.status.isEmpty == false ? maintenance?.status ?? "รอดำเนินการ" : "รอดำเนินการ")
@@ -346,127 +343,117 @@ private struct MaintenanceEditor: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("ห้องและรายละเอียด") {
-                    if isEditing {
-                        HStack {
-                            Text("ห้อง")
-                                .font(.custom("SukhumvitSet-Medium", size: 16))
-                            Spacer()
-                            Text(roomNumber)
-                                .font(.custom("SukhumvitSet-Bold", size: 18))
-                        }
-                        .frame(minHeight: 50)
-                        .accessibilityElement(children: .combine)
-                    } else if rooms.isEmpty {
-                        TextField("เลขห้อง", text: $roomNumber)
-                            .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
-                            .font(.custom("SukhumvitSet-Text", size: 17))
-                            .frame(minHeight: 50)
-                    } else {
-                        Picker("ห้อง", selection: $roomNumber) {
-                            ForEach(rooms) { room in
-                                Text(room.roomNumber).tag(room.roomNumber)
-                            }
-                        }
-                        .font(.custom("SukhumvitSet-Medium", size: 16))
-                        .frame(minHeight: 50)
-                    }
+            ScrollView {
+                VStack(spacing: 18) {
+                    MaintenanceEditorCard(title: "ห้องและรายละเอียด", systemImage: "door.left.hand.open") {
+                        roomSelector
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("อาการ / รายละเอียด")
-                            .font(.custom("SukhumvitSet-Medium", size: 15))
-                        TextField("เช่น ไฟดับ น้ำไม่ไหล หรืออุปกรณ์ชำรุด", text: $issue, axis: .vertical)
-                            .font(.custom("SukhumvitSet-Text", size: 17))
-                            .lineLimit(4...7)
-                            .padding(14)
-                            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
-                            .limitedText($issue, maxLength: 300)
-                    }
-                    .padding(.vertical, 6)
-                }
+                        Divider().overlay(Color.primary.opacity(0.08))
 
-                Section("อัปเดตสถานะ") {
-                    VStack(spacing: 10) {
-                        ForEach(MaintenanceWorkflow.statuses, id: \.self) { item in
-                            Button {
-                                status = item
-                            } label: {
-                                HStack(spacing: 7) {
-                                    Image(systemName: status == item ? "checkmark.circle.fill" : "circle")
-                                    Text(item)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("อาการ / รายละเอียด")
                                 .font(.custom("SukhumvitSet-Medium", size: 13))
-                                .foregroundStyle(status == item ? Color.white : Color.primary)
-                                .frame(maxWidth: .infinity, minHeight: 52)
-                                .background(status == item ? Color.indigo : Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 6)
-                }
-
-                Section("ค่าใช้จ่าย") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("จำนวนเงิน")
-                            .font(.custom("SukhumvitSet-Medium", size: 15))
-                        HStack {
-                            TextField("0.00", text: $cost)
-                                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                                .keyboardType(.decimalPad)
-                                .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
-                            Spacer()
-                            Text("บาท")
-                                .font(.custom("SukhumvitSet-Medium", size: 16))
                                 .foregroundStyle(.secondary)
+                            TextField("เช่น ไฟดับ น้ำไม่ไหล หรืออุปกรณ์ชำรุด", text: $issue, axis: .vertical)
+                                .font(.custom("SukhumvitSet-Text", size: 17))
+                                .lineLimit(4...7)
+                                .padding(16)
+                                .frame(minHeight: 124, alignment: .topLeading)
+                                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Color.primary.opacity(0.07), lineWidth: 0.75)
+                                }
+                                .limitedText($issue, maxLength: 300)
                         }
-                        .padding(.horizontal, 14)
-                        .frame(minHeight: 58)
-                        .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("ช่องทางชำระ")
-                            .font(.custom("SukhumvitSet-Medium", size: 15))
-                        Menu {
-                            ForEach(paymentMethods, id: \.value) { method in
-                                Button {
-                                    paymentMethod = method.value
-                                } label: {
-                                    if paymentMethod == method.value {
-                                        Label(method.title, systemImage: "checkmark")
-                                    } else {
-                                        Text(method.title)
-                                    }
+                    MaintenanceEditorCard(title: "อัปเดตสถานะ", systemImage: "point.topleft.down.to.point.bottomright.curvepath") {
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(spacing: 9) {
+                                Image(systemName: "lock.shield.fill")
+                                    .foregroundStyle(.indigo)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("ทำงานตามลำดับ")
+                                        .font(.custom("SukhumvitSet-Medium", size: 13))
+                                    Text("เลือกได้เฉพาะขั้นก่อนหน้าหรือขั้นถัดไป แล้วกดบันทึก")
+                                        .font(.custom("SukhumvitSet-Text", size: 11))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
-                        } label: {
-                            HStack {
-                                Image(systemName: paymentMethod == "เงินสด" ? "banknote" : "building.columns")
-                                Text(paymentMethodTitle)
-                                    .foregroundStyle(paymentMethod.isEmpty ? Color.secondary : Color.primary)
+
+                            VStack(spacing: 0) {
+                                ForEach(Array(MaintenanceWorkflow.statuses.enumerated()), id: \.offset) { index, item in
+                                    statusRow(item: item, index: index)
+                                }
+                            }
+                        }
+                    }
+
+                    MaintenanceEditorCard(title: "ค่าใช้จ่าย", systemImage: "banknote") {
+                        VStack(alignment: .leading, spacing: 9) {
+                            Text("จำนวนเงิน")
+                                .font(.custom("SukhumvitSet-Medium", size: 13))
+                                .foregroundStyle(.secondary)
+                            HStack(alignment: .firstTextBaseline) {
+                                TextField("0.00", text: $cost)
+                                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                    .keyboardType(.decimalPad)
+                                    .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
                                 Spacer()
-                                Image(systemName: "chevron.up.chevron.down")
-                                    .font(.system(size: 13, weight: .semibold))
+                                Text("บาท")
+                                    .font(.custom("SukhumvitSet-Medium", size: 15))
                                     .foregroundStyle(.secondary)
                             }
-                            .font(.custom("SukhumvitSet-Text", size: 16))
-                            .padding(.horizontal, 14)
-                            .frame(maxWidth: .infinity, minHeight: 54)
-                            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+                            .padding(.horizontal, 16)
+                            .frame(minHeight: 70)
+                            .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        }
+
+                        Divider().overlay(Color.primary.opacity(0.08))
+
+                        VStack(alignment: .leading, spacing: 9) {
+                            Text("ช่องทางชำระ")
+                                .font(.custom("SukhumvitSet-Medium", size: 13))
+                                .foregroundStyle(.secondary)
+                            paymentMethodMenu
                         }
                     }
-                    .padding(.vertical, 4)
-                }
 
-                Section("รูปและหลักฐาน") {
-                    MaintenanceEvidenceView(title: "รูปอาการเสีย", paths: mediaPaths(issueImage), emptyText: "ยังไม่มีรูปอาการเสีย")
-                    MaintenanceEvidenceView(title: "สลิปชำระเงิน", paths: mediaPaths(slipPath), emptyText: "ยังไม่มีสลิปชำระเงิน")
+                    MaintenanceEditorCard(title: "รูปและหลักฐาน", systemImage: "photo.on.rectangle.angled") {
+                        MaintenanceEvidenceView(title: "รูปอาการเสีย", paths: mediaPaths(issueImage), emptyText: "ยังไม่มีรูปอาการเสีย")
+                        Divider().overlay(Color.primary.opacity(0.08))
+                        MaintenanceEvidenceView(title: "สลิปชำระเงิน", paths: mediaPaths(slipPath), emptyText: "ยังไม่มีสลิปชำระเงิน")
+                    }
+
+                    if isEditing, onDelete != nil {
+                        Button(role: .destructive) {
+                            showingDeleteConfirmation = true
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "trash")
+                                Text("ลบรายการแจ้งซ่อม")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .font(.custom("SukhumvitSet-Medium", size: 15))
+                            .padding(.horizontal, 18)
+                            .frame(maxWidth: .infinity, minHeight: 58)
+                            .background(Color.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .stroke(Color.red.opacity(0.16), lineWidth: 0.75)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 36)
             }
+            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("งานซ่อม")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -476,6 +463,7 @@ private struct MaintenanceEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
+                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status) else { return }
                         let item = Maintenance(roomNumber: clean(roomNumber), issue: clean(issue))
                         item.status = status
                         item.cost = Double(cost) ?? 0
@@ -490,14 +478,204 @@ private struct MaintenanceEditor: View {
                         dismiss()
                     }
                     .font(.custom("SukhumvitSet-Bold", size: 16))
-                    .disabled(clean(roomNumber).isEmpty || clean(issue).isEmpty)
+                    .disabled(
+                        clean(roomNumber).isEmpty ||
+                        clean(issue).isEmpty ||
+                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status)
+                    )
                 }
             }
             .dismissKeyboardOnTap()
             .scrollDismissesKeyboard(.interactively)
+            .alert("ยืนยันการลบ", isPresented: $showingDeleteConfirmation) {
+                Button("ยกเลิก", role: .cancel) { }
+                Button("ลบรายการ", role: .destructive) {
+                    onDelete?()
+                    dismiss()
+                }
+            } message: {
+                Text("ต้องการลบรายการแจ้งซ่อมนี้หรือไม่? รายการจะถูกซิงก์ออกจากอุปกรณ์อื่นด้วย")
+            }
         }
         .presentationDetents([.medium, .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private var roomSelector: some View {
+        if isEditing {
+            HStack(spacing: 12) {
+                Image(systemName: "door.left.hand.open")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.indigo)
+                    .frame(width: 38, height: 38)
+                    .background(Color.indigo.opacity(0.10), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("ห้อง")
+                        .font(.custom("SukhumvitSet-Text", size: 12))
+                        .foregroundStyle(.secondary)
+                    Text(roomNumber)
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                }
+                Spacer()
+                Text("แก้ไขไม่ได้")
+                    .font(.custom("SukhumvitSet-Text", size: 11))
+                    .foregroundStyle(.tertiary)
+            }
+            .accessibilityElement(children: .combine)
+        } else if rooms.isEmpty {
+            TextField("เลขห้อง", text: $roomNumber)
+                .limitedText($roomNumber, maxLength: 10, trimNewlines: true)
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .padding(.horizontal, 16)
+                .frame(minHeight: 58)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        } else {
+            Menu {
+                ForEach(rooms) { room in
+                    Button {
+                        roomNumber = room.roomNumber
+                    } label: {
+                        if roomNumber == room.roomNumber {
+                            Label("ห้อง \(room.roomNumber)", systemImage: "checkmark")
+                        } else {
+                            Text("ห้อง \(room.roomNumber)")
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "door.left.hand.open")
+                        .foregroundStyle(.indigo)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("เลือกห้อง")
+                            .font(.custom("SukhumvitSet-Text", size: 12))
+                            .foregroundStyle(.secondary)
+                        Text(roomNumber.isEmpty ? "ยังไม่ได้เลือก" : "ห้อง \(roomNumber)")
+                            .font(.custom("SukhumvitSet-Medium", size: 16))
+                            .foregroundStyle(roomNumber.isEmpty ? Color.secondary : Color.primary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 62)
+                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+        }
+    }
+
+    private func statusRow(item: String, index: Int) -> some View {
+        let selected = status == item
+        let persisted = originalStatus == item
+        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item)
+
+        return Button {
+            status = item
+        } label: {
+            HStack(spacing: 13) {
+                VStack(spacing: 0) {
+                    Rectangle()
+                        .fill(index == 0 ? Color.clear : statusConnectorColor(before: index))
+                        .frame(width: 2, height: 17)
+                    Circle()
+                        .fill(selected ? Color.indigo : persisted ? Color.primary.opacity(0.7) : Color.secondary.opacity(available ? 0.35 : 0.16))
+                        .frame(width: selected ? 13 : 9, height: selected ? 13 : 9)
+                        .overlay {
+                            if selected {
+                                Circle().stroke(Color.indigo.opacity(0.20), lineWidth: 5)
+                            }
+                        }
+                    Rectangle()
+                        .fill(index == MaintenanceWorkflow.statuses.count - 1 ? Color.clear : statusConnectorColor(before: index + 1))
+                        .frame(width: 2, height: 17)
+                }
+                .frame(width: 18, height: 47)
+
+                Text(item)
+                    .font(.custom("SukhumvitSet-Medium", size: 14))
+                    .foregroundStyle(available ? Color.primary : Color.secondary.opacity(0.48))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer()
+
+                if selected && !persisted {
+                    Text("สถานะใหม่")
+                        .foregroundStyle(.indigo)
+                } else if persisted {
+                    Text("ปัจจุบัน")
+                        .foregroundStyle(.secondary)
+                } else if !available {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(.tertiary)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .font(.custom("SukhumvitSet-Text", size: 11))
+            .padding(.horizontal, 14)
+            .frame(minHeight: 58)
+            .background(selected ? Color.indigo.opacity(0.09) : Color.clear, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                if selected {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.indigo.opacity(0.18), lineWidth: 0.75)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!available || selected)
+        .accessibilityHint(available ? "เลือกสถานะนี้ได้" : "ต้องบันทึกสถานะตามลำดับก่อน")
+    }
+
+    private func statusConnectorColor(before index: Int) -> Color {
+        guard let originalIndex = MaintenanceWorkflow.statuses.firstIndex(of: originalStatus) else {
+            return .secondary.opacity(0.12)
+        }
+        return index <= originalIndex ? .primary.opacity(0.24) : .secondary.opacity(0.12)
+    }
+
+    private var paymentMethodMenu: some View {
+        Menu {
+            ForEach(paymentMethods, id: \.value) { method in
+                Button {
+                    paymentMethod = method.value
+                } label: {
+                    if paymentMethod == method.value {
+                        Label(method.title, systemImage: "checkmark")
+                    } else {
+                        Text(method.title)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: paymentMethod == "เงินสด" ? "banknote" : "building.columns")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.indigo)
+                    .frame(width: 36, height: 36)
+                    .background(Color.indigo.opacity(0.09), in: Circle())
+                Text(paymentMethodTitle)
+                    .font(.custom("SukhumvitSet-Medium", size: 15))
+                    .foregroundStyle(paymentMethod.isEmpty ? Color.secondary : Color.primary)
+                Spacer()
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 62)
+            .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.07), lineWidth: 0.75)
+            }
+        }
     }
 
     private func clean(_ value: String) -> String {
@@ -516,6 +694,36 @@ private struct MaintenanceEditor: View {
 
     private func currentDateString() -> String {
         AppDate.dateKey(from: Date())
+    }
+}
+
+private struct MaintenanceEditorCard<Content: View>: View {
+    let title: String
+    let systemImage: String
+    let content: Content
+
+    init(title: String, systemImage: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label(title, systemImage: systemImage)
+                .font(.custom("SukhumvitSet-Bold", size: 16))
+                .foregroundStyle(.primary)
+                .symbolRenderingMode(.hierarchical)
+
+            content
+        }
+        .padding(20)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 0.75)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 16, y: 7)
     }
 }
 
