@@ -14,17 +14,22 @@ var lineNotificationWorkerMu sync.Mutex
 // EnqueueMaintenanceStatusNotification persists the intent before delivery.
 // eventKey makes a retried snapshot idempotent while still allowing a later
 // status transition for the same maintenance item to generate a new message.
-func EnqueueMaintenanceStatusNotification(db *sql.DB, accountID int, eventKey, lineUserID, roomNumber, issue, status string) error {
-	eventKey = strings.TrimSpace(eventKey)
-	lineUserID = strings.TrimSpace(lineUserID)
-	if eventKey == "" || lineUserID == "" {
+func EnqueueMaintenanceStatusNotification(db *sql.DB, accountID int, notification maintenanceStatusNotification) error {
+	notification.EventKey = strings.TrimSpace(notification.EventKey)
+	notification.LineUserID = strings.TrimSpace(notification.LineUserID)
+	if notification.EventKey == "" || notification.LineUserID == "" {
 		return fmt.Errorf("missing notification identity")
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	_, err := db.Exec(`INSERT INTO line_notification_outbox
-		(event_key, account_id, line_user_id, room_number, issue, maintenance_status, status, next_attempt_at, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-		ON CONFLICT(event_key) DO NOTHING`, eventKey, accountID, lineUserID, roomNumber, issue, status, now, now)
+		(event_key, account_id, line_user_id, room_number, issue, maintenance_status,
+		 cost, reported_at, resolved_at, payment_method, maintenance_updated_at,
+		 status, next_attempt_at, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+		ON CONFLICT(event_key) DO NOTHING`,
+		notification.EventKey, accountID, notification.LineUserID, notification.RoomNumber,
+		notification.Issue, notification.Status, notification.Cost, notification.ReportedAt,
+		notification.ResolvedAt, notification.PaymentMethod, notification.LastUpdated, now, now)
 	return err
 }
 
@@ -45,18 +50,23 @@ func ProcessPendingLineNotifications(db *sql.DB) {
 	processPendingLineNotifications(db, sendMaintenanceStatusFlexMessage)
 }
 
-func processPendingLineNotifications(db *sql.DB, sender func(lineUserID, roomNumber, issue, status string) error) {
+func processPendingLineNotifications(db *sql.DB, sender func(notification maintenanceStatusNotification) error) {
 	lineNotificationWorkerMu.Lock()
 	defer lineNotificationWorkerMu.Unlock()
 
 	for processed := 0; processed < 20; processed++ {
 		var id int64
-		var lineUserID, roomNumber, issue, maintenanceStatus string
+		var notification maintenanceStatusNotification
 		now := time.Now().UTC().Format(time.RFC3339Nano)
-		err := db.QueryRow(`SELECT id, line_user_id, room_number, issue, maintenance_status
+		err := db.QueryRow(`SELECT id, event_key, line_user_id, room_number, issue, maintenance_status,
+			cost, reported_at, resolved_at, payment_method, maintenance_updated_at
 			FROM line_notification_outbox
 			WHERE status = 'pending' AND next_attempt_at <= ?
-			ORDER BY id LIMIT 1`, now).Scan(&id, &lineUserID, &roomNumber, &issue, &maintenanceStatus)
+			ORDER BY id LIMIT 1`, now).Scan(
+			&id, &notification.EventKey, &notification.LineUserID, &notification.RoomNumber,
+			&notification.Issue, &notification.Status, &notification.Cost, &notification.ReportedAt,
+			&notification.ResolvedAt, &notification.PaymentMethod, &notification.LastUpdated,
+		)
 		if err == sql.ErrNoRows {
 			return
 		}
@@ -75,7 +85,7 @@ func processPendingLineNotifications(db *sql.DB, sender func(lineUserID, roomNum
 			continue
 		}
 
-		err = sender(lineUserID, roomNumber, issue, maintenanceStatus)
+		err = sender(notification)
 		if err == nil {
 			_, updateErr := db.Exec(`UPDATE line_notification_outbox
 				SET status = 'sent', sent_at = ?, last_error = '' WHERE id = ?`, now, id)

@@ -60,12 +60,13 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 
 ## สิ่งที่ยังไม่เสร็จ
 
-- LINE/LIFF ผูกบัญชีได้แล้ว แสดงข้อมูลลูกบ้าน/บิล รับสลิป/แจ้งซ่อม และแจ้งสถานะงานซ่อมจากแอปกลับไป LINE ได้; สถานะแจ้งซ่อมมี persistent outbox, idempotency และ retry แล้ว แต่ข้อความชนิดอื่นยังขาดมาตรฐาน delivery log/retry เดียวกันและ opt-out policy
+- LINE/LIFF ผูกบัญชีได้แล้ว แสดงข้อมูลลูกบ้าน/บิล รับสลิป/แจ้งซ่อม และแจ้งสถานะงานซ่อมจากแอปกลับไป LINE ได้; Flex งานซ่อมแสดงห้อง อาการ วันที่แจ้ง วัน–เวลาอัปเดตจริง ค่าใช้จ่าย ช่องทางชำระ เวลาปิดงาน และ progress ครบ 5 ขั้น โดยแปลงเวลาเป็นประเทศไทย/ปี พ.ศ. สถานะแจ้งซ่อมมี persistent outbox, idempotency และ retry แล้ว แต่ข้อความชนิดอื่นยังขาดมาตรฐาน delivery log/retry เดียวกันและ opt-out policy
 - UUID ของงานซ่อมถูก canonicalize ก่อน materialize/publish และ snapshot จาก LINE จะตัด UUID ซ้ำแบบไม่สนตัวพิมพ์โดยเลือกข้อมูลที่อัปเดตล่าสุด ป้องกัน snapshot ทั้งชุดถูก iOS ปฏิเสธจนรายการใหม่ไม่แสดง
 - ยังไม่มี APNs/Push Notification และการจัดตาราง local notification
 - หน้าเลือกภาษาบันทึกตัวเลือกได้ แต่ยังไม่ได้แปลข้อความด้วย localization resources จริง
 - สลิปและรูปแจ้งซ่อมจาก LINE มี tenant-scoped authenticated hydration เข้าแอปแล้ว และปิด public `/uploads` บน production แล้ว; ยังเหลือ UAT ข้ามสองเครื่อง, orphan cleanup และ retention policy
 - การซิงก์ยังเป็น snapshot ทั้งชุด มี optimistic conflict protection, exact retry, same-version self-healing และ manual dirty-record rebase แล้ว แต่ยังไม่มี record-level merge เต็มรูปแบบ
+- การบันทึกในจังหวะที่แอปกำลัง pull จะคง dirty checkpoint และส่งต่อทันทีหลัง pull จบ ไม่ปล่อยให้สถานะงานซ่อมค้างเฉพาะในเครื่องจน LINE ไม่ได้รับ
 - เส้นทางลืมรหัสผ่านยังต้องทดสอบการส่งอีเมลจริงบน staging และ concurrency หลาย instance
 - ยังต้องหมุน secret ที่เคยอยู่ใน Git และเพิ่ม regression test ให้ authorization endpoint ที่เหลือ
 - Online server restore ถูกปิดไว้แบบ fail closed จนกว่าจะมี maintenance-mode restore ที่ตรวจ manifest และสลับฐานข้อมูล/สื่อแบบ atomic; archive ปัจจุบันผ่าน offline restore drill แล้ว

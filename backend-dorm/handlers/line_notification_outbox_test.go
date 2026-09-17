@@ -8,6 +8,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func testMaintenanceNotification(eventKey string) maintenanceStatusNotification {
+	return maintenanceStatusNotification{
+		EventKey: eventKey, LineUserID: "line-one", RoomNumber: "103", Issue: "ไฟดับ",
+		Status: "กำลังซ่อม", Cost: 450, ReportedAt: "2026-09-16",
+		PaymentMethod: "โอนผ่านธนาคาร", LastUpdated: "2026-09-17T02:30:00Z",
+	}
+}
+
 func TestMaintenanceNotificationOutboxIsIdempotent(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -17,7 +25,7 @@ func TestMaintenanceNotificationOutboxIsIdempotent(t *testing.T) {
 	InitializeLineIntegration(db)
 
 	for i := 0; i < 2; i++ {
-		if err := EnqueueMaintenanceStatusNotification(db, 7, "maintenance:7:item:updated:status", "line-one", "103", "ไฟดับ", "กำลังซ่อม"); err != nil {
+		if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("maintenance:7:item:updated:status")); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -34,14 +42,17 @@ func TestProcessMaintenanceNotificationMarksSent(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
 	InitializeLineIntegration(db)
-	if err := EnqueueMaintenanceStatusNotification(db, 7, "sent-event", "line-one", "103", "ไฟดับ", "กำลังซ่อม"); err != nil {
+	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("sent-event")); err != nil {
 		t.Fatal(err)
 	}
 	called := 0
-	processPendingLineNotifications(db, func(lineUserID, roomNumber, issue, status string) error {
+	processPendingLineNotifications(db, func(notification maintenanceStatusNotification) error {
 		called++
-		if lineUserID != "line-one" || roomNumber != "103" || issue != "ไฟดับ" || status != "กำลังซ่อม" {
-			t.Fatalf("unexpected notification: %q %q %q %q", lineUserID, roomNumber, issue, status)
+		if notification.LineUserID != "line-one" || notification.RoomNumber != "103" || notification.Issue != "ไฟดับ" || notification.Status != "กำลังซ่อม" {
+			t.Fatalf("unexpected notification: %+v", notification)
+		}
+		if notification.Cost != 450 || notification.ReportedAt != "2026-09-16" || notification.LastUpdated != "2026-09-17T02:30:00Z" {
+			t.Fatalf("notification detail was not persisted: %+v", notification)
 		}
 		return nil
 	})
@@ -58,10 +69,10 @@ func TestProcessMaintenanceNotificationSchedulesRetry(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
 	InitializeLineIntegration(db)
-	if err := EnqueueMaintenanceStatusNotification(db, 7, "retry-event", "line-one", "103", "ไฟดับ", "กำลังซ่อม"); err != nil {
+	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("retry-event")); err != nil {
 		t.Fatal(err)
 	}
-	processPendingLineNotifications(db, func(_, _, _, _ string) error {
+	processPendingLineNotifications(db, func(_ maintenanceStatusNotification) error {
 		return errors.New("temporary LINE failure")
 	})
 	var deliveryStatus, lastError string
@@ -78,7 +89,7 @@ func TestInitializeLineIntegrationRecoversClaimedNotification(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
 	InitializeLineIntegration(db)
-	if err := EnqueueMaintenanceStatusNotification(db, 7, "event", "line-one", "103", "ไฟดับ", "กำลังซ่อม"); err != nil {
+	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("event")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`UPDATE line_notification_outbox SET status = 'processing'`); err != nil {

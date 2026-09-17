@@ -165,8 +165,11 @@ final class CoreDataSafetyTests: XCTestCase {
             let manager = manager(api: api, defaults: defaults)
             await manager.pullLatestSnapshot(modelContext: context)
             XCTAssertEqual(room.roomType, "local edit")
-            XCTAssertTrue(room.isDirty)
-            guard case .failed = manager.state else { return XCTFail("Concurrent edit must be preserved") }
+            XCTAssertFalse(room.isDirty)
+            XCTAssertEqual(api.payloads.count, 1)
+            XCTAssertTrue(String(decoding: try XCTUnwrap(api.payloads.first), as: UTF8.self).contains("local edit"))
+            XCTAssertFalse(SyncCheckpoint(accountID: 1, defaults: defaults).pending)
+            XCTAssertEqual(manager.state, .completed)
         }
     }
 
@@ -391,8 +394,9 @@ final class CoreDataSafetyTests: XCTestCase {
             XCTAssertEqual(manager.state, .completed)
             XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<PaymentTransaction>()).count, 1)
             XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<FinancialReceipt>()).count, 1)
-            XCTAssertEqual(SyncCheckpoint(accountID: 1, defaults: defaults).version, 1)
-            XCTAssertTrue(SyncCheckpoint(accountID: 1, defaults: defaults).pending)
+            XCTAssertEqual(api.bases, [1])
+            XCTAssertEqual(SyncCheckpoint(accountID: 1, defaults: defaults).version, 2)
+            XCTAssertFalse(SyncCheckpoint(accountID: 1, defaults: defaults).pending)
         }
     }
 

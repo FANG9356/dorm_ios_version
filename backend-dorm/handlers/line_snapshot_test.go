@@ -128,14 +128,18 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	}
 
 	var notifications []maintenanceStatusChange
-	notifier := func(eventKey, lineUserID, roomNumber, issue, status string) error {
-		if lineUserID != "line-one" {
-			t.Fatalf("line user = %q", lineUserID)
+	notifier := func(notification maintenanceStatusNotification) error {
+		if notification.LineUserID != "line-one" {
+			t.Fatalf("line user = %q", notification.LineUserID)
 		}
-		if eventKey == "" {
+		if notification.EventKey == "" {
 			t.Fatal("empty notification event key")
 		}
-		notifications = append(notifications, maintenanceStatusChange{RoomNumber: roomNumber, Issue: issue, Status: status})
+		notifications = append(notifications, maintenanceStatusChange{
+			RoomNumber: notification.RoomNumber, Issue: notification.Issue, Status: notification.Status,
+			Cost: notification.Cost, ReportedAt: notification.ReportedAt,
+			PaymentMethod: notification.PaymentMethod, LastUpdated: notification.LastUpdated,
+		})
 		return nil
 	}
 	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {

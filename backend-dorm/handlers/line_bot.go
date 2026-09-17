@@ -1099,74 +1099,189 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 }
 
 func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status string) {
-	if err := sendMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status); err != nil {
+	if err := sendMaintenanceStatusFlexMessage(maintenanceStatusNotification{
+		LineUserID: lineUserID, RoomNumber: roomNumber, Issue: issue, Status: status,
+		LastUpdated: time.Now().UTC().Format(time.RFC3339Nano),
+	}); err != nil {
 		fmt.Println("Error sending maintenance status flex message:", err)
 	}
 }
 
-func sendMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status string) error {
+func sendMaintenanceStatusFlexMessage(notification maintenanceStatusNotification) error {
 	token := getLineToken()
 	if token == "" {
 		return fmt.Errorf("LINE token is not configured")
 	}
-	if strings.TrimSpace(lineUserID) == "" {
+	if strings.TrimSpace(notification.LineUserID) == "" {
 		return fmt.Errorf("LINE user id is empty")
 	}
-
-	dateStr := time.Now().Format("02/01/2006 15:04")
-
-	headerColor := "#3B82F6"
-	statusColor := "#2563EB"
-
-	if status == "กำลังซ่อม" {
-		headerColor = "#0284C7"
-		statusColor = "#0284C7"
-	} else if status == "กำลังติดต่อช่าง" {
-		headerColor = "#8B5CF6"
-		statusColor = "#7C3AED"
-	} else if status == "เสร็จสิ้น" {
-		headerColor = "#10B981"
-		statusColor = "#10B981"
-	} else if status == "รอตรวจสอบชำระเงิน" {
-		headerColor = "#F59E0B"
-		statusColor = "#D97706"
-	}
-
-	flexJSON := fmt.Sprintf(`{
-		"type": "bubble",
-		"header": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "อัปเดตสถานะแจ้งซ่อม", "weight": "bold", "color": "%s", "size": "lg" }, { "type": "text", "text": "MAINTENANCE UPDATE", "size": "xs", "color": "%s", "margin": "sm" } ] },
-		"body": {
-			"type": "box", "layout": "vertical",
-			"contents": [
-				{
-					"type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
-					"contents": [
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3, "weight": "bold"} ] },
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "เวลา", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "รายการ", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] }
-					]
-				},
-				{ "type": "separator", "margin": "lg" },
-				{
-					"type": "box", "layout": "vertical", "margin": "lg",
-					"contents": [
-						{ "type": "text", "text": "สถานะล่าสุด", "size": "xs", "color": "#aaaaaa", "align": "center" },
-						{ "type": "text", "text": "%s", "size": "lg", "color": "%s", "align": "center", "weight": "bold", "margin": "sm" }
-					]
-				}
-			]
-		}
-	}`, headerColor, headerColor, roomNumber, dateStr, issue, status, statusColor)
-
-	var contents map[string]interface{}
-	err := json.Unmarshal([]byte(flexJSON), &contents)
+	message, err := buildMaintenanceStatusFlexMessage(notification, time.Now())
 	if err != nil {
-		return fmt.Errorf("build maintenance Flex message: %w", err)
+		return err
 	}
-	message := map[string]interface{}{
-		"type": "flex", "altText": fmt.Sprintf("อัปเดตแจ้งซ่อมห้อง %s: %s", roomNumber, status), "contents": contents,
+	return pushLinePayload(notification.LineUserID, message)
+}
+
+func buildMaintenanceStatusFlexMessage(notification maintenanceStatusNotification, fallbackTime time.Time) (map[string]interface{}, error) {
+	roomNumber := strings.TrimSpace(notification.RoomNumber)
+	issue := strings.TrimSpace(notification.Issue)
+	status := strings.TrimSpace(notification.Status)
+	if roomNumber == "" || issue == "" || status == "" {
+		return nil, fmt.Errorf("maintenance Flex message is missing required detail")
 	}
-	return pushLinePayload(lineUserID, message)
+
+	accent, tint, step := maintenanceStatusStyle(status)
+	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
+	reportedAt := formatThaiMaintenanceDateTime(notification.ReportedAt, time.Time{}, false)
+	steps := []string{"รับเรื่อง", "ติดต่อช่าง", "กำลังซ่อม", "ตรวจชำระ", "เสร็จสิ้น"}
+	progressContents := make([]interface{}, 0, len(steps))
+	for index, label := range steps {
+		color := "#D1D5DB"
+		weight := "regular"
+		if index <= step {
+			color = accent
+		}
+		if index == step {
+			weight = "bold"
+		}
+		progressContents = append(progressContents, map[string]interface{}{
+			"type": "box", "layout": "vertical", "flex": 1, "spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "box", "layout": "vertical", "height": "5px", "backgroundColor": color, "cornerRadius": "3px", "contents": []interface{}{map[string]interface{}{"type": "filler"}}},
+				map[string]interface{}{"type": "text", "text": label, "size": "xxs", "color": color, "align": "center", "weight": weight, "wrap": true},
+			},
+		})
+	}
+
+	detailRows := []interface{}{
+		maintenanceFlexDetailRow("แจ้งเมื่อ", reportedAt),
+		maintenanceFlexDetailRow("อัปเดตล่าสุด", updatedAt),
+	}
+	if notification.Cost > 0 {
+		detailRows = append(detailRows, maintenanceFlexDetailRow("ค่าใช้จ่าย", formatLineMoney(notification.Cost)))
+	}
+	if method := strings.TrimSpace(notification.PaymentMethod); method != "" {
+		detailRows = append(detailRows, maintenanceFlexDetailRow("ช่องทางชำระ", method))
+	}
+	if status == "เสร็จสิ้น" && strings.TrimSpace(notification.ResolvedAt) != "" {
+		detailRows = append(detailRows, maintenanceFlexDetailRow("เสร็จเมื่อ", formatThaiMaintenanceDateTime(notification.ResolvedAt, fallbackTime, true)))
+	}
+
+	contents := map[string]interface{}{
+		"type": "bubble", "size": "mega",
+		"header": map[string]interface{}{
+			"type": "box", "layout": "vertical", "backgroundColor": "#111827", "paddingAll": "20px", "spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "DormiNetX  •  งานซ่อม", "size": "xs", "color": "#9CA3AF", "weight": "bold"},
+				map[string]interface{}{"type": "text", "text": "อัปเดตสถานะการแจ้งซ่อม", "size": "xl", "color": "#FFFFFF", "weight": "bold", "wrap": true},
+				map[string]interface{}{"type": "text", "text": "ห้อง " + roomNumber, "size": "sm", "color": "#D1D5DB", "margin": "sm"},
+			},
+		},
+		"body": map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingAll": "20px", "spacing": "lg",
+			"contents": []interface{}{
+				map[string]interface{}{
+					"type": "box", "layout": "vertical", "spacing": "sm",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "text", "text": "รายการที่แจ้ง", "size": "xs", "color": "#9CA3AF"},
+						map[string]interface{}{"type": "text", "text": issue, "size": "md", "color": "#111827", "weight": "bold", "wrap": true},
+					},
+				},
+				map[string]interface{}{"type": "separator", "color": "#E5E7EB"},
+				map[string]interface{}{"type": "box", "layout": "vertical", "spacing": "md", "contents": detailRows},
+				map[string]interface{}{
+					"type": "box", "layout": "vertical", "backgroundColor": tint, "cornerRadius": "14px", "paddingAll": "16px", "spacing": "md",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "text", "text": fmt.Sprintf("ความคืบหน้า  •  ขั้นที่ %d จาก %d", step+1, len(steps)), "size": "xs", "color": "#6B7280", "weight": "bold"},
+						map[string]interface{}{"type": "box", "layout": "horizontal", "spacing": "xs", "contents": progressContents},
+						map[string]interface{}{"type": "text", "text": status, "size": "lg", "color": accent, "weight": "bold", "align": "center", "wrap": true, "margin": "sm"},
+					},
+				},
+			},
+		},
+		"footer": map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingAll": "16px", "backgroundColor": "#F9FAFB",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "เวลาในประเทศไทย (UTC+7)  •  ส่งอัตโนมัติจาก DormiNetX", "size": "xxs", "color": "#9CA3AF", "align": "center", "wrap": true},
+			},
+		},
+	}
+
+	return map[string]interface{}{
+		"type":     "flex",
+		"altText":  fmt.Sprintf("แจ้งซ่อมห้อง %s • %s • %s", roomNumber, status, updatedAt),
+		"contents": contents,
+	}, nil
+}
+
+func maintenanceFlexDetailRow(label, value string) map[string]interface{} {
+	if strings.TrimSpace(value) == "" {
+		value = "ไม่ระบุ"
+	}
+	return map[string]interface{}{
+		"type": "box", "layout": "baseline", "spacing": "md",
+		"contents": []interface{}{
+			map[string]interface{}{"type": "text", "text": label, "size": "sm", "color": "#9CA3AF", "flex": 2},
+			map[string]interface{}{"type": "text", "text": value, "size": "sm", "color": "#374151", "flex": 4, "align": "end", "wrap": true},
+		},
+	}
+}
+
+func maintenanceStatusStyle(status string) (accent, tint string, step int) {
+	switch strings.TrimSpace(status) {
+	case "กำลังติดต่อช่าง":
+		return "#7C3AED", "#F5F3FF", 1
+	case "กำลังซ่อม":
+		return "#0284C7", "#F0F9FF", 2
+	case "รอตรวจสอบชำระเงิน":
+		return "#D97706", "#FFFBEB", 3
+	case "เสร็จสิ้น":
+		return "#059669", "#ECFDF5", 4
+	default:
+		return "#4F46E5", "#EEF2FF", 0
+	}
+}
+
+func formatThaiMaintenanceDateTime(raw string, fallback time.Time, includeTime bool) string {
+	parsed, ok := parseMaintenanceTime(raw)
+	if !ok {
+		if fallback.IsZero() {
+			return "ไม่ระบุ"
+		}
+		parsed = fallback
+	}
+	location, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		location = time.FixedZone("Asia/Bangkok", 7*60*60)
+	}
+	parsed = parsed.In(location)
+	date := fmt.Sprintf("%d %s %d", parsed.Day(), thaiShortMonths[int(parsed.Month())], buddhistDisplayYear(parsed.Year()))
+	if includeTime {
+		return fmt.Sprintf("%s • %02d:%02d น.", date, parsed.Hour(), parsed.Minute())
+	}
+	return date
+}
+
+func parseMaintenanceTime(raw string) (time.Time, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		if parsed, err := time.Parse(layout, raw); err == nil {
+			return parsed, true
+		}
+	}
+	location, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		location = time.FixedZone("Asia/Bangkok", 7*60*60)
+	}
+	for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02"} {
+		if parsed, err := time.ParseInLocation(layout, raw, location); err == nil {
+			return parsed, true
+		}
+	}
+	return time.Time{}, false
 }
 
 func replyToLineWithQuickReply(replyToken, text string, options []string) {

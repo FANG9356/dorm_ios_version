@@ -94,13 +94,31 @@ type lineMaintenanceSnapshot struct {
 	LastUpdated   string  `json:"lastUpdated"`
 }
 
-type maintenanceStatusNotifier func(eventKey, lineUserID, roomNumber, issue, status string) error
+type maintenanceStatusNotification struct {
+	EventKey      string
+	LineUserID    string
+	RoomNumber    string
+	Issue         string
+	Status        string
+	Cost          float64
+	ReportedAt    string
+	ResolvedAt    string
+	PaymentMethod string
+	LastUpdated   string
+}
+
+type maintenanceStatusNotifier func(notification maintenanceStatusNotification) error
 
 type maintenanceStatusChange struct {
-	EventKey   string
-	RoomNumber string
-	Issue      string
-	Status     string
+	EventKey      string
+	RoomNumber    string
+	Issue         string
+	Status        string
+	Cost          float64
+	ReportedAt    string
+	ResolvedAt    string
+	PaymentMethod string
+	LastUpdated   string
 }
 
 type lineRoomTypeSnapshot struct {
@@ -150,6 +168,13 @@ func InitializeLineIntegration(db *sql.DB) {
 		created_at TEXT NOT NULL,
 		sent_at TEXT NOT NULL DEFAULT ''
 	)`)
+	// Keep event timestamps and financial context in the outbox so a delayed
+	// retry renders the original maintenance event, not the worker retry time.
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN cost REAL NOT NULL DEFAULT 0`)
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN reported_at TEXT NOT NULL DEFAULT ''`)
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN resolved_at TEXT NOT NULL DEFAULT ''`)
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN payment_method TEXT NOT NULL DEFAULT ''`)
+	db.Exec(`ALTER TABLE line_notification_outbox ADD COLUMN maintenance_updated_at TEXT NOT NULL DEFAULT ''`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_line_notification_outbox_pending
 		ON line_notification_outbox(status, next_attempt_at)`)
 	// A process may stop after claiming a row but before sending it. Recover the
@@ -206,8 +231,8 @@ func MaterializeLineSnapshot(master *sql.DB, accountID int, payload []byte) erro
 // Startup reconciliation uses MaterializeLineSnapshot so it cannot resend old
 // LINE notifications after every server restart.
 func MaterializeLineSnapshotAndNotify(master *sql.DB, accountID int, payload []byte) error {
-	err := materializeLineSnapshotPayload(master, accountID, payload, func(eventKey, lineUserID, roomNumber, issue, status string) error {
-		return EnqueueMaintenanceStatusNotification(master, accountID, eventKey, lineUserID, roomNumber, issue, status)
+	err := materializeLineSnapshotPayload(master, accountID, payload, func(notification maintenanceStatusNotification) error {
+		return EnqueueMaintenanceStatusNotification(master, accountID, notification)
 	})
 	if err == nil {
 		go ProcessPendingLineNotifications(master)
@@ -377,10 +402,15 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		}
 		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
 			statusChanges = append(statusChanges, maintenanceStatusChange{
-				EventKey:   fmt.Sprintf("maintenance:%d:%s:%s:%s", accountID, maintenance.ID, maintenance.LastUpdated, maintenance.Status),
-				RoomNumber: maintenance.RoomNumber,
-				Issue:      maintenance.Issue,
-				Status:     maintenance.Status,
+				EventKey:      fmt.Sprintf("maintenance:%d:%s:%s:%s", accountID, maintenance.ID, maintenance.LastUpdated, maintenance.Status),
+				RoomNumber:    maintenance.RoomNumber,
+				Issue:         maintenance.Issue,
+				Status:        maintenance.Status,
+				Cost:          maintenance.Cost,
+				ReportedAt:    maintenance.ReportedAt,
+				ResolvedAt:    maintenance.ResolvedAt,
+				PaymentMethod: maintenance.PaymentMethod,
+				LastUpdated:   maintenance.LastUpdated,
 			})
 		}
 	}
@@ -416,7 +446,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			ORDER BY CASE status WHEN 'กำลังพักอาศัย' THEN 0 ELSE 1 END
 			LIMIT 1`, change.RoomNumber).Scan(&lineUserID)
 		if err == nil && lineUserID != "" {
-			if err := notifier(change.EventKey, lineUserID, change.RoomNumber, change.Issue, change.Status); err != nil {
+			if err := notifier(maintenanceStatusNotification{
+				EventKey: change.EventKey, LineUserID: lineUserID, RoomNumber: change.RoomNumber,
+				Issue: change.Issue, Status: change.Status, Cost: change.Cost,
+				ReportedAt: change.ReportedAt, ResolvedAt: change.ResolvedAt,
+				PaymentMethod: change.PaymentMethod, LastUpdated: change.LastUpdated,
+			}); err != nil {
 				return fmt.Errorf("queue maintenance status notification: %w", err)
 			}
 		} else if err != nil && !errors.Is(err, sql.ErrNoRows) {

@@ -42,6 +42,7 @@
 - ไม่ mark clean ให้รายการที่ถูกแก้ระหว่าง upload และไม่ apply ผลของบัญชีเก่าหลังสลับบัญชี
 - manual sync ซ่อม local data ที่ขาดแม้ version เท่ากันได้
 - manual sync รวม local dirty/deleted records เข้ากับ remote snapshot แล้ว push บน remote base version ได้
+- ปิดช่องว่าง sync slot: หากผู้ใช้บันทึกข้อมูลระหว่าง manual/auto pull แอปจะระบาย dirty checkpoint ต่อเป็น push ทันทีหลัง pull จบ ทำให้สถานะงานซ่อมไม่ค้างเฉพาะในเครื่องและ LINE ได้รับ transition
 - เมื่อ LINE รับสลิปหรือแจ้งซ่อม backend รวมการเปลี่ยนแปลงกลับเข้า immutable snapshot ทันที
 - มี tenant-scoped authenticated media hydration สำหรับสลิป รูปแจ้งซ่อม รูปจอง และหลักฐานสภาพห้อง พร้อมตรวจ SHA-256 และ retry สูงสุด 3 ครั้งก่อนบันทึกลงเครื่อง
 
@@ -67,6 +68,7 @@
 - ใบแจ้งหนี้ของบอทแสดงเลขบิล รอบบิล ครบกำหนด วัน–เวลาอัปเดต รายการค่าใช้จ่าย ยอดชำระและคงเหลือ
 - rich menu เชื่อมไปยังผูกบัญชี การเงิน และแจ้งซ่อม
 - เมื่อแอดมินเปลี่ยนสถานะงานซ่อมจากแอป backend จะบันทึกเหตุการณ์ลง persistent outbox หลัง transaction commit ก่อนส่ง Flex Message, กันซ้ำด้วย event key และ retry อัตโนมัติสูงสุด 8 ครั้ง; แถวที่ค้างระหว่าง process จะถูกกู้กลับเมื่อ service เริ่มใหม่
+- Flex Message สถานะงานซ่อมใช้การ์ดรายละเอียดใหม่ แสดงห้อง อาการ วันที่แจ้ง วัน–เวลาเปลี่ยนสถานะจริง ค่าใช้จ่าย ช่องทางชำระ เวลาปิดงาน และ progress ครบ 5 ขั้น; วัน–เวลาแปลงเป็นประเทศไทย (UTC+7) และปี พ.ศ. จาก source event โดย outbox เก็บข้อมูลเหตุการณ์ครบเพื่อให้ retry ภายหลังไม่แสดงเวลาที่ส่งซ้ำแทนเวลาที่เปลี่ยนสถานะ
 - วันที่ 17 กันยายนแก้ snapshot งานซ่อมไม่เข้าแอปจาก UUID เดียวกันที่ต่างกันเฉพาะตัวพิมพ์: backend canonicalize ID และ deduplicate โดยเก็บรายการ `lastUpdated` ล่าสุดทั้งขณะ materialize และ publish; production ล้างแถวซ้ำหลังสำรองฐานข้อมูลและสร้าง snapshot `v82` ซึ่งมีงานซ่อม 2 รายการถูกต้อง
 
 ### หลักฐานการทดสอบและ deploy
@@ -80,6 +82,8 @@
 - production deploy private-media/checksum binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`; health ทั้ง loopback/โดเมนตอบ 200, known public upload ตอบ 404, tenant media ที่ไม่มี session ตอบ 401 และ unsigned LINE media ตอบ 404
 - วันที่ 17 กันยายน deploy maintenance notification outbox binary SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; Linux tests, local unit/race/vet, loopback/public health และ SQLite master/tenant `quick_check` ผ่าน โดยยังรอ UAT เปลี่ยนสถานะจริงเพื่อยืนยันข้อความถึง LINE ปลายทาง
 - production binary หลังแก้ maintenance UUID deduplication เป็น SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`; external/loopback health และ SQLite quick check ผ่าน พร้อมเก็บ master/tenant database ก่อน cleanup ไว้สำหรับ rollback
+- วันที่ 17 กันยายน deploy Flex งานซ่อมรุ่นรายละเอียดใหม่เป็น production binary SHA-256 `9eac700fbc3e910107e14b2c9c8b36cff8031500caf479c7ddd1603ced0165f0`; `go test -count=1 ./...`, `go test -count=1 -race ./...` และ `go vet ./...` ผ่าน, service เป็น `active`, health ทั้ง loopback/โดเมนตอบ HTTP 200 และ SQLite master/tenant `quick_check` เป็น `ok` โดยเก็บ binary/master DB ก่อน deploy ที่ `/home/fang/line_migration_backups/20260916-232750-pre-flex-ui`; UAT requeue สถานะปัจจุบันไป LINE จริงสำเร็จด้วย outbox `sent`, attempts `0`
+- หลัง UAT พบว่าการบันทึกสถานะระหว่างแอปกำลัง pull ทำให้ immediate push คืนก่อนเพราะ sync slot ไม่ว่างและไม่มีการ drain ต่อ แก้ `SyncManager` ให้ push dirty records ต่อทันทีหลัง pull จบ, CoreDataSafetyTests ผ่าน 18/18 และ signed Debug build ถูกติดตั้งทับบน iPhone “F” โดยคง app container เดิม
 - ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production แล้ว หลังไม่พบ legacy push ใน journal ตั้งแต่ 15 กันยายนและ snapshot จากอุปกรณ์ปัจจุบันเดินต่อถึง v76; ยังต้องกด manual sync จาก iPhone หลัง cutover เพื่อบันทึกหลักฐานปลายทาง
 - มี rollback set ก่อน deployment สำคัญและตรวจ SQLite master/tenant เป็น `ok`
 - CI workflow ถูก commit/push แล้ว แต่การประเมินรอบนี้ไม่สามารถอ่านผล GitHub Actions ของ private repository ได้ จึงไม่อ้างว่า online CI ผ่าน

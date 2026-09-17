@@ -304,13 +304,6 @@ class SyncManager: ObservableObject {
 
         isSyncing = true
         operation = .manualPull
-        defer {
-            isSyncing = false
-            operation = .idle
-            if case .completed = state, message.isEmpty {
-                message = "ดึงข้อมูลล่าสุดแล้ว"
-            }
-        }
 
         do {
             if hasDirtyLocalChanges(), !hasDirtyRecords(modelContext) {
@@ -330,6 +323,19 @@ class SyncManager: ObservableObject {
             state = .failed(text)
             message = text
         }
+
+        isSyncing = false
+        operation = .idle
+        if case .completed = state, message.isEmpty {
+            message = "ดึงข้อมูลล่าสุดแล้ว"
+        }
+        // A save can occur while a pull is awaiting the network. The save
+        // marks the checkpoint pending, but its immediate push returns because
+        // this pull owns the sync slot. Drain that pending edit now instead of
+        // leaving it local until the user manually syncs again.
+        if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
+            await autoPushLocalChanges(modelContext: modelContext)
+        }
     }
 
     func autoPullRecentRemoteIfNeeded(modelContext: ModelContext) async {
@@ -343,16 +349,18 @@ class SyncManager: ObservableObject {
 
         isSyncing = true
         operation = .autoPull
-        defer {
-            isSyncing = false
-            operation = .idle
-        }
 
         do {
             state = .downloading
             try await fetchAndApplyLatestSnapshot(modelContext: modelContext, onlyIfRecent: true, silentWhenUnchanged: true)
         } catch {
             state = .failed(error.localizedDescription)
+        }
+
+        isSyncing = false
+        operation = .idle
+        if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
+            await autoPushLocalChanges(modelContext: modelContext)
         }
     }
 

@@ -1,0 +1,50 @@
+#!/usr/bin/expect -f
+
+set timeout 240
+set archive [lindex $argv 0]
+if {$archive eq ""} {
+    puts stderr "usage: run_flex_safe_deploy.exp /path/to/source.tar.gz"
+    exit 2
+}
+
+set credential_file [file join [file dirname [info script]] .. build_deploy.exp]
+set handle [open $credential_file r]
+set credential_text [read $handle]
+close $handle
+if {![regexp {set password "([^"]+)"} $credential_text -> password]} {
+    puts stderr "could not read deployment credential"
+    exit 2
+}
+
+set host "202.29.232.28"
+set user "fang"
+
+proc wait_for_command {password} {
+    expect {
+        "yes/no" { send "yes\r"; exp_continue }
+        -re "(?i)password.*:" { send "$password\r"; exp_continue }
+        eof
+    }
+    set result [wait]
+    return [lindex $result 3]
+}
+
+spawn scp $archive $user@$host:/home/fang/dorminet-flex-source.tar.gz
+if {[wait_for_command $password] != 0} {
+    puts stderr "source upload failed"
+    exit 1
+}
+
+set remote_script [file join [file dirname [info script]] deploy_flex_safe_remote.sh]
+spawn scp $remote_script $user@$host:/home/fang/deploy_flex_safe_remote.sh
+if {[wait_for_command $password] != 0} {
+    puts stderr "deployment script upload failed"
+    exit 1
+}
+
+spawn ssh -tt $user@$host "bash /home/fang/deploy_flex_safe_remote.sh"
+set exit_code [wait_for_command $password]
+if {$exit_code != 0} {
+    puts stderr "deployment failed"
+    exit $exit_code
+}
