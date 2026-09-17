@@ -1,6 +1,6 @@
 # สถานะปัจจุบันของ DormiNetX
 
-วันที่อัปเดต: 16 กันยายน 2569
+วันที่อัปเดต: 17 กันยายน 2569
 
 เอกสารนี้เป็นสรุปสถานะล่าสุดสำหรับใช้ตัดสินใจ เอกสารวันที่ 9–15 กันยายนยังเก็บไว้เป็นประวัติการพัฒนา แต่คะแนนและรายการงานปัจจุบันให้ยึดเอกสารนี้และ [PRODUCTION_HARDENING_2026-09-10.md](PRODUCTION_HARDENING_2026-09-10.md) เป็นหลัก
 
@@ -28,6 +28,7 @@
 - บิลค้างตาม stable user ID เมื่อย้ายห้อง ส่วนบิลที่ชำระแล้วเก็บห้องเดิมเป็นประวัติ
 - มี local backup/import ที่ตรวจ account, format, UUID ซ้ำ และ ledger integrity ก่อนแทนที่ข้อมูล
 - หน้าจัดการงานซ่อมแสดงห้องแบบคงที่ มีปุ่มสถานะขนาดเท่ากัน ตัวเลือกช่องทางชำระ และเปิดรูปหลักฐานเต็มจอ/ซูมได้
+- การ์ดงานซ่อมแสดงและเปลี่ยนได้ครบทั้ง 5 สถานะโดยตรงด้วย segmented glass แบบ monochrome ชิ้นเดียว; ลดสีพื้นแยกตามสถานะ เหลือ indigo เฉพาะตัวเลือกปัจจุบัน และกดสถานะเดิมซ้ำไม่ได้
 - หน้าบิล การเงิน ห้องพัก ตั้งราคา หลักฐานโอน และแจ้งซ่อมมีช่องค้นหารูปแบบเดียวกับทะเบียนลูกบ้าน พร้อมค้นเลขห้อง ชื่อ รอบบิล สถานะ และรายละเอียดที่เกี่ยวข้อง
 - หน้าการเงินรวมช่องค้นหา รอบบิล และตัวกรองสถานะไว้ในการ์ดกระจกฝ้าใบเดียว; รอบบิลแสดงเฉพาะเดือน–ปี และแท็บสถานะแตะหรือกดลากเลือกพร้อม haptic ได้
 - หน้าบิลยกเลิก swipe/context gesture ที่แย่งการเลื่อน เหลือปุ่มแก้ไขและลบที่เห็นชัดบนการ์ด
@@ -64,17 +65,20 @@
 - ข้อมูลห้อง/สัญญา/บิลค้างอ่านจาก tenant database ปัจจุบัน จึงเปลี่ยนตามเมื่อแอดมินย้ายห้องและซิงก์
 - ใบแจ้งหนี้ของบอทแสดงเลขบิล รอบบิล ครบกำหนด วัน–เวลาอัปเดต รายการค่าใช้จ่าย ยอดชำระและคงเหลือ
 - rich menu เชื่อมไปยังผูกบัญชี การเงิน และแจ้งซ่อม
-- เมื่อแอดมินเปลี่ยนสถานะงานซ่อมจากแอป backend จะ push สถานะไป LINE หลัง transaction commit และไม่ส่งซ้ำสำหรับ snapshot เดิม
+- เมื่อแอดมินเปลี่ยนสถานะงานซ่อมจากแอป backend จะบันทึกเหตุการณ์ลง persistent outbox หลัง transaction commit ก่อนส่ง Flex Message, กันซ้ำด้วย event key และ retry อัตโนมัติสูงสุด 8 ครั้ง; แถวที่ค้างระหว่าง process จะถูกกู้กลับเมื่อ service เริ่มใหม่
+- วันที่ 17 กันยายนแก้ snapshot งานซ่อมไม่เข้าแอปจาก UUID เดียวกันที่ต่างกันเฉพาะตัวพิมพ์: backend canonicalize ID และ deduplicate โดยเก็บรายการ `lastUpdated` ล่าสุดทั้งขณะ materialize และ publish; production ล้างแถวซ้ำหลังสำรองฐานข้อมูลและสร้าง snapshot `v82` ซึ่งมีงานซ่อม 2 รายการถูกต้อง
 
 ### หลักฐานการทดสอบและ deploy
 
-- iOS unit tests ล่าสุดผ่าน **52/52** หลังแก้วันที่ การค้นหา และตัวกรองการเงิน
+- iOS baseline ก่อนรอบนี้ผ่าน **52/52**; รอบเพิ่ม maintenance workflow test มี 52 tests ผ่านและ Keychain integration test เดิมล้มบน Simulator 1 รายการด้วย environment `storage(-34018)` ขณะที่ test ใหม่ผ่านและ signed device build/install สำเร็จ
 - backend `go test -count=1 -race ./...` และ `go vet ./...` ผ่าน
 - Debug device build/sign/install บน iPhone “F” ผ่าน และมี UAT จริงบาง flow
 - production binary ก่อนรอบ restore/media hardening คือ SHA-256 `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และถูกเก็บไว้ใน rollback set
 - production health ที่ `https://api.dorminet.studio/api/system/ping` ตอบ HTTP 200
 - production deploy binary ที่มี maintenance-mode restore/rollback แล้ว SHA-256 `2f069031e35d1a57eb5cefa8760849f651c5c6c57eaccc79f683f9b7660e5d6b`; archive ล่าสุดผ่าน `--verify-only` โดยพบ 2 databases และ 2 media files
 - production deploy private-media/checksum binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`; health ทั้ง loopback/โดเมนตอบ 200, known public upload ตอบ 404, tenant media ที่ไม่มี session ตอบ 401 และ unsigned LINE media ตอบ 404
+- วันที่ 17 กันยายน deploy maintenance notification outbox binary SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; Linux tests, local unit/race/vet, loopback/public health และ SQLite master/tenant `quick_check` ผ่าน โดยยังรอ UAT เปลี่ยนสถานะจริงเพื่อยืนยันข้อความถึง LINE ปลายทาง
+- production binary หลังแก้ maintenance UUID deduplication เป็น SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`; external/loopback health และ SQLite quick check ผ่าน พร้อมเก็บ master/tenant database ก่อน cleanup ไว้สำหรับ rollback
 - ปิด `ALLOW_LEGACY_SYNC_PUSH=false` บน production แล้ว หลังไม่พบ legacy push ใน journal ตั้งแต่ 15 กันยายนและ snapshot จากอุปกรณ์ปัจจุบันเดินต่อถึง v76; ยังต้องกด manual sync จาก iPhone หลัง cutover เพื่อบันทึกหลักฐานปลายทาง
 - มี rollback set ก่อน deployment สำคัญและตรวจ SQLite master/tenant เป็น `ok`
 - CI workflow ถูก commit/push แล้ว แต่การประเมินรอบนี้ไม่สามารถอ่านผล GitHub Actions ของ private repository ได้ จึงไม่อ้างว่า online CI ผ่าน
@@ -86,7 +90,7 @@
 | Financial ledger | append-only transaction/receipt, migration จากยอดเก่า, delete guard | Invoice migration เต็มรูปแบบ, refund, void, credit adjustment และ actor/reason audit |
 | Media | tenant-scoped hydration สำหรับสื่อธุรกิจ, SHA-256 verification, bounded retry, signed LINE URL และปิด public `/uploads` | orphan cleanup/retention policy และ UAT ดาวน์โหลดจริงข้ามสองเครื่อง; พื้นหลัง/วิดีโอเป็น client-local ตามสถาปัตยกรรมและรวมใน local backup |
 | Sync conflict | atomic version check, exact retry, backup-before-replace, self-healing, dirty rebase | UAT ชนกันจริงสองเครื่อง และ record-level merge/policy |
-| LINE delivery | core linking/invoice/payment/maintenance ทำงาน | delivery log/retry/idempotency ครบทุก message, opt-out และ monitoring |
+| LINE delivery | core linking/invoice/payment/maintenance ทำงาน และสถานะแจ้งซ่อมมี outbox/retry/idempotency | ขยาย delivery log/retry/idempotency ไปทุก message, เพิ่ม opt-out, monitoring และ UAT ปลายทาง |
 | Restore | archive/manifest/checksum/offline drill, คำสั่ง maintenance-mode atomic swap/rollback, automated tests, production deploy และ verify-only ผ่าน | ทำ production maintenance-window restore/rollback drill พร้อม health checklist |
 | Device UAT | ทดสอบบาง flow บน iPhone จริงหนึ่งเครื่อง | สองเครื่อง/สองบัญชี, offline/interruption, Photos/AirPrint, disk-full และ performance soak |
 

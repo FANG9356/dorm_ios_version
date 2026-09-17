@@ -94,9 +94,10 @@ type lineMaintenanceSnapshot struct {
 	LastUpdated   string  `json:"lastUpdated"`
 }
 
-type maintenanceStatusNotifier func(lineUserID, roomNumber, issue, status string)
+type maintenanceStatusNotifier func(eventKey, lineUserID, roomNumber, issue, status string) error
 
 type maintenanceStatusChange struct {
+	EventKey   string
 	RoomNumber string
 	Issue      string
 	Status     string
@@ -134,6 +135,26 @@ func InitializeLineIntegration(db *sql.DB) {
 		detail TEXT NOT NULL DEFAULT '',
 		created_at TEXT NOT NULL
 	)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS line_notification_outbox (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_key TEXT NOT NULL UNIQUE,
+		account_id INTEGER NOT NULL,
+		line_user_id TEXT NOT NULL,
+		room_number TEXT NOT NULL,
+		issue TEXT NOT NULL,
+		maintenance_status TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'pending',
+		attempts INTEGER NOT NULL DEFAULT 0,
+		next_attempt_at TEXT NOT NULL,
+		last_error TEXT NOT NULL DEFAULT '',
+		created_at TEXT NOT NULL,
+		sent_at TEXT NOT NULL DEFAULT ''
+	)`)
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_line_notification_outbox_pending
+		ON line_notification_outbox(status, next_attempt_at)`)
+	// A process may stop after claiming a row but before sending it. Recover the
+	// row at startup so the notification is not permanently stranded.
+	db.Exec(`UPDATE line_notification_outbox SET status = 'pending' WHERE status = 'processing'`)
 }
 
 func ensureLineTenantSchema(db *sql.DB) {
@@ -185,9 +206,13 @@ func MaterializeLineSnapshot(master *sql.DB, accountID int, payload []byte) erro
 // Startup reconciliation uses MaterializeLineSnapshot so it cannot resend old
 // LINE notifications after every server restart.
 func MaterializeLineSnapshotAndNotify(master *sql.DB, accountID int, payload []byte) error {
-	return materializeLineSnapshotPayload(master, accountID, payload, func(lineUserID, roomNumber, issue, status string) {
-		go PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status)
+	err := materializeLineSnapshotPayload(master, accountID, payload, func(eventKey, lineUserID, roomNumber, issue, status string) error {
+		return EnqueueMaintenanceStatusNotification(master, accountID, eventKey, lineUserID, roomNumber, issue, status)
 	})
+	if err == nil {
+		go ProcessPendingLineNotifications(master)
+	}
+	return err
 }
 
 func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byte, notifier maintenanceStatusNotifier) error {
@@ -195,6 +220,7 @@ func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byt
 	if err := json.Unmarshal(payload, &snapshot); err != nil {
 		return err
 	}
+	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
 	if snapshot.SnapshotID == "" {
 		return nil
 	}
@@ -214,6 +240,7 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 
 func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID int, snapshot lineSyncEnvelope, notifier maintenanceStatusNotifier) error {
 	ensureLineTenantSchema(tenantDB)
+	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
 	tx, err := tenantDB.Begin()
 	if err != nil {
 		return err
@@ -350,6 +377,7 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		}
 		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
 			statusChanges = append(statusChanges, maintenanceStatusChange{
+				EventKey:   fmt.Sprintf("maintenance:%d:%s:%s:%s", accountID, maintenance.ID, maintenance.LastUpdated, maintenance.Status),
 				RoomNumber: maintenance.RoomNumber,
 				Issue:      maintenance.Issue,
 				Status:     maintenance.Status,
@@ -388,7 +416,9 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			ORDER BY CASE status WHEN 'กำลังพักอาศัย' THEN 0 ELSE 1 END
 			LIMIT 1`, change.RoomNumber).Scan(&lineUserID)
 		if err == nil && lineUserID != "" {
-			notifier(lineUserID, change.RoomNumber, change.Issue, change.Status)
+			if err := notifier(change.EventKey, lineUserID, change.RoomNumber, change.Issue, change.Status); err != nil {
+				return fmt.Errorf("queue maintenance status notification: %w", err)
+			}
 		} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("resolve LINE recipient for maintenance status: %w", err)
 		}
@@ -554,7 +584,8 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 	}
 	rows.Close()
 
-	maintenance, _ := payload["maintenance"].([]interface{})
+	maintenance, deduplicated := normalizeMaintenancePayload(payload["maintenance"])
+	changed = deduplicated || changed
 	maintenanceObjects := snapshotObjectsByID(maintenance)
 	rows, err = db.Query(`SELECT id, external_id, room_number, issue, status, COALESCE(cost, 0),
 		COALESCE(reported_at, ''), COALESCE(resolved_at, ''), COALESCE(payment_method, ''),
@@ -572,6 +603,7 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 			rows.Close()
 			return false, err
 		}
+		id = strings.ToLower(strings.TrimSpace(id))
 		item := maintenanceObjects[id]
 		if item == nil {
 			item = map[string]interface{}{"id": id}
@@ -604,6 +636,76 @@ func snapshotObjectsByID(value interface{}) map[string]map[string]interface{} {
 		}
 	}
 	return result
+}
+
+func normalizeMaintenanceSnapshots(items []lineMaintenanceSnapshot) []lineMaintenanceSnapshot {
+	result := make([]lineMaintenanceSnapshot, 0, len(items))
+	indexes := make(map[string]int, len(items))
+	for _, item := range items {
+		id := strings.ToLower(strings.TrimSpace(item.ID))
+		item.ID = id
+		if id == "" {
+			result = append(result, item)
+			continue
+		}
+		if index, exists := indexes[id]; exists {
+			if maintenanceTimestamp(item.LastUpdated).After(maintenanceTimestamp(result[index].LastUpdated)) {
+				result[index] = item
+			}
+			continue
+		}
+		indexes[id] = len(result)
+		result = append(result, item)
+	}
+	return result
+}
+
+func normalizeMaintenancePayload(value interface{}) ([]interface{}, bool) {
+	items, _ := value.([]interface{})
+	result := make([]interface{}, 0, len(items))
+	indexes := make(map[string]int, len(items))
+	changed := false
+	for _, raw := range items {
+		item, ok := raw.(map[string]interface{})
+		if !ok {
+			result = append(result, raw)
+			continue
+		}
+		originalID, _ := item["id"].(string)
+		id := strings.ToLower(strings.TrimSpace(originalID))
+		if id == "" {
+			result = append(result, item)
+			continue
+		}
+		if originalID != id {
+			item["id"] = id
+			changed = true
+		}
+		if index, exists := indexes[id]; exists {
+			changed = true
+			current, _ := result[index].(map[string]interface{})
+			if maintenanceTimestamp(snapshotString(item, "lastUpdated")).After(maintenanceTimestamp(snapshotString(current, "lastUpdated"))) {
+				result[index] = item
+			}
+			continue
+		}
+		indexes[id] = len(result)
+		result = append(result, item)
+	}
+	return result, changed
+}
+
+func snapshotString(item map[string]interface{}, key string) string {
+	value, _ := item[key].(string)
+	return value
+}
+
+func maintenanceTimestamp(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}
+	}
+	return parsed
 }
 
 func setSnapshotField(item map[string]interface{}, key string, value interface{}) bool {

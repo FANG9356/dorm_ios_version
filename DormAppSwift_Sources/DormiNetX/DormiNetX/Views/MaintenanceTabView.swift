@@ -2,6 +2,20 @@ import SwiftUI
 import SwiftData
 import UIKit
 
+enum MaintenanceWorkflow {
+    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
+
+    static func shortTitle(for status: String) -> String {
+        switch status {
+        case "กำลังติดต่อช่าง": return "ติดต่อช่าง"
+        case "กำลังซ่อม": return "ซ่อม"
+        case "รอตรวจสอบชำระเงิน": return "ตรวจชำระ"
+        case "เสร็จสิ้น": return "เสร็จ"
+        default: return "รอ"
+        }
+    }
+}
+
 struct MaintenanceTabView: View {
     @Binding var showingEditor: Bool
     @Environment(\.modelContext) private var modelContext
@@ -143,6 +157,8 @@ struct MaintenanceTabView: View {
         maintenance.status = status
         if status == "เสร็จสิ้น" {
             maintenance.resolvedAt = currentDateString()
+        } else {
+            maintenance.resolvedAt = ""
         }
         maintenance.lastUpdated = Date()
         maintenance.isDirty = true
@@ -176,22 +192,7 @@ private struct MaintenanceRow: View {
     }
 
     private var statusColor: Color {
-        switch status {
-        case "เสร็จสิ้น": return .green
-        case "กำลังซ่อม": return .orange
-        case "กำลังติดต่อช่าง": return .purple
-        case "รอตรวจสอบชำระเงิน": return .blue
-        default: return .secondary
-        }
-    }
-
-    private var nextAction: (title: String, status: String)? {
-        switch status {
-        case "รอดำเนินการ": return ("รับงาน", "กำลังติดต่อช่าง")
-        case "กำลังติดต่อช่าง": return ("เริ่มซ่อม", "กำลังซ่อม")
-        case "กำลังซ่อม", "รอตรวจสอบชำระเงิน": return ("ปิดงาน", "เสร็จสิ้น")
-        default: return nil
-        }
+        .primary
     }
 
     var body: some View {
@@ -224,27 +225,62 @@ private struct MaintenanceRow: View {
                 }
                 .buttonStyle(.plain)
 
-                HStack(spacing: 10) {
-                    Button(action: onEdit) {
-                        Label("ดู / แก้ไข", systemImage: "pencil")
-                            .font(.custom("SukhumvitSet-Bold", size: 14))
-                            .frame(maxWidth: .infinity, minHeight: 46)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("เปลี่ยนสถานะ")
+                        .font(.custom("SukhumvitSet-Medium", size: 12))
+                        .foregroundStyle(.secondary)
 
-                    if let nextAction {
-                        Button {
-                            onStatus(nextAction.status)
-                        } label: {
-                            Label(nextAction.title, systemImage: "arrow.right.circle.fill")
-                                .font(.custom("SukhumvitSet-Bold", size: 14))
-                                .frame(maxWidth: .infinity, minHeight: 46)
+                    HStack(spacing: 3) {
+                        ForEach(MaintenanceWorkflow.statuses, id: \.self) { item in
+                            let selected = status == item
+                            Button {
+                                onStatus(item)
+                            } label: {
+                                VStack(spacing: 5) {
+                                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundStyle(selected ? Color.indigo : Color.secondary.opacity(0.7))
+                                    Text(MaintenanceWorkflow.shortTitle(for: item))
+                                        .lineLimit(1)
+                                        .multilineTextAlignment(.center)
+                                        .minimumScaleFactor(0.68)
+                                }
+                                .font(.custom("SukhumvitSet-Medium", size: 10))
+                                .foregroundStyle(selected ? Color.primary : Color.secondary)
+                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .background {
+                                    if selected {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(Color.primary.opacity(0.11))
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                    .stroke(Color.primary.opacity(0.14), lineWidth: 0.75)
+                                            }
+                                            .shadow(color: .black.opacity(0.12), radius: 5, y: 2)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(selected)
+                            .accessibilityLabel("เปลี่ยนสถานะเป็น \(item)")
+                            .accessibilityAddTraits(selected ? [.isSelected] : [])
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.indigo)
+                    }
+                    .padding(4)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.primary.opacity(0.08), lineWidth: 0.75)
                     }
                 }
+
+                Button(action: onEdit) {
+                    Label("ดูรายละเอียด / แก้ไข", systemImage: "pencil")
+                        .font(.custom("SukhumvitSet-Bold", size: 14))
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
 
                 if maintenance.cost > 0 {
                     HStack {
@@ -293,7 +329,6 @@ private struct MaintenanceEditor: View {
     @State private var selectedDetent: PresentationDetent = .large
     private let isEditing: Bool
 
-    private let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
     private let paymentMethods = [(value: "", title: "ยังไม่ระบุ"), (value: "เงินสด", title: "เงินสด"), (value: "โอนเงิน", title: "โอนผ่านธนาคาร")]
 
     init(maintenance: Maintenance? = nil, rooms: [Room], onSave: @escaping (Maintenance) -> Void) {
@@ -353,7 +388,7 @@ private struct MaintenanceEditor: View {
 
                 Section("อัปเดตสถานะ") {
                     VStack(spacing: 10) {
-                        ForEach(statuses, id: \.self) { item in
+                        ForEach(MaintenanceWorkflow.statuses, id: \.self) { item in
                             Button {
                                 status = item
                             } label: {

@@ -128,11 +128,15 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	}
 
 	var notifications []maintenanceStatusChange
-	notifier := func(lineUserID, roomNumber, issue, status string) {
+	notifier := func(eventKey, lineUserID, roomNumber, issue, status string) error {
 		if lineUserID != "line-one" {
 			t.Fatalf("line user = %q", lineUserID)
 		}
+		if eventKey == "" {
+			t.Fatal("empty notification event key")
+		}
 		notifications = append(notifications, maintenanceStatusChange{RoomNumber: roomNumber, Issue: issue, Status: status})
+		return nil
 	}
 	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
 		t.Fatal(err)
@@ -175,6 +179,37 @@ func TestSingleLineAccountRejectsAmbiguousAccounts(t *testing.T) {
 	db.Exec(`INSERT INTO sync_snapshots VALUES (2)`)
 	if _, err := singleLineAccount(db); err == nil {
 		t.Fatal("expected ambiguous account error")
+	}
+}
+
+func TestNormalizeMaintenanceSnapshotsDeduplicatesUUIDCaseAndKeepsNewest(t *testing.T) {
+	idLower := "5f5a483f-af16-4237-ae54-c3c0a82330cf"
+	idUpper := "5F5A483F-AF16-4237-AE54-C3C0A82330CF"
+	items := normalizeMaintenanceSnapshots([]lineMaintenanceSnapshot{
+		{ID: idLower, Status: "รอดำเนินการ", LastUpdated: "2026-09-16T03:06:16.996Z"},
+		{ID: idUpper, Status: "เสร็จสิ้น", LastUpdated: "2026-09-16T13:54:08Z"},
+		{ID: "27f6ec6e-8096-42fc-89e0-acc06e35af92", Status: "รอดำเนินการ", LastUpdated: "2026-09-17T01:37:41Z"},
+	})
+	if len(items) != 2 {
+		t.Fatalf("maintenance count = %d, want 2", len(items))
+	}
+	if items[0].ID != idLower || items[0].Status != "เสร็จสิ้น" {
+		t.Fatalf("deduplicated maintenance = %+v", items[0])
+	}
+}
+
+func TestNormalizeMaintenancePayloadRemovesCaseDuplicate(t *testing.T) {
+	payload := []interface{}{
+		map[string]interface{}{"id": "ABCDEF00-0000-4000-8000-000000000000", "status": "เก่า", "lastUpdated": "2026-09-16T01:00:00Z"},
+		map[string]interface{}{"id": "abcdef00-0000-4000-8000-000000000000", "status": "ใหม่", "lastUpdated": "2026-09-17T01:00:00Z"},
+	}
+	normalized, changed := normalizeMaintenancePayload(payload)
+	if !changed || len(normalized) != 1 {
+		t.Fatalf("changed=%v count=%d", changed, len(normalized))
+	}
+	item := normalized[0].(map[string]interface{})
+	if item["id"] != "abcdef00-0000-4000-8000-000000000000" || item["status"] != "ใหม่" {
+		t.Fatalf("normalized payload = %+v", item)
 	}
 }
 

@@ -1099,9 +1099,18 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 }
 
 func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status string) {
+	if err := sendMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status); err != nil {
+		fmt.Println("Error sending maintenance status flex message:", err)
+	}
+}
+
+func sendMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status string) error {
 	token := getLineToken()
-	if token == "" || lineUserID == "" {
-		return
+	if token == "" {
+		return fmt.Errorf("LINE token is not configured")
+	}
+	if strings.TrimSpace(lineUserID) == "" {
+		return fmt.Errorf("LINE user id is empty")
 	}
 
 	dateStr := time.Now().Format("02/01/2006 15:04")
@@ -1152,38 +1161,12 @@ func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status stri
 	var contents map[string]interface{}
 	err := json.Unmarshal([]byte(flexJSON), &contents)
 	if err != nil {
-		fmt.Println("Error unmarshaling flexJSON:", err)
-		return
+		return fmt.Errorf("build maintenance Flex message: %w", err)
 	}
-
-	url := "https://api.line.me/v2/bot/message/push"
-	body := map[string]interface{}{
-		"to": lineUserID,
-		"messages": []map[string]interface{}{
-			{
-				"type":     "flex",
-				"altText":  fmt.Sprintf("อัปเดตแจ้งซ่อมห้อง %s: %s", roomNumber, status),
-				"contents": contents,
-			},
-		},
+	message := map[string]interface{}{
+		"type": "flex", "altText": fmt.Sprintf("อัปเดตแจ้งซ่อมห้อง %s: %s", roomNumber, status), "contents": contents,
 	}
-	jsonBody, _ := json.Marshal(body)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending maintenance status flex message:", err)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		var res map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&res)
-		fmt.Printf("LINE API Error in status update (Status %d): %+v\n", resp.StatusCode, res)
-	}
+	return pushLinePayload(lineUserID, message)
 }
 
 func replyToLineWithQuickReply(replyToken, text string, options []string) {

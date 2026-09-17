@@ -1,6 +1,6 @@
 # รายการงานรอแก้ไข DormiNetX
 
-อัปเดตล่าสุด: 16 กันยายน 2569
+อัปเดตล่าสุด: 17 กันยายน 2569
 
 สถานะอ้างอิงปัจจุบัน: Controlled pilot ประมาณ 88% และ Production readiness ประมาณ 78%
 
@@ -43,6 +43,10 @@
 
 ## ปิดแล้วในรอบนี้
 
+- [x] ทำตัวเลือกสถานะบนการ์ดแจ้งซ่อมให้ครบ 5 ค่าเหมือนหน้าแก้ไข เลือกได้โดยตรง ปรับเป็น segmented glass แบบ monochrome ตามแนวทาง iOS ใช้ indigo เฉพาะสถานะปัจจุบัน ปุ่มปัจจุบันกดซ้ำไม่ได้ และติดตั้ง build ใหม่บน iPhone “F” แล้ว
+- [x] แก้สถานะแจ้งซ่อมไม่ส่ง Flex Card: เพิ่ม persistent outbox, event-key กันซ้ำ, retry สูงสุด 8 ครั้ง, startup recovery และ regression tests สำหรับส่งสำเร็จ/ล้มแล้วรอส่งใหม่
+- [x] Deploy backend production SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; service, public health และ master/tenant SQLite quick check ผ่าน เหลือ UAT เปลี่ยนสถานะจริงจากแอปเพื่อตรวจ LINE ปลายทาง
+- [x] แก้รายการแจ้งซ่อมจาก LINE ไม่เข้าแอปเพราะ UUID ต่างตัวพิมพ์: canonicalize/deduplicate โดยเก็บแถวล่าสุด, สำรองฐานข้อมูลก่อน cleanup และออก snapshot production `v82` ที่มี 2 รายการถูกต้อง; binary SHA-256 `ca4718cfa6f43451394df4fe2830cbc6f280c13b1074765f4379faad9b587717`
 - [x] Dashboard นับงานซ่อมครบทุกสถานะ รวม “กำลังติดต่อช่าง” และ “รอตรวจสอบชำระเงิน”
 - [x] Dashboard แสดงยอดรวม ตัวเลขบนกราฟ และ empty state ที่ชัดเจน
 - [x] Regression tests ของ Dashboard และวันที่ผ่าน; iOS suite ล่าสุด 52/52

@@ -2,7 +2,7 @@
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
 
-> สถานะ ณ 16 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover และ public-media closure ถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
+> สถานะ ณ 17 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, public-media closure และคิว retry สำหรับสถานะแจ้งซ่อมถูก deploy แล้ว ประเมินความพร้อม production ประมาณ **78%** และความพร้อมสำหรับ pilot แบบควบคุมประมาณ **88%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
 
 อ่านสรุปว่าทำอะไรแล้วและยังเหลืออะไรได้ที่ [CURRENT_STATUS_2026-09-16.md](docs/CURRENT_STATUS_2026-09-16.md) ส่วนการประเมินรายหน้าและ roadmap ตั้งต้นอยู่ที่ [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) ตัวเลขใน baseline นั้นไม่ใช่สถานะปัจจุบัน
 
@@ -33,6 +33,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - วันที่และรอบบิลใช้ตัวแปลงกลาง รองรับข้อมูลเก่าปี พ.ศ. และข้อมูลใหม่ปี ค.ศ. โดยบันทึกใหม่เป็น Gregorian และไม่แสดงปี 3112
 - ฟอร์มการเงินรักษาสตางค์และส่วนต่างบิลเก่า แยกมัดจำในบิลใหม่แบบเต็มจำนวน/จอง ตรวจสถานะกับยอด และไม่ปิดฟอร์มถ้าบันทึกลงเครื่องไม่สำเร็จ
 - หน้าบิล การเงิน ห้องพัก ตั้งราคา หลักฐานโอน และแจ้งซ่อมค้นหาข้อมูลได้ด้วย UI มาตรฐานเดียวกับหน้าจัดการลูกบ้าน
+- การ์ดแจ้งซ่อมเลือกสถานะได้ครบทั้ง 5 ค่าโดยตรงผ่าน segmented glass แบบ monochrome ในการ์ดเดียว ลดการใช้สีให้ใกล้เคียง control ของ iOS แสดงสถานะปัจจุบันด้วยจุดเน้น indigo เล็กน้อย และใช้รายการสถานะชุดเดียวกับหน้าแก้ไข
 - ชุดค้นหา รอบบิล และสถานะในหน้าการเงินอยู่ในการ์ดกระจกฝ้าใบเดียว เลือกเดือน–ปีโดยตรง และแท็บสถานะรองรับทั้งการแตะกับกดลากเลือก
 - ตรวจหลักฐานการโอน เปิดดูรูปเต็ม แก้ไข อนุมัติ หรือปฏิเสธ
 - แสดงและส่งออกใบเสร็จเป็นภาพ แชร์ บันทึกลง Photos และสั่งพิมพ์
@@ -58,7 +59,8 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 
 ## สิ่งที่ยังไม่เสร็จ
 
-- LINE/LIFF ผูกบัญชีได้แล้ว แสดงข้อมูลลูกบ้าน/บิล รับสลิป/แจ้งซ่อม และแจ้งสถานะงานซ่อมจากแอปกลับไป LINE ได้ แต่ยังขาด delivery log/retry ครบทุกข้อความและ opt-out policy
+- LINE/LIFF ผูกบัญชีได้แล้ว แสดงข้อมูลลูกบ้าน/บิล รับสลิป/แจ้งซ่อม และแจ้งสถานะงานซ่อมจากแอปกลับไป LINE ได้; สถานะแจ้งซ่อมมี persistent outbox, idempotency และ retry แล้ว แต่ข้อความชนิดอื่นยังขาดมาตรฐาน delivery log/retry เดียวกันและ opt-out policy
+- UUID ของงานซ่อมถูก canonicalize ก่อน materialize/publish และ snapshot จาก LINE จะตัด UUID ซ้ำแบบไม่สนตัวพิมพ์โดยเลือกข้อมูลที่อัปเดตล่าสุด ป้องกัน snapshot ทั้งชุดถูก iOS ปฏิเสธจนรายการใหม่ไม่แสดง
 - ยังไม่มี APNs/Push Notification และการจัดตาราง local notification
 - หน้าเลือกภาษาบันทึกตัวเลือกได้ แต่ยังไม่ได้แปลข้อความด้วย localization resources จริง
 - สลิปและรูปแจ้งซ่อมจาก LINE มี tenant-scoped authenticated hydration เข้าแอปแล้ว และปิด public `/uploads` บน production แล้ว; ยังเหลือ UAT ข้ามสองเครื่อง, orphan cleanup และ retention policy
@@ -66,7 +68,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - เส้นทางลืมรหัสผ่านยังต้องทดสอบการส่งอีเมลจริงบน staging และ concurrency หลาย instance
 - ยังต้องหมุน secret ที่เคยอยู่ใน Git และเพิ่ม regression test ให้ authorization endpoint ที่เหลือ
 - Online server restore ถูกปิดไว้แบบ fail closed จนกว่าจะมี maintenance-mode restore ที่ตรวจ manifest และสลับฐานข้อมูล/สื่อแบบ atomic; archive ปัจจุบันผ่าน offline restore drill แล้ว
-- มี iOS unit tests, backend race tests/vet และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว; ผล local ล่าสุด iOS ผ่าน 52/52 และ backend `go test -count=1 -race ./...`/`go vet ./...` ผ่าน แต่ยังไม่มี UI automation ครบทุกหน้า
+- มี iOS unit tests, backend race tests/vet และ GitHub Actions workflow สำหรับ test/build/analyze แล้ว; รอบล่าสุด test สถานะงานซ่อมใหม่ผ่านและรวมผ่าน 52 รายการ แต่ Keychain integration test เดิมบน Simulator ล้มด้วย entitlement environment `-34018` 1 รายการ ขณะที่ signed device build/install ผ่าน; backend `go test -count=1 -race ./...`/`go vet ./...` ผ่าน แต่ยังไม่มี UI automation ครบทุกหน้า
 - มี device UAT บน iPhone จริงหนึ่งเครื่องแล้ว แต่ยังต้องทดสอบ Photos, Share Sheet, AirPrint, alternate icons, video background, พื้นที่เต็ม และ sync บน iPhone สองเครื่อง
 
 ## โครงสร้างโปรเจกต์

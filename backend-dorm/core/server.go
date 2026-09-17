@@ -74,6 +74,7 @@ func RunServer() {
 
 	InitializeDatabase(db)
 	handlers.InitializeLineIntegration(db)
+	handlers.StartLineNotificationWorker(db)
 	if err := handlers.ReconcileLineTenantChanges(db); err != nil {
 		log.Printf("LINE change reconciliation failed: %v", err)
 	}
