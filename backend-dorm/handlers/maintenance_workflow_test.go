@@ -19,6 +19,10 @@ func TestValidateMaintenanceAppTransitionRequiresQuoteApproval(t *testing.T) {
 		{name: "free repair can skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น"},
 		{name: "paid repair cannot skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500, shouldFail: true},
 		{name: "admin cannot approve quote", from: "รออนุมัติค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, shouldFail: true},
+		{name: "resident can reject prepared quote", from: "กำลังติดต่อช่าง", to: "ปฏิเสธค่าใช้จ่าย", cost: 500},
+		{name: "resident can reject pending quote", from: "รออนุมัติค่าใช้จ่าย", to: "ปฏิเสธค่าใช้จ่าย", cost: 500},
+		{name: "rejected quote is terminal", from: "ปฏิเสธค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, shouldFail: true},
+		{name: "unrelated state cannot reject quote", from: "กำลังซ่อม", to: "ปฏิเสธค่าใช้จ่าย", cost: 500, shouldFail: true},
 		{name: "cannot skip to payment", from: "กำลังติดต่อช่าง", to: "รอตรวจสอบชำระเงิน", cost: 500, shouldFail: true},
 	}
 	for _, test := range tests {

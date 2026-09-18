@@ -3,12 +3,13 @@ import SwiftData
 import UIKit
 
 enum MaintenanceWorkflow {
-    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
+    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
 
     static func shortTitle(for status: String) -> String {
         switch status {
         case "กำลังติดต่อช่าง": return "ติดต่อช่าง"
         case "รออนุมัติค่าใช้จ่าย": return "อนุมัติราคา"
+        case "ปฏิเสธค่าใช้จ่าย": return "ปฏิเสธ"
         case "กำลังซ่อม": return "ซ่อม"
         case "รอตรวจสอบชำระเงิน": return "ตรวจชำระ"
         case "เสร็จสิ้น": return "เสร็จ"
@@ -18,29 +19,35 @@ enum MaintenanceWorkflow {
 
     static func canTransition(from originalStatus: String, to newStatus: String, cost: Double = 0, quoteApproved: Bool = false) -> Bool {
         let original = originalStatus.isEmpty ? statuses[0] : originalStatus
-        guard
-            let originalIndex = statuses.firstIndex(of: original),
-            let newIndex = statuses.firstIndex(of: newStatus)
-        else {
+        if original == newStatus { return true }
+
+        switch original {
+        case "รอดำเนินการ":
+            return newStatus == "กำลังติดต่อช่าง"
+        case "กำลังติดต่อช่าง":
+            if newStatus == "รออนุมัติค่าใช้จ่าย" { return cost > 0 }
+            if newStatus == "กำลังซ่อม" { return cost <= 0 || quoteApproved }
+            return false
+        case "รออนุมัติค่าใช้จ่าย":
+            if newStatus == "กำลังติดต่อช่าง" { return true }
+            if newStatus == "ปฏิเสธค่าใช้จ่าย" { return true }
+            return false
+        case "ปฏิเสธค่าใช้จ่าย":
+            return false
+        case "กำลังซ่อม":
+            if newStatus == "รออนุมัติค่าใช้จ่าย" { return cost > 0 }
+            if newStatus == "รอตรวจสอบชำระเงิน" { return cost > 0 }
+            if newStatus == "เสร็จสิ้น" { return cost <= 0 }
+            return false
+        case "รอตรวจสอบชำระเงิน":
+            if newStatus == "กำลังซ่อม" { return true }
+            if newStatus == "เสร็จสิ้น" { return true }
+            return false
+        case "เสร็จสิ้น":
+            return newStatus == "รอตรวจสอบชำระเงิน"
+        default:
             return false
         }
-        if originalIndex == newIndex { return true }
-        if original == "รออนุมัติค่าใช้จ่าย", newStatus == "กำลังซ่อม" {
-            return false
-        }
-        if original == "กำลังติดต่อช่าง", newStatus == "กำลังซ่อม", cost > 0 {
-            return quoteApproved
-        }
-        if original == "กำลังติดต่อช่าง", newStatus == "กำลังซ่อม", cost <= 0 {
-            return true
-        }
-        if original == "กำลังซ่อม", newStatus == "เสร็จสิ้น", cost <= 0 {
-            return true
-        }
-        if newStatus == "รออนุมัติค่าใช้จ่าย", cost <= 0 {
-            return false
-        }
-        return abs(newIndex - originalIndex) <= 1
     }
 }
 
@@ -133,6 +140,12 @@ struct MaintenanceTabView: View {
         }
         .padding(.top, 106)
         .padding(.horizontal, 20)
+        .task {
+            // Maintenance can be created from LINE while this device is idle.
+            // Refresh on entry so the list does not depend on the global
+            // refresh button being pressed first.
+            await SyncManager.shared.syncWithGoBackend(modelContext: modelContext)
+        }
         .sheet(isPresented: $showingEditor) {
             MaintenanceEditor(rooms: rooms) { draft in
                 draft.isDirty = true
@@ -406,6 +419,14 @@ private struct MaintenanceEditor: View {
                                 ForEach(Array(MaintenanceWorkflow.statuses.enumerated()), id: \.offset) { index, item in
                                     statusRow(item: item, index: index)
                                 }
+                            }
+
+                            if status == "ปฏิเสธค่าใช้จ่าย" {
+                                Label("ลูกบ้านปฏิเสธใบเสนอราคา: ระบบจะยกเลิกเคสทิ้งอัตโนมัติใน 24 ชม.", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.custom("SukhumvitSet-Medium", size: 12))
+                                    .foregroundStyle(.red)
+                                    .padding(.top, -6)
+                                    .padding(.horizontal, 4)
                             }
                         }
                     }

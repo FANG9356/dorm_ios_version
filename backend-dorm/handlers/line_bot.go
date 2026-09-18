@@ -1061,12 +1061,11 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 		return
 	}
 
-	nextStatus := "กำลังติดต่อช่าง"
-	reply := "ปฏิเสธค่าใช้จ่ายแล้วค่ะ ระบบส่งรายการกลับให้แอดมินตรวจสอบราคาใหม่"
+	nextStatus := "ปฏิเสธค่าใช้จ่าย"
 	approvedAt := ""
 	if approved {
+		nextStatus = "กำลังติดต่อช่าง"
 		approvedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		reply = fmt.Sprintf("อนุมัติค่าใช้จ่าย %s แล้วค่ะ ขณะนี้แอดมินกำลังติดต่อช่าง", formatLineMoney(notification.Cost))
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	result, err := db.Exec(`UPDATE maintenances SET status = ?, quote_approved_at = ?, last_updated = ?
@@ -1080,19 +1079,28 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับไปแล้วค่ะ")
 		return
 	}
+
+	actionName := "rejected"
 	if approved {
-		notification.EventKey = fmt.Sprintf("maintenance-quote-approved:%d:%s:%s", accountID, maintenanceID, now)
-		notification.MaintenanceID = maintenanceID
-		notification.LineUserID = lineUserID
-		notification.Status = nextStatus
-		notification.LastUpdated = now
-		if err := EnqueueMaintenanceStatusNotification(master, accountID, notification); err != nil {
-			log.Printf("[LINE] queue approved maintenance status failed (account=%d maintenance=%s): %v", accountID, maintenanceID, err)
-		}
+		actionName = "approved"
 	}
+	notification.EventKey = fmt.Sprintf("maintenance-quote-%s:%d:%s:%s", actionName, accountID, maintenanceID, now)
+	notification.MaintenanceID = maintenanceID
+	notification.LineUserID = lineUserID
+	notification.Status = nextStatus
+	notification.LastUpdated = now
+	queued := true
+	if err := EnqueueMaintenanceStatusNotification(master, accountID, notification); err != nil {
+		queued = false
+		log.Printf("[LINE] queue %s maintenance status failed (account=%d maintenance=%s): %v", actionName, accountID, maintenanceID, err)
+		// A plain-text reply is only a delivery fallback. On the normal path the
+		// queued Flex card is the single confirmation, so LINE does not show the
+		// same approval or rejection twice.
+		replyToLine(replyToken, "บันทึกผลการพิจารณาแล้วค่ะ กรุณาตรวจสอบสถานะงานซ่อมอีกครั้ง")
+	}
+
 	publishLineChanges(master, db, accountID)
-	replyToLine(replyToken, reply)
-	if approved {
+	if queued {
 		go ProcessPendingLineNotifications(master)
 	}
 }
@@ -1223,6 +1231,9 @@ func buildMaintenanceStatusFlexMessage(notification maintenanceStatusNotificatio
 	if status == "รอตรวจสอบชำระเงิน" && notification.Cost > 0 {
 		return buildMaintenancePaymentFlexMessage(notification, fallbackTime)
 	}
+	if status == "ปฏิเสธค่าใช้จ่าย" {
+		return buildMaintenanceRejectFlexMessage(notification, fallbackTime)
+	}
 
 	step := maintenanceStatusStep(status)
 	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
@@ -1291,6 +1302,55 @@ func buildMaintenanceStatusFlexMessage(notification maintenanceStatusNotificatio
 		"type":     "flex",
 		"altText":  fmt.Sprintf("แจ้งซ่อมห้อง %s • %s • %s", roomNumber, status, updatedAt),
 		"contents": contents,
+	}, nil
+}
+
+func buildMaintenanceRejectFlexMessage(notification maintenanceStatusNotification, fallbackTime time.Time) (map[string]interface{}, error) {
+	roomNumber := strings.TrimSpace(notification.RoomNumber)
+	issue := strings.TrimSpace(notification.Issue)
+	updatedAt := formatThaiMaintenanceDateTime(notification.LastUpdated, fallbackTime, true)
+
+	return map[string]interface{}{
+		"type": "flex", "altText": "ผลการพิจารณาใบเสนอราคางานซ่อม",
+		"contents": map[string]interface{}{
+			"type": "bubble", "size": "mega",
+			"body": map[string]interface{}{
+				"type": "box", "layout": "vertical", "paddingAll": "20px",
+				"contents": []interface{}{
+					map[string]interface{}{
+						"type": "box", "layout": "horizontal", "alignItems": "center",
+						"contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "แจ้งซ่อม", "size": "lg", "color": "#111827", "weight": "bold", "flex": 4},
+							map[string]interface{}{"type": "text", "text": "ห้อง " + roomNumber, "size": "sm", "color": "#6B7280", "weight": "bold", "align": "end", "flex": 2},
+						},
+					},
+					map[string]interface{}{
+						"type": "text", "text": issue, "size": "md", "color": "#111827", "weight": "bold", "margin": "sm", "wrap": true,
+					},
+					map[string]interface{}{"type": "separator", "color": "#E5E7EB", "margin": "md"},
+					map[string]interface{}{
+						"type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
+						"contents": []interface{}{
+							maintenanceFlexDetailRow("อัปเดตล่าสุด", updatedAt),
+						},
+					},
+					map[string]interface{}{
+						"type": "box", "layout": "vertical", "margin": "lg", "paddingAll": "12px", "backgroundColor": "#F3F4F6", "cornerRadius": "12px", "spacing": "xs",
+						"contents": []interface{}{
+							map[string]interface{}{
+								"type": "text", "text": "ผลการพิจารณา", "size": "xs", "color": "#9CA3AF", "wrap": true,
+							},
+							map[string]interface{}{
+								"type": "text", "text": "ไม่อนุมัติใบเสนอราคา", "size": "md", "color": "#111827", "wrap": true, "weight": "bold",
+							},
+							map[string]interface{}{
+								"type": "text", "text": "ระบบจะยกเลิกรายการนี้ภายใน 24 ชั่วโมง", "size": "xs", "color": "#6B7280", "wrap": true,
+							},
+						},
+					},
+				},
+			},
+		},
 	}, nil
 }
 
@@ -1396,6 +1456,8 @@ func maintenanceStatusStep(status string) int {
 	case "กำลังติดต่อช่าง":
 		return 1
 	case "รออนุมัติค่าใช้จ่าย":
+		return 2
+	case "ปฏิเสธค่าใช้จ่าย":
 		return 2
 	case "กำลังซ่อม":
 		return 3

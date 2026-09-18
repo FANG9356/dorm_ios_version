@@ -106,6 +106,7 @@ func HandleSyncPush(db *sql.DB) http.HandlerFunc {
 			}
 		}
 		if err := MaterializeLineSnapshotAndNotify(db, accountID, payload); err != nil {
+			log.Printf("sync snapshot %s stored but LINE materialization failed: %v", snapshotID, err)
 			http.Error(w, "Sync stored, but LINE data preparation failed", http.StatusInternalServerError)
 			return
 		}

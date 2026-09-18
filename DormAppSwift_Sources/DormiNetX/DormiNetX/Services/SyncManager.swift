@@ -285,12 +285,28 @@ class SyncManager: ObservableObject {
 
             let startingAccount = accountID
             repeat {
-                try await pushCurrentSnapshot(modelContext: modelContext)
+                do {
+                    try await pushCurrentSnapshot(modelContext: modelContext)
+                } catch SyncError.conflict {
+                    // LINE and another device can publish a newer snapshot while
+                    // this device still has unsent edits. Pull that snapshot and
+                    // rebase the dirty records instead of leaving the user on a
+                    // conflict screen where the new LINE record never appears.
+                    state = .downloading
+                    message = "กำลังรวมข้อมูลใหม่จาก LINE กับข้อมูลในเครื่อง"
+                    print("ℹ️ Sync conflict detected; rebasing pending local records")
+                    try await fetchAndApplyLatestSnapshot(
+                        modelContext: modelContext,
+                        onlyIfRecent: false,
+                        silentWhenUnchanged: false
+                    )
+                }
             } while accountID == startingAccount && checkpoint.pending
             lastSyncTime = Date()
             state = .completed
         } catch {
             let text = error.localizedDescription
+            print("❌ Automatic sync failed: \(text)")
             state = .failed(text)
             message = text
         }

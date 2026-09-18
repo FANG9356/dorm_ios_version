@@ -147,6 +147,43 @@ final class CoreDataSafetyTests: XCTestCase {
         }
     }
 
+    func testAutoPushRebasesDirtyLocalRecordsAfterLinePublishesNewSnapshot() async throws {
+        try await withDefaults { defaults in
+            let remote = try AccountScopedStore.makeGuestContainer()
+            let reportedFromLine = Maintenance(roomNumber: "103", issue: "ไฟดับ")
+            reportedFromLine.isDirty = false
+            remote.mainContext.insert(reportedFromLine)
+            try remote.mainContext.save()
+
+            let api = SyncTestAPI()
+            let manager = manager(api: api, defaults: defaults)
+            let remoteBackup = try manager.exportLocalBackupData(modelContext: remote.mainContext)
+            let backupObject = try XCTUnwrap(JSONSerialization.jsonObject(with: remoteBackup) as? [String: Any])
+            let remotePayload = try JSONSerialization.data(withJSONObject: XCTUnwrap(backupObject["snapshot"]))
+            api.onFetch = { try self.snapshotResponse(remotePayload) }
+            api.onPush = { _, baseVersion in
+                if baseVersion == 0 { throw SyncError.conflict }
+            }
+
+            let local = try AccountScopedStore.makeGuestContainer()
+            let unsentRoom = Room(roomNumber: "local-room")
+            unsentRoom.isDirty = true
+            local.mainContext.insert(unsentRoom)
+            try local.mainContext.save()
+
+            await manager.autoPushLocalChanges(modelContext: local.mainContext)
+
+            XCTAssertEqual(manager.state, .completed)
+            XCTAssertEqual(api.bases, [0, 1])
+            XCTAssertEqual(SyncCheckpoint(accountID: 1, defaults: defaults).version, 2)
+            XCTAssertFalse(SyncCheckpoint(accountID: 1, defaults: defaults).pending)
+            XCTAssertEqual(try local.mainContext.fetch(FetchDescriptor<Maintenance>()).map(\.issue), ["ไฟดับ"])
+            let mergedRooms = try local.mainContext.fetch(FetchDescriptor<Room>())
+            XCTAssertEqual(mergedRooms.map(\.roomNumber), ["local-room"])
+            XCTAssertFalse(try XCTUnwrap(mergedRooms.first).isDirty)
+        }
+    }
+
     func testDownloadDoesNotOverwriteEditsMadeWhileWaiting() async throws {
         try await withDefaults { defaults in
             let container = try AccountScopedStore.makeGuestContainer()

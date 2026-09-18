@@ -139,6 +139,12 @@ func RunServer() {
 	// Start daily backup scheduler at 10 PM
 	go handlers.StartBackupScheduler(db, dbPath, "./uploads", "./backups")
 
+	// Start daily media cleanup scheduler at 3 AM
+	go handlers.StartMediaCleanupScheduler(db, "./uploads")
+
+	// Start hourly maintenance cleanup scheduler
+	go handlers.StartMaintenanceCleanupScheduler(db)
+
 	http.HandleFunc("/api/system/backup/auto", func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {

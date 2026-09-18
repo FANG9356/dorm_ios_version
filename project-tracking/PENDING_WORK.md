@@ -1,8 +1,8 @@
 # รายการงานรอแก้ไข DormiNetX
 
-อัปเดตล่าสุด: 17 กันยายน 2569
+อัปเดตล่าสุด: 18 กันยายน 2569
 
-สถานะอ้างอิงปัจจุบัน: ความครบของฟีเจอร์ 92%, Controlled pilot ประมาณ 89% และ Production readiness ประมาณ 79% ตาม [แบบประเมิน 17 กันยายน](../project-review/DormiNetX-Assessment-2026-09-17.md)
+สถานะอ้างอิงปัจจุบัน: ความครบของฟีเจอร์ 93%, Controlled pilot ประมาณ 90% และ Production readiness ประมาณ 81% ตาม [แบบประเมิน 18 กันยายน](../project-review/DormiNetX-Assessment-2026-09-18.md)
 
 ## P0 — ต้องปิดก่อน Production เต็มรูปแบบ
 
@@ -10,7 +10,7 @@
 | ---: | --- | --- | --- | --- |
 | 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | รอดำเนินการ | ต้องเข้าถึงหน้า provider และวางแผน session cutover ร่วมกับเจ้าของระบบ | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
 | 2 | UAT สอง iPhone และสองบัญชี | รอดำเนินการ | ต้องมีอุปกรณ์และบัญชีทดสอบแยกกัน | ทดสอบแก้ข้อมูลชนกัน/คนละรายการ, ตัดเน็ต, force quit, backup/restore และไม่พบข้อมูลข้ามบัญชีหรือสูญหาย |
-| 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | รอตรวจ | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false` แล้ว | manual sync จากอุปกรณ์ใช้งานจริงผ่าน และ server log ไม่มี protocol rejection |
+| 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
 | 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |
 | 5 | ทำ Financial ledger เต็มรูปแบบ | รอดำเนินการ | เริ่มมี `PaymentTransaction` และ `FinancialReceipt` แล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
 | 6 | Production atomic restore/rollback drill | รอตรวจ | คำสั่งและ verify-only พร้อมแล้ว ต้องกำหนด maintenance window | restore archive จริง, health checklist และ rollback ผ่าน พร้อมบันทึกหลักฐาน |
@@ -37,20 +37,25 @@
 
 ## งานเอกสาร
 
-- [x] บันทึกผล iOS full suite รอบก่อน `52/52` และผล targeted maintenance/sync ล่าสุด `21/21` แยกกัน ไม่อ้างว่าเป็นชุดเดียวกัน
+- [x] บันทึกผล iOS full suite รอบก่อน `52/52` และผล targeted maintenance/sync ล่าสุด `23/23` แยกกัน ไม่อ้างว่าเป็นชุดเดียวกัน
 - [x] ลบข้อความเก่าที่ระบุว่า public `/uploads` ยังไม่ปิด เพราะ production ปิดแล้ว
 - [x] เพิ่มเอกสารวิสัยทัศน์, สถานะงาน, คู่มือส่งต่อ และแบบประเมินวันที่ 17 กันยายน พร้อมเชื่อมจาก README/Project Tracking
 - [x] เพิ่ม maintenance E2E checklist และ issue history `LINE-007`–`FLOW-011`
-- [ ] บันทึกผล manual sync หลัง protocol-2 cutover
-- [ ] อัปเดตคะแนนเมื่อมีหลักฐานปิด P0 เพิ่ม ไม่เพิ่มคะแนนจาก build/test เพียงอย่างเดียว
+- [x] บันทึกผล sync อุปกรณ์จริงหลัง protocol-2 cutover: snapshot v161, dirty 0, pending 0 และรายการ LINE server id 183 ปรากฏใน SwiftData
+- [x] อัปเดตคะแนนแบบประเมินหลังมีหลักฐานปิด protocol-2 device proof; ไม่เพิ่มคะแนนจาก build/test เพียงอย่างเดียว
 
 ## ปิดแล้วในรอบนี้
+
+- [x] แก้ sync conflict ที่ทำให้รายการจาก LINE ไม่เข้าแอปเมื่อมี local dirty record: ดึง remote snapshot, rebase ข้อมูลในเครื่องแล้ว push ซ้ำอัตโนมัติ; เพิ่ม sync ตอนเปิด dashboard/หน้าแจ้งซ่อม และพิสูจน์บน iPhone จริงถึง snapshot v161 โดยข้อมูลเดิมไม่หาย
+- [x] รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ใน backend materialization เป็น terminal branch ป้องกัน snapshot รับสำเร็จแต่ side-effect ตอบ HTTP 500; targeted iOS maintenance/sync tests ผ่าน 23/23 และ backend test/race/vet ผ่าน
+- [x] ปรับ Flex ปฏิเสธใบเสนอราคาเป็นโทนขาว–เทาแบบกระชับ deploy SHA-256 `0cb92224751a1456eedfcb3962b72df694c5219ea399cd59a663753671f55721`
+- [x] ตัดข้อความยืนยันซ้ำหลังอนุมัติ/ปฏิเสธใบเสนอราคา ให้ success path ส่ง Flex ใบเดียวและใช้ text เฉพาะ fallback; production ล่าสุด SHA-256 `32a26c80c5793f533a1e658790c09aed423b51f104a4e3120496ce5793f07f89`, rollback set `/home/fang/line_migration_backups/20260917-201712-pre-flex-ui`
 
 - [x] ออกแบบการ์ดแจ้งซ่อมใหม่เป็น read-only card แสดง timeline ครบ 6 ขั้นแบบ monochrome รวมขั้นอนุมัติค่าใช้จ่าย ตัดการเปลี่ยนสถานะ, swipe และเมนูกดค้างจากหน้ารายการ ให้แตะทั้งการ์ดก่อนแก้ไข บังคับ workflow ตามกฎพร้อม save validation และย้ายการลบเข้าไปในหน้ารายละเอียดพร้อม confirmation; ติดตั้ง build ใหม่บน iPhone “F” แล้ว
 - [x] Redesign หน้าแก้ไขงานซ่อมเป็น premium thin-material cards ลดสีและกล่องซ้อน ทำสถานะเป็น vertical workflow timeline และปรับรายละเอียด ค่าใช้จ่าย ช่องทางชำระ หลักฐาน และปุ่มลบให้ใช้ visual language เดียวกัน
 - [x] เปลี่ยนการยืนยันลบงานซ่อมจาก adaptive confirmation popover เป็น system alert กลางจอ ไม่ลอยไปเตือนด้านบนตามตำแหน่งปุ่ม
 - [x] แก้สถานะแจ้งซ่อมไม่ส่ง Flex Card: เพิ่ม persistent outbox, event-key กันซ้ำ, retry สูงสุด 8 ครั้ง, startup recovery และ regression tests สำหรับส่งสำเร็จ/ล้มแล้วรอส่งใหม่
-- [x] Deploy backend production รุ่นล่าสุด SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`; service/public health และ schema checks ผ่าน มี rollback set `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`; ยังเหลือ controlled E2E UAT ของ quote/approval/bill/slip
+- [x] Deploy backend รุ่น workflow SHA-256 `f02deb959dde76647b366d24e1e804b7958af4552b4ca715b615333783e997c6`; service/public health และ schema checks ผ่าน มี rollback set `/home/fang/line_migration_backups/20260917-002953-pre-flex-ui`; รุ่น production ปัจจุบันอยู่ในรายการปิดล่าสุดด้านบน และยังเหลือ controlled E2E UAT ของ quote/approval/bill/slip
 - [x] เพิ่ม workflow งานซ่อม 6 ขั้น: งานมีค่าใช้จ่ายต้องส่ง Flex ใบเสนอราคาและรอ linked resident อนุมัติก่อนซ่อม, ปฏิเสธเพื่อออกยอดใหม่ได้, ล็อกยอดที่เสนอ, ส่ง Flex บิลตอนรอตรวจชำระ และให้งานฟรีข้าม quote/payment ได้
 - [x] เพิ่ม maintenance LINE action authorization, stale-action protection, snapshot publish กลับแอป, outbox internal record ID และแก้ retry due-time comparison ด้วย SQLite `julianday`
 - [x] แก้ Flex ใบเสนอราคา/บิลถูก LINE API ปฏิเสธ 400 เพราะใช้ `alignItems: baseline`; เปลี่ยนเป็น baseline layout, เก็บ response body ใน error, deploy SHA-256 `2566537a63a22d3d591f2e845fe6389afc0412664094436999eaabb45e3aec4d` และ retry ใบเสนอราคาห้อง 103 ยอด 200 บาทสำเร็จ (`sent`)

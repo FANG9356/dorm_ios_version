@@ -1,6 +1,6 @@
 # คู่มือส่งต่องาน DormiNetX
 
-อัปเดตล่าสุด: 17 กันยายน 2569
+อัปเดตล่าสุด: 18 กันยายน 2569
 
 ## อ่านก่อนแก้โค้ด
 
@@ -38,6 +38,7 @@
 | กำลังซ่อม | รอตรวจสอบชำระเงิน | งานมีค่าใช้จ่าย; ส่ง Flex บิล |
 | กำลังซ่อม | เสร็จสิ้น | ทำได้เฉพาะงานไม่มีค่าใช้จ่าย |
 | รอตรวจสอบชำระเงิน | เสร็จสิ้น | หลังตรวจการชำระ/หลักฐานแล้ว |
+| กำลังติดต่อช่าง / รออนุมัติค่าใช้จ่าย | ปฏิเสธค่าใช้จ่าย | ลูกบ้านไม่อนุมัติใบเสนอราคา; เป็น terminal branch ของรายการนั้น ไม่เดินหน้าซ่อมอัตโนมัติ |
 
 หากแก้สถานะหรือชื่อสถานะ ต้องแก้พร้อมกันทั้ง Swift, backend, Flex progress, dashboard/filter และ tests ห้ามแก้เฉพาะ UI
 
@@ -75,8 +76,8 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 
 ## Production และ rollback
 
-- production binary ปัจจุบัน: SHA-256 `d4e0f718ff73c371796f8ca5adc4f9964d755d132cced1e9a94de7cc66db4351`
-- rollback set ล่าสุด: `/home/fang/line_migration_backups/20260917-052357-pre-flex-ui` (รวม master และ tenant databases)
+- production binary ปัจจุบัน: SHA-256 `32a26c80c5793f533a1e658790c09aed423b51f104a4e3120496ce5793f07f89`
+- rollback set ล่าสุด: `/home/fang/line_migration_backups/20260917-201712-pre-flex-ui` (รวม binary, master และ tenant databases)
 - health endpoint: `https://api.dorminet.studio/api/system/ping`
 - safe deployment script จะสำรอง binary/master DB ตรวจ health และตรวจ schema additive ของ outbox
 - credential deploy อยู่ในไฟล์ ignored ของเครื่องพัฒนา ห้ามพิมพ์ค่าออก log หรือ commit
@@ -94,6 +95,15 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 6. ตรวจ outbox เป็น `sent`, attempts ไม่ผิดปกติ, เวลาใน Flex เป็นเวลาประเทศไทยและปี พ.ศ. ถูกต้อง
 7. กด sync ในแอปและยืนยันว่า iPhone อีกเครื่องเห็นสถานะ/หลักฐานตรงกัน
 8. หากพบปัญหา ให้บันทึกใน `UI_LINE_AUDIT_CHECKLIST.md` ก่อนแก้ และเก็บ rollback target ไว้
+
+## พฤติกรรมล่าสุดที่ต้องไม่ทำให้ถอยหลัง
+
+- เมื่อ iOS push snapshot แล้วพบ HTTP 409 เพราะมีข้อมูลใหม่จาก LINE ให้ดึง remote snapshot, rebase local dirty records และ push ซ้ำ; ห้ามหยุดที่ข้อความ conflict จนข้อมูลใหม่ไม่เข้าแอป
+- เปิด dashboard หรือหน้าแจ้งซ่อมต้องเริ่ม sync เพื่อให้รายการจาก LINE ปรากฏโดยไม่ต้องรอผู้ใช้กดปุ่มในหน้าอื่น
+- การอนุมัติใบเสนอราคาจาก LINE เปลี่ยนกลับเป็น `กำลังติดต่อช่าง` พร้อม approval marker; แอดมินต้องเป็นผู้บันทึก `กำลังซ่อม` ในแอปเอง
+- การอนุมัติหรือปฏิเสธสำเร็จส่ง Flex เพียงใบเดียว ไม่ส่ง text bubble ที่ซ้ำความหมาย; text ใช้เฉพาะ error, stale/repeated action หรือ fallback เมื่อ enqueue ไม่สำเร็จ
+- สถานะ `ปฏิเสธค่าใช้จ่าย` ต้อง materialize ลงฐาน tenant/snapshot ได้และเป็นสถานะปลายทาง
+- หลักฐาน production ล่าสุดของ LINE → app คือ snapshot v161, iPhone dirty 0/pending 0 และรายการ server id 183 ปรากฏใน SwiftData; นี่ไม่ทดแทน UAT สองเครื่อง/สองบัญชี
 
 ## จุดเสี่ยงที่ผู้รับช่วงต้องรู้
 

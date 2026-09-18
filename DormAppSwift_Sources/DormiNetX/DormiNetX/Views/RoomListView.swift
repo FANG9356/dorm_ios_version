@@ -211,6 +211,9 @@ struct RoomListView: View {
                     }
                 }
         )
+        .task {
+            await syncManager.syncWithGoBackend(modelContext: modelContext)
+        }
         .onAppear {
             ensureCurrentMonthPaymentsIfNeeded()
             scheduleAutoPullCheck()

@@ -537,13 +537,28 @@ func maintenanceStatusIndex(value string) int {
 }
 
 func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost float64, quoteApproved bool) error {
+	previousStatus = strings.TrimSpace(previousStatus)
+	nextStatus = strings.TrimSpace(nextStatus)
+	const rejectedStatus = "ปฏิเสธค่าใช้จ่าย"
+	if previousStatus == nextStatus {
+		return nil
+	}
+	// Quote rejection is a terminal branch, not a numbered repair step. LINE
+	// can publish it while the tenant database still shows either the quote
+	// preparation or quote-awaiting state, so accept both safe predecessors.
+	if nextStatus == rejectedStatus {
+		if previousStatus == "กำลังติดต่อช่าง" || previousStatus == "รออนุมัติค่าใช้จ่าย" {
+			return nil
+		}
+		return fmt.Errorf("quote can only be rejected while contacting or awaiting approval")
+	}
+	if previousStatus == rejectedStatus {
+		return fmt.Errorf("rejected quote is terminal; issue a replacement quote")
+	}
 	previousIndex := maintenanceStatusIndex(previousStatus)
 	nextIndex := maintenanceStatusIndex(nextStatus)
 	if previousIndex < 0 || nextIndex < 0 {
 		return fmt.Errorf("unknown status")
-	}
-	if previousIndex == nextIndex {
-		return nil
 	}
 	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {
 		return fmt.Errorf("resident approval is required before repair")

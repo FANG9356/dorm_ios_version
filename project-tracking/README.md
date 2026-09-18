@@ -1,6 +1,6 @@
 # Project Tracking — DormiNetX
 
-อัปเดตล่าสุด: 17 กันยายน 2569
+อัปเดตล่าสุด: 18 กันยายน 2569
 
 โฟลเดอร์นี้คือจุดเริ่มต้นสำหรับผู้ที่จะรับช่วงพัฒนา ใช้ติดตามสถานะปัจจุบัน งานที่กำลังทำ งานถัดไป และหลักฐานที่ต้องมีก่อนเปลี่ยนสถานะ ห้ามถือว่า checkbox ที่ติ๊กแล้วเท่ากับผ่าน production หากยังไม่มีผลทดสอบหรือ UAT ตามเกณฑ์รับงาน
 
@@ -12,7 +12,7 @@
 4. [PENDING_WORK.md](PENDING_WORK.md) — backlog ตาม P0/P1/P2 พร้อมเกณฑ์ปิดงาน
 5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
 6. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-7. [DormiNetX-Assessment-2026-09-17.md](../project-review/DormiNetX-Assessment-2026-09-17.md) — แบบประเมินความพร้อมล่าสุด
+7. [DormiNetX-Assessment-2026-09-18.md](../project-review/DormiNetX-Assessment-2026-09-18.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 
@@ -20,11 +20,11 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 92% | flow หลักมีแล้ว รวมอนุมัติค่าซ่อมก่อนเริ่มงาน |
-| Controlled pilot | 89% | ใช้กับกลุ่มจำกัดได้โดยมี backup และผู้ดูแลติดตาม |
-| Production readiness | 79% | ยังห้ามเรียกว่า production-ready จนกว่า P0 จะปิดพร้อมหลักฐาน |
+| ความครบของฟีเจอร์ | 93% | flow หลักมีแล้ว รวมอนุมัติค่าซ่อมก่อนเริ่มงานและสาขาปฏิเสธ |
+| Controlled pilot | 90% | ใช้กับกลุ่มจำกัดได้โดยมี backup และผู้ดูแลติดตาม |
+| Production readiness | 81% | sync อุปกรณ์จริงผ่านแล้ว แต่ยังห้ามเรียกว่า production-ready จนกว่า P0 ที่เหลือจะปิดพร้อมหลักฐาน |
 
-งานล่าสุดที่เสร็จคือ workflow แจ้งซ่อม 6 ขั้น, Flex ใบเสนอราคา/บิล, สิทธิ์อนุมัติของลูกบ้าน, outbox retry และ UI งานซ่อมที่ลดโอกาสกดพลาด งานที่กำลังติดตามต่อทันทีคือ controlled end-to-end UAT ของ quote/approve/reject/bill/slip และการยืนยัน sync กลับเข้าแอป
+งานล่าสุดที่เสร็จคือแก้ sync conflict ให้รายการจาก LINE รวมกับข้อมูลในเครื่องได้โดยไม่สูญหาย, รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ตลอดเส้นทาง snapshot, ลด Flex ปฏิเสธเป็นโทนขาว–เทา และตัดข้อความยืนยันซ้ำให้เหตุการณ์หนึ่งส่ง Flex เพียงใบเดียว งานที่กำลังติดตามต่อทันทีคือ controlled end-to-end UAT ของ quote/approve/reject/re-quote/bill/slip และการทดสอบหลายอุปกรณ์/หลายบัญชี
 
 ## กติกาการอัปเดต
 

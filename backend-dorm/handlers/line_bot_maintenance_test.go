@@ -115,6 +115,37 @@ func TestMaintenanceQuoteAndPaymentFlexRejectMissingRecordID(t *testing.T) {
 	}
 }
 
+func TestMaintenanceRejectFlexUsesCompactMonochromeStyle(t *testing.T) {
+	notification := maintenanceStatusNotification{
+		MaintenanceID: "44", LineUserID: "line-one", RoomNumber: "103",
+		Issue: "น้ำไม่ไหล", Status: "ปฏิเสธค่าใช้จ่าย",
+		LastUpdated: "2026-09-17T14:26:48Z",
+	}
+	message, err := buildMaintenanceStatusFlexMessage(notification, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(payload)
+	for _, expected := range []string{
+		"แจ้งซ่อม", "ผลการพิจารณา", "ไม่อนุมัติใบเสนอราคา",
+		"ระบบจะยกเลิกรายการนี้ภายใน 24 ชั่วโมง", "17 ก.ย. 2569 • 21:26 น.",
+		`"backgroundColor":"#F3F4F6"`,
+	} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("reject Flex payload does not contain %q: %s", expected, text)
+		}
+	}
+	for _, forbidden := range []string{"#DC2626", "#B91C1C", "#FEE2E2", "ระบบจะดำเนินการยกเลิกงานแจ้งซ่อมนี้"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("reject Flex payload contains legacy red styling %q: %s", forbidden, text)
+		}
+	}
+}
+
 func TestMaintenanceTimeParsesLegacyBangkokValue(t *testing.T) {
 	got := formatThaiMaintenanceDateTime("2026-09-17 09:45:00", time.Time{}, true)
 	if got != "17 ก.ย. 2569 • 09:45 น." {
