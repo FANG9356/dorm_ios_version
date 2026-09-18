@@ -2,7 +2,7 @@
 
 อัปเดตล่าสุด: 18 กันยายน 2569
 
-สถานะอ้างอิงปัจจุบัน: ความครบของฟีเจอร์ 93%, Controlled pilot ประมาณ 90% และ Production readiness ประมาณ 81% ตาม [แบบประเมิน 18 กันยายน](../project-review/DormiNetX-Assessment-2026-09-18.md)
+สถานะอ้างอิงปัจจุบันหลังเพิ่มระบบตรวจสลิปอัตโนมัติ: ความครบของฟีเจอร์ 94%, Controlled pilot ประมาณ 82% และ Production readiness ประมาณ 70% ตาม [แบบประเมิน 18 กันยายน](../project-review/DormiNetX-Assessment-2026-09-18.md) คะแนน readiness ลดลงเพราะพบ P0 ใหม่ ไม่ใช่เพราะฟีเจอร์เดิมถอยหลัง
 
 ## P0 — ต้องปิดก่อน Production เต็มรูปแบบ
 
@@ -14,6 +14,7 @@
 | 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |
 | 5 | ทำ Financial ledger เต็มรูปแบบ | รอดำเนินการ | เริ่มมี `PaymentTransaction` และ `FinancialReceipt` แล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
 | 6 | Production atomic restore/rollback drill | รอตรวจ | คำสั่งและ verify-only พร้อมแล้ว ต้องกำหนด maintenance window | restore archive จริง, health checklist และ rollback ผ่าน พร้อมบันทึกหลักฐาน |
+| 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | เร่งด่วน/ยังไม่ผ่าน | ระบบ deploy แล้ว แต่ fallback QR ยอมรับ payload กว้างและเปลี่ยน `paid`/`เสร็จสิ้น`; OCR service รัน root และยังไม่อยู่ใน atomic rollback/health gate | fail closed; ตรวจยอด ผู้รับ reference และ replay; ไม่ auto-paid เมื่อ OCR/API ล่ม; config/secret ไม่ hardcode; service ลดสิทธิ์; tests/UAT/rollback ผ่าน |
 
 ## P1 — ต้องปิดก่อน Rollout วงกว้าง
 

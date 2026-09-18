@@ -11,8 +11,9 @@
 3. [WORK_STATUS.md](WORK_STATUS.md) — ภาพรวมว่าทำอะไรแล้ว กำลังทำอะไร และหลักฐานล่าสุด
 4. [PENDING_WORK.md](PENDING_WORK.md) — backlog ตาม P0/P1/P2 พร้อมเกณฑ์ปิดงาน
 5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
-6. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-7. [DormiNetX-Assessment-2026-09-18.md](../project-review/DormiNetX-Assessment-2026-09-18.md) — แบบประเมินความพร้อมล่าสุด
+6. [DEVELOPMENT_OPERATIONS_RUNBOOK.md](../docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md) — วิธีเข้า server, ตรวจระบบ, deploy backend และ build/install แอปสำหรับ Terminal ใหม่
+7. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
+8. [DormiNetX-Assessment-2026-09-18.md](../project-review/DormiNetX-Assessment-2026-09-18.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 
@@ -20,15 +21,16 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 93% | flow หลักมีแล้ว รวมอนุมัติค่าซ่อมก่อนเริ่มงานและสาขาปฏิเสธ |
-| Controlled pilot | 90% | ใช้กับกลุ่มจำกัดได้โดยมี backup และผู้ดูแลติดตาม |
-| Production readiness | 81% | sync อุปกรณ์จริงผ่านแล้ว แต่ยังห้ามเรียกว่า production-ready จนกว่า P0 ที่เหลือจะปิดพร้อมหลักฐาน |
+| ความครบของฟีเจอร์ | 94% | เพิ่ม PromptPay/OCR/ตรวจสลิปแล้ว แต่ความครบไม่เท่ากับความปลอดภัย |
+| Controlled pilot | 82% | ต้องมีผู้ดูแลตรวจการตัดยอดทุกครั้งจนกว่า slip verification จะ fail closed |
+| Production readiness | 70% | ลดลงชั่วคราวเพราะ fallback ตรวจสลิปอาจยอมรับ QR โดยไม่ยืนยันยอด/ผู้รับ/replay และ OCR deploy ยัง rollback ไม่ครบ |
 
-งานล่าสุดที่เสร็จคือแก้ sync conflict ให้รายการจาก LINE รวมกับข้อมูลในเครื่องได้โดยไม่สูญหาย, รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ตลอดเส้นทาง snapshot, ลด Flex ปฏิเสธเป็นโทนขาว–เทา และตัดข้อความยืนยันซ้ำให้เหตุการณ์หนึ่งส่ง Flex เพียงใบเดียว งานที่กำลังติดตามต่อทันทีคือ controlled end-to-end UAT ของ quote/approve/reject/re-quote/bill/slip และการทดสอบหลายอุปกรณ์/หลายบัญชี
+งานล่าสุดมีการเพิ่ม PromptPay QR, OCR service และ auto slip flow บน production แล้ว แต่ยังจัดเป็น **ทดลอง/ต้อง harden** ไม่ใช่หลักฐานรับเงินจริงที่ปลอดภัย งานเร่งด่วนที่สุดคือทำ verification ให้ fail closed และหยุดการ auto-paid/auto-complete เมื่อยืนยันยอด ผู้รับ reference และ replay ไม่ได้ จากนั้นจึงทำ controlled end-to-end UAT และการทดสอบหลายอุปกรณ์/หลายบัญชี
 
 ## กติกาการอัปเดต
 
 - ทุกคำขอและทุกการดำเนินงานต้องเพิ่มรายการใหม่ใน `ACTIVITY_REPORT.md` ก่อนส่งมอบผล แม้ไม่มีไฟล์หรือข้อมูลเปลี่ยนแปลง
+- Terminal/Agent ทุกตัวต้องอ่าน `AGENTS.md`; งานที่แตะ server/deploy/build/install ต้องอ่าน `docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md` ก่อนลงมือ
 - `ACTIVITY_REPORT.md` เป็น append-only ห้ามลบหรือเขียนทับประวัติเดิม
 - ใช้สถานะ `รอดำเนินการ`, `กำลังทำ`, `รอตรวจ`, `ติดเงื่อนไข` หรือ `เสร็จแล้ว`
 - ทุกงานที่เป็น `เสร็จแล้ว` ต้องระบุผลทดสอบ, รุ่นแอป/backend, commit หรือหลักฐาน UAT อย่างน้อยหนึ่งรายการ

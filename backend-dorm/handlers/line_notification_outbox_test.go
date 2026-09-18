@@ -105,3 +105,104 @@ func TestInitializeLineIntegrationRecoversClaimedNotification(t *testing.T) {
 		t.Fatalf("status = %q, want pending", status)
 	}
 }
+
+// TestDuplicateNotificationFromTwoPathsIsPreventedByEventKey จำลอง scenario ที่เกิด bug:
+// REST API path และ snapshot path ส่ง event_key เดียวกันสำหรับสถานะเดียวกัน
+// outbox ต้องเก็บแค่ 1 row และส่งแค่ครั้งเดียว
+func TestDuplicateNotificationFromTwoPathsIsPreventedByEventKey(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	InitializeLineIntegration(db)
+
+	// event_key เดิม: สร้างจาก maintenance ID + status + last_updated
+	// ทั้ง 2 path ควรใช้ key เดียวกันถ้าเป็น event เดียวกัน
+	sharedEventKey := "maintenance:1:ext-abc:2026-09-18T04:49:00Z:กำลังติดต่อช่าง"
+	notification := maintenanceStatusNotification{
+		EventKey:      sharedEventKey,
+		MaintenanceID: "55",
+		LineUserID:    "line-test",
+		RoomNumber:    "103",
+		Issue:         "หลอดไฟเสีย",
+		Status:        "กำลังติดต่อช่าง",
+		LastUpdated:   "2026-09-18T04:49:00Z",
+	}
+
+	// Path A (snapshot): enqueue ครั้งแรก
+	if err := EnqueueMaintenanceStatusNotification(db, 1, notification); err != nil {
+		t.Fatalf("first enqueue failed: %v", err)
+	}
+	// Path B (snapshot retry หรือ race): enqueue ซ้ำด้วย event_key เดิม
+	if err := EnqueueMaintenanceStatusNotification(db, 1, notification); err != nil {
+		t.Fatalf("second enqueue failed: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM line_notification_outbox WHERE event_key = ?`, sharedEventKey).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("outbox has %d rows for same event_key, want 1 — duplicate notification would be sent", count)
+	}
+
+	// ตรวจว่า worker ส่งแค่ครั้งเดียว
+	sendCount := 0
+	processPendingLineNotifications(db, func(n maintenanceStatusNotification) error {
+		sendCount++
+		if n.LineUserID != "line-test" {
+			t.Fatalf("unexpected recipient: %s", n.LineUserID)
+		}
+		return nil
+	})
+	if sendCount != 1 {
+		t.Fatalf("LINE push called %d times for same event, want 1", sendCount)
+	}
+}
+
+// TestDifferentStatusTransitionGeneratesSeparateOutboxEntries ตรวจว่าสถานะต่างกัน
+// (คนละ event) สร้าง outbox entry แยกกันได้ถูกต้อง
+func TestDifferentStatusTransitionGeneratesSeparateOutboxEntries(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	InitializeLineIntegration(db)
+
+	base := maintenanceStatusNotification{
+		MaintenanceID: "66",
+		LineUserID:    "line-two",
+		RoomNumber:    "201",
+		Issue:         "น้ำรั่ว",
+	}
+
+	// event 1: กำลังติดต่อช่าง
+	n1 := base
+	n1.EventKey = "maintenance:1:ext-def:2026-09-18T05:00:00Z:กำลังติดต่อช่าง"
+	n1.Status = "กำลังติดต่อช่าง"
+	n1.LastUpdated = "2026-09-18T05:00:00Z"
+	if err := EnqueueMaintenanceStatusNotification(db, 1, n1); err != nil {
+		t.Fatal(err)
+	}
+
+	// event 2: รออนุมัติค่าใช้จ่าย (สถานะต่างกัน → event_key ต่างกัน)
+	n2 := base
+	n2.EventKey = "maintenance:1:ext-def:2026-09-18T05:05:00Z:รออนุมัติค่าใช้จ่าย"
+	n2.Status = "รออนุมัติค่าใช้จ่าย"
+	n2.LastUpdated = "2026-09-18T05:05:00Z"
+	n2.Cost = 500
+	if err := EnqueueMaintenanceStatusNotification(db, 1, n2); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM line_notification_outbox`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("outbox has %d rows, want 2 for two different status events", count)
+	}
+}
+

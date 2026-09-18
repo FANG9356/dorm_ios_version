@@ -247,6 +247,67 @@ func MaterializeLineSnapshotAndNotify(master *sql.DB, accountID int, payload []b
 	return err
 }
 
+// validateLineSnapshotForPush applies the workflow checks that can be decided
+// without mutating tenant data. It must run before sync_snapshots INSERT so an
+// invalid stale app state cannot become the latest immutable snapshot.
+func validateLineSnapshotForPush(accountID int, payload []byte) error {
+	var snapshot lineSyncEnvelope
+	if err := json.Unmarshal(payload, &snapshot); err != nil {
+		return err
+	}
+	if snapshot.SnapshotID == "" {
+		return nil
+	}
+	if snapshot.AccountID != accountID {
+		return errors.New("snapshot account mismatch")
+	}
+	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
+	tenantDB, err := GetTenantDB(accountID)
+	if err != nil {
+		return err
+	}
+	return validateMaintenanceSnapshotAgainstTenant(tenantDB, snapshot.Maintenance)
+}
+
+func validateMaintenanceSnapshotAgainstTenant(tenantDB *sql.DB, maintenanceItems []lineMaintenanceSnapshot) error {
+	for _, maintenance := range maintenanceItems {
+		maintenanceID := strings.TrimSpace(maintenance.ID)
+		if maintenanceID == "" {
+			continue
+		}
+		var previousStatus, quoteApprovedAt string
+		var previousCost float64
+		err := tenantDB.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0), COALESCE(quote_approved_at, '')
+			FROM maintenances WHERE external_id = ?`, maintenanceID).Scan(&previousStatus, &previousCost, &quoteApprovedAt)
+		if errors.Is(err, sql.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("read previous maintenance status: %w", err)
+		}
+		if err := validateMaintenanceCostChange(previousStatus, maintenance.Status, previousCost, maintenance.Cost, quoteApprovedAt != ""); err != nil {
+			return fmt.Errorf("maintenance %s cost change: %w", maintenanceID, err)
+		}
+		if strings.TrimSpace(previousStatus) == strings.TrimSpace(maintenance.Status) {
+			continue
+		}
+		if err := validateMaintenanceAppTransition(previousStatus, maintenance.Status, maintenance.Cost, quoteApprovedAt != ""); err != nil {
+			return fmt.Errorf("maintenance %s transition: %w", maintenanceID, err)
+		}
+		if maintenance.Status == "รออนุมัติค่าใช้จ่าย" {
+			var linkedResidents int
+			if err := tenantDB.QueryRow(`SELECT COUNT(*) FROM users WHERE room_number = ?
+				AND line_user_id != '' AND status IN ('กำลังพักอาศัย','จอง')`, maintenance.RoomNumber).Scan(&linkedResidents); err != nil {
+				return fmt.Errorf("check maintenance quote recipient: %w", err)
+			}
+			if linkedResidents == 0 {
+				return errors.New("maintenance quote requires a linked LINE resident")
+			}
+		}
+	}
+	return nil
+}
+
 func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byte, notifier maintenanceStatusNotifier) error {
 	var snapshot lineSyncEnvelope
 	if err := json.Unmarshal(payload, &snapshot); err != nil {
@@ -1012,8 +1073,12 @@ func blankAsDash(value string) string {
 	return value
 }
 
-func pushLinePayload(lineUserID string, message map[string]interface{}) error {
-	body, err := json.Marshal(map[string]interface{}{"to": lineUserID, "messages": []interface{}{message}})
+func pushLinePayload(lineUserID string, messages ...map[string]interface{}) error {
+	var msgs []interface{}
+	for _, m := range messages {
+		msgs = append(msgs, m)
+	}
+	body, err := json.Marshal(map[string]interface{}{"to": lineUserID, "messages": msgs})
 	if err != nil {
 		return err
 	}

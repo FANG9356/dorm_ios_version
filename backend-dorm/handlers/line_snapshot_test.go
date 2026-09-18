@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -251,6 +252,36 @@ func TestNormalizeMaintenancePayloadRemovesCaseDuplicate(t *testing.T) {
 	item := normalized[0].(map[string]interface{})
 	if item["id"] != "abcdef00-0000-4000-8000-000000000000" || item["status"] != "ใหม่" {
 		t.Fatalf("normalized payload = %+v", item)
+	}
+}
+
+func TestValidateMaintenanceSnapshotRejectsStaleBackwardTransition(t *testing.T) {
+	tenantDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tenantDB.Close()
+	InitializeTenantDatabase(tenantDB)
+	if _, err := tenantDB.Exec(`INSERT INTO maintenances
+		(room_number, issue, status, cost, external_id, last_updated)
+		VALUES ('103', 'test', 'เสร็จสิ้น', 2, 'maintenance-one', '2026-09-18T07:29:30Z')`); err != nil {
+		t.Fatal(err)
+	}
+
+	err = validateMaintenanceSnapshotAgainstTenant(tenantDB, []lineMaintenanceSnapshot{{
+		ID: "maintenance-one", RoomNumber: "103", Issue: "test",
+		Status: "รออนุมัติค่าใช้จ่าย", Cost: 2, LastUpdated: "2026-09-18T07:32:19Z",
+	}})
+	if err == nil || !strings.Contains(err.Error(), "status must move one step at a time") {
+		t.Fatalf("stale backward transition error = %v", err)
+	}
+
+	var status string
+	if err := tenantDB.QueryRow(`SELECT status FROM maintenances WHERE external_id = 'maintenance-one'`).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "เสร็จสิ้น" {
+		t.Fatalf("validation mutated tenant status to %q", status)
 	}
 }
 

@@ -22,7 +22,11 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 			return
 		}
 		if r.Method == "GET" {
-			rows, err := db.Query("SELECT id, room_number, issue, status, cost, reported_at, COALESCE(resolved_at, ''), COALESCE(payment_method, ''), COALESCE(slip_path, ''), COALESCE(issue_image, '') FROM maintenances ORDER BY CASE status WHEN 'รอดำเนินการ' THEN 1 WHEN 'กำลังซ่อม' THEN 2 ELSE 3 END, id DESC")
+		rows, err := db.Query(`SELECT id, room_number, issue, status, cost, reported_at,
+			COALESCE(resolved_at, ''), COALESCE(payment_method, ''), COALESCE(slip_path, ''), COALESCE(issue_image, ''),
+			COALESCE(last_updated, ''), COALESCE(quote_approved_at, ''), COALESCE(external_id, '')
+			FROM maintenances ORDER BY CASE status
+				WHEN 'รอดำเนินการ' THEN 1 WHEN 'กำลังซ่อม' THEN 2 ELSE 3 END, id DESC`)
 			if err != nil {
 				http.Error(w, "Database error", http.StatusInternalServerError)
 				return
@@ -31,7 +35,9 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 			var list []models.Maintenance
 			for rows.Next() {
 				var m models.Maintenance
-				rows.Scan(&m.ID, &m.RoomNumber, &m.Issue, &m.Status, &m.Cost, &m.ReportedAt, &m.ResolvedAt, &m.PaymentMethod, &m.SlipPath, &m.IssueImage)
+				rows.Scan(&m.ID, &m.RoomNumber, &m.Issue, &m.Status, &m.Cost, &m.ReportedAt,
+					&m.ResolvedAt, &m.PaymentMethod, &m.SlipPath, &m.IssueImage,
+					&m.LastUpdated, &m.QuoteApprovedAt, &m.ExternalID)
 				list = append(list, m)
 			}
 			json.NewEncoder(w).Encode(list)
@@ -102,8 +108,9 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				if m.Status == "รออนุมัติค่าใช้จ่าย" && prevStatus != m.Status {
 					db.Exec("UPDATE maintenances SET quote_approved_at = '' WHERE id = ?", m.ID)
 				}
-
-				go notifyMaintenanceStatus(db, fmt.Sprintf("%v", m.ID), m.Status)
+				// LINE notification สำหรับการเปลี่ยนสถานะจาก REST API ส่งผ่าน
+				// MaterializeLineSnapshotAndNotify เมื่อ iOS push snapshot ถัดไป
+				// เพื่อให้ outbox event_key ป้องกันการส่งซ้ำ (duplicate Flex card)
 				w.WriteHeader(http.StatusOK)
 			} else {
 				id := r.FormValue("id")
@@ -177,10 +184,9 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 							PushReceiptFlexMessage(lineUserID, fmt.Sprintf("%v", id), roomNumber, dateStr, cost, imageURL)
 						}
 					}()
-				} else {
-					go notifyMaintenanceStatus(db, id, status)
 				}
-
+				// สำหรับสถานะอื่น: LINE notification ส่งผ่าน MaterializeLineSnapshotAndNotify
+				// เมื่อ iOS push snapshot ถัดไป ไม่ต้องส่งซ้ำที่นี่
 				w.WriteHeader(http.StatusOK)
 			}
 		}
@@ -253,7 +259,10 @@ func notifyMaintenanceStatus(db *sql.DB, maintID string, status string) {
 	}
 
 	var lineUserID string
-	err = db.QueryRow("SELECT line_user_id FROM users WHERE room_number = ? AND status = 'กำลังพักอาศัย' AND line_user_id IS NOT NULL AND line_user_id != ''", notification.RoomNumber).Scan(&lineUserID)
+	err = db.QueryRow(`SELECT line_user_id FROM users WHERE room_number = ?
+		AND status IN ('กำลังพักอาศัย','จอง')
+		AND line_user_id IS NOT NULL AND line_user_id != ''
+		LIMIT 1`, notification.RoomNumber).Scan(&lineUserID)
 	if err == nil && lineUserID != "" {
 		notification.LineUserID = lineUserID
 		if err := sendMaintenanceStatusFlexMessage(notification); err != nil {

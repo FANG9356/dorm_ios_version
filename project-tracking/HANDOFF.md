@@ -25,6 +25,8 @@
 | LINE/outbox/snapshot tests | `backend-dorm/handlers/line_bot_maintenance_test.go`, `line_notification_outbox_test.go`, `line_snapshot_test.go` |
 | Safe deploy | `backend-dorm/scripts/deploy_flex_safe_remote.sh` |
 | Restore | `docs/SERVER_RESTORE_RUNBOOK_2026-09-16.md` |
+| Server/deploy/iOS build สำหรับ Terminal ใหม่ | `docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md` |
+| OCR ตรวจสลิป | `backend-dorm/ocr-bot/`, `backend-dorm/utils/slip_verification.go` |
 
 ## กฎ workflow งานซ่อม
 
@@ -76,8 +78,10 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 
 ## Production และ rollback
 
-- production binary ปัจจุบัน: SHA-256 `32a26c80c5793f533a1e658790c09aed423b51f104a4e3120496ce5793f07f89`
-- rollback set ล่าสุด: `/home/fang/line_migration_backups/20260917-201712-pre-flex-ui` (รวม binary, master และ tenant databases)
+คำสั่งเข้า server, ตำแหน่ง credential, safe deploy, rollback และ build/install iOS ฉบับใช้งานจริงอยู่ใน `docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md`; ห้ามเดาคำสั่งจากสคริปต์ legacy
+
+- production binary ที่ตรวจเวลา 14:18 น. เคยเป็น SHA-256 `4262b9c08a3a6cef0721a2249e7e743bd9a98dce42c44c01a596a64934faab0c` แต่มี deploy ใหม่ใน activity report เวลา 14:20; **ห้ามถือ SHA นี้เป็น current** ให้ตรวจ `sha256sum /opt/dormitory/server_debian` สดก่อนทุกงาน
+- rollback set ที่ตรวจเวลา 14:18 น. คือ `/home/fang/line_migration_backups/20260918-002045-pre-flex-ui`; deploy หลังจากนั้นอาจมีชุดใหม่ ให้เรียง directory และใช้ path ที่ safe deploy รอบนั้นรายงาน ห้ามเดา (ทุกชุดยังไม่รวม atomic rollback ของ OCR)
 - health endpoint: `https://api.dorminet.studio/api/system/ping`
 - safe deployment script จะสำรอง binary/master DB ตรวจ health และตรวจ schema additive ของ outbox
 - credential deploy อยู่ในไฟล์ ignored ของเครื่องพัฒนา ห้ามพิมพ์ค่าออก log หรือ commit
@@ -113,6 +117,7 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 - media business flow ปลอดภัยขึ้นแล้ว แต่ orphan cleanup/retention และ cross-device UAT ยังไม่ปิด
 - Keychain test บางชุดบน Simulator อาจล้มด้วย entitlement `-34018`; ต้องแยก environment failure ออกจาก product regression และยืนยัน signed-device path
 - online restore endpoint เดิมถูกปิดแบบ fail closed; production restore ต้องทำตาม maintenance-mode runbook เท่านั้น
+- ระบบ OCR ปัจจุบันเป็น service แยก `dormitory-ocr.service` ที่ localhost:5001; safe deploy ยังไม่ทำ atomic backup/rollback/health gate ให้ service นี้ และ fallback QR ยังไม่ตรวจยอด/ผู้รับ/replay ครบ จึงห้ามถือเป็นหลักฐานรับเงินจริงจนกว่าจะปิด P0 ใน backlog
 
 ## Definition of Done สำหรับงานใหม่
 

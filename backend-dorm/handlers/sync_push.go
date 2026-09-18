@@ -73,6 +73,16 @@ func HandleSyncPush(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Snapshot account does not match session", http.StatusBadRequest)
 			return
 		}
+		// Reject workflow-invalid snapshots before the immutable snapshot is
+		// inserted. Otherwise a stale local maintenance record can become the
+		// latest snapshot even though tenant materialization rejects it, leaving
+		// the client checkpoint behind an accepted snapshot that always returns
+		// HTTP 500.
+		if err := validateLineSnapshotForPush(accountID, payload); err != nil {
+			log.Printf("sync push for account %d rejected before storage: %v", accountID, err)
+			http.Error(w, "Newer LINE data conflicts with a local workflow change. Refresh and merge the latest data.", http.StatusConflict)
+			return
+		}
 		sum := sha256.Sum256(payload)
 		checksum := hex.EncodeToString(sum[:])
 		nextVersion := *req.BaseVersion + 1

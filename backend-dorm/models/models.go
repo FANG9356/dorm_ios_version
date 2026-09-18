@@ -100,14 +100,17 @@ type RoomCondition struct {
 }
 
 type Maintenance struct {
-	ID            int     `json:"id"`
-	RoomNumber    string  `json:"room_number"`
-	Issue         string  `json:"issue"`
-	Status        string  `json:"status"`
-	Cost          float64 `json:"cost"`
-	ReportedAt    string  `json:"reported_at"`
-	ResolvedAt    string  `json:"resolved_at"`
-	PaymentMethod string  `json:"payment_method"`
-	SlipPath      string  `json:"slip_path"`
-	IssueImage    string  `json:"issue_image"`
+	ID              int     `json:"id"`
+	RoomNumber      string  `json:"room_number"`
+	Issue           string  `json:"issue"`
+	Status          string  `json:"status"`
+	Cost            float64 `json:"cost"`
+	ReportedAt      string  `json:"reported_at"`
+	ResolvedAt      string  `json:"resolved_at"`
+	PaymentMethod   string  `json:"payment_method"`
+	SlipPath        string  `json:"slip_path"`
+	IssueImage      string  `json:"issue_image"`
+	LastUpdated     string  `json:"last_updated"`
+	QuoteApprovedAt string  `json:"quote_approved_at"`
+	ExternalID      string  `json:"external_id"`
 }

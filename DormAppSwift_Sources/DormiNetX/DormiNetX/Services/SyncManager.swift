@@ -717,6 +717,19 @@ class SyncManager: ObservableObject {
         let dirtyMaintenance = try modelContext.fetch(FetchDescriptor<Maintenance>()).filter { $0.isDirty || $0.isDeletedLocally }
         let dirtyRoomTypes = try modelContext.fetch(FetchDescriptor<RoomType>()).filter(\.isDirty)
 
+        let remoteMaintenance = Dictionary(uniqueKeysWithValues: remote.maintenance.map { ($0.id, $0) })
+        let mergeableDirtyMaintenance = dirtyMaintenance.filter { item in
+            guard !item.isDeletedLocally, let remoteItem = remoteMaintenance[item.id] else { return true }
+            let remoteStatus = remoteItem.status.isEmpty ? MaintenanceWorkflow.statuses[0] : remoteItem.status
+            let localStatus = item.status.isEmpty ? MaintenanceWorkflow.statuses[0] : item.status
+            return MaintenanceWorkflow.canTransition(
+                from: remoteStatus,
+                to: localStatus,
+                cost: item.cost,
+                quoteApproved: !(remoteItem.quoteApprovedAt ?? "").isEmpty
+            )
+        }
+
         merged.rooms = mergeSnapshots(remote: remote.rooms, local: local.rooms,
                                       changed: Set(dirtyRooms.filter { !$0.isDeletedLocally }.map(\.id)),
                                       deleted: Set(dirtyRooms.filter(\.isDeletedLocally).map(\.id)))
@@ -733,7 +746,7 @@ class SyncManager: ObservableObject {
                                                   local: local.financialReceipts ?? [],
                                                   changed: Set(dirtyReceipts.map(\.id)), deleted: [])
         merged.maintenance = mergeSnapshots(remote: remote.maintenance, local: local.maintenance,
-                                            changed: Set(dirtyMaintenance.filter { !$0.isDeletedLocally }.map(\.id)),
+                                            changed: Set(mergeableDirtyMaintenance.filter { !$0.isDeletedLocally }.map(\.id)),
                                             deleted: Set(dirtyMaintenance.filter(\.isDeletedLocally).map(\.id)))
         merged.roomTypes = mergeSnapshots(remote: remote.roomTypes, local: local.roomTypes,
                                           changed: Set(dirtyRoomTypes.map(\.id)), deleted: [])

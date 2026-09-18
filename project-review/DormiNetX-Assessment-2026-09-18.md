@@ -1,20 +1,22 @@
 # แบบประเมิน DormiNetX — 18 กันยายน 2569
 
+ปรับปรุงเพิ่มเติม: 18 กันยายน 2569 เวลา 14:18 น. หลังมีการ deploy PromptPay/OCR/auto slip
+
 ## คำตัดสิน
 
-DormiNetX พร้อมสำหรับ **controlled pilot** ที่จำกัดจำนวนห้อง มี backup และมีผู้ดูแลติดตามผล แต่ยังไม่พร้อมประกาศ production เต็มรูปแบบ รอบนี้เพิ่มคะแนนอย่างระมัดระวังเพราะมีหลักฐานจากอุปกรณ์จริงว่า LINE → tenant DB → snapshot → SwiftData ทำงานผ่านหลังปิด legacy sync และ conflict rebase ไม่ทำข้อมูลในเครื่องหาย อย่างไรก็ตาม maintenance consent/billing ยังไม่ได้ UAT ครบทุกสาขา และ P0 ด้าน secret, สองอุปกรณ์/สองบัญชี, media, financial audit และ restore drill ยังเปิดอยู่
+DormiNetX ยังใช้ทดสอบแบบ **controlled pilot** ได้เฉพาะเมื่อผู้ดูแลตรวจรายการการเงินจริงทุกครั้ง แต่ยังไม่พร้อม production เต็มรูปแบบ แม้มี PromptPay/OCR/auto slip เพิ่มขึ้น เพราะ fallback ปัจจุบันอาจยอมรับ QR โดยไม่ยืนยันยอด ผู้รับ reference และ replay แล้วเปลี่ยนสถานะเป็น paid/complete ได้ จึงเพิ่ม P0 และลด readiness ชั่วคราวจนกว่าจะทำ fail closed พร้อม UAT
 
 ## คะแนนล่าสุด
 
 | มิติ | คะแนน | เหตุผลย่อ |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 9.3/10 | งานหลักครบขึ้น รวม consent, rejection terminal branch, billing และ sync recovery |
-| สถาปัตยกรรม | 8.8/10 | local-first, tenant isolation, snapshot conflict rebase, outbox และ rollback มีเส้นทางชัดขึ้น |
-| ความปลอดภัยและข้อมูล | 8.1/10 | protocol-2 device proof ผ่านหนึ่งเครื่องและข้อมูลไม่สูญหาย แต่ secret rotation/full financial audit ยังไม่ปิด |
+| ความครบของฟีเจอร์ | 9.4/10 | เพิ่ม PromptPay QR, OCR และ auto slip flow แต่คะแนนฟีเจอร์ไม่ยืนยันความปลอดภัย |
+| สถาปัตยกรรม | 8.4/10 | core sync/outbox แข็งแรง แต่ OCR service/dependency/rollback ยังแยกจาก deployment safety หลัก |
+| ความปลอดภัยและข้อมูล | 6.8/10 | fallback การเงินยังไม่ fail closed, config ผู้รับมี hardcode และ OCR รันด้วยสิทธิ์ root |
 | UX และความสม่ำเสมอ | 8.8/10 | LINE ตอบหนึ่งเหตุการณ์ด้วยการ์ดเดียว Flex ลดสี และ iOS ลด action ที่กดพลาด; accessibility/performance ยังขาดหลักฐาน |
-| Operational readiness | 8.5/10 | deploy/backup/health/retry และ device-level sync evidence ดีขึ้น แต่ยังไม่มี production restore drill/monitoring ครบวงจร |
-| Controlled pilot | **9.0/10 (90%)** | ใช้ในวงจำกัดได้หากมีผู้ดูแลและ rollback |
-| Production readiness | **8.1/10 (81%)** | ปิด protocol-2 device proof แล้วหนึ่ง P0 แต่ยังมี P0 สำคัญหลายรายการ |
+| Operational readiness | 7.4/10 | main deploy มี backup/health แต่ OCR install ยอมให้ dependency ล้ม, ไม่มี atomic backup/rollback/health gate |
+| Controlled pilot | **8.2/10 (82%)** | ใช้ได้เฉพาะวงจำกัดและต้องให้ผู้ดูแลยืนยันการเงินจริงทุกครั้ง |
+| Production readiness | **7.0/10 (70%)** | เพิ่ม P0 ด้านการตัดยอดอัตโนมัติ แม้ protocol-2 device proof ผ่านแล้ว |
 
 คะแนนนี้เป็น risk-weighted assessment ไม่ใช่ test coverage, uptime SLA หรือเปอร์เซ็นต์จำนวนงาน และไม่ควรเฉลี่ยกับคะแนน baseline เก่า
 
@@ -58,6 +60,7 @@ DormiNetX พร้อมสำหรับ **controlled pilot** ที่จำ
 | P0 | Media lifecycle | access/checksum/retry ผ่าน แต่ cleanup/retention/UAT ยังขาด | cross-device download, orphan cleanup และ retention policy |
 | P0 | Financial ledger | transaction/receipt เริ่มมี แต่ refund/void/credit ยังไม่ครบ | immutable actor/reason audit และ migration/UAT |
 | P0 | Production restore | verify-only/offline drill ผ่าน แต่ยังไม่สลับจริงใน maintenance window | restore, health checklist และ rollback สำเร็จ |
+| P0 | Auto slip/OCR financial integrity | fallback QR ไม่ตรวจยอด/ผู้รับ/reference/replay ครบ, OCR รัน root และ deploy rollback ไม่ครอบคลุม | fail closed, immutable/replay audit, config secrets, least privilege, atomic deploy/rollback และ controlled UAT |
 | P1 | Maintenance consent E2E | payload/tests/deploy และ LINE → app หนึ่งเหตุการณ์ผ่าน แต่ยังไม่กดทุกสาขาบนบัญชีทดสอบ | approve, reject, re-quote, bill, slip, single-Flex rendering และ multi-device app sync ครบ |
 
 ## เป้าหมายรอบถัดไป

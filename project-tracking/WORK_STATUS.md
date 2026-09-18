@@ -10,6 +10,7 @@
 | งานซ่อมไม่มีค่าใช้จ่าย | รอตรวจ UAT | อนุญาตข้าม quote และ payment ไปซ่อม/เสร็จสิ้นตามกฎ | ทดสอบบนอุปกรณ์จริงและยืนยันว่าไม่สร้างบิลหรือขออนุมัติโดยไม่จำเป็น |
 | Protocol 2 production cutover | เสร็จแล้ว | production ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง rebase conflict และ sync ถึง snapshot v161 สำเร็จโดย dirty/pending เป็น 0 | ติดตาม log ต่อเนื่องและยังต้องทำ UAT สองเครื่อง/สองบัญชีแยกต่างหาก |
 | Media lifecycle | กำลังทำบางส่วน | tenant ownership, checksum, retry, authenticated hydration และปิด public `/uploads` แล้ว | UAT ข้ามสองเครื่อง, orphan cleanup และ retention policy |
+| PromptPay QR และตรวจสลิปอัตโนมัติ | deploy แล้ว/ต้อง harden | มี QR, EasySlip optional, OCR localhost service และ fallback QR | ต้อง fail closed, ตรวจยอด/ผู้รับ/reference/replay, ย้าย config ออกจาก source, ลดสิทธิ์ OCR, เพิ่ม atomic deploy/health/rollback และ UAT ก่อนใช้ตัดยอดจริง |
 | เอกสารและ handoff | เสร็จแล้วรอบนี้ | เพิ่ม vision, work status, handoff, assessment และปรับ backlog/checklist | ผู้รับช่วงอ่านตามลำดับใน `project-tracking/README.md` และอัปเดตหลักฐานเมื่อ UAT เสร็จ |
 
 ## ทำเสร็จแล้วล่าสุด
@@ -37,18 +38,18 @@
 | Backend | `go test ./...`, `go test -race ./handlers` และ `go vet ./...` ผ่าน |
 | LINE maintenance payload | automated tests ครอบคลุม status, quote, approve/reject, bill, JSON/date, outbox persistence/retry และป้องกัน `alignItems: baseline` ที่ LINE ปฏิเสธ |
 | iOS maintenance/sync | `MaintenanceWorkflowTests` 4/4 + `CoreDataSafetyTests` 19/19 รวม 23/23 ผ่าน รวม conflict rebase และ paid repair เริ่มได้หลังมี approval marker เท่านั้น |
-| Production | external health ผ่าน; รายการ LINE server id 183 อยู่ใน tenant DB, snapshot และ SwiftData ตรงกัน; iPhone checkpoint v161, dirty 0, pending 0; backend ล่าสุด SHA-256 `32a26c80c5793f533a1e658790c09aed423b51f104a4e3120496ce5793f07f89` และมี backup/rollback |
-| ข้อจำกัดหลักฐาน | ยังไม่ได้ทำ live quote/payment UAT ครบวงจร เพราะไม่ควรเปลี่ยนสถานะงานของลูกบ้านจริงโดยพลการ |
+| Production | หลักฐานเวลา 14:18 น.: main/OCR services เป็น `active`, main health `online`, OCR `/verify` ตอบ HTTP 400 เมื่อ payload ไม่ครบ; binary ขณะนั้น SHA-256 `4262b9c08a3a6cef0721a2249e7e743bd9a98dce42c44c01a596a64934faab0c`, backup `/home/fang/line_migration_backups/20260918-002045-pre-flex-ui`; มี deploy ใหม่ที่บันทึกเวลา 14:20 จึงต้องตรวจ SHA/backup สดก่อนใช้อ้างอิง |
+| ข้อจำกัดหลักฐาน | OCR HTTP 400 พิสูจน์เพียงว่า service ตอบ ไม่พิสูจน์ความแม่นยำ; ยังไม่มี UAT ที่ยืนยัน amount/receiver/reference/replay และ fallback ปัจจุบันไม่ fail closed |
 
 ## สิ่งที่ต้องทำต่อทันที
 
-1. เตรียม maintenance record และ LINE account สำหรับ UAT ที่ได้รับอนุญาต
-2. ทดสอบทั้งอนุมัติและปฏิเสธใบเสนอราคา รวม stale/unauthorized action
-3. ตรวจว่า snapshot หลัง LINE action ปรากฏในอุปกรณ์อีกเครื่องและบัญชีทดสอบแยก โดยไม่ข้าม tenant; เส้นทาง LINE → iPhone เครื่อง `F` ผ่านแล้วหนึ่งเหตุการณ์
-4. ทดสอบ Flex บิล → ส่งสลิป → แอปเห็นหลักฐาน → ผู้ดูแลตรวจรับ
-5. บันทึกเวลา, record ID แบบไม่เปิดเผยข้อมูลส่วนบุคคล, outbox state, attempts และภาพผลลัพธ์ลง checklist
-6. หลัง workflow UAT ผ่าน ให้ทำ P0 ตามลำดับใน `PENDING_WORK.md`; อย่าเลื่อนฟีเจอร์ตกแต่งขึ้นมาก่อน data/security blockers
+1. ปิดหรือทำ auto slip fallback ให้ fail closed ก่อนใช้ตัดยอดจริง; เมื่อยืนยันไม่ได้ให้คง `checking` และส่งให้แอดมินตรวจ
+2. เพิ่มการตรวจ amount, receiver, transaction/reference uniqueness และ replay พร้อม tests ทั้ง OCR/EasySlip unavailable/timeout
+3. ย้าย PromptPay/receiver/token ออกจาก source และทำ OCR service/deploy/rollback ให้ปลอดภัย
+4. จากนั้นเตรียม maintenance record และ LINE account สำหรับ controlled UAT ที่ได้รับอนุญาต
+5. ทดสอบ approve/reject/re-quote/bill/slip, stale/unauthorized action และ sync สองอุปกรณ์/สองบัญชี
+6. บันทึกเวลา, record ID แบบไม่เปิดเผยข้อมูลส่วนบุคคล, outbox/service state และภาพผลลัพธ์ลง checklist
 
 ## สิ่งที่ยังไม่เสร็จ
 
-สรุปเฉพาะหัวข้อหลัก: provider secret rotation, UAT สอง iPhone/สองบัญชี, maintenance quote/bill/slip UAT ครบวงจร, media cleanup/retention, full invoice/refund/void ledger, production restore drill, UI automation, monitoring/incident process, APNs, localization, accessibility และ performance soak รายละเอียดและเกณฑ์ปิดอยู่ใน [PENDING_WORK.md](PENDING_WORK.md)
+สรุปเฉพาะหัวข้อหลัก: provider secret rotation, UAT สอง iPhone/สองบัญชี, maintenance quote/bill/slip UAT ครบวงจร, hardening การตรวจสลิปอัตโนมัติ, media cleanup/retention, full invoice/refund/void ledger, production restore drill, UI automation, monitoring/incident process, APNs, localization, accessibility และ performance soak รายละเอียดและเกณฑ์ปิดอยู่ใน [PENDING_WORK.md](PENDING_WORK.md)

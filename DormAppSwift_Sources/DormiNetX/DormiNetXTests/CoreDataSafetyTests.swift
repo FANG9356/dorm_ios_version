@@ -184,6 +184,64 @@ final class CoreDataSafetyTests: XCTestCase {
         }
     }
 
+    func testRebaseKeepsCompletedLineMaintenanceOverInvalidDirtyRollback() async throws {
+        try await withDefaults { defaults in
+            let sharedID = UUID()
+            let remote = try AccountScopedStore.makeGuestContainer()
+            let completed = Maintenance(roomNumber: "103", issue: "existing")
+            completed.id = sharedID
+            completed.serverId = 222
+            completed.status = "เสร็จสิ้น"
+            completed.cost = 2
+            completed.isDirty = false
+            let reportedFromLine = Maintenance(roomNumber: "103", issue: "new from LINE")
+            reportedFromLine.serverId = 779
+            reportedFromLine.status = "รอดำเนินการ"
+            reportedFromLine.isDirty = false
+            remote.mainContext.insert(completed)
+            remote.mainContext.insert(reportedFromLine)
+            try remote.mainContext.save()
+
+            let api = SyncTestAPI()
+            let manager = manager(api: api, defaults: defaults)
+            let remoteBackup = try manager.exportLocalBackupData(modelContext: remote.mainContext)
+            let backupObject = try XCTUnwrap(JSONSerialization.jsonObject(with: remoteBackup) as? [String: Any])
+            let remotePayload = try JSONSerialization.data(withJSONObject: XCTUnwrap(backupObject["snapshot"]))
+            api.onFetch = { try self.snapshotResponse(remotePayload) }
+            api.onPush = { _, baseVersion in
+                if baseVersion == 0 { throw SyncError.conflict }
+            }
+
+            let local = try AccountScopedStore.makeGuestContainer()
+            let stale = Maintenance(roomNumber: "103", issue: "existing")
+            stale.id = sharedID
+            stale.serverId = 222
+            stale.status = "รออนุมัติค่าใช้จ่าย"
+            stale.cost = 2
+            stale.isDirty = true
+            local.mainContext.insert(stale)
+            try local.mainContext.save()
+
+            await manager.autoPushLocalChanges(modelContext: local.mainContext)
+
+            XCTAssertEqual(manager.state, .completed)
+            XCTAssertEqual(api.bases, [0, 1])
+            XCTAssertEqual(SyncCheckpoint(accountID: 1, defaults: defaults).version, 2)
+            XCTAssertFalse(SyncCheckpoint(accountID: 1, defaults: defaults).pending)
+            let records = try local.mainContext.fetch(FetchDescriptor<Maintenance>())
+            XCTAssertEqual(records.first(where: { $0.id == sharedID })?.status, "เสร็จสิ้น")
+            XCTAssertEqual(records.first(where: { $0.serverId == 779 })?.issue, "new from LINE")
+            XCTAssertFalse(try XCTUnwrap(records.first(where: { $0.id == sharedID })).isDirty)
+
+            let mergedPayload = try XCTUnwrap(api.payloads.last)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let merged = try decoder.decode(SyncEnvelope.self, from: mergedPayload)
+            XCTAssertEqual(merged.maintenance.first(where: { $0.id == sharedID })?.status, "เสร็จสิ้น")
+            XCTAssertNotNil(merged.maintenance.first(where: { $0.serverId == 779 }))
+        }
+    }
+
     func testDownloadDoesNotOverwriteEditsMadeWhileWaiting() async throws {
         try await withDefaults { defaults in
             let container = try AccountScopedStore.makeGuestContainer()

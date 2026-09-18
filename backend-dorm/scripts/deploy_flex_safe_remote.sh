@@ -8,6 +8,8 @@ backup_dir="/home/fang/line_migration_backups/${timestamp}-pre-flex-ui"
 live_binary="/opt/dormitory/server_debian"
 master_database="/opt/dormitory/dormitory.db"
 tenant_database_dir="/opt/dormitory/dorm_data"
+ocr_directory="/opt/dormitory/ocr-bot"
+ocr_unit="/etc/systemd/system/dormitory-ocr.service"
 
 mkdir -p "$build_dir" "$backup_dir"
 tar -xzf "$archive_path" -C "$build_dir"
@@ -30,6 +32,16 @@ else
   if sudo test -d "$tenant_database_dir"; then
     sudo cp -a "$tenant_database_dir" "$backup_dir/dorm_data"
   fi
+fi
+
+# OCR is updated later in this deploy, so keep its runtime files and unit next
+# to the binary/database backup. This gives operators a concrete rollback
+# source even though OCR restoration is still a manual operation.
+if sudo test -d "$ocr_directory"; then
+  sudo cp -a "$ocr_directory" "$backup_dir/ocr-bot"
+fi
+if sudo test -f "$ocr_unit"; then
+  sudo cp -p "$ocr_unit" "$backup_dir/dormitory-ocr.service"
 fi
 
 rollback() {
@@ -63,9 +75,40 @@ if [[ "$healthy" != "true" ]]; then
   exit 1
 fi
 
+echo "Setting up OCR Bot..."
+sudo DEBIAN_FRONTEND=noninteractive apt-get update >/dev/null
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tesseract-ocr tesseract-ocr-tha python3-pip python3-venv >/dev/null || true
+sudo mkdir -p /opt/dormitory/ocr-bot
+sudo cp -r "$build_dir/backend-dorm/ocr-bot/"* /opt/dormitory/ocr-bot/
+if sudo test ! -d "/opt/dormitory/ocr-bot/venv"; then
+  sudo python3 -m venv /opt/dormitory/ocr-bot/venv
+fi
+sudo /opt/dormitory/ocr-bot/venv/bin/pip install -r /opt/dormitory/ocr-bot/requirements.txt >/dev/null || echo "Failed to install Python dependencies, OCR might not work"
+
+sudo bash -c 'cat <<EOF > /etc/systemd/system/dormitory-ocr.service
+[Unit]
+Description=Dormitory OCR Bot
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/dormitory/ocr-bot
+Environment="BACKEND_DIR=/opt/dormitory"
+ExecStart=/opt/dormitory/ocr-bot/venv/bin/python app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+sudo systemctl daemon-reload
+sudo systemctl enable dormitory-ocr.service
+sudo systemctl restart dormitory-ocr.service
+
 echo "DEPLOY_SUCCESS"
 echo "NEW_SHA=${new_sha}"
 echo "BACKUP_DIR=${backup_dir}"
+echo "OCR_BACKUP_DIR=${backup_dir}/ocr-bot"
 sudo systemctl is-active dormitory.service
 curl --fail --silent --show-error http://127.0.0.1:4283/api/system/ping
 echo
