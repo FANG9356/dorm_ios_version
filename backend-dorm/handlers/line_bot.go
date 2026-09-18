@@ -153,7 +153,7 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 				}
 				handlePostbackEvent(db, tenantDB, accountID, event.ReplyToken, lineUserID, event.Postback.Data)
 			} else if event.Type == "follow" {
-				welcomeMsg := "สวัสดีค่ะ! ยินดีต้อนรับสู่บริการหอพัก DormiNet นะคะ ✨\n\nหากคุณเป็นลูกบ้านของเรา กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่าง เพื่อรับข้อมูลบิลค่าเช่าและการแจ้งเตือนต่างๆ ได้เลยค่ะ "
+				welcomeMsg := "สวัสดีค่ะ! ยินดีต้อนรับสู่บริการหอพัก DormiNet นะคะ\n\nหากคุณเป็นลูกบ้านของเรา กรุณากดปุ่ม 'ผูกบัญชี' ที่เมนูด้านล่าง เพื่อรับข้อมูลบิลค่าเช่าและการแจ้งเตือนต่างๆ ได้เลยค่ะ"
 				replyToLine(event.ReplyToken, welcomeMsg)
 			}
 		}
@@ -200,8 +200,18 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 		return
 	}
 	
+	if text == "wifi" || text == "ไวไฟ" || text == "อินเทอร์เน็ต" || text == "รหัสไวไฟ" {
+		replyToLineWithFlexMessage(replyToken, "รหัสอินเทอร์เน็ต (Wi-Fi)", buildWifiFlexMessage())
+		return
+	}
+
+	if text == "บริการ" || text == "บริการรอบหอพัก" {
+		replyToLineWithFlexMessage(replyToken, "บริการรอบหอพัก", buildServicesFlexMessage())
+		return
+	}
+	
 	if text == "ฝากข้อความถึงแอดมิน" {
-		replyToLine(replyToken, "สามารถพิมพ์ข้อความหรือคำถามทิ้งไว้ได้เลยค่ะ แอดมินจะเข้ามาตอบกลับให้เร็วที่สุดนะคะ 💬")
+		replyToLine(replyToken, "สามารถพิมพ์ข้อความหรือคำถามทิ้งไว้ได้เลยค่ะ แอดมินจะเข้ามาตอบกลับให้เร็วที่สุดนะคะ")
 		return
 	}
 

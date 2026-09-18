@@ -23,7 +23,7 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 					"type": "text",
 					"text": "CONTACT & EMERGENCY",
 					"size": "xs",
-					"color": "#aaaaaa"
+					"color": "#888888"
 				}
 			],
 			"backgroundColor": "#f8f9fa"
@@ -40,7 +40,7 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 					"contents": [
 						{
 							"type": "text",
-							"text": "ติดต่อแอดมินหอพัก",
+							"text": "ติดต่อนิติบุคคล",
 							"weight": "bold",
 							"size": "sm",
 							"color": "#111111"
@@ -51,20 +51,21 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"height": "sm",
 							"action": {
 								"type": "uri",
-								"label": "📞 โทร: 081-234-5678",
+								"label": "โทรติดต่อ: 081-234-5678",
 								"uri": "tel:0812345678"
 							},
-							"color": "#e0e7ff"
+							"color": "#f1f5f9"
 						},
 						{
 							"type": "button",
-							"style": "link",
+							"style": "secondary",
 							"height": "sm",
 							"action": {
 								"type": "message",
-								"label": "💬 แชทกับแอดมิน (ฝากข้อความ)",
+								"label": "ส่งข้อความถึงนิติบุคคล",
 								"text": "ฝากข้อความถึงแอดมิน"
-							}
+							},
+							"color": "#f1f5f9"
 						}
 					]
 				},
@@ -81,10 +82,10 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 					"contents": [
 						{
 							"type": "text",
-							"text": "สายด่วนฉุกเฉิน",
+							"text": "หมายเลขโทรศัพท์ฉุกเฉิน",
 							"weight": "bold",
 							"size": "sm",
-							"color": "#ef4444"
+							"color": "#111111"
 						},
 						{
 							"type": "button",
@@ -92,9 +93,10 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"height": "sm",
 							"action": {
 								"type": "uri",
-								"label": "🚑 เจ็บป่วยฉุกเฉิน (1669)",
+								"label": "สถาบันการแพทย์ฉุกเฉิน (1669)",
 								"uri": "tel:1669"
-							}
+							},
+							"color": "#f1f5f9"
 						},
 						{
 							"type": "button",
@@ -102,9 +104,10 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"height": "sm",
 							"action": {
 								"type": "uri",
-								"label": "🚒 แจ้งเหตุเพลิงไหม้ (199)",
+								"label": "แจ้งเหตุเพลิงไหม้ (199)",
 								"uri": "tel:199"
-							}
+							},
+							"color": "#f1f5f9"
 						},
 						{
 							"type": "button",
@@ -112,9 +115,10 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"height": "sm",
 							"action": {
 								"type": "uri",
-								"label": "🚓 เหตุด่วนเหตุร้าย (191)",
+								"label": "เหตุด่วนเหตุร้าย (191)",
 								"uri": "tel:191"
-							}
+							},
+							"color": "#f1f5f9"
 						}
 					]
 				}

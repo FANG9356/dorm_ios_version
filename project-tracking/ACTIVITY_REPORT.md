@@ -411,3 +411,25 @@
   - เพิ่ม Trigger คำว่า "ติดต่อ" หรือ "ติดต่อนิติบุคคล" ใน `line_bot.go` ให้เรียกใช้ Flex Message นี้
   - เพิ่ม Trigger คำว่า "ฝากข้อความถึงแอดมิน" เพื่อใช้เป็น Action เมื่อผู้ใช้กดปุ่มแชท
 - สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย แอดมินสามารถนำคำว่า "ติดต่อ" ไปผูกกับปุ่มบน LINE Rich Menu ได้เลย
+
+## 2026-09-18 14:58 — แก้ sync รายการแจ้งซ่อมจาก LINE ไม่ขึ้นในแอปและกู้คืน iPhone
+
+- คำขอ/เป้าหมาย: แก้ปัญหาที่ตรวจพบเวลา 14:37 ให้รายการแจ้งซ่อมจาก LINE ปรากฏในแอป โดยรักษาข้อมูลเดิมบน iPhone และป้องกัน snapshot เสียซ้ำ
+- สาเหตุ: แอปมี maintenance dirty record เก่าที่พยายามย้อน workflow จากสถานะ canonical `เสร็จสิ้น` ไป `รออนุมัติค่าใช้จ่าย`; backend เดิม INSERT immutable snapshot ก่อน materialization จึงเก็บ snapshot ใหม่ไว้แม้ tenant workflow ปฏิเสธและตอบ HTTP 500 ทำให้ checkpoint/pending ค้างและรายการ LINE ใหม่ไม่ถูก apply
+- สิ่งที่ดำเนินการ: เพิ่ม backend preflight validation ก่อน INSERT snapshot และตอบ conflict เมื่อ maintenance workflow ไม่ถูกต้อง; ปรับ iOS rebase ให้ทิ้ง local dirty rollback ที่ขัดกับ remote canonical state; เพิ่ม regression tests ทั้ง Go/Swift; ปรับ test ข้อความชำระค่าซ่อมให้ตรงกับ Smart Slip Detection ที่เอาปุ่ม manual ออก; เพิ่ม OCR runtime/unit backup ใน safe deploy; publish canonical tenant state เป็น snapshot `v240`; build/sign และติดตั้งแอปทับบน iPhone โดยไม่ uninstall แล้วให้แอป rebase/push เป็น snapshot `v241`
+- ไฟล์ที่แก้ในขอบเขตนี้: `backend-dorm/handlers/sync_push.go`, `backend-dorm/handlers/line_snapshot.go`, `backend-dorm/handlers/line_snapshot_test.go`, `backend-dorm/handlers/line_bot_maintenance_test.go`, `backend-dorm/scripts/deploy_flex_safe_remote.sh`, `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncManager.swift`, `DormAppSwift_Sources/DormiNetX/DormiNetXTests/CoreDataSafetyTests.swift` และรายการ append-only นี้
+- การทดสอบก่อน deploy: `go test ./...` ผ่าน, `go test -race ./handlers` ผ่าน, `go vet ./...` ผ่าน; targeted iOS tests `CoreDataSafetyTests` 20/20 และ `MaintenanceWorkflowTests` 4/4 ผ่าน รวม 24/24; physical-device build/sign ผ่าน; scoped `git diff --check` ผ่าน
+- Deploy production: ใช้ safe deploy ตาม runbook; `NEW_SHA=75412501cd0da89330fb4dfb20e4aded01f492a09cff9b48a722ff4a8b54b206`; backup/rollback source คือ `/home/fang/line_migration_backups/20260918-005104-pre-flex-ui` ซึ่งมี binary, master DB, tenant DB และ OCR backup ที่ `/home/fang/line_migration_backups/20260918-005104-pre-flex-ui/ocr-bot`; main และ OCR service เป็น `active`; internal/external health ตอบ `online`; OCR availability probe ตอบ HTTP 400 ตามคาดเมื่อ payload ว่าง; master/tenant `PRAGMA quick_check` เป็น `ok`
+- การเปลี่ยนข้อมูล production: ใช้ `cmd/publish-line-state` หลังมี database backup เพื่อสร้าง canonical snapshot ใหม่สำหรับ account `1`; ไม่แก้ tenant maintenance โดยตรง; ขอบเขตตรวจสอบใช้เฉพาะ internal maintenance id `222` และ `779` โดยไม่บันทึก PII; rollback ฐานข้อมูลให้อ้าง backup path ข้างต้นและ restore runbook เท่านั้น
+- UAT บนอุปกรณ์จริง: ค้น device ปัจจุบันใหม่และติดตั้งทับ iPhone `F`; หลังเปิดแอป checkpoint เป็น `v241`, pending เป็น `false`, ไม่มี sync outbox, dirty/deleted maintenance เป็นศูนย์; local/server/latest snapshot ตรงกันว่า id `222` เป็น `เสร็จสิ้น` และรายการ LINE id `779` อยู่ในแอปเป็น `รอดำเนินการ`; journal 10 นาทีหลังแก้ไม่พบ snapshot materialization failure ใหม่
+- สถานะผลลัพธ์: automated tests, production deploy, data-level UAT และ device recovery ผ่าน; ยังไม่ได้ทำ visual tap-through ทุกหน้าจอหรือส่งรายการ LINE ทดสอบใหม่ที่เปลี่ยนข้อมูล production
+- การเก็บข้อมูลวินิจฉัย: สำรอง app container ชั่วคราวก่อน install และสำเนาหลัง UAT ไว้เฉพาะระหว่างตรวจสอบ; ย้ายไป Trash หลังยืนยันผลเพื่อให้กู้คืนได้และไม่เหลือข้อมูลลูกบ้านใน `/tmp`
+
+## 2026-09-18 15:00 — เพิ่มเมนู รหัส Wi-Fi และ บริการรอบหอพัก
+
+- คำขอ/เป้าหมาย: เพิ่มปุ่มรหัส Wi-Fi และปุ่มบริการรอบหอพัก ใน LINE Rich Menu
+- สิ่งที่ดำเนินการ: 
+  - สร้าง Flex Message `buildWifiFlexMessage` แสดงรหัส Wi-Fi ของหอพัก
+  - สร้าง Flex Message `buildServicesFlexMessage` แสดงรายการบริการน้ำดื่ม, ซักรีด, และวินมอเตอร์ไซค์
+  - ผูก Keyword ใน `line_bot.go` ได้แก่ "wifi", "อินเทอร์เน็ต", "ไวไฟ" สำหรับดึงรหัสเน็ต และ "บริการ", "บริการรอบหอพัก" สำหรับดึงบริการต่างๆ
+- สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย แอดมินสามารถกำหนด Action (Text) ของปุ่มใน LINE Official Account Manager เป็นคำว่า "wifi" และ "บริการ" ได้เลย
