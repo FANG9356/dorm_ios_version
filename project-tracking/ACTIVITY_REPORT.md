@@ -293,6 +293,16 @@
   - `backend-dorm/handlers/line_bot.go`
 - สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย
 
+## 2026-09-18 — ประเมินโปรเจคซ้ำจากเอกสารและโค้ดปัจจุบัน
+
+- คำขอ/เป้าหมาย: ประเมิน DormiNetX ใหม่หลังมีการแก้ sync และเพิ่มเมนู LINE
+- สิ่งที่ดำเนินการ: อ่าน Project Tracking, WORK_STATUS, PENDING_WORK, แบบประเมินล่าสุด และ activity ล่าสุด; ตรวจ diff ปัจจุบันของ `additional_menus_flex.go` และยืนยันจากโค้ด/เอกสารว่าไม่จำเป็นต้องรัน test เพิ่มตามขอบเขตการประเมิน
+- ผลการประเมิน: sync/recovery ดีขึ้นและมีหลักฐาน device UAT หนึ่งเครื่องถึง snapshot `v241`, dirty/pending เป็นศูนย์ และ OCR runtime/unit backup ถูกเพิ่มใน safe deploy; อย่างไรก็ตามยังไม่มี UAT สองอุปกรณ์/สองบัญชี, full maintenance E2E และ financial integrity ของ auto slip ยังไม่ผ่าน
+- ความเสี่ยงเพิ่มเติม: เมนู Wi-Fi ฝัง SSID/password และส่ง credential ใน URL ของ QuickChart; ควรย้าย configuration ออกจาก source และหลีกเลี่ยง third-party QR endpoint สำหรับข้อมูลเครือข่าย
+- คำตัดสิน: readiness เชิง release ยังคงประมาณ 70% และเหมาะเฉพาะ controlled pilot; ไม่มีหลักฐานใหม่ที่ปิด P0 หรือทำให้พร้อม production เต็มรูปแบบ
+- ไฟล์หรือระบบที่กระทบ: เพิ่มรายการนี้ใน `project-tracking/ACTIVITY_REPORT.md` แบบ append-only เท่านั้น; ไม่แก้ source, database หรือ production
+- สถานะ deploy/UAT: ไม่มี deploy หรือ UAT ใหม่จากการประเมินครั้งนี้; อ้างอิงหลักฐาน deploy/UAT ที่บันทึกไว้ก่อนหน้า
+
 ## 2026-09-18 13:46 — แก้บั๊กกดส่งหลักฐานการชำระเงินแจ้งซ่อมไม่ได้
 
 - คำขอ/เป้าหมาย: ลูกบ้านกดปุ่ม "ส่งหลักฐานการชำระ" แล้วได้ข้อความ "บิลนี้ไม่พร้อมรับชำระ" 
@@ -433,3 +443,80 @@
   - สร้าง Flex Message `buildServicesFlexMessage` แสดงรายการบริการน้ำดื่ม, ซักรีด, และวินมอเตอร์ไซค์
   - ผูก Keyword ใน `line_bot.go` ได้แก่ "wifi", "อินเทอร์เน็ต", "ไวไฟ" สำหรับดึงรหัสเน็ต และ "บริการ", "บริการรอบหอพัก" สำหรับดึงบริการต่างๆ
 - สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย แอดมินสามารถกำหนด Action (Text) ของปุ่มใน LINE Official Account Manager เป็นคำว่า "wifi" และ "บริการ" ได้เลย
+
+## 2026-09-18 15:11 — สรุปวิธีใช้ระบบแจ้งซ่อมหลังแก้ sync
+
+- คำขอ/เป้าหมาย: อธิบายว่าสิ่งที่แก้จากเหตุรายการแจ้งซ่อม LINE ไม่ขึ้นในแอปคืออะไร และผู้ใช้/ผู้ดูแลต้องใช้งานอย่างไร
+- สิ่งที่ดำเนินการ: ทบทวนสถานะล่าสุดและจัดทำคำอธิบายการใช้งานสำหรับฝั่งลูกบ้านใน LINE, ฝั่งผู้ดูแลในแอป และพฤติกรรม sync/recovery ที่ระบบทำให้อัตโนมัติ
+- ไฟล์หรือระบบที่กระทบ: เพิ่มรายการนี้ใน `project-tracking/ACTIVITY_REPORT.md` แบบ append-only เท่านั้น; ไม่แก้โค้ด แอป ฐานข้อมูล หรือ production
+- สถานะ deploy/UAT: ไม่มี deploy หรือ UAT ใหม่; อ้างอิงผลแก้ไขและ UAT บนอุปกรณ์จริงจากรายการเวลา 14:58
+
+## 2026-09-18 15:12 — ปรับแก้ UI และข้อความ (Monochrome/Professional Theme)
+
+- คำขอ/เป้าหมาย: ปรับสี UI ของเมนูติดต่อ, Wi-Fi, และบริการรอบหอพัก ให้เป็นสีเดียวกัน และปรับข้อความให้ดูเป็นทางการมากขึ้น
+- สิ่งที่ดำเนินการ: 
+  - ปรับชุดสีของการ์ดทั้งหมดใน `contact_flex.go` และ `additional_menus_flex.go` เป็นโทนขาว-ดำ-เทา (`#111111`, `#888888`, `#f1f5f9`) 
+  - ลบสีแดง สีฟ้า สีชมพู และส้ม ออกจากการ์ดทั้งหมดเพื่อให้ดูคลีนและเป็นมืออาชีพ
+  - ปรับข้อความให้เป็นทางการ เช่น "วินมอเตอร์ไซค์หน้าปากซอย" -> "จุดจอดรถจักรยานยนต์รับจ้าง", "ติดต่อแอดมินหอพัก" -> "ติดต่อนิติบุคคล", "สายด่วนฉุกเฉิน" -> "หมายเลขโทรศัพท์ฉุกเฉิน", ฯลฯ
+- สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย
+
+## 2026-09-18 15:17 — เพิ่ม QR Code สำหรับเมนู Wi-Fi
+
+- คำขอ/เป้าหมาย: เพิ่ม QR Code สำหรับสแกนเชื่อมต่อ Wi-Fi ในการ์ดและเปลี่ยนชื่อ/รหัสผ่าน Wi-Fi ตามที่กำหนด
+- สิ่งที่ดำเนินการ: 
+  - สร้างภาพ QR Code รูปแบบ `WIFI:T:WPA;S:Dorminet;P:999999999;;` โดยใช้ Google Chart API
+  - แทรกรูปภาพลงในการ์ด Wi-Fi (Flex Message) พร้อมคำอธิบาย "สแกนเพื่อเชื่อมต่ออัตโนมัติ"
+  - เปลี่ยนข้อมูล Network เป็น `Dorminet` และ Password เป็น `999999999`
+- สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย
+
+## 2026-09-18 18:52 — อัปเกรด UI การ์ดทั้ง 3 และเพิ่ม Carousel บริการรอบหอพัก
+
+- คำขอ/เป้าหมาย: ปรับแต่งการ์ดทั้ง 3 ให้สวยงามและมีข้อมูลรายละเอียดมากขึ้น บริการรอบหอพักให้เป็น Carousel เลื่อนข้างได้พร้อมแผนที่
+- สิ่งที่ดำเนินการ:
+  - Wi-Fi: ย้าย QR Code ขึ้นบน, เพิ่มประเภทความถี่ (5GHz/WPA2), ชั้นที่ครอบคลุม, หมายเหตุเปลี่ยนรหัสทุกต้นเดือน
+  - ติดต่อ: เพิ่มเวลาทำการ (จ.-ส. 08:00-20:00), คำอธิบายใต้ปุ่มฉุกเฉินแต่ละปุ่ม
+  - บริการรอบหอพัก: เปลี่ยนเป็น Carousel (3 bubble) แต่ละร้านมีข้อมูลครบ (ชื่อ/เวลา/ราคา/บริการ) พร้อมปุ่มโทรออกและปุ่มเส้นทาง Google Maps
+- สถานะ deploy/UAT: Deploy ขึ้น Production เรียบร้อย SHA=14be22ca
+
+## 2026-09-18 19:01 — แก้ไขบั๊ก URI ใน Carousel และตัดข้อมูล Wi-Fi ที่ไม่จำเป็นออก
+
+- คำขอ/เป้าหมาย:
+  - แก้บั๊ก "บริการรอบหอไม่มา" (Carousel ไม่แสดงเพราะติดปัญหา URI ภาษาไทยไม่ได้เข้ารหัส)
+  - นำข้อมูล "ความถี่" (WPA2) และ "ครอบคลุม" (ทุกชั้น) ออกจากการ์ด Wi-Fi เพราะไม่จำเป็นสำหรับผู้ใช้ทั่วไป
+- สิ่งที่ดำเนินการ:
+  - แก้ไข `backend-dorm/handlers/additional_menus_flex.go`: URL Encoding ให้ URI ของ Google Maps ในฟังก์ชัน `buildServicesFlexMessage()`
+  - แก้ไข `buildWifiFlexMessage()`: ลบรายละเอียดเรื่องความถี่สัญญาณและการครอบคลุมออก
+  - Build & Deploy ซ้ำ
+- สถานะ deploy/UAT: แก้ไขโค้ดเสร็จแล้ว กำลังรอ Deploy ขึ้น Production 
+
+## 2026-09-18 19:10 — ปรับปรุง UI ของ Wi-Fi Card ให้สวยงามขึ้น
+
+- คำขอ/เป้าหมาย: ปรับขนาดตัวอักษรและจัดหน้าตาของการ์ด Wi-Fi ให้สวยงาม สมดุล และน่าใช้มากขึ้น
+- สิ่งที่ดำเนินการ:
+  - แก้ไข `buildWifiFlexMessage()` ใน `additional_menus_flex.go`
+  - ปรับปรุง Header: เปลี่ยน "รหัสอินเทอร์เน็ต (Wi-Fi)" เป็น "Wi-Fi & Internet" (ลดขนาดเหลือ `lg`) ลบข้อความ subtitle ที่ซ้ำซ้อน
+  - ปรับปรุง QR Code: เพิ่มขนาดเป็น `xl` ให้สแกนง่ายขึ้น จัดให้อยู่ตรงกลาง (align: center) เปลี่ยนข้อความเป็น "สแกน QR Code เพื่อเชื่อมต่อ" ให้ดูสวยงาม (size `xxs`)
+  - ปรับปรุง Body: ปรับขนาด Network และ Password ให้เท่ากัน (`sm`) จัดให้อยู่ในแนวนอน (`layout: horizontal`) และใช้ `filler` ดันให้ข้อความชิดขอบคนละฝั่งอย่างสวยงาม
+  - ปรับปรุง Footer: เปลี่ยนข้อความให้กระชับขึ้นเป็น "พบปัญหาการใช้งาน แจ้งผ่านเมนู 'แจ้งซ่อม'" (size `xxs`)
+- สถานะ deploy/UAT: Deploy โค้ดใหม่ขึ้น Production เรียบร้อย
+
+## 2026-09-18 19:55 — ตรวจพื้นที่ server หลังพบไฟล์ deploy/backup สะสม
+
+- คำขอ/เป้าหมาย: ตรวจสอบข้อสังเกตว่าไฟล์ภายใน production server เริ่มมีขนาดใหญ่ โดยยังไม่ลบหรือเปลี่ยนแปลงข้อมูล
+- สิ่งที่ดำเนินการ: อ่านรายการไฟล์ที่ผู้ใช้แนบ; ตรวจ filesystem, inode, ขนาด directory ระดับบน, จำนวน/ขนาด deploy build และ rollback backup, live application, system journal และ Docker ด้วยคำสั่ง read-only; ตรวจ main/OCR service และ internal health
+- ผลตรวจ: filesystem ขนาด 109 GB ใช้ 51 GB เหลือ 52 GB (`50%`), inode ใช้ `8%`; `/home/fang` ใช้ 35 GB โดย `dorminet-flex-build-*` 50 ชุดรวม 12 GB และ `line_migration_backups` 77 ชุดรวม 7.9 GB เป็นแหล่งสะสมหลัก; build รุ่นใหม่ใช้ประมาณ 244 MB/ชุด และ backup รุ่นใหม่ประมาณ 301 MB/ชุด; root-level source archives รวมประมาณ 0.7 GB; live `/opt/dormitory` ใช้ 484 MB; journal ใช้ 63.9 MB; Docker ใช้ image 9.083 GB แบบ active และมี inactive build cache ที่ reclaimable 1.236 GB
+- สาเหตุ: safe deploy สร้าง build directory ใหม่ทุกครั้งแต่ยังไม่มี cleanup/retention และ rollback backup ล่าสุดสำรอง OCR virtual environment ด้วย ทำให้ deployment หนึ่งรอบเพิ่มพื้นที่ราว 545 MB ก่อนนับ archive; การ deploy ต่อเนื่องจึงทำให้โตเร็ว
+- การเปลี่ยนข้อมูล/production: ไม่มีการลบ, prune, restart, deploy หรือแก้ฐานข้อมูล; `dormitory.service` และ `dormitory-ocr.service` ยัง `active` และ health ตอบ `online`; สคริปต์ตรวจชั่วคราวถูกย้ายไป Trash แบบกู้คืนได้
+- ข้อเสนอ: ลบเฉพาะ build artifacts ที่สร้างซ้ำได้โดยเก็บรุ่นล่าสุด, กำหนด retention ของ rollback backup โดยรักษา milestone/รุ่นล่าสุด, พิจารณาลบ root archives ที่แทนที่แล้ว และ prune เฉพาะ Docker build cache ที่รายงาน reclaimable; ต้องทำ inventory/รายการเป้าหมายและขออนุมัติก่อนลบจริง
+- สถานะ: ตรวจสอบเสร็จแล้วและยืนยันว่าพื้นที่ยังไม่ฉุกเฉิน แต่ควรตั้ง retention ก่อน deploy ต่อเนื่องเพิ่ม
+
+## 2026-09-18 20:02 — ล้าง deploy artifacts แบบรักษา rollback และเพิ่ม concurrent-deploy guard
+
+- คำขอ/เป้าหมาย: ดำเนินการ cleanup ตามข้อเสนอ โดยตรวจซ้ำและป้องกันไม่ให้กระทบ Agent/Terminal อื่นที่กำลังใช้โปรเจกต์และ production server เดียวกัน
+- Preflight/dry-run: ตรวจ local/remote process และ `git status` ซ้ำ; ก่อนเริ่มไม่พบ deploy/build process ที่กำลังทำงาน; สร้างรายการเป้าหมายและตรวจทุก path ว่าเป็น directory ตาม pattern ใต้ `/home/fang/dorminet-flex-build-*` หรือ automated backup ใต้ `/home/fang/line_migration_backups/*-pre-flex-ui` เท่านั้น; ไม่แตะ `/opt/dormitory`, uploads, live database, backup แบบตั้งชื่อเอง, Docker image หรือ directory อื่น
+- การลบจริง: ลบ deploy build เก่า 47 ชุดและ automated rollback เก่า 40 ชุด รวม `15,856,235,893` bytes ตาม dry-run/validation; การลบชุดเก่าเป็นการลบถาวรบน server แต่ยังเก็บ rollback รุ่นใหม่และ milestone ไว้; disk usage ลดจาก 51 GB (`50%`) เหลือ 37 GB (`36%`) และพื้นที่ว่างเพิ่มจาก 52 GB เป็น 66–67 GB
+- Retention ที่เหลือ: ทำ marker `.retain` ให้ build/backup ของ sync recovery `20260918-005104`; เก็บ backup แบบตั้งชื่อเองทั้งหมด; หลัง cleanup มี Agent อื่น deploy ชุดใหม่ระหว่าง post-check โดยปลอดภัยเพราะใช้ directory ใหม่ ทำให้สถานะสุดท้ายมี milestone 1 ชุด + automated backup ล่าสุด 10 ชุด (รวม automated 11, backup ทุกชนิด 38 ชุด) และ build milestone + build ล่าสุด 3 ชุดชั่วคราว
+- การป้องกันระยะยาว: แก้ `backend-dorm/scripts/deploy_flex_safe_remote.sh` ให้ใช้ `flock` ป้องกัน deploy ซ้อน, เก็บ build ล่าสุด 2 ชุดและ automated rollback ล่าสุด 10 ชุดหลัง deploy สำเร็จ, เคารพ `.retain`, ไม่แตะ named/manual backups และตรวจ realpath/pattern ก่อนลบ; อัปเดต `docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md` ให้ Agent อื่นเห็นกติกาเดียวกัน
+- การตรวจหลังทำ: production SHA ที่ตรวจสดหลัง concurrent deploy คือ `ffcac500fe0f171be25e070102e72f2f938fa86e90e38fe2ee3c2839258694c0`; `dormitory.service` และ `dormitory-ocr.service` เป็น `active`; internal/external health ตอบ `online`; master และ tenant `PRAGMA quick_check` เป็น `ok`; remote cleanup script ชั่วคราวถูกลบแล้ว
+- การตรวจไฟล์: `bash -n backend-dorm/scripts/deploy_flex_safe_remote.sh` และ scoped `git diff --check` สำหรับสคริปต์/runbook ผ่าน; เครื่องพัฒนาไม่มี `shellcheck` จึงไม่ได้รัน; ไม่รัน backend tests หรือ deploy ใหม่จาก Terminal นี้เพราะไม่ได้เปลี่ยน application code และมี concurrent deploy จาก Agent อื่น
+- สิ่งที่จงใจไม่ลบ: root-level archives ประมาณ 0.7 GB และ Docker build cache reclaimable ประมาณ 1.236 GB ถูกเก็บไว้ก่อน เพราะอาจเกี่ยวข้องกับงาน/บริการอื่นและพื้นที่ปัจจุบันเพียงพอ

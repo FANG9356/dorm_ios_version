@@ -10,6 +10,16 @@ master_database="/opt/dormitory/dormitory.db"
 tenant_database_dir="/opt/dormitory/dorm_data"
 ocr_directory="/opt/dormitory/ocr-bot"
 ocr_unit="/etc/systemd/system/dormitory-ocr.service"
+deploy_lock="/home/fang/.dorminet-flex-deploy.lock"
+
+# Agents share this deployment path. Serialize deploys so a second agent
+# cannot replace the source archive or service binary while one deploy is in
+# progress.
+exec 9>"$deploy_lock"
+if ! flock -n 9; then
+  echo "Another DormiNetX deploy is already running" >&2
+  exit 1
+fi
 
 mkdir -p "$build_dir" "$backup_dir"
 tar -xzf "$archive_path" -C "$build_dir"
@@ -117,4 +127,59 @@ sudo sqlite3 "$master_database" \
 if sudo test -f "$tenant_database_dir/tenant_1.db"; then
   sudo sqlite3 "$tenant_database_dir/tenant_1.db" \
     "SELECT name FROM pragma_table_info('maintenances') WHERE name = 'quote_approved_at';"
+fi
+
+# Keep storage bounded after a fully successful deploy. A `.retain` marker
+# exempts milestone directories from rotation. Named/manual backups outside
+# the timestamped pre-flex-ui pattern are never touched.
+cleanup_deploy_artifacts() {
+  local build_keep_count=2
+  local backup_keep_count=10
+  local delete_count index candidate resolved
+  local removed_builds=0
+  local removed_backups=0
+  local -a builds automated_backups
+
+  mapfile -d '' -t builds < <(
+    find /home/fang -maxdepth 1 -type d -name 'dorminet-flex-build-*' \
+      -printf '%p\0' | sort -z
+  )
+  delete_count=$((${#builds[@]} - build_keep_count))
+  if (( delete_count < 0 )); then delete_count=0; fi
+  for ((index=0; index<delete_count; index++)); do
+    candidate="${builds[$index]}"
+    [[ "$candidate" == "$build_dir" || -e "$candidate/.retain" ]] && continue
+    [[ ! -L "$candidate" && -d "$candidate/backend-dorm" ]] || continue
+    [[ "$(basename "$candidate")" =~ ^dorminet-flex-build-[0-9]{8}-[0-9]{6}$ ]] || continue
+    resolved="$(realpath "$candidate")"
+    [[ "$(dirname "$resolved")" == "/home/fang" ]] || continue
+    sudo rm -rf --one-file-system -- "$candidate"
+    removed_builds=$((removed_builds + 1))
+  done
+
+  mapfile -d '' -t automated_backups < <(
+    find /home/fang/line_migration_backups -mindepth 1 -maxdepth 1 -type d \
+      -regextype posix-extended \
+      -regex '.*/[0-9]{8}-[0-9]{6}-pre-flex-ui' \
+      -printf '%p\0' | sort -z
+  )
+  delete_count=$((${#automated_backups[@]} - backup_keep_count))
+  if (( delete_count < 0 )); then delete_count=0; fi
+  for ((index=0; index<delete_count; index++)); do
+    candidate="${automated_backups[$index]}"
+    [[ "$candidate" == "$backup_dir" || -e "$candidate/.retain" ]] && continue
+    [[ ! -L "$candidate" && -f "$candidate/server_debian" && -f "$candidate/dormitory.db" ]] || continue
+    [[ "$(basename "$candidate")" =~ ^[0-9]{8}-[0-9]{6}-pre-flex-ui$ ]] || continue
+    resolved="$(realpath "$candidate")"
+    [[ "$(dirname "$resolved")" == "/home/fang/line_migration_backups" ]] || continue
+    sudo rm -rf --one-file-system -- "$candidate"
+    removed_backups=$((removed_backups + 1))
+  done
+
+  echo "RETENTION_REMOVED_BUILDS=${removed_builds}"
+  echo "RETENTION_REMOVED_BACKUPS=${removed_backups}"
+}
+
+if ! cleanup_deploy_artifacts; then
+  echo "Warning: deploy succeeded but artifact retention cleanup failed" >&2
 fi

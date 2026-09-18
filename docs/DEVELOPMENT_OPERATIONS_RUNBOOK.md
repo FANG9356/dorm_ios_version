@@ -181,12 +181,16 @@ backend-dorm/scripts/run_flex_safe_deploy.exp \
 สคริปต์นี้จะ:
 
 1. upload source และ remote deploy script
-2. build ด้วย Linux/CGO บน server
-3. สำรอง binary, master DB และ tenant DB ลง `/home/fang/line_migration_backups/TIMESTAMP-pre-flex-ui`
-4. stop/install/start `dormitory.service`
-5. health check ที่ `127.0.0.1:4283`
-6. rollback binary อัตโนมัติถ้า install/start/health ล้มเหลว
-7. แสดง `NEW_SHA` และ `BACKUP_DIR`
+2. ล็อก deployment ด้วย `flock` เพื่อไม่ให้ Agent/Terminal สองตัว deploy ทับกัน
+3. build ด้วย Linux/CGO บน server
+4. สำรอง binary, master DB และ tenant DB ลง `/home/fang/line_migration_backups/TIMESTAMP-pre-flex-ui`
+5. stop/install/start `dormitory.service`
+6. health check ที่ `127.0.0.1:4283`
+7. rollback binary อัตโนมัติถ้า install/start/health ล้มเหลว
+8. หลัง deploy สำเร็จ เก็บ build ล่าสุด 2 ชุดและ automated rollback ล่าสุด 10 ชุด แล้วลบชุดเก่าตาม retention
+9. แสดง `NEW_SHA`, `BACKUP_DIR` และจำนวน artifact ที่ retention ลบ
+
+หาก build หรือ automated backup ใดเป็น milestone ที่ต้องเก็บข้าม retention ให้สร้างไฟล์ marker ชื่อ `.retain` ภายใน directory นั้นก่อน deploy รอบถัดไป ระบบจะไม่ลบ backup แบบตั้งชื่อเองที่อยู่นอก pattern `TIMESTAMP-pre-flex-ui` และจะไม่แตะ `/opt/dormitory`, uploads หรือฐานข้อมูล live ระหว่าง cleanup
 
 รุ่นปัจจุบันยังติดตั้ง OCR service เพิ่มด้วย ได้แก่ Tesseract ภาษาไทย, Python virtual environment, dependencies ใน `backend-dorm/ocr-bot/requirements.txt` และ systemd unit `dormitory-ocr.service`
 

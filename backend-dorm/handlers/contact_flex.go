@@ -25,8 +25,7 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 					"size": "xs",
 					"color": "#888888"
 				}
-			],
-			"backgroundColor": "#f8f9fa"
+			]
 		},
 		"body": {
 			"type": "box",
@@ -44,6 +43,15 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"weight": "bold",
 							"size": "sm",
 							"color": "#111111"
+						},
+						{
+							"type": "box",
+							"layout": "baseline",
+							"spacing": "sm",
+							"contents": [
+								{ "type": "text", "text": "เวลาทำการ", "color": "#888888", "size": "xs", "flex": 3 },
+								{ "type": "text", "text": "จ.-ส. 08:00-20:00 น.", "color": "#111111", "size": "xs", "flex": 5, "wrap": true }
+							]
 						},
 						{
 							"type": "button",
@@ -99,6 +107,13 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"color": "#f1f5f9"
 						},
 						{
+							"type": "text",
+							"text": "ใช้เมื่อเจ็บป่วยหรือได้รับบาดเจ็บ",
+							"size": "xs",
+							"color": "#aaaaaa",
+							"margin": "xs"
+						},
+						{
 							"type": "button",
 							"style": "secondary",
 							"height": "sm",
@@ -110,6 +125,13 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 							"color": "#f1f5f9"
 						},
 						{
+							"type": "text",
+							"text": "ใช้เมื่อเกิดเพลิงไหม้หรือควันไฟ",
+							"size": "xs",
+							"color": "#aaaaaa",
+							"margin": "xs"
+						},
+						{
 							"type": "button",
 							"style": "secondary",
 							"height": "sm",
@@ -119,6 +141,14 @@ func buildContactMenuFlexMessage() map[string]interface{} {
 								"uri": "tel:191"
 							},
 							"color": "#f1f5f9"
+						},
+						{
+							"type": "text",
+							"text": "ใช้เมื่อเกิดเหตุการณ์อาชญากรรมหรือเหตุด่วน",
+							"size": "xs",
+							"color": "#aaaaaa",
+							"margin": "xs",
+							"wrap": true
 						}
 					]
 				}
