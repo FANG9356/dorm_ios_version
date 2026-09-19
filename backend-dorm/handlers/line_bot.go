@@ -241,7 +241,7 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 			}
 
 			now := time.Now()
-			_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?)", roomNumber, issue, now.Format("2006-01-02 15:04:05"), now.UTC().Format(time.RFC3339Nano))
+			_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?)", roomNumber, issue, now.UTC().Format(time.RFC3339), now.UTC().Format(time.RFC3339Nano))
 			if err != nil {
 				replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้งค่ะ")
 				return
@@ -444,7 +444,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 
 	} else if botState == "maintenance" {
 		now := time.Now()
-		_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, issue_image, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?, ?)", roomNumber, "รอรายละเอียดเพิ่มเติม", now.Format("2006-01-02 15:04:05"), "/uploads/"+newFileName, now.UTC().Format(time.RFC3339Nano))
+		_, err = db.Exec("INSERT INTO maintenances (room_number, issue, status, reported_at, issue_image, last_updated) VALUES (?, ?, 'รอดำเนินการ', ?, ?, ?)", roomNumber, "รอรายละเอียดเพิ่มเติม", now.UTC().Format(time.RFC3339), "/uploads/"+newFileName, now.UTC().Format(time.RFC3339Nano))
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกข้อมูลแจ้งซ่อม กรุณาลองใหม่อีกครั้งค่ะ")
 			return

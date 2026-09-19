@@ -48,7 +48,7 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 				http.Error(w, "Invalid input", http.StatusBadRequest)
 				return
 			}
-			if _, err := db.Exec("INSERT INTO maintenances (room_number, issue, reported_at) VALUES (?, ?, ?)", m.RoomNumber, m.Issue, time.Now().Format("2006-01-02 15:04:05")); err != nil {
+			if _, err := db.Exec("INSERT INTO maintenances (room_number, issue, reported_at) VALUES (?, ?, ?)", m.RoomNumber, m.Issue, time.Now().UTC().Format(time.RFC3339)); err != nil {
 				http.Error(w, "Database error", http.StatusInternalServerError)
 				return
 			}
@@ -95,7 +95,7 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 				}
 
 				if m.Status == "เสร็จสิ้น" {
-					if _, err := db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=? WHERE id=?", m.Status, m.Cost, time.Now().Format("2006-01-02 15:04:05"), m.ID); err != nil {
+					if _, err := db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=? WHERE id=?", m.Status, m.Cost, time.Now().UTC().Format(time.RFC3339), m.ID); err != nil {
 						http.Error(w, "Database error", http.StatusInternalServerError)
 						return
 					}
@@ -152,9 +152,9 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 
 				if status == "เสร็จสิ้น" {
 					if slipPath != "" {
-						_, err = db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=?, payment_method=?, slip_path=? WHERE id=?", status, cost, time.Now().Format("2006-01-02 15:04:05"), paymentMethod, slipPath, id)
+						_, err = db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=?, payment_method=?, slip_path=? WHERE id=?", status, cost, time.Now().UTC().Format(time.RFC3339), paymentMethod, slipPath, id)
 					} else {
-						_, err = db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=?, payment_method=? WHERE id=?", status, cost, time.Now().Format("2006-01-02 15:04:05"), paymentMethod, id)
+						_, err = db.Exec("UPDATE maintenances SET status=?, cost=?, resolved_at=?, payment_method=? WHERE id=?", status, cost, time.Now().UTC().Format(time.RFC3339), paymentMethod, id)
 					}
 				} else {
 					_, err = db.Exec("UPDATE maintenances SET status=?, cost=? WHERE id=?", status, cost, id)

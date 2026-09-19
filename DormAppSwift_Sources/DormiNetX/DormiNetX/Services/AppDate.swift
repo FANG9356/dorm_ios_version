@@ -108,6 +108,14 @@ enum AppDate {
         if let date = formatter.date(from: value) {
             return thaiDateTime(date)
         }
+        let customFormatter = Self.formatter("yyyy-MM-dd HH:mm:ss")
+        if let date = customFormatter.date(from: value) {
+            return thaiDateTime(date)
+        }
+        let customFormatter2 = Self.formatter("yyyy-MM-dd")
+        if let date = customFormatter2.date(from: value) {
+            return thaiDateTime(date)
+        }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? fallback : trimmed
     }
