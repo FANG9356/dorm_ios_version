@@ -430,7 +430,8 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			 payment_plan=excluded.payment_plan, installment_phase=excluded.installment_phase,
 			 due_date=excluded.due_date, payment_status=excluded.payment_status,
 			 slip_path_array=excluded.slip_path_array, paid_amount=excluded.paid_amount,
-			 last_updated=excluded.last_updated`,
+			 last_updated=excluded.last_updated
+			WHERE excluded.last_updated > payments.last_updated`,
 			payment.UserID, payment.RoomNumber, payment.RentFee, payment.DepositFee, payment.WaterFee,
 			payment.ElectricFee, payment.CommonFee, payment.LateFee, payment.ApplianceFee, payment.Amount,
 			payment.Month, payment.PaymentDate, payment.Method, payment.SlipPath, payment.PaymentPlan,
@@ -483,7 +484,8 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			ON CONFLICT(external_id) WHERE external_id != '' DO UPDATE SET room_number=excluded.room_number, issue=excluded.issue,
 			 status=excluded.status, cost=excluded.cost, reported_at=excluded.reported_at,
 			 resolved_at=excluded.resolved_at, payment_method=excluded.payment_method,
-			 slip_path=excluded.slip_path, issue_image=excluded.issue_image, last_updated=excluded.last_updated`,
+			 slip_path=excluded.slip_path, issue_image=excluded.issue_image, last_updated=excluded.last_updated
+			WHERE excluded.last_updated > maintenances.last_updated`,
 			maintenance.RoomNumber, maintenance.Issue, maintenance.Status, maintenance.Cost,
 			maintenance.ReportedAt, maintenance.ResolvedAt, maintenance.PaymentMethod,
 			maintenance.SlipPath, maintenance.IssueImage, maintenance.LastUpdated, maintenance.ID)
@@ -588,7 +590,8 @@ func validateMaintenanceCostChange(previousStatus, nextStatus string, previousCo
 }
 
 func maintenanceStatusIndex(value string) int {
-	statuses := []string{"รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"}
+	// ลำดับใหม่: ชำระเงินก่อนซ่อม
+	statuses := []string{"รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "รอตรวจสอบชำระเงิน", "กำลังซ่อม", "เสร็จสิ้น"}
 	for index, status := range statuses {
 		if strings.TrimSpace(value) == status {
 			return index
@@ -597,6 +600,13 @@ func maintenanceStatusIndex(value string) int {
 	return -1
 }
 
+// validateMaintenanceAppTransition enforces the new pay-before-repair workflow:
+//
+//	รอดำเนินการ → กำลังติดต่อช่าง → รออนุมัติค่าใช้จ่าย → รอตรวจสอบชำระเงิน → กำลังซ่อม → เสร็จสิ้น
+//
+// For cost=0 jobs, payment step is skipped:
+//
+//	ติดต่อช่าง → กำลังซ่อม → เสร็จสิ้น
 func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost float64, quoteApproved bool) error {
 	previousStatus = strings.TrimSpace(previousStatus)
 	nextStatus = strings.TrimSpace(nextStatus)
@@ -604,9 +614,7 @@ func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost fl
 	if previousStatus == nextStatus {
 		return nil
 	}
-	// Quote rejection is a terminal branch, not a numbered repair step. LINE
-	// can publish it while the tenant database still shows either the quote
-	// preparation or quote-awaiting state, so accept both safe predecessors.
+	// Quote rejection is a terminal branch. Accept both safe predecessors.
 	if nextStatus == rejectedStatus {
 		if previousStatus == "กำลังติดต่อช่าง" || previousStatus == "รออนุมัติค่าใช้จ่าย" {
 			return nil
@@ -616,30 +624,47 @@ func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost fl
 	if previousStatus == rejectedStatus {
 		return fmt.Errorf("rejected quote is terminal; issue a replacement quote")
 	}
+
+	// --- กฎ flow ใหม่: ชำระก่อนซ่อม ---
+
+	// ติดต่อช่าง → รออนุมัติค่าใช้จ่าย: ต้องมีค่าใช้จ่าย
+	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "รออนุมัติค่าใช้จ่าย" {
+		if cost <= 0 {
+			return fmt.Errorf("quote cost must be greater than zero")
+		}
+		return nil
+	}
+	// ติดต่อช่าง → กำลังซ่อม: อนุญาตเฉพาะเมื่อไม่มีค่าใช้จ่าย
+	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" {
+		if cost <= 0 {
+			return nil
+		}
+		return fmt.Errorf("chargeable repairs must go through quote approval and payment before repair")
+	}
+	// รออนุมัติค่าใช้จ่าย → กำลังติดต่อช่าง: ถอยกลับได้
+	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังติดต่อช่าง" {
+		return nil
+	}
+	// รออนุมัติค่าใช้จ่าย → กำลังซ่อม: ไม่อนุญาต ต้องผ่านชำระก่อน
+	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {
+		return fmt.Errorf("payment must be verified before starting repair")
+	}
+	// รอตรวจสอบชำระเงิน → กำลังซ่อม: admin ยืนยันรับเงินแล้ว เริ่มซ่อมได้
+	if previousStatus == "รอตรวจสอบชำระเงิน" && nextStatus == "กำลังซ่อม" {
+		return nil
+	}
+	// กำลังซ่อม → เสร็จสิ้น: ซ่อมเสร็จ ชำระเงินเรียบร้อยแล้วก่อนหน้า
+	if previousStatus == "กำลังซ่อม" && nextStatus == "เสร็จสิ้น" {
+		return nil
+	}
+
+	// กฎทั่วไป: ห้ามกระโดดข้ามขั้น
 	previousIndex := maintenanceStatusIndex(previousStatus)
 	nextIndex := maintenanceStatusIndex(nextStatus)
 	if previousIndex < 0 || nextIndex < 0 {
 		return fmt.Errorf("unknown status")
 	}
-	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {
-		return fmt.Errorf("resident approval is required before repair")
-	}
-	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" && cost > 0 {
-		if quoteApproved {
-			return nil
-		}
-		return fmt.Errorf("resident approval is required before repair")
-	}
-	if previousStatus == "กำลังติดต่อช่าง" && nextStatus == "กำลังซ่อม" && cost <= 0 {
-		return nil
-	}
-	if previousStatus == "กำลังซ่อม" && nextStatus == "เสร็จสิ้น" && cost <= 0 {
-		return nil
-	}
-	if nextStatus == "รออนุมัติค่าใช้จ่าย" && cost <= 0 {
-		return fmt.Errorf("quote cost must be greater than zero")
-	}
-	if previousIndex-nextIndex > 1 || nextIndex-previousIndex > 1 {
+	if nextIndex-previousIndex > 1 || previousIndex-nextIndex > 1 {
 		return fmt.Errorf("status must move one step at a time")
 	}
 	return nil

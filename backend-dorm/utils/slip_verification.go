@@ -149,7 +149,7 @@ func verifyMock(file *os.File, expectedAmount float64) (bool, string) {
 	payload := result.GetText()
 	
 	if strings.Contains(payload, "00410006000001") || len(payload) > 20 {
-		return true, "Verified automatically (QR Found, OCR Bot Offline)"
+		return false, "พบ QR Code แต่ไม่สามารถตรวจสอบยอดเงินอัตโนมัติได้ กรุณารอแอดมินยืนยัน"
 	}
 
 	return false, "QR code is not a valid transfer slip."

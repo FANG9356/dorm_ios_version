@@ -14,16 +14,17 @@ func TestValidateMaintenanceAppTransitionRequiresQuoteApproval(t *testing.T) {
 		{name: "paid repair enters quote", from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", cost: 500},
 		{name: "zero quote rejected", from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", shouldFail: true},
 		{name: "paid repair cannot skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, shouldFail: true},
-		{name: "approved paid repair can start", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, approved: true},
+		{name: "approved paid repair cannot start without payment", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, approved: true, shouldFail: true},
+		{name: "approved paid repair must await payment", from: "รออนุมัติค่าใช้จ่าย", to: "รอตรวจสอบชำระเงิน", cost: 500, approved: true},
+		{name: "paid repair starts after payment", from: "รอตรวจสอบชำระเงิน", to: "กำลังซ่อม", cost: 500},
 		{name: "free repair can skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม"},
 		{name: "free repair can skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น"},
-		{name: "paid repair cannot skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500, shouldFail: true},
+		{name: "paid repair completes after payment and repair", from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500},
 		{name: "admin cannot approve quote", from: "รออนุมัติค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, shouldFail: true},
 		{name: "resident can reject prepared quote", from: "กำลังติดต่อช่าง", to: "ปฏิเสธค่าใช้จ่าย", cost: 500},
 		{name: "resident can reject pending quote", from: "รออนุมัติค่าใช้จ่าย", to: "ปฏิเสธค่าใช้จ่าย", cost: 500},
 		{name: "rejected quote is terminal", from: "ปฏิเสธค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, shouldFail: true},
 		{name: "unrelated state cannot reject quote", from: "กำลังซ่อม", to: "ปฏิเสธค่าใช้จ่าย", cost: 500, shouldFail: true},
-		{name: "cannot skip to payment", from: "กำลังติดต่อช่าง", to: "รอตรวจสอบชำระเงิน", cost: 500, shouldFail: true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -50,7 +51,7 @@ func TestValidateMaintenanceCostChangeLocksQuotedAmount(t *testing.T) {
 		{name: "approved amount is locked while contacting", from: "กำลังติดต่อช่าง", to: "กำลังติดต่อช่าง", approved: true, shouldFail: true},
 		{name: "approved amount can be replaced with new quote", from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", approved: true},
 		{name: "pending quote amount is locked", from: "รออนุมัติค่าใช้จ่าย", to: "รออนุมัติค่าใช้จ่าย", shouldFail: true},
-		{name: "approved repair amount is locked", from: "กำลังซ่อม", to: "รอตรวจสอบชำระเงิน", shouldFail: true},
+		{name: "approved repair amount is locked", from: "กำลังซ่อม", to: "เสร็จสิ้น", shouldFail: true},
 		{name: "repair can issue replacement quote", from: "กำลังซ่อม", to: "รออนุมัติค่าใช้จ่าย"},
 		{name: "quote can return to draft with changed amount", from: "รออนุมัติค่าใช้จ่าย", to: "กำลังติดต่อช่าง"},
 	}

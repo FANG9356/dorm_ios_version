@@ -301,7 +301,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 
 		var maintID int
 		var maintAmount float64
-		errMaint := db.QueryRow("SELECT id, cost FROM maintenances WHERE room_number = ? AND status IN ('กำลังติดต่อช่าง', 'กำลังซ่อม', 'รอตรวจสอบชำระเงิน') AND cost > 0 ORDER BY id DESC LIMIT 1", roomNumber).Scan(&maintID, &maintAmount)
+		errMaint := db.QueryRow("SELECT id, cost FROM maintenances WHERE room_number = ? AND status = 'รอตรวจสอบชำระเงิน' AND cost > 0 ORDER BY id DESC LIMIT 1", roomNumber).Scan(&maintID, &maintAmount)
 
 		if errRent == nil && errMaint != nil {
 			botState = "slip"
@@ -313,10 +313,27 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		}
 	}
 
+	// Bug Fix: ถ้า bot_state เป็น "maintenance" แต่มีเคสซ่อมที่รอชำระเงินอยู่
+	// หมายความว่าผู้ใช้อาจตั้งใจส่งสลิปชำระค่าซ่อม ไม่ใช่แจ้งซ่อมใหม่
+	// เปลี่ยน bot_state เป็น pay_maint_* เพื่อให้รับสลิปได้อย่างถูกต้อง
+	if botState == "maintenance" {
+		var pendingMaintID int
+		errPending := db.QueryRow(
+			"SELECT id FROM maintenances WHERE room_number = ? AND status = 'รอตรวจสอบชำระเงิน' AND cost > 0 ORDER BY id DESC LIMIT 1",
+			roomNumber).Scan(&pendingMaintID)
+		if errPending == nil {
+			// มีเคสรอชำระอยู่ — เปลี่ยนเป็นโหมดชำระค่าซ่อมแทน
+			db.Exec("UPDATE users SET bot_state = ? WHERE line_user_id = ?", fmt.Sprintf("pay_maint_%d", pendingMaintID), lineUserID)
+			botState = fmt.Sprintf("pay_maint_%d", pendingMaintID)
+		}
+		// ถ้าไม่มีเคสรอชำระ ให้ดำเนินการแจ้งซ่อมปกติต่อไป
+	}
+
 	if botState != "slip" && botState != "maintenance" && botState != "maintenance_wait_image" && botState != "maintenance_wait_text" && !strings.HasPrefix(botState, "pay_maint_") {
 		replyToLine(replyToken, "กรุณากดเลือกเมนู 'การเงิน' หรือ 'แจ้งซ่อม' ด้านล่างก่อนส่งรูปภาพนะคะ เพื่อให้ระบบจัดเก็บข้อมูลได้อย่างถูกต้องค่ะ")
 		return
 	}
+
 
 	token := getLineToken()
 	if token == "" {
@@ -477,7 +494,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		var cost float64
 		err = db.QueryRow(`SELECT m.cost FROM maintenances m
 			JOIN users u ON u.room_number = m.room_number
-			WHERE m.id = ? AND m.status IN ('กำลังติดต่อช่าง', 'กำลังซ่อม', 'รอตรวจสอบชำระเงิน') AND m.cost > 0
+			WHERE m.id = ? AND m.status = 'รอตรวจสอบชำระเงิน' AND m.cost > 0
 			AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
 			LIMIT 1`, maintID, lineUserID).Scan(&cost)
 		if err != nil || cost <= 0 {
@@ -490,7 +507,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		newStatus := "รอตรวจสอบชำระเงิน"
 		var replyMsg string
 		if isValid {
-			newStatus = "เสร็จสิ้น"
+			newStatus = "รอตรวจสอบชำระเงิน"
 			replyMsg = fmt.Sprintf("ระบบตรวจสอบสลิปอัตโนมัติ: ยืนยันการชำระเงินค่าซ่อมแซมสำเร็จ ยอด %.2f บาท เรียบร้อยแล้วค่ะ", cost)
 		} else {
 			replyMsg = fmt.Sprintf("ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ (%s) ระบบได้รับสลิปค่าซ่อมแซมเรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันให้อีกครั้งค่ะ", verifyReason)
@@ -666,7 +683,16 @@ func replyToLineWithFlexMessage(replyToken, altText string, contents interface{}
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending flex message:", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		respBody, _ := io.ReadAll(resp.Body)
+		fmt.Printf("LINE API Error (Flex): %s - %s\n", resp.Status, string(respBody))
+	}
 }
 
 func replyToLineWithFlexAndText(replyToken, altText string, contents interface{}, followUpText string) {
@@ -1160,7 +1186,7 @@ func handlePostbackEvent(master, db *sql.DB, accountID int, replyToken, lineUser
 		var count int
 		_ = db.QueryRow(`SELECT COUNT(*) FROM maintenances m JOIN users u ON u.room_number = m.room_number
 			WHERE m.id = ? AND u.line_user_id = ? AND u.status IN ('กำลังพักอาศัย','จอง')
-			AND m.status IN ('กำลังติดต่อช่าง', 'กำลังซ่อม', 'รอตรวจสอบชำระเงิน') AND m.cost > 0`, maintID, lineUserID).Scan(&count)
+			AND m.status = 'รอตรวจสอบชำระเงิน' AND m.cost > 0`, maintID, lineUserID).Scan(&count)
 		if count == 0 {
 			replyToLine(replyToken, "บิลนี้ไม่พร้อมรับชำระ หรือสถานะถูกเปลี่ยนไปแล้วค่ะ")
 			return
@@ -1188,11 +1214,11 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 		return
 	}
 	if notification.Status != "รออนุมัติค่าใช้จ่าย" {
-		if approved && notification.Status == "กำลังติดต่อช่าง" && quoteApprovedAt != "" {
-			replyToLine(replyToken, "ใบเสนอราคานี้อนุมัติแล้วค่ะ ขณะนี้แอดมินกำลังติดต่อช่าง")
+		if approved && notification.Status == "รอตรวจสอบชำระเงิน" {
+			replyToLine(replyToken, "ใบเสนอราคานี้อนุมัติแล้วค่ะ รอการตรวจสอบการชำระเงินอยู่ค่ะ")
 			return
 		}
-		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับหรือสถานะเปลี่ยนไปแล้วค่ะ")
+		replyToLine(replyToken, "ใบเสนอราคานี้ถูกตอบกลับแล้วค่ะ")
 		return
 	}
 	if notification.Cost <= 0 {
@@ -1200,10 +1226,12 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 		return
 	}
 
+	// เมื่ออนุมัติ: เปลี่ยนสถานะเป็น "รอตรวจสอบชำระเงิน" แทน "กำลังติดต่อช่าง"
+	// เพื่อให้ลูกบ้านชำระเงินก่อนที่ช่างจะมาซ่อม
 	nextStatus := "ปฏิเสธค่าใช้จ่าย"
 	approvedAt := ""
 	if approved {
-		nextStatus = "กำลังติดต่อช่าง"
+		nextStatus = "รอตรวจสอบชำระเงิน"
 		approvedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)

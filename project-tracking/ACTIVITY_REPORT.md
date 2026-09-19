@@ -520,3 +520,122 @@
 - การตรวจหลังทำ: production SHA ที่ตรวจสดหลัง concurrent deploy คือ `ffcac500fe0f171be25e070102e72f2f938fa86e90e38fe2ee3c2839258694c0`; `dormitory.service` และ `dormitory-ocr.service` เป็น `active`; internal/external health ตอบ `online`; master และ tenant `PRAGMA quick_check` เป็น `ok`; remote cleanup script ชั่วคราวถูกลบแล้ว
 - การตรวจไฟล์: `bash -n backend-dorm/scripts/deploy_flex_safe_remote.sh` และ scoped `git diff --check` สำหรับสคริปต์/runbook ผ่าน; เครื่องพัฒนาไม่มี `shellcheck` จึงไม่ได้รัน; ไม่รัน backend tests หรือ deploy ใหม่จาก Terminal นี้เพราะไม่ได้เปลี่ยน application code และมี concurrent deploy จาก Agent อื่น
 - สิ่งที่จงใจไม่ลบ: root-level archives ประมาณ 0.7 GB และ Docker build cache reclaimable ประมาณ 1.236 GB ถูกเก็บไว้ก่อน เพราะอาจเกี่ยวข้องกับงาน/บริการอื่นและพื้นที่ปัจจุบันเพียงพอ
+
+---
+## [2026-09-18 21:22] Bug Fix: Maintenance Payment Flow (4 บั๊ค)
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ผู้ใช้แจ้งบั๊ค 4 จุดในระบบแจ้งซ่อมและชำระเงินใน LINE
+
+### บั๊คที่แก้ไข
+1. **สลิปสร้างเคสแจ้งซ่อมใหม่ (แทนที่จะรับสลิปชำระ)**
+   - สาเหตุ: `bot_state = "maintenance"` ค้างอยู่ ระบบเข้า block แจ้งซ่อมแทน
+   - Fix: เพิ่ม guard ใน `handleImageMessage()` — ตรวจว่ามีเคสรอชำระหรือไม่ก่อน
+
+2. **QR Code ไม่ตรงเมื่อส่งสลิปซ้ำ**
+   - สาเหตุ: Downstream จากบั๊ค 1 (สลิปไปผิดเคส)
+   - Fix: แก้หายตามบั๊ค 1
+
+3. **iOS App ข้ามขั้นตอนไปเสร็จสิ้นโดยไม่ผ่านตรวจสอบชำระ**
+   - สาเหตุ: `validateMaintenanceAppTransition()` ไม่บล็อค "กำลังซ่อม"→"เสร็จสิ้น" เมื่อ cost > 0
+   - Fix: เพิ่ม rule block ใน `line_snapshot.go`
+
+4. **LINE ไม่ส่งแจ้งเตือนสถานะ**
+   - สาเหตุ: Notification รอ iOS push snapshot ก่อน
+   - Fix: เรียก `ProcessPendingLineNotifications()` ทันทีหลังสถานะเปลี่ยน
+
+### ไฟล์ที่แก้ไข
+- `backend-dorm/handlers/line_bot.go`
+- `backend-dorm/handlers/line_snapshot.go`
+- `backend-dorm/handlers/api_maintenances.go`
+- `backend-dorm/handlers/api_dorm.go`
+- `backend-dorm/core/server.go`
+
+### ผลลัพธ์
+- Build OK, Tests OK (`go test ./handlers/... -count=1`)
+- Deploy: DEPLOY_SUCCESS
+- SHA: `45962c88b3073e79ba0b62ba0f162d55d190a724e85435f776e7fe4c307873cd`
+- Backup: `/home/fang/line_migration_backups/20260918-072224-pre-flex-ui`
+
+---
+## [2026-09-19 02:49] Feature: Pay Before Repair Workflow
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลูกบ้านควรต้องชำระเงินและแอดมินยืนยันรับเงินก่อนที่ช่างจะเริ่มซ่อม (เปลี่ยนจากซ่อมก่อนจ่าย เป็นจ่ายก่อนซ่อม)
+
+### สิ่งที่เปลี่ยนแปลง
+1. **Backend `line_snapshot.go`**
+   - เปลี่ยนลำดับ statuses ให้ "รอตรวจสอบชำระเงิน" มาก่อน "กำลังซ่อม"
+   - อัปเดต `validateMaintenanceAppTransition()` ให้บังคับว่าถ้า cost > 0 ต้องผ่านการชำระเงินก่อนเสมอ
+2. **Backend `line_bot.go`**
+   - เมื่อลูกบ้านกด "อนุมัติใบเสนอราคา" ใน LINE เปลี่ยนสถานะเป็น "รอตรวจสอบชำระเงิน" ทันที (แทนที่จะเป็นกำลังติดต่อช่าง)
+   - ปรับ query ตรวจสลิปให้เจาะจงเฉพาะสถานะ "รอตรวจสอบชำระเงิน" เท่านั้น
+3. **iOS App `MaintenanceTabView.swift`**
+   - เปลี่ยนลำดับ `statuses` array และ update logic `canTransition()` ให้สอดคล้องกับ backend
+
+### ไฟล์ที่แก้ไข
+- `backend-dorm/handlers/line_bot.go`
+- `backend-dorm/handlers/line_snapshot.go`
+- `backend-dorm/handlers/line_snapshot_test.go`
+- `backend-dorm/handlers/maintenance_workflow_test.go`
+- `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/MaintenanceTabView.swift`
+
+### ผลลัพธ์
+- Build & Tests OK: `go test ./handlers/... -count=1` passed
+- Deploy: `DEPLOY_SUCCESS`
+- SHA: `2f25fc019a8e48d8dc30ca54ffa5dba9c966ab9e74c05df8cc8e302477922523`
+- Backup: `/home/fang/line_migration_backups/20260918-124925-pre-flex-ui`
+
+---
+## [2026-09-19 09:54] Bug Fix: Slip Verification Auto-Approve Fallback
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ผู้ใช้รายงานว่าบอทรับสลิปยอด 2 บาทและอนุมัติเป็นยอด 15 บาท (ยอดเต็ม) โดยอัตโนมัติ
+
+### สิ่งที่เปลี่ยนแปลง
+1. **แก้บั๊คใน `backend-dorm/utils/slip_verification.go`**
+   - **สาเหตุ:** เมื่อ OCR Bot (Python) ทำงานไม่ได้หรือปิดอยู่ ระบบจะ fallback ไปใช้วิธีแกะ QR Code พื้นฐาน ซึ่งโค้ดเดิมกำหนดว่า ถ้าแกะได้ PromptPay Payload ก็ให้คืนค่า `isValid = true` ทันที โดยไม่ได้ตรวจสอบยอดเงิน (เพราะ basic decoder ไม่ได้แกะข้อมูลจำนวนเงิน) ทำให้ยอดเท่าไหร่ก็ผ่าน
+   - **การแก้ไข:** เปลี่ยนค่า `isValid` ใน Fallback เป็น `false` พร้อมข้อความแจ้งว่า "พบ QR Code แต่ไม่สามารถตรวจสอบยอดเงินอัตโนมัติได้ กรุณารอแอดมินยืนยัน"
+   - ด้วยวิธีนี้ หาก OCR Bot ล่ม สลิปจะถูกรับเข้าระบบ (รูปเข้าสู่การแจ้งซ่อม) แต่สถานะยังคงเป็น "รอตรวจสอบชำระเงิน" และแจ้งให้ลูกบ้านรอแอดมินยืนยัน แทนที่จะตัดยอดให้สำเร็จอัตโนมัติ
+
+### ผลลัพธ์
+- Build & Tests OK: `go test ./... -count=1` passed
+- Deploy: `DEPLOY_SUCCESS`
+- SHA: `e23faeabbe259698f2f5db96a57560a0b206579aef00a3c53ad5c8799b5bc4c6`
+- Backup: `/home/fang/line_migration_backups/20260918-195441-pre-flex-ui`
+
+---
+## [2026-09-19 10:00] Bug Fix: iOS App Sync Overwriting LINE Data (Lost Update)
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลูกบ้านแจ้งว่าส่งภาพสลิปชำระเงินเข้ามาแล้ว แต่ในแอปของแอดมินไม่ปรากฏสลิปชำระเงิน
+
+### สิ่งที่เปลี่ยนแปลง
+1. **สาเหตุของปัญหา:** แอดมินเปิดแอปทิ้งไว้ ณ สถานะที่ยังไม่มีสลิปชำระเงิน จากนั้นระบบ LINE ได้รับรูปสลิปจากลูกบ้านและบันทึกในฐานข้อมูล แต่เมื่อแอดมินคลิกบันทึกการแก้ไขใดๆ ในแอป iOS แอปจะส่งข้อมูลเดิม (ที่ไม่มีสลิป) กลับมาทับข้อมูลใหม่ที่ระบบ LINE เพิ่งบันทึกไป (Lost Update Problem)
+2. **การแก้ไข Backend (`line_snapshot.go`):** 
+   - เพิ่ม `last_updated=excluded.last_updated` เข้าไปในประโยค `ON CONFLICT DO UPDATE SET` สำหรับการอัปเดตข้อมูลผ่าน Snapshot 
+   - เพิ่มเงื่อนไข `WHERE excluded.last_updated > [table].last_updated` ในส่วนท้ายของ UPSERT 
+   - การแก้ไขนี้ช่วยป้องกันไม่ให้ข้อมูลเก่าที่ส่งมาจากฝั่งแอป iOS ทำการเขียนทับข้อมูลใหม่ที่บันทึกโดยฝั่งเซิร์ฟเวอร์ (LINE Bot)
+
+### ผลลัพธ์
+- Build & Tests OK
+- Deploy: `DEPLOY_SUCCESS`
+- SHA: `1e019b1cf770d001f5982b403b94ef92b59a47574676b4b50d366302e9b570e3`
+
+---
+## [2026-09-19 10:19] Hotfix: SQL Syntax Error on Snapshot Sync
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลูกบ้านแจ้งว่ามีการอัปเดตสถานะ "กำลังติดต่อช่าง" ในแอป แต่ไม่มีข้อความแจ้งเตือนทาง LINE
+
+### สิ่งที่เปลี่ยนแปลง
+1. **สาเหตุของปัญหา:** ในการแก้ไขก่อนหน้านี้ (Lost Update) ได้มีการคัดลอกคำสั่ง `WHERE excluded.last_updated > ...` ไปใช้กับตาราง `rooms` ด้วย แต่ตาราง `rooms` ไม่มีคอลัมน์ `last_updated` ทำให้เกิดข้อผิดพลาด SQLite `no such column: excluded.last_updated`
+2. **การแก้ไข:** 
+   - ลบ `last_updated` ออกจากการอัปเดต (UPSERT) ของตาราง `rooms` ใน `backend-dorm/handlers/line_snapshot.go`
+   - ตรวจสอบเพิ่มเติมพบว่าตารางที่รองรับ `last_updated` ได้แก่ `maintenances`, `payments`, `payment_transactions`, `financial_receipts` ซึ่งไม่ได้มีข้อผิดพลาด
+   - การแก้บั๊คนี้ช่วยให้กระบวนการอัปเดต Snapshot กลับมาทำงานได้ปกติ และ Trigger ส่ง LINE Outbox ทำงานตามปกติ
+
+### ผลลัพธ์
+- Build & Tests OK
+- Deploy: `DEPLOY_SUCCESS`
+- SHA: `c9a48454b18b02782ef63fcf04df09809ad22e651ad8692f859e2bcb5d7ac5ef`

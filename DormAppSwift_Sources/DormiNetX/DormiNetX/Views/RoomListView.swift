@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Charts
+import Combine
 
 // Dashboard Models are in DashboardTab.swift
 
@@ -29,6 +30,9 @@ struct RoomListView: View {
     @State private var syncButtonRotation = 0.0
     @State private var lastAutoPullCheck: Date?
     @State private var lastBookingPromotionCheck: Date?
+    
+    // Auto-polling timer (every 10 seconds)
+    private let pollingTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -224,6 +228,12 @@ struct RoomListView: View {
                 ensureCurrentMonthPaymentsIfNeeded()
                 scheduleAutoPullCheck()
                 scheduleBookingPromotionCheck()
+            }
+        }
+        .onReceive(pollingTimer) { _ in
+            guard scenePhase == .active, !syncManager.isSyncing else { return }
+            Task {
+                await syncManager.syncWithGoBackend(modelContext: modelContext)
             }
         }
     }

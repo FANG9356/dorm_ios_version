@@ -60,11 +60,14 @@ def verify_slip():
             return jsonify({"valid": False, "reason": f"Recipient name '{RECEIVER_NAME}' not found on slip"}), 200
             
         # 2. Verify Amount
-        amount_str = f"{float(expected_amount):.2f}"
-        amount_str_no_decimal = f"{int(float(expected_amount))}"
+        amount_exact = f"{float(expected_amount):.2f}"
+        amount_int = f"{int(float(expected_amount))}"
         
-        if amount_str not in clean_text and amount_str_no_decimal not in clean_text:
-            return jsonify({"valid": False, "reason": f"Expected amount {amount_str} not found on slip"}), 200
+        # Use regex to match the amount with boundaries to avoid matching inside transaction IDs (which are alphanumeric)
+        # e.g., prevents matching "60" inside "l60o" or "2560"
+        amount_pattern = rf"(?<![\dA-Za-z])({amount_int}|{amount_exact})(?![\dA-Za-z])"
+        if not re.search(amount_pattern, clean_text):
+            return jsonify({"valid": False, "reason": f"Expected amount {amount_exact} not found on slip"}), 200
 
         return jsonify({"valid": True, "reason": "Verified locally via OCR"}), 200
 

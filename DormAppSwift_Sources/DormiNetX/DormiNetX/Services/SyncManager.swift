@@ -720,13 +720,13 @@ class SyncManager: ObservableObject {
         let remoteMaintenance = Dictionary(uniqueKeysWithValues: remote.maintenance.map { ($0.id, $0) })
         let mergeableDirtyMaintenance = dirtyMaintenance.filter { item in
             guard !item.isDeletedLocally, let remoteItem = remoteMaintenance[item.id] else { return true }
-            let remoteStatus = remoteItem.status.isEmpty ? MaintenanceWorkflow.statuses[0] : remoteItem.status
-            let localStatus = item.status.isEmpty ? MaintenanceWorkflow.statuses[0] : item.status
+            let hasCost = item.cost > 0 || ["รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "รอตรวจสอบชำระเงิน"].contains(item.status)
+            let remoteStatus = remoteItem.status.isEmpty ? "รอดำเนินการ" : remoteItem.status
+            let localStatus = item.status.isEmpty ? "รอดำเนินการ" : item.status
             return MaintenanceWorkflow.canTransition(
                 from: remoteStatus,
                 to: localStatus,
-                cost: item.cost,
-                quoteApproved: !(remoteItem.quoteApprovedAt ?? "").isEmpty
+                hasCost: hasCost
             )
         }
 

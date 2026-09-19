@@ -82,7 +82,7 @@ func RunServer() {
 		log.Printf("LINE snapshot preparation failed: %v", err)
 	}
 	handlers.InitAdminTable(db)
-	handlers.SetupDormRoutes(db)
+	handlers.SetupDormRoutes(db, db)
 
 	http.HandleFunc("/api/login", handlers.LoginHandler(db))
 	http.HandleFunc("/api/setup/status", handlers.CheckSetupStatus(db))

@@ -3,7 +3,13 @@ import SwiftData
 import UIKit
 
 enum MaintenanceWorkflow {
-    static let statuses = ["รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "กำลังซ่อม", "รอตรวจสอบชำระเงิน", "เสร็จสิ้น"]
+    static func statuses(hasCost: Bool) -> [String] {
+        if hasCost {
+            return ["รอดำเนินการ", "กำลังติดต่อช่าง", "รออนุมัติค่าใช้จ่าย", "รอตรวจสอบชำระเงิน", "กำลังซ่อม", "เสร็จสิ้น"]
+        } else {
+            return ["รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "เสร็จสิ้น"]
+        }
+    }
 
     static func shortTitle(for status: String) -> String {
         switch status {
@@ -17,37 +23,19 @@ enum MaintenanceWorkflow {
         }
     }
 
-    static func canTransition(from originalStatus: String, to newStatus: String, cost: Double = 0, quoteApproved: Bool = false) -> Bool {
-        let original = originalStatus.isEmpty ? statuses[0] : originalStatus
-        if original == newStatus { return true }
-
-        switch original {
-        case "รอดำเนินการ":
-            return newStatus == "กำลังติดต่อช่าง"
-        case "กำลังติดต่อช่าง":
-            if newStatus == "รออนุมัติค่าใช้จ่าย" { return cost > 0 }
-            if newStatus == "กำลังซ่อม" { return cost <= 0 || quoteApproved }
-            return false
-        case "รออนุมัติค่าใช้จ่าย":
-            if newStatus == "กำลังติดต่อช่าง" { return true }
-            if newStatus == "ปฏิเสธค่าใช้จ่าย" { return true }
-            return false
-        case "ปฏิเสธค่าใช้จ่าย":
-            return false
-        case "กำลังซ่อม":
-            if newStatus == "รออนุมัติค่าใช้จ่าย" { return cost > 0 }
-            if newStatus == "รอตรวจสอบชำระเงิน" { return cost > 0 }
-            if newStatus == "เสร็จสิ้น" { return cost <= 0 }
-            return false
-        case "รอตรวจสอบชำระเงิน":
-            if newStatus == "กำลังซ่อม" { return true }
-            if newStatus == "เสร็จสิ้น" { return true }
-            return false
-        case "เสร็จสิ้น":
-            return newStatus == "รอตรวจสอบชำระเงิน"
-        default:
-            return false
+    static func canTransition(from originalStatus: String, to newStatus: String, hasCost: Bool) -> Bool {
+        if originalStatus == newStatus { return true }
+        let flow = statuses(hasCost: hasCost)
+        
+        let original = originalStatus == "ปฏิเสธค่าใช้จ่าย" ? "รออนุมัติค่าใช้จ่าย" : (originalStatus.isEmpty ? flow[0] : originalStatus)
+        guard let currentIndex = flow.firstIndex(of: original),
+              let newIndex = flow.firstIndex(of: newStatus) else {
+            // ถ้า originalStatus ไม่อยู่ใน flow (เช่น เปลี่ยนใจลบค่าใช้จ่าย)
+            return true 
         }
+        
+        // อนุญาตให้เดินหน้าทีละ 1 ขั้น หรือถอยหลังได้ 1 ขั้น เพื่อแก้ไขข้อมูล
+        return abs(newIndex - currentIndex) <= 1
     }
 }
 
@@ -200,8 +188,12 @@ private struct MaintenanceRow: View {
         maintenance.status.isEmpty ? "รอดำเนินการ" : maintenance.status
     }
 
+    private var hasCost: Bool {
+        maintenance.cost > 0 || ["รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "รอตรวจสอบชำระเงิน"].contains(maintenance.status)
+    }
+
     private var currentStatusIndex: Int {
-        MaintenanceWorkflow.statuses.firstIndex(of: status) ?? 0
+        MaintenanceWorkflow.statuses(hasCost: hasCost).firstIndex(of: status) ?? 0
     }
 
     var body: some View {
@@ -221,6 +213,11 @@ private struct MaintenanceRow: View {
                                 .font(.custom("SukhumvitSet-Text", size: 14))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
+                            if !maintenance.reportedAt.isEmpty {
+                                Text(maintenance.reportedAt)
+                                    .font(.custom("SukhumvitSet-Text", size: 11))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                         Spacer()
                         HStack(spacing: 7) {
@@ -237,11 +234,20 @@ private struct MaintenanceRow: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("ความคืบหน้า")
-                            .font(.custom("SukhumvitSet-Medium", size: 12))
-                            .foregroundStyle(.secondary)
-
-                        MaintenanceProgressView(currentIndex: currentStatusIndex)
+                        if status == "ปฏิเสธค่าใช้จ่าย" || status == "ยกเลิก" {
+                            HStack(spacing: 8) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.red)
+                                Text(status == "ปฏิเสธค่าใช้จ่าย" ? "ลูกบ้านปฏิเสธใบเสนอราคา" : "ยกเลิกรายการ")
+                                    .font(.custom("SukhumvitSet-Medium", size: 14))
+                                    .foregroundStyle(.red)
+                            }
+                        } else {
+                            Text("ความคืบหน้า")
+                                .font(.custom("SukhumvitSet-Medium", size: 12))
+                                .foregroundStyle(.secondary)
+                            MaintenanceProgressView(currentIndex: currentStatusIndex, hasCost: hasCost)
+                        }
                     }
 
                     Divider()
@@ -279,11 +285,16 @@ private struct MaintenanceRow: View {
 
 private struct MaintenanceProgressView: View {
     let currentIndex: Int
+    let hasCost: Bool
+
+    private var currentFlow: [String] {
+        MaintenanceWorkflow.statuses(hasCost: hasCost)
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 0) {
-                ForEach(Array(MaintenanceWorkflow.statuses.indices), id: \.self) { index in
+                ForEach(Array(currentFlow.indices), id: \.self) { index in
                     HStack(spacing: 0) {
                         Rectangle()
                             .fill(index == 0 ? Color.clear : connectorColor(at: index - 1))
@@ -300,7 +311,7 @@ private struct MaintenanceProgressView: View {
                             }
 
                         Rectangle()
-                            .fill(index == MaintenanceWorkflow.statuses.count - 1 ? Color.clear : connectorColor(at: index))
+                            .fill(index == currentFlow.count - 1 ? Color.clear : connectorColor(at: index))
                             .frame(height: 2)
                     }
                     .frame(maxWidth: .infinity)
@@ -309,7 +320,7 @@ private struct MaintenanceProgressView: View {
             .frame(height: 18)
 
             HStack(spacing: 0) {
-                ForEach(Array(MaintenanceWorkflow.statuses.enumerated()), id: \.offset) { index, item in
+                ForEach(Array(currentFlow.enumerated()), id: \.offset) { index, item in
                     Text(MaintenanceWorkflow.shortTitle(for: item))
                         .font(.custom("SukhumvitSet-Medium", size: 12))
                         .foregroundStyle(index == currentIndex ? Color.primary : Color.secondary)
@@ -345,6 +356,8 @@ private struct MaintenanceEditor: View {
     @State private var slipPath: String
     @State private var issueImage: String
     @State private var quoteApprovedAt: String
+    @State private var reportedAt: String
+    @State private var hasCost: Bool
     @State private var selectedDetent: PresentationDetent = .large
     @State private var showingDeleteConfirmation = false
     private let isEditing: Bool
@@ -372,6 +385,10 @@ private struct MaintenanceEditor: View {
         _slipPath = State(initialValue: maintenance?.slipPath ?? "")
         _issueImage = State(initialValue: maintenance?.issueImage ?? "")
         _quoteApprovedAt = State(initialValue: maintenance?.quoteApprovedAt ?? "")
+        _reportedAt = State(initialValue: maintenance?.reportedAt ?? "")
+        let initialCost = maintenance?.cost ?? 0
+        let initialStatus = maintenance?.status ?? ""
+        _hasCost = State(initialValue: initialCost > 0 || ["รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "รอตรวจสอบชำระเงิน"].contains(initialStatus))
     }
 
     var body: some View {
@@ -380,6 +397,18 @@ private struct MaintenanceEditor: View {
                 VStack(spacing: 18) {
                     MaintenanceEditorCard(title: "ห้องและรายละเอียด", systemImage: "door.left.hand.open") {
                         roomSelector
+                        
+                        if !reportedAt.isEmpty {
+                            Divider().overlay(Color.primary.opacity(0.08))
+                            HStack {
+                                Text("วันที่แจ้งซ่อม")
+                                    .font(.custom("SukhumvitSet-Medium", size: 13))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(reportedAt)
+                                    .font(.custom("SukhumvitSet-Medium", size: 13))
+                            }
+                        }
 
                         Divider().overlay(Color.primary.opacity(0.08))
 
@@ -416,7 +445,7 @@ private struct MaintenanceEditor: View {
                             }
 
                             VStack(spacing: 0) {
-                                ForEach(Array(MaintenanceWorkflow.statuses.enumerated()), id: \.offset) { index, item in
+                                ForEach(Array(MaintenanceWorkflow.statuses(hasCost: hasCost).enumerated()), id: \.offset) { index, item in
                                     statusRow(item: item, index: index)
                                 }
                             }
@@ -432,21 +461,37 @@ private struct MaintenanceEditor: View {
                     }
 
                     MaintenanceEditorCard(title: "ค่าใช้จ่าย", systemImage: "banknote") {
-                        VStack(alignment: .leading, spacing: 9) {
-                            Text("จำนวนเงิน")
-                                .font(.custom("SukhumvitSet-Medium", size: 13))
-                                .foregroundStyle(.secondary)
-                            HStack(alignment: .firstTextBaseline) {
-                                TextField("0.00", text: $cost)
-                                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                    .keyboardType(.decimalPad)
-                                    .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
-                                    .disabled(!canEditCost)
-                                Spacer()
-                                Text("บาท")
-                                    .font(.custom("SukhumvitSet-Medium", size: 15))
-                                    .foregroundStyle(.secondary)
+                        Toggle(isOn: $hasCost.animation()) {
+                            Text("มีค่าใช้จ่ายเพิ่มเติม")
+                                .font(.custom("SukhumvitSet-Medium", size: 15))
+                        }
+                        .tint(.indigo)
+                        .onChange(of: hasCost) { _, newValue in
+                            if !newValue {
+                                cost = ""
+                                paymentMethod = ""
                             }
+                        }
+
+                        if hasCost {
+                            Divider().overlay(Color.primary.opacity(0.08))
+
+                            VStack(alignment: .leading, spacing: 9) {
+                                Text("จำนวนเงิน")
+                                    .font(.custom("SukhumvitSet-Medium", size: 13))
+                                    .foregroundStyle(.secondary)
+                                HStack(alignment: .firstTextBaseline) {
+                                    TextField("0.00", text: $cost)
+                                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                        .keyboardType(.decimalPad)
+                                        .decimalInput($cost, maxIntegerDigits: 9, maxFractionDigits: 2)
+                                        .disabled(!canEditCost)
+                                    Spacer()
+                                    Text("บาท")
+                                        .font(.custom("SukhumvitSet-Medium", size: 15))
+                                        .foregroundStyle(.secondary)
+                                }
+                    }
                             .padding(.horizontal, 16)
                             .frame(minHeight: 70)
                             .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -518,7 +563,7 @@ private struct MaintenanceEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("บันทึก") {
                         let parsedCost = Double(cost) ?? 0
-                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: parsedCost, quoteApproved: !quoteApprovedAt.isEmpty) else { return }
+                        guard MaintenanceWorkflow.canTransition(from: originalStatus, to: status, hasCost: hasCost) else { return }
                         let item = Maintenance(roomNumber: clean(roomNumber), issue: clean(issue))
                         item.status = status
                         item.cost = parsedCost
@@ -537,7 +582,7 @@ private struct MaintenanceEditor: View {
                     .disabled(
                         clean(roomNumber).isEmpty ||
                         clean(issue).isEmpty ||
-                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status, cost: Double(cost) ?? 0, quoteApproved: !quoteApprovedAt.isEmpty)
+                        !MaintenanceWorkflow.canTransition(from: originalStatus, to: status, hasCost: hasCost)
                     )
                 }
             }
@@ -626,7 +671,9 @@ private struct MaintenanceEditor: View {
     private func statusRow(item: String, index: Int) -> some View {
         let selected = status == item
         let persisted = originalStatus == item
-        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item, cost: Double(cost) ?? 0, quoteApproved: !quoteApprovedAt.isEmpty)
+        let available = MaintenanceWorkflow.canTransition(from: originalStatus, to: item, hasCost: hasCost)
+
+        let flow = MaintenanceWorkflow.statuses(hasCost: hasCost)
 
         return Button {
             status = item
@@ -634,7 +681,7 @@ private struct MaintenanceEditor: View {
             HStack(spacing: 13) {
                 VStack(spacing: 0) {
                     Rectangle()
-                        .fill(index == 0 ? Color.clear : statusConnectorColor(before: index))
+                        .fill(index == 0 ? Color.clear : statusConnectorColor(before: index, flow: flow))
                         .frame(width: 2, height: 17)
                     Circle()
                         .fill(selected ? Color.indigo : persisted ? Color.primary.opacity(0.7) : Color.secondary.opacity(available ? 0.35 : 0.16))
@@ -645,7 +692,7 @@ private struct MaintenanceEditor: View {
                             }
                         }
                     Rectangle()
-                        .fill(index == MaintenanceWorkflow.statuses.count - 1 ? Color.clear : statusConnectorColor(before: index + 1))
+                        .fill(index == flow.count - 1 ? Color.clear : statusConnectorColor(before: index + 1, flow: flow))
                         .frame(width: 2, height: 17)
                 }
                 .frame(width: 18, height: 47)
@@ -689,8 +736,9 @@ private struct MaintenanceEditor: View {
         .accessibilityHint(available ? "เลือกสถานะนี้ได้" : "ต้องบันทึกสถานะตามลำดับก่อน")
     }
 
-    private func statusConnectorColor(before index: Int) -> Color {
-        guard let originalIndex = MaintenanceWorkflow.statuses.firstIndex(of: originalStatus) else {
+    private func statusConnectorColor(before index: Int, flow: [String]) -> Color {
+        let original = originalStatus == "ปฏิเสธค่าใช้จ่าย" ? "รออนุมัติค่าใช้จ่าย" : originalStatus
+        guard let originalIndex = flow.firstIndex(of: original) else {
             return .secondary.opacity(0.12)
         }
         return index <= originalIndex ? .primary.opacity(0.24) : .secondary.opacity(0.12)
@@ -743,11 +791,11 @@ private struct MaintenanceEditor: View {
     }
 
     private var canEditCost: Bool {
-        guard
-            let originalIndex = MaintenanceWorkflow.statuses.firstIndex(of: originalStatus),
-            let selectedIndex = MaintenanceWorkflow.statuses.firstIndex(of: status)
-        else { return true }
-        let quoteIndex = MaintenanceWorkflow.statuses.firstIndex(of: "รออนุมัติค่าใช้จ่าย") ?? 2
+        let flow = MaintenanceWorkflow.statuses(hasCost: hasCost)
+        guard let originalIndex = flow.firstIndex(of: originalStatus),
+              let selectedIndex = flow.firstIndex(of: status) else { return true }
+        
+        let quoteIndex = flow.firstIndex(of: "รออนุมัติค่าใช้จ่าย") ?? 2
         if !quoteApprovedAt.isEmpty && originalStatus == "กำลังติดต่อช่าง" && status != "รออนุมัติค่าใช้จ่าย" {
             return false
         }

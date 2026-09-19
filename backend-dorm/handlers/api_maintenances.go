@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func SetupMaintenanceRoutes(db *sql.DB) {
+func SetupMaintenanceRoutes(master, db *sql.DB) {
 	http.HandleFunc("/api/maintenances", func(w http.ResponseWriter, r *http.Request) {
 		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
@@ -108,9 +108,11 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 				if m.Status == "รออนุมัติค่าใช้จ่าย" && prevStatus != m.Status {
 					db.Exec("UPDATE maintenances SET quote_approved_at = '' WHERE id = ?", m.ID)
 				}
-				// LINE notification สำหรับการเปลี่ยนสถานะจาก REST API ส่งผ่าน
-				// MaterializeLineSnapshotAndNotify เมื่อ iOS push snapshot ถัดไป
-				// เพื่อให้ outbox event_key ป้องกันการส่งซ้ำ (duplicate Flex card)
+				// Bug 4 Fix: Trigger LINE notification immediately after status change
+				// instead of waiting for next iOS snapshot push.
+				if prevStatus != m.Status {
+					go ProcessPendingLineNotifications(master)
+				}
 				w.WriteHeader(http.StatusOK)
 			} else {
 				id := r.FormValue("id")
@@ -165,6 +167,7 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 					db.Exec("UPDATE maintenances SET quote_approved_at = '' WHERE id = ?", id)
 				}
 
+				// Push receipt flex message for cash-verified payment
 				if prevStatus == "รอตรวจสอบชำระเงิน" && status == "เสร็จสิ้น" && paymentMethod == "โอนเงิน" {
 					go func() {
 						var roomNumber, lineUserID string
@@ -185,8 +188,10 @@ func SetupMaintenanceRoutes(db *sql.DB) {
 						}
 					}()
 				}
-				// สำหรับสถานะอื่น: LINE notification ส่งผ่าน MaterializeLineSnapshotAndNotify
-				// เมื่อ iOS push snapshot ถัดไป ไม่ต้องส่งซ้ำที่นี่
+				// Bug 4 Fix: Trigger LINE notification immediately after any status change
+				if prevStatus != status {
+					go ProcessPendingLineNotifications(master)
+				}
 				w.WriteHeader(http.StatusOK)
 			}
 		}

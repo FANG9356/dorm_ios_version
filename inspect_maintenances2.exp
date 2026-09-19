@@ -1,0 +1,18 @@
+#!/usr/bin/expect -f
+set timeout 30
+set credential_file "backend-dorm/build_deploy.exp"
+set handle [open $credential_file r]
+set credential_text [read $handle]
+close $handle
+if {![regexp {set password "([^"]+)"} $credential_text -> password]} {
+    exit 2
+}
+set host "202.29.232.28"
+set user "fang"
+set remote_command {sudo sqlite3 -header -column /opt/dormitory/dorm_data/tenant_1.db "SELECT id, status, cost, slip_path, issue_image, external_id FROM maintenances ORDER BY id DESC LIMIT 5;"}
+spawn ssh -tt $user@$host $remote_command
+expect {
+    "yes/no" { send "yes\r"; exp_continue }
+    -re "(?i)password.*:" { send "$password\r"; exp_continue }
+    eof
+}
