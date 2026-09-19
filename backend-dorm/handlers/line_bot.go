@@ -188,7 +188,7 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 			}
 			replyToLineWithFlexMessage(replyToken, lineInvoiceAltText(invoice), buildLineInvoiceBubble(invoice))
 		} else if err == sql.ErrNoRows {
-			replyToLine(replyToken, fmt.Sprintf("ห้อง %s ไม่มียอดค้างชำระในระบบขณะนี้ค่ะ ขอบคุณค่ะ", roomNumber))
+			replyToLineWithFlexMessage(replyToken, "สถานะการเงิน", buildNoOutstandingBalanceFlexMessage(roomNumber))
 		} else {
 			replyToLine(replyToken, "อ่านข้อมูลใบแจ้งหนี้ไม่สำเร็จ กรุณาลองใหม่อีกครั้งค่ะ")
 		}
@@ -842,6 +842,149 @@ func lineInvoiceMoneyRow(label string, value float64) map[string]interface{} {
 		{"type": "text", "text": label, "size": "sm", "color": "#4B5563", "flex": 3, "wrap": true},
 		{"type": "text", "text": formatLineMoney(value), "size": "sm", "color": "#111827", "align": "end", "flex": 2, "wrap": true},
 	}}
+}
+
+func buildNoOutstandingBalanceFlexMessage(roomNumber string) map[string]interface{} {
+	updatedAt := formatLineDateTime(time.Now().UTC().Format(time.RFC3339))
+	flexJSON := fmt.Sprintf(`{
+		"type": "bubble",
+		"size": "mega",
+		"header": {
+			"type": "box",
+			"layout": "vertical",
+			"paddingBottom": "10px",
+			"contents": [
+				{
+					"type": "text",
+					"text": "สถานะการเงิน",
+					"weight": "bold",
+					"size": "lg",
+					"color": "#111827"
+				},
+				{
+					"type": "text",
+					"text": "อัปเดตล่าสุด %s",
+					"size": "xs",
+					"color": "#6B7280",
+					"margin": "xs"
+				}
+			]
+		},
+		"body": {
+			"type": "box",
+			"layout": "vertical",
+			"paddingTop": "10px",
+			"spacing": "sm",
+			"contents": [
+				{
+					"type": "text",
+					"text": "ยอดคงเหลือ",
+					"size": "xs",
+					"color": "#6B7280"
+				},
+				{
+					"type": "text",
+					"text": "0.00 ฿",
+					"size": "xxl",
+					"weight": "bold",
+					"color": "#111827",
+					"margin": "xs",
+					"wrap": true
+				},
+				{
+					"type": "box",
+					"layout": "horizontal",
+					"margin": "lg",
+					"contents": [
+						{
+							"type": "box",
+							"layout": "vertical",
+							"flex": 3,
+							"contents": [
+								{
+									"type": "text",
+									"text": "ห้อง",
+									"size": "xs",
+									"color": "#9CA3AF"
+								},
+								{
+									"type": "text",
+									"text": "%s",
+									"size": "sm",
+									"weight": "bold",
+									"color": "#374151",
+									"margin": "xs",
+									"wrap": true
+								}
+							]
+						},
+						{
+							"type": "box",
+							"layout": "vertical",
+							"flex": 2,
+							"alignItems": "flex-end",
+							"contents": [
+								{
+									"type": "text",
+									"text": "สถานะ",
+									"size": "xs",
+									"color": "#9CA3AF",
+									"align": "end"
+								},
+								{
+									"type": "text",
+									"text": "ปกติ",
+									"size": "sm",
+									"weight": "bold",
+									"color": "#10B981",
+									"margin": "xs",
+									"align": "end",
+									"wrap": true
+								}
+							]
+						}
+					]
+				},
+				{
+					"type": "separator",
+					"margin": "lg"
+				},
+				{
+					"type": "box",
+					"layout": "vertical",
+					"margin": "lg",
+					"contents": [
+						{
+							"type": "text",
+							"text": "คุณไม่มียอดค้างชำระในขณะนี้ หรือบิลล่าสุดได้รับการตรวจสอบและชำระเรียบร้อยแล้ว",
+							"size": "sm",
+							"color": "#374151",
+							"wrap": true,
+							"margin": "md"
+						}
+					]
+				}
+			]
+		},
+		"footer": {
+			"type": "box",
+			"layout": "vertical",
+			"contents": [
+				{
+					"type": "text",
+					"text": "ขอบคุณที่ใช้บริการค่ะ",
+					"size": "xs",
+					"color": "#6B7280",
+					"align": "center",
+					"wrap": true
+				}
+			]
+		}
+	}`, updatedAt, roomNumber)
+
+	var contents map[string]interface{}
+	json.Unmarshal([]byte(flexJSON), &contents)
+	return contents
 }
 
 func buildLineInvoiceBubble(invoice lineInvoiceFlexData) map[string]interface{} {
