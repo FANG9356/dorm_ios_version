@@ -817,9 +817,10 @@ func formatLineDateTime(value string) string {
 		return formatLineDate(value)
 	}
 	location, locationErr := time.LoadLocation("Asia/Bangkok")
-	if locationErr == nil {
-		parsed = parsed.In(location)
+	if locationErr != nil {
+		location = time.FixedZone("Asia/Bangkok", 7*60*60)
 	}
+	parsed = parsed.In(location)
 	return fmt.Sprintf("%d %s %d %02d:%02d น.", parsed.Day(), thaiShortMonths[int(parsed.Month())], buddhistDisplayYear(parsed.Year()), parsed.Hour(), parsed.Minute())
 }
 

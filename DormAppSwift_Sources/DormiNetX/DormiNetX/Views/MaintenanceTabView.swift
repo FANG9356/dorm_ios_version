@@ -214,7 +214,7 @@ private struct MaintenanceRow: View {
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
                             if !maintenance.reportedAt.isEmpty {
-                                Text(maintenance.reportedAt)
+                                Text(AppDate.thaiDateTime(from: maintenance.reportedAt))
                                     .font(.custom("SukhumvitSet-Text", size: 11))
                                     .foregroundStyle(.tertiary)
                             }
@@ -405,7 +405,7 @@ private struct MaintenanceEditor: View {
                                     .font(.custom("SukhumvitSet-Medium", size: 13))
                                     .foregroundStyle(.secondary)
                                 Spacer()
-                                Text(reportedAt)
+                                Text(AppDate.thaiDateTime(from: reportedAt))
                                     .font(.custom("SukhumvitSet-Medium", size: 13))
                             }
                         }
@@ -571,9 +571,9 @@ private struct MaintenanceEditor: View {
                         item.slipPath = clean(slipPath)
                         item.issueImage = clean(issueImage)
                         item.quoteApprovedAt = status == "รออนุมัติค่าใช้จ่าย" && originalStatus != status ? "" : quoteApprovedAt
-                        item.reportedAt = currentDateString()
+                        item.reportedAt = currentDateTimeString()
                         if status == "เสร็จสิ้น" {
-                            item.resolvedAt = currentDateString()
+                            item.resolvedAt = currentDateTimeString()
                         }
                         onSave(item)
                         dismiss()
@@ -808,8 +808,9 @@ private struct MaintenanceEditor: View {
         }.filter { !$0.isEmpty }
     }
 
-    private func currentDateString() -> String {
-        AppDate.dateKey(from: Date())
+    private func currentDateTimeString() -> String {
+        let formatter = ISO8601DateFormatter()
+        return formatter.string(from: Date())
     }
 }
 

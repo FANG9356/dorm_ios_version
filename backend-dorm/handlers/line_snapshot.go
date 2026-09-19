@@ -396,7 +396,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		}
 	}
 
+	activeRoomIDs := make(map[string]bool, len(snapshot.Rooms))
 	for _, room := range snapshot.Rooms {
+		if strings.TrimSpace(room.ID) != "" {
+			activeRoomIDs[room.ID] = true
+		}
 		_, err = tx.Exec(`INSERT INTO rooms(room_number, room_type, external_id) VALUES (?, ?, ?)
 			ON CONFLICT(room_number) DO UPDATE SET room_type=excluded.room_type, external_id=excluded.external_id`,
 			room.RoomNumber, room.RoomType, room.ID)
@@ -404,7 +408,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			return fmt.Errorf("upsert room: %w", err)
 		}
 	}
+	activeRoomTypeIDs := make(map[string]bool, len(snapshot.RoomTypes))
 	for _, roomType := range snapshot.RoomTypes {
+		if strings.TrimSpace(roomType.ID) != "" {
+			activeRoomTypeIDs[roomType.ID] = true
+		}
 		_, err = tx.Exec(`INSERT INTO room_types(name, price, water_fee_default, electric_fee_default, common_fee_default, late_fee_default, external_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(name) DO UPDATE SET price=excluded.price, water_fee_default=excluded.water_fee_default,
@@ -415,7 +423,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			return fmt.Errorf("upsert room type: %w", err)
 		}
 	}
+	activePaymentIDs := make(map[string]bool, len(snapshot.Payments))
 	for _, payment := range snapshot.Payments {
+		if strings.TrimSpace(payment.ID) != "" {
+			activePaymentIDs[payment.ID] = true
+		}
 		slips, _ := json.Marshal(payment.SlipPathArray)
 		_, err = tx.Exec(`INSERT INTO payments
 			(user_id, room_number, rent_fee, deposit_fee, water_fee, electric_fee, common_fee, late_fee,
@@ -442,7 +454,11 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		}
 	}
 	statusChanges := make([]maintenanceStatusChange, 0)
+	activeMaintenanceIDs := make(map[string]bool, len(snapshot.Maintenance))
 	for _, maintenance := range snapshot.Maintenance {
+		if strings.TrimSpace(maintenance.ID) != "" {
+			activeMaintenanceIDs[maintenance.ID] = true
+		}
 		var previousStatus, quoteApprovedAt string
 		var previousCost float64
 		hadExistingMaintenance := false
@@ -515,6 +531,19 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 				LastUpdated:   maintenance.LastUpdated,
 			})
 		}
+	}
+
+	if err := deleteStaleRecords(tx, "rooms", activeRoomIDs); err != nil {
+		return err
+	}
+	if err := deleteStaleRecords(tx, "room_types", activeRoomTypeIDs); err != nil {
+		return err
+	}
+	if err := deleteStaleRecords(tx, "payments", activePaymentIDs); err != nil {
+		return err
+	}
+	if err := deleteStaleRecords(tx, "maintenances", activeMaintenanceIDs); err != nil {
+		return err
 	}
 
 	if _, err := tx.Exec(`UPDATE users SET line_user_id = '' WHERE external_id != ''`); err != nil {
@@ -1132,4 +1161,31 @@ func writeLineJSON(w http.ResponseWriter, status int, value interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(value)
+}
+
+func deleteStaleRecords(tx *sql.Tx, tableName string, activeIDs map[string]bool) error {
+	query := fmt.Sprintf(`SELECT external_id FROM %s WHERE external_id != ''`, tableName)
+	rows, err := tx.Query(query)
+	if err != nil {
+		return err
+	}
+	var staleIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		if !activeIDs[id] {
+			staleIDs = append(staleIDs, id)
+		}
+	}
+	rows.Close()
+	for _, id := range staleIDs {
+		deleteQuery := fmt.Sprintf(`DELETE FROM %s WHERE external_id = ?`, tableName)
+		if _, err := tx.Exec(deleteQuery, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }

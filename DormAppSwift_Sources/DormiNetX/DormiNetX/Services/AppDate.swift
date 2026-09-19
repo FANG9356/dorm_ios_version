@@ -98,6 +98,20 @@ enum AppDate {
         formatter("d MMMM yyyy เวลา HH:mm น.", locale: "th_TH", buddhist: true).string(from: date)
     }
 
+    static func thaiDateTime(from value: String, fallback: String = "-") -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) {
+            return thaiDateTime(date)
+        }
+        formatter.formatOptions = [.withInternetDateTime]
+        if let date = formatter.date(from: value) {
+            return thaiDateTime(date)
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
+    }
+
     private static func strictDate(_ key: String) -> Date? {
         let parser = formatter("yyyy-MM-dd")
         guard let date = parser.date(from: key), parser.string(from: date) == key else { return nil }
