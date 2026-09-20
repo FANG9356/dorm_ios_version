@@ -97,6 +97,7 @@ type LiffResidentSummary struct {
 type LiffBillingSummary struct {
 	OutstandingCount  int                  `json:"outstanding_count"`
 	OutstandingAmount float64              `json:"outstanding_amount"`
+	ProjectedBill     float64              `json:"projected_bill"`
 	Invoices          []LiffInvoiceSummary `json:"invoices"`
 }
 
@@ -266,29 +267,28 @@ func lookupLinkedResident(master *sql.DB, openTenantDB liffTenantDBOpener, lineU
 		return LiffLinkedSummary{}, err
 	}
 
-	summary.Billing.Invoices, err = loadLiffInvoices(tenantDB, userID, summary.Billing.OutstandingCount > 0)
+	_ = tenantDB.QueryRow(`SELECT COALESCE(rt.price, 0) + COALESCE(u.additional_appliance_fee, 0)
+		FROM users u 
+		LEFT JOIN rooms r ON u.room_number = r.room_number
+		LEFT JOIN room_types rt ON r.room_type = rt.name
+		WHERE u.user_id = ?`, userID).Scan(&summary.Billing.ProjectedBill)
+
+	summary.Billing.Invoices, err = loadLiffInvoices(tenantDB, userID)
 	if err != nil {
 		return LiffLinkedSummary{}, err
 	}
 	return summary, nil
 }
 
-func loadLiffInvoices(db *sql.DB, userID int, outstandingOnly bool) ([]LiffInvoiceSummary, error) {
+func loadLiffInvoices(db *sql.DB, userID int) ([]LiffInvoiceSummary, error) {
 	query := `SELECT payment_id, COALESCE(month, ''), COALESCE(due_date, ''),
 		COALESCE(last_updated, ''), COALESCE(payment_date, ''),
 		COALESCE(NULLIF(payment_status, ''), 'pending'), COALESCE(installment_phase, 0),
 		COALESCE(rent_fee, 0), COALESCE(deposit_fee, 0), COALESCE(water_fee, 0),
 		COALESCE(electric_fee, 0), COALESCE(common_fee, 0), COALESCE(appliance_fee, 0),
 		COALESCE(late_fee, 0), COALESCE(amount, 0), COALESCE(paid_amount, 0)
-		FROM payments WHERE user_id = ?`
-	if outstandingOnly {
-		query += ` AND COALESCE(payment_status, 'pending') != 'paid'
-			AND amount > COALESCE(paid_amount, 0)`
-	}
-	query += ` ORDER BY month DESC, installment_phase DESC, payment_id DESC`
-	if !outstandingOnly {
-		query += ` LIMIT 1`
-	}
+		FROM payments WHERE user_id = ?
+		ORDER BY month DESC, installment_phase DESC, payment_id DESC LIMIT 24`
 
 	rows, err := db.Query(query, userID)
 	if err != nil {

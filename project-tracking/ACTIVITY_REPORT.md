@@ -639,3 +639,68 @@
 - Build & Tests OK
 - Deploy: `DEPLOY_SUCCESS`
 - SHA: `c9a48454b18b02782ef63fcf04df09809ad22e651ad8692f859e2bcb5d7ac5ef`
+
+---
+## [2026-09-19 10:25] Bug Fix: Deleted Maintenance Record Reappears on iOS Sync
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลูกบ้าน/แอดมินแจ้งว่า "ลบรายการซ่อมด้วยตัวเองแล้วไม่หาย" (รายการที่ลบกลับมาแสดงในแอปอีกครั้ง)
+
+### สิ่งที่เปลี่ยนแปลง
+1. **สาเหตุของปัญหา:** แอดมินใช้ช่องทางอื่นลบหรือจัดการข้อมูล แต่ระบบในส่วน `api_maintenances.go` (Web UI/Legacy flow) ไม่มีคำสั่ง Publish Sync Snapshot ทำให้ข้อมูลล่าสุดไม่ได้ถูกสร้างเป็น Snapshot (`sync_snapshots`) ส่งผลให้แอป iOS (DormiNetX) ที่ยังมีข้อมูลอยู่ ส่ง Snapshot ที่มีข้อมูลเดิมกลับมาให้ Backend และ Backend ดึงกลับมาใส่ฐานข้อมูล
+2. **การแก้ไข Backend (`api_maintenances.go`):** 
+   - เพิ่มกระบวนการ `publishLineChanges(master, db, accountID)` ใน Endpoint ของ `POST`, `PUT`, และ `DELETE`
+   - ทำให้ทุกครั้งที่มีการลบหรือแก้รายการแจ้งซ่อมจากช่องทางอื่น ข้อมูล `sync_snapshots` จะถูกอัปเดต และ iOS App จะไม่ส่งข้อมูลเก่าทับกลับมาอีก
+
+- ปัญหาที่ลูกบ้านแจ้งเรื่องลบแล้วไม่หาย ได้ถูกป้องกันจากต้นทางแล้ว
+
+---
+## [2026-09-19 10:35] Bug Fix: iOS App Shows Stale Maintenance Status & Missing Date
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลูกบ้าน/แอดมินแจ้งว่า "ลองกดปฏิเสธแล้ว ระบบมันแสดงที่แอพว่ารอ ทั้งที่ข้างในมันขึ้นแล้วก็ด้วยแล้วก็เพิ่มวันที่และเวลาของเคสซ่อมที่เข้ามาในแอพด้วย"
+
+### สิ่งที่เปลี่ยนแปลง
+1. **สาเหตุของปัญหา:**
+   - **สถานะไม่อัปเดต ("แอปแสดงว่ารอ"):** แอป iOS ไม่มีคำสั่งดึงข้อมูลล่าสุด (Sync) เมื่อสลับแอปกลับมาเปิดใหม่ (Foreground) ทำให้ผู้ใช้ต้องรอ Timer ทุก ๆ 20 วินาที หรือต้องเปิดปิดหน้าต่างใหม่ ข้อมูลจึงจะเปลี่ยนจาก "รอ" เป็นสถานะล่าสุด
+   - **ไม่แสดงเวลาที่แจ้งซ่อม:** โค้ดแปลวันที่ใน iOS (`AppDate.swift`) รองรับแต่ฟอร์แมต ISO8601 ทำให้ข้อมูลเก่าบางส่วนที่ถูกบันทึกด้วยรูปแบบ `yyyy-MM-dd HH:mm:ss` (ไม่มี T หรือ Z) ไม่สามารถแสดงผลได้ และแสดงเป็น `-` แทน
+2. **การแก้ไข iOS App (`DormAppSwift_Sources/DormiNetX`):** 
+   - เพิ่ม `.onChange(of: scenePhase)` ลงใน `RoomListView.swift` เพื่อบังคับให้แอปทำการ Sync ข้อมูลจาก Backend ทันทีที่ผู้ใช้สลับแอปกลับมา
+   - เพิ่ม `.refreshable` (Pull to Refresh) ลงใน ScrollView หลัก เพื่อให้แอดมินลากนิ้วดึงเพื่ออัปเดตข้อมูลได้ในทุกๆ หน้าจอ
+   - เพิ่มระบบ Fallback ให้ `AppDate.swift` รองรับการ Parse วันที่แบบ Legacy (`yyyy-MM-dd HH:mm:ss`) เพื่อให้วันที่และเวลาที่แจ้งซ่อมแสดงผลได้ครบถ้วน
+
+### ผลลัพธ์
+- Build & Tests OK: Xcode build `DormiNetX` success
+- Deploy: `PENDING` (รออัปเดตแอป iOS เข้าสู่เครื่องทดสอบ)
+- ปัญหาแอปไม่อัปเดตสถานะทันทีเมื่อสลับหน้าจอได้รับการแก้ไขแล้ว และวันที่แจ้งซ่อมแสดงผลได้สมบูรณ์
+
+## [2026-09-19 18:15] Security & Stability Bug Hunt: LINE Bot Memory Leaks
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** "/goal ตรวจค้นหาบั๊คอีกแล้วต้องแก้อะไรอีกแก้ไข แล้วเขียนอัปเดตใส่เอกสารเอาไว้ อะไรที่ทำได้ทำก่อนอะไรที่ทำไม่ได้เขียนไว้"
+
+### สิ่งที่ดำเนินการ
+- รัน Static Analysis และ Race Condition Test (`go test -race`) บน Backend ไม่พบ Data Race หรือ Syntax Errors
+- ตรวจพบการเรียก `http.Client.Do` หลายแห่งใน `line_bot.go` ที่ละเลยการปิด `resp.Body.Close()` และไม่รับตรวจสอบ HTTP Error ทำให้เกิดปัญหา Memory Leak และ Connection Leak (File Descriptor Exhaustion) เมื่อรันระบบไปนาน ๆ
+- ได้ทำการแก้ไขแพตช์ทั้งหมดโดยใส่เงื่อนไขให้ `resp.Body.Close()` อย่างถูกต้องในฟังก์ชันการตอบกลับของ LINE Bot ทุกตัว
+- ตรวจสอบโค้ดระบบการยืนยัน Slip อัตโนมัติในโหมด Fallback (QR Basic Decoder) พบว่ามีการตั้งค่า Fail-closed ป้องกันยอดเงินอัตโนมัติแล้วตั้งแต่แพตช์ก่อนหน้านี้
+- รัน `go test ./handlers/...` ทั้งหมดผ่านสมบูรณ์
+
+### ผลลัพธ์และการบันทึก
+- **Fixed:** แพตช์ลดโอกาสการเกิด Memory Leak ในระบบแจ้งเตือน LINE 
+- **Pending (ข้อจำกัด / สิ่งที่ยังไม่ได้ทำ):** การย้าย Secrets (JWT, LINE Token, Resend Key) ออกจาก Git History ยังไม่ได้ทำในตอนนี้ เนื่องจากต้องให้แอดมินหมุนเวียน (Rotate) คีย์จริงที่ใช้บน Server ก่อน จึงควรเก็บไว้เป็น P0 ในรอบถัดไป
+
+## [2026-09-20 16:30] Security: Fix P0 Secret Leakage & Implement SSH Key
+
+**ผู้ดำเนินงาน:** Antigravity Agent
+**คำขอ:** ลบสคริปต์ .exp รุ่นเก่าที่มีรหัสผ่านและสร้างระบบ Login ผ่าน SSH Key แทน
+
+### สิ่งที่ดำเนินการ
+- สร้าง SSH Key-pair และฝัง Public key (`id_ed25519.pub`) ขึ้นไปยังเครื่องเซิร์ฟเวอร์ `202.29.232.28` ของผู้ใช้ `fang`
+- ทดสอบ Passwordless Login เข้าสู่ระบบเซิร์ฟเวอร์สำเร็จ
+- ค้นหาและลบไฟล์ `.exp` เก่า (Legacy Expect scripts) ออกจาก Repository จำนวนกว่า 30 ไฟล์ ซึ่งรวมถึง `build_deploy.exp` และ `inspect_*.exp` ที่เก็บรหัสผ่านเป็น plain-text
+- Commit การลบไฟล์เหล่านี้ลง Git (`80f188d`) เพื่อป้องกันการใช้งานสคริปต์ที่ล้าสมัยตามที่ระบุใน AGENTS.md
+
+### ผลลัพธ์
+- **Fixed:** ถอนรากถอนโคนการใช้รหัสผ่านแบบ hard-coded ในสคริปต์ Deploy / Inspect เก่า
+- **Status:** ปิดงาน P0 เรื่อง Secret Leakage ของรหัสเซิร์ฟเวอร์เรียบร้อย

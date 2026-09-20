@@ -69,6 +69,16 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 			}()
 
 			w.WriteHeader(http.StatusCreated)
+
+			_, accountID, _, _ := resolveSyncAccount(master, r)
+			if accountID == 0 {
+				if id, ok := r.Context().Value("admin_id").(int); ok {
+					accountID = id
+				}
+			}
+			if accountID > 0 {
+				publishLineChanges(master, db, accountID)
+			}
 		}
 		if r.Method == "PUT" {
 			err := r.ParseMultipartForm(10 << 20)
@@ -192,6 +202,17 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 				if prevStatus != status {
 					go ProcessPendingLineNotifications(master)
 				}
+
+				_, accountID, _, _ := resolveSyncAccount(master, r)
+				if accountID == 0 {
+					if id, ok := r.Context().Value("admin_id").(int); ok {
+						accountID = id
+					}
+				}
+				if accountID > 0 {
+					publishLineChanges(master, db, accountID)
+				}
+
 				w.WriteHeader(http.StatusOK)
 			}
 		}
@@ -233,6 +254,16 @@ func SetupMaintenanceRoutes(master, db *sql.DB) {
 					return
 				}
 			}
+			_, accountID, _, _ := resolveSyncAccount(master, r)
+			if accountID == 0 {
+				if id, ok := r.Context().Value("admin_id").(int); ok {
+					accountID = id
+				}
+			}
+			if accountID > 0 {
+				publishLineChanges(master, db, accountID)
+			}
+
 			w.WriteHeader(http.StatusOK)
 		}
 	})

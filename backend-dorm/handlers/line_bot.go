@@ -205,8 +205,48 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 		return
 	}
 
-	if text == "บริการ" || text == "บริการรอบหอพัก" {
-		replyToLineWithFlexMessage(replyToken, "บริการรอบหอพัก", buildServicesFlexMessage())
+	if text == "ประวัติ" || text == "ประวัติการชำระ" || text == "ใบเสร็จ" {
+		replyToLineWithFlexMessage(replyToken, "ข้อมูลของฉันและประวัติการชำระ", map[string]interface{}{
+			"type": "bubble",
+			"size": "kilo",
+			"body": map[string]interface{}{
+				"type": "box",
+				"layout": "vertical",
+				"contents": []map[string]interface{}{
+					{
+						"type": "text",
+						"text": "พอร์ทัลลูกบ้าน",
+						"weight": "bold",
+						"color": "#1DB446",
+						"size": "sm",
+					},
+					{
+						"type": "text",
+						"text": "ตรวจสอบประวัติการชำระเงิน ยอดค้างชำระ และข้อมูลสัญญาเช่า ได้ที่นี่",
+						"wrap": true,
+						"color": "#666666",
+						"size": "sm",
+						"margin": "md",
+					},
+				},
+			},
+			"footer": map[string]interface{}{
+				"type": "box",
+				"layout": "vertical",
+				"contents": []map[string]interface{}{
+					{
+						"type": "button",
+						"style": "primary",
+						"color": "#111827",
+						"action": map[string]interface{}{
+							"type": "uri",
+							"label": "เปิดหน้าข้อมูลของฉัน",
+							"uri": "https://liff.line.me/2010525486-cUOKPsCJ",
+						},
+					},
+				},
+			},
+		})
 		return
 	}
 	
@@ -598,7 +638,10 @@ func replyToLine(replyToken, text string) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 // PushLineMessage sends a direct message to a user
@@ -622,7 +665,10 @@ func PushLineMessage(lineUserID, text string) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 func replyToLineWithImage(replyToken, text, imageURL string) {
@@ -656,7 +702,10 @@ func replyToLineWithImage(replyToken, text, imageURL string) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 func replyToLineWithFlexMessage(replyToken, altText string, contents interface{}) {
@@ -723,7 +772,10 @@ func replyToLineWithFlexAndText(replyToken, altText string, contents interface{}
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 func loadLatestOutstandingLineInvoice(db *sql.DB, userID int, room, name string) (lineInvoiceFlexData, error) {
@@ -1502,7 +1554,10 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }
 
 func PushMaintenanceStatusFlexMessage(lineUserID, roomNumber, issue, status string) {
@@ -1993,5 +2048,8 @@ func replyToLineWithQuickReply(replyToken, text string, options []string) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	client.Do(req)
+	resp, err := client.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
 }

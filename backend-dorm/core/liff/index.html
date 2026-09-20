@@ -63,15 +63,33 @@
 
           <section class="information-group billing-group" aria-labelledby="billing-heading">
             <div class="section-heading">
-              <h3 id="billing-heading">ข้อมูลการเงิน</h3>
+              <h3 id="billing-heading">ยอดค้างชำระ</h3>
             </div>
             <div class="balance-row">
-              <div><span>ยอดค้างชำระรวม</span><strong id="outstanding-amount"></strong></div>
+              <div><span>ยอดค้างรวมทั้งหมด</span><strong id="outstanding-amount"></strong></div>
             </div>
             <p id="outstanding-count" class="billing-status"></p>
             <p id="billing-warning" class="billing-warning" hidden></p>
             <div id="invoice-list" class="invoice-list"></div>
-            <p id="no-bill" class="empty-bill" hidden>ยังไม่มีรายการบิลในระบบ</p>
+            <p id="no-bill" class="empty-bill" hidden>ไม่มีรายการค้างชำระ</p>
+          </section>
+
+          <section class="information-group billing-group" aria-labelledby="projected-heading">
+            <div class="section-heading">
+              <h3 id="projected-heading">ยอดประเมินบิลรอบหน้า</h3>
+            </div>
+            <div class="balance-row">
+              <div><span>ค่าเช่าและส่วนกลาง (เริ่มต้น)</span><strong id="projected-bill-amount"></strong></div>
+            </div>
+            <p class="billing-status">ยังไม่รวมค่าน้ำ ค่าไฟ หรือค่าปรับเพิ่มเติม</p>
+          </section>
+
+          <section class="information-group billing-group" aria-labelledby="history-heading">
+            <div class="section-heading">
+              <h3 id="history-heading">ประวัติการชำระเงิน</h3>
+            </div>
+            <div id="history-list" class="invoice-list"></div>
+            <p id="no-history" class="empty-bill" hidden>ไม่มีประวัติการชำระเงิน</p>
           </section>
 
           <p class="dashboard-note">ข้อมูลจะอัปเดตหลังแอดมินบันทึกและซิงก์ขึ้นระบบ</p>

@@ -153,6 +153,7 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 
 	snapshot.SnapshotID = "snapshot-2"
 	snapshot.Maintenance[0].Status = "กำลังติดต่อช่าง"
+	snapshot.Maintenance[0].LastUpdated = "2026-09-17T08:10:00Z"
 	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
 		t.Fatal(err)
 	}
@@ -165,6 +166,7 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	}
 
 	snapshot.SnapshotID = "snapshot-3"
+	snapshot.Maintenance[0].LastUpdated = "2026-09-17T08:20:00Z"
 	if err := materializeLineSnapshotIntoWithNotifier(master, tenantDB, 7, snapshot, notifier); err != nil {
 		t.Fatal(err)
 	}

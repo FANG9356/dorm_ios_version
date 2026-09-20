@@ -31,8 +31,11 @@
   const outstandingCount = document.getElementById("outstanding-count");
   const billingWarning = document.getElementById("billing-warning");
   const invoiceList = document.getElementById("invoice-list");
+  const historyList = document.getElementById("history-list");
   const invoiceTemplate = document.getElementById("invoice-template");
   const noBill = document.getElementById("no-bill");
+  const noHistory = document.getElementById("no-history");
+  const projectedBillAmount = document.getElementById("projected-bill-amount");
   const closeButton = document.getElementById("close-button");
 
   let verified = null;
@@ -240,15 +243,28 @@
     outstandingCount.textContent = count > 0 ? `${count} ใบแจ้งหนี้ที่ยังไม่ปิดยอด · เรียงล่าสุดก่อน` : "ไม่มีรายการค้างชำระ";
 
     const invoices = Array.isArray(billing.invoices) ? billing.invoices : [];
-    const periods = invoices.map((invoice) => normalizedPeriod(invoice.period)).filter(Boolean);
+    
+    // Split into outstanding and paid
+    const outstandingInvoices = invoices.filter(i => i.status !== 'paid');
+    const paidInvoices = invoices.filter(i => i.status === 'paid');
+
+    const periods = outstandingInvoices.map((invoice) => normalizedPeriod(invoice.period)).filter(Boolean);
     const hasRepeatedPeriod = new Set(periods).size !== periods.length;
     billingWarning.textContent = hasRepeatedPeriod
-      ? "พบใบแจ้งหนี้มากกว่า 1 ใบในรอบเดียวกัน กรุณาตรวจสอบกับผู้ดูแลหอพัก"
+      ? "พบใบแจ้งหนี้ค้างชำระมากกว่า 1 ใบในรอบเดียวกัน กรุณาตรวจสอบกับผู้ดูแลหอพัก"
       : "";
     billingWarning.hidden = !hasRepeatedPeriod;
+    
     invoiceList.replaceChildren();
-    invoices.forEach((invoice, index) => invoiceList.appendChild(renderInvoice(invoice, index)));
-    noBill.hidden = invoices.length > 0;
+    outstandingInvoices.forEach((invoice, index) => invoiceList.appendChild(renderInvoice(invoice, index)));
+    noBill.hidden = outstandingInvoices.length > 0;
+
+    historyList.replaceChildren();
+    paidInvoices.forEach((invoice, index) => historyList.appendChild(renderInvoice(invoice, index)));
+    noHistory.hidden = paidInvoices.length > 0;
+    
+    const projected = Number(billing.projected_bill) || 0;
+    projectedBillAmount.textContent = formatMoney(projected);
   }
 
   async function initialize() {

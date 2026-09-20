@@ -128,6 +128,9 @@ struct MaintenanceTabView: View {
         }
         .padding(.top, 106)
         .padding(.horizontal, 20)
+        .refreshable {
+            await SyncManager.shared.syncWithGoBackend(modelContext: modelContext)
+        }
         .task {
             // Maintenance can be created from LINE while this device is idle.
             // Refresh on entry so the list does not depend on the global

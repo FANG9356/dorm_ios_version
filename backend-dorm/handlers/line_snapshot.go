@@ -459,12 +459,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		if strings.TrimSpace(maintenance.ID) != "" {
 			activeMaintenanceIDs[maintenance.ID] = true
 		}
-		var previousStatus, quoteApprovedAt string
+		var previousStatus, previousLastUpdated, quoteApprovedAt string
 		var previousCost float64
 		hadExistingMaintenance := false
 		if strings.TrimSpace(maintenance.ID) != "" {
-			err = tx.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0), COALESCE(quote_approved_at, '')
-				FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus, &previousCost, &quoteApprovedAt)
+			err = tx.QueryRow(`SELECT COALESCE(status, ''), COALESCE(cost, 0), COALESCE(quote_approved_at, ''), COALESCE(last_updated, '')
+				FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&previousStatus, &previousCost, &quoteApprovedAt, &previousLastUpdated)
 			switch {
 			case err == nil:
 				hadExistingMaintenance = true
@@ -474,12 +474,13 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 				return fmt.Errorf("read previous maintenance status: %w", err)
 			}
 		}
-		if hadExistingMaintenance {
+		isNewerUpdate := !hadExistingMaintenance || maintenance.LastUpdated > previousLastUpdated
+		if hadExistingMaintenance && isNewerUpdate {
 			if err := validateMaintenanceCostChange(previousStatus, maintenance.Status, previousCost, maintenance.Cost, quoteApprovedAt != ""); err != nil {
 				return fmt.Errorf("maintenance %s cost change: %w", maintenance.ID, err)
 			}
 		}
-		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
+		if hadExistingMaintenance && isNewerUpdate && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
 			if err := validateMaintenanceAppTransition(previousStatus, maintenance.Status, maintenance.Cost, quoteApprovedAt != ""); err != nil {
 				return fmt.Errorf("maintenance %s transition: %w", maintenance.ID, err)
 			}
@@ -508,12 +509,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		if err != nil {
 			return fmt.Errorf("upsert maintenance: %w", err)
 		}
-		if hadExistingMaintenance && maintenance.Status == "รออนุมัติค่าใช้จ่าย" && previousStatus != maintenance.Status {
+		if hadExistingMaintenance && isNewerUpdate && maintenance.Status == "รออนุมัติค่าใช้จ่าย" && previousStatus != maintenance.Status {
 			if _, err := tx.Exec(`UPDATE maintenances SET quote_approved_at = '' WHERE external_id = ?`, maintenance.ID); err != nil {
 				return fmt.Errorf("reset maintenance quote approval: %w", err)
 			}
 		}
-		if hadExistingMaintenance && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
+		if hadExistingMaintenance && isNewerUpdate && strings.TrimSpace(previousStatus) != strings.TrimSpace(maintenance.Status) {
 			var maintenanceRecordID int64
 			if err := tx.QueryRow(`SELECT id FROM maintenances WHERE external_id = ?`, maintenance.ID).Scan(&maintenanceRecordID); err != nil {
 				return fmt.Errorf("read maintenance record id: %w", err)

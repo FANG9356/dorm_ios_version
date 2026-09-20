@@ -65,6 +65,11 @@ struct RoomListView: View {
                     }
                     .scrollDisabled(selectedTab == .securityToken)
                     .scrollDismissesKeyboard(.interactively)
+                    .refreshable {
+                        if !syncManager.isSyncing {
+                            await syncManager.syncWithGoBackend(modelContext: modelContext)
+                        }
+                    }
                     .contentShape(Rectangle())
                     .simultaneousGesture(TapGesture().onEnded {
                         hideKeyboard()
@@ -226,8 +231,12 @@ struct RoomListView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 ensureCurrentMonthPaymentsIfNeeded()
-                scheduleAutoPullCheck()
                 scheduleBookingPromotionCheck()
+                if !syncManager.isSyncing {
+                    Task {
+                        await syncManager.syncWithGoBackend(modelContext: modelContext)
+                    }
+                }
             }
         }
         .onReceive(pollingTimer) { _ in

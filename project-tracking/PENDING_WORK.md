@@ -49,8 +49,11 @@
 
 - [x] แก้ sync conflict ที่ทำให้รายการจาก LINE ไม่เข้าแอปเมื่อมี local dirty record: ดึง remote snapshot, rebase ข้อมูลในเครื่องแล้ว push ซ้ำอัตโนมัติ; เพิ่ม sync ตอนเปิด dashboard/หน้าแจ้งซ่อม และพิสูจน์บน iPhone จริงถึง snapshot v161 โดยข้อมูลเดิมไม่หาย
 - [x] รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ใน backend materialization เป็น terminal branch ป้องกัน snapshot รับสำเร็จแต่ side-effect ตอบ HTTP 500; targeted iOS maintenance/sync tests ผ่าน 23/23 และ backend test/race/vet ผ่าน
-- [x] ปรับ Flex ปฏิเสธใบเสนอราคาเป็นโทนขาว–เทาแบบกระชับ deploy SHA-256 `0cb92224751a1456eedfcb3962b72df694c5219ea399cd59a663753671f55721`
+- [x] แก้ Flex ปฏิเสธใบเสนอราคาเป็นโทนขาว–เทาแบบกระชับ deploy SHA-256 `0cb92224751a1456eedfcb3962b72df694c5219ea399cd59a663753671f55721`
 - [x] ตัดข้อความยืนยันซ้ำหลังอนุมัติ/ปฏิเสธใบเสนอราคา ให้ success path ส่ง Flex ใบเดียวและใช้ text เฉพาะ fallback; production ล่าสุด SHA-256 `32a26c80c5793f533a1e658790c09aed423b51f104a4e3120496ce5793f07f89`, rollback set `/home/fang/line_migration_backups/20260917-201712-pre-flex-ui`
+- [x] แก้ปัญหา "ลบรายการซ่อมด้วยตัวเองแล้วไม่หาย": แก้ไข Web UI / API `api_maintenances.go` ให้เรียก `publishLineChanges` ทุกครั้งเมื่อ Create, Update หรือ Delete เพื่อป้องกันไม่ให้ iOS sync ดึงเอา snapshot ข้อมูลที่ไม่ได้อัปเดตกลับมาทับข้อมูลใหม่
+- [x] แก้ปัญหา "ระบบแสดงที่แอพว่ารอ": เพิ่ม `.onChange(of: scenePhase)` ลงใน `RoomListView` เพื่อบังคับ Sync จาก Backend ทันทีที่สลับแอปกลับมา และเพิ่ม `Pull to Refresh` ในทุกหน้า เพื่อให้ผู้ใช้ไม่ต้องรอ Timer 20 วินาที
+- [x] แก้ปัญหา "ไม่แสดงวันที่และเวลาแจ้งซ่อม": ปรับ `AppDate.swift` ให้รองรับการแปลงวันที่แบบ Legacy (`yyyy-MM-dd HH:mm:ss`) นอกเหนือจาก ISO8601 เพื่อให้ข้อมูลเก่าแสดงผลเวลาแจ้งซ่อมได้ครบถ้วน
 
 - [x] ออกแบบการ์ดแจ้งซ่อมใหม่เป็น read-only card แสดง timeline ครบ 6 ขั้นแบบ monochrome รวมขั้นอนุมัติค่าใช้จ่าย ตัดการเปลี่ยนสถานะ, swipe และเมนูกดค้างจากหน้ารายการ ให้แตะทั้งการ์ดก่อนแก้ไข บังคับ workflow ตามกฎพร้อม save validation และย้ายการลบเข้าไปในหน้ารายละเอียดพร้อม confirmation; ติดตั้ง build ใหม่บน iPhone “F” แล้ว
 - [x] Redesign หน้าแก้ไขงานซ่อมเป็น premium thin-material cards ลดสีและกล่องซ้อน ทำสถานะเป็น vertical workflow timeline และปรับรายละเอียด ค่าใช้จ่าย ช่องทางชำระ หลักฐาน และปุ่มลบให้ใช้ visual language เดียวกัน
@@ -72,3 +75,4 @@
 - [x] เพิ่มช่องค้นหาแบบเดียวกับทะเบียนลูกบ้านในหน้าบิล การเงิน ห้องพัก ตั้งราคา หลักฐานโอน และแจ้งซ่อม
 - [x] รวมค้นหา รอบบิล และสถานะของหน้าการเงินในการ์ดกระจกฝ้าใบเดียว พร้อมตัวเลือกเดือน–ปีและแท็บสถานะแบบแตะ/ลากเลือก
 - [x] Build/sign/install งาน UI รอบล่าสุดบน iPhone “F” สำเร็จ โดยใช้ฐานข้อมูลเดิม; รายการ `UI-001`–`UI-006` ยังรอผู้ใช้ตรวจซ้ำก่อนปิด issue
+- [x] ตรวจสอบและแก้ไขบั๊ก HTTP Response Body Leak (Memory & Connection Leak) ในฟังก์ชันส่งข้อความของ `line_bot.go`

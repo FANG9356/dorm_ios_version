@@ -108,6 +108,20 @@ enum AppDate {
         if let date = formatter.date(from: value) {
             return thaiDateTime(date)
         }
+
+        let legacyFormatter = DateFormatter()
+        legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.timeZone = timeZone
+        legacyFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if let date = legacyFormatter.date(from: value) {
+            return thaiDateTime(date)
+        }
+
+        legacyFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        if let date = legacyFormatter.date(from: value) {
+            return thaiDateTime(date)
+        }
+
         let customFormatter = Self.formatter("yyyy-MM-dd HH:mm:ss")
         if let date = customFormatter.date(from: value) {
             return thaiDateTime(date)
