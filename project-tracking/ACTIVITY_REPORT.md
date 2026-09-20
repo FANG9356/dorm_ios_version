@@ -705,3 +705,17 @@
 - **Fixed:** ถอนรากถอนโคนการใช้รหัสผ่านแบบ hard-coded ในสคริปต์ Deploy / Inspect เก่า
 - **Status:** ปิดงาน P0 เรื่อง Secret Leakage ของรหัสเซิร์ฟเวอร์เรียบร้อย
 * **2026-09-20**: เพิ่มการส่ง Reference Code (`ref_code`) กลับไปยังแอป iOS ผ่าน API `/api/forgot-password` (Backend) และปรับปรุงให้แอป iOS รับค่าดังกล่าวไปแสดงผลในหน้าจอ `PasswordResetView` เพื่อให้ผู้ใช้สามารถตรวจสอบหมายเลขอ้างอิงตรงกับอีเมลที่ได้รับได้ (iOS App)
+
+## 2026-09-20 22:45 — ตรวจสอบและแก้ไขพื้นที่ Mac เต็ม & อัปเดตหน้าเว็บ Static (Privacy, Terms, Contact)
+
+- คำขอ/เป้าหมาย: หาสาเหตุและแก้ปัญหาพื้นที่ Mac ของผู้ใช้ลดลง/เต็ม และสร้างหน้าเว็บ Static 3 หน้า (Contact, Privacy, Terms) อย่างเป็นทางการเพื่อรองรับลิงก์ในอีเมล
+- สิ่งที่ดำเนินการ:
+  1. เคลียร์แคชระบบ Mac (`~/Library/Developer/CoreSimulator`, `~/Library/Caches`) คืนพื้นที่กว่า 20 GB และวิเคราะห์หมวดหมู่ System Data 88GB (พบว่าเป็น Application Support ปกติเช่น VS Code, Docker, Discord, Chrome Profile)
+  2. สร้างหน้า `contact.html`, `privacy.html`, `terms.html` ในโฟลเดอร์ `public/` ของ Backend ด้วย Flat Design ธีมมืดและเนื้อหาเชิงกฎหมายตาม PDPA หนาแน่น ครอบคลุมการตกลงใช้ OCR และ LINE LIFF
+  3. แก้ไข `deploy_flex_safe_remote.sh` ให้ `cp -r public/` ไปที่ `/opt/dormitory/` บน Server เสมอเมื่อ Deploy
+- ไฟล์หรือระบบที่กระทบ: `backend-dorm/public/*.html`, `backend-dorm/scripts/deploy_flex_safe_remote.sh`, Mac Storage
+- การเปลี่ยนข้อมูล/production: สคริปต์ Deploy ถูกอัปเดตให้พร้อมรันโดยผู้ใช้ (ต้องใช้ sudo password)
+- การตรวจสอบและหลักฐาน: โฟลเดอร์ `public` พร้อมใช้งาน, หน้าเว็บมีความยาวมากพอ, สคริปต์ deploy สะท้อนคำสั่งใหม่
+- สถานะ deploy/UAT: โค้ดเสร็จสมบูรณ์ รอผู้ใช้รันคำสั่ง Deploy ผ่าน Terminal ของตนเอง
+- ผลลัพธ์: ผู้ใช้ได้หน้าเว็บทางการและไฟล์ครบถ้วนพร้อม Deploy, และได้วิธีแก้ปัญหา System Data ของ Mac
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: Storage ของ Mac ควรอัปเดตหลังจาก Restart เครื่อง
