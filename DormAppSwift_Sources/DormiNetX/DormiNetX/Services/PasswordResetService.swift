@@ -15,8 +15,9 @@ struct PasswordResetService {
         self.transport = transport
     }
 
-    func requestCode(email: String) async throws {
-        try await post("forgot-password", body: ["email": normalized(email)])
+    func requestCode(email: String) async throws -> String? {
+        let reply = try await post("forgot-password", body: ["email": normalized(email)])
+        return reply.ref_code
     }
 
     func reset(email: String, code: String, password: String) async throws {
@@ -35,7 +36,7 @@ struct PasswordResetService {
         email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    private func post(_ path: String, body: [String: String]) async throws {
+    private func post(_ path: String, body: [String: String]) async throws -> Reply {
         guard let url = URL(string: baseURL)?.appendingPathComponent(path) else {
             throw Failure("ไม่พบที่อยู่เซิร์ฟเวอร์")
         }
@@ -58,11 +59,13 @@ struct PasswordResetService {
             }
             throw Failure(result?.error ?? "ทำรายการไม่สำเร็จ กรุณาลองใหม่ภายหลัง")
         }
+        return result!
     }
 
     private struct Reply: Decodable {
         var message: String?
         var error: String?
+        var ref_code: String?
     }
 
     struct Failure: LocalizedError {

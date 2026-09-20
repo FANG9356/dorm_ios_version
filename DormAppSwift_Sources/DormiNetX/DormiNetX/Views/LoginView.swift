@@ -9,6 +9,7 @@ struct LoginView: View {
     @State private var isSignUpMode: Bool = false
     @State private var isForgotPasswordMode: Bool = false
     @State private var passwordResetEmail: String?
+    @State private var passwordResetRefCode: String?
     @State private var showingPasswordReset = false
     @State private var passwordResetCompleted = false
     @State private var showingPasswordResetSuccess = false
@@ -491,7 +492,7 @@ struct LoginView: View {
             }
         }) {
             if let passwordResetEmail {
-                PasswordResetView(email: passwordResetEmail) {
+                PasswordResetView(email: passwordResetEmail, refCode: passwordResetRefCode) {
                     passwordResetCompleted = true
                     // Remove this device's saved session; server-side JWT revocation is separate.
                     do {
@@ -678,8 +679,9 @@ struct LoginView: View {
         clearError()
         defer { isLoading = false }
         do {
-            try await PasswordResetService().requestCode(email: normalizedEmail)
+            let refCode = try await PasswordResetService().requestCode(email: normalizedEmail)
             passwordResetEmail = normalizedEmail.lowercased()
+            passwordResetRefCode = refCode
             showingPasswordReset = true
         } catch { showError(error.localizedDescription) }
     }

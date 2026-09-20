@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PasswordResetView: View {
     let email: String
+    @State var refCode: String?
     let onComplete: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var code = ""
@@ -35,6 +36,12 @@ struct PasswordResetView: View {
                             Label(remaining > 0 ? "ขอรหัสใหม่ใน \(remaining) วินาที" : "ขอรหัสใหม่", systemImage: "arrow.clockwise")
                         }
                         .disabled(isBusy || remaining > 0)
+                    }
+                    if let code = refCode {
+                        Text("หมายเลขอ้างอิง: \(code)")
+                            .font(.custom("SukhumvitSet-SemiBold", size: 14))
+                            .foregroundStyle(.primary)
+                            .padding(.top, 4)
                     }
                     Text(requestMessage)
                         .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -86,7 +93,10 @@ struct PasswordResetView: View {
         errorMessage = nil
         defer { isBusy = false }
         do {
-            try await PasswordResetService().requestCode(email: email)
+            let ref = try await PasswordResetService().requestCode(email: email)
+            if let ref = ref {
+                self.refCode = ref
+            }
             nextRequestAt = Date().addingTimeInterval(60)
             requestMessage = "ส่งคำขอรหัสใหม่แล้ว หากมีบัญชีนี้ในระบบ กรุณาตรวจสอบอีเมล"
         } catch { errorMessage = error.localizedDescription }

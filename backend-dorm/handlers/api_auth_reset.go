@@ -88,7 +88,7 @@ func generateOTP() (string, error) {
 }
 
 // sendEmailOTP sends an email using Resend API
-func sendEmailOTP(toEmail string, otp string) error {
+func sendEmailOTP(toEmail string, otp string, refCode string) error {
 	apiKey := os.Getenv("RESEND_API_KEY")
 	if apiKey == "" {
 		return fmt.Errorf("RESEND_API_KEY is not set in .env")
@@ -98,10 +98,7 @@ func sendEmailOTP(toEmail string, otp string) error {
 	now := time.Now().In(time.FixedZone("ICT", 7*3600))
 	monthsTh := []string{"มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"}
 	timeStr := fmt.Sprintf("%d %s %d, %02d:%02d น.", now.Day(), monthsTh[now.Month()-1], now.Year(), now.Hour(), now.Minute())
-	
-	b := make([]byte, 2)
-	rand.Read(b)
-	refCode := fmt.Sprintf("REQ-%s-%X", now.Format("20060102"), b)
+
 
 	htmlContent := fmt.Sprintf(`
 		<!DOCTYPE html>
@@ -327,13 +324,19 @@ func SetupAuthResetRoutes(db *sql.DB) {
 		// ตอบกลับข้อความเดียวกันทุกกรณี เพื่อป้องกัน User Enumeration
 		successMsg := "หากอีเมลนี้อยู่ในระบบ คุณจะได้รับรหัส OTP ภายใน 5 นาที"
 
+		// Generate RefCode here so it can be returned
+		now := time.Now().In(time.FixedZone("ICT", 7*3600))
+		b := make([]byte, 2)
+		rand.Read(b)
+		refCode := fmt.Sprintf("REQ-%s-%X", now.Format("20060102"), b)
+
 		// Check if email exists in admins table
 		var id int
 		err = db.QueryRow("SELECT id FROM admins WHERE email = ?", req.Email).Scan(&id)
 		if err != nil {
 			// Email not found — but respond with same message to prevent enumeration
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"message": successMsg})
+			json.NewEncoder(w).Encode(map[string]string{"message": successMsg, "ref_code": refCode})
 			return
 		}
 
@@ -353,13 +356,13 @@ func SetupAuthResetRoutes(db *sql.DB) {
 		}
 
 		// Send Email
-		if err := sendEmailOTP(req.Email, otp); err != nil {
+		if err := sendEmailOTP(req.Email, otp, refCode); err != nil {
 			fmt.Println("Error sending email:", err)
 			// ยังคงตอบกลับ success เพื่อไม่ให้รู้ว่าส่งไม่ได้
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": successMsg})
+		json.NewEncoder(w).Encode(map[string]string{"message": successMsg, "ref_code": refCode})
 	})
 
 	http.HandleFunc("/api/verify-otp", func(w http.ResponseWriter, r *http.Request) {
