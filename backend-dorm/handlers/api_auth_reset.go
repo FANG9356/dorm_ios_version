@@ -104,75 +104,105 @@ func sendEmailOTP(toEmail string, otp string) error {
 			<meta name="color-scheme" content="light dark">
 			<meta name="supported-color-schemes" content="light dark">
 			<title>รหัส OTP สำหรับรีเซ็ตรหัสผ่าน</title>
+			<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 			<style>
 				/* Base resets */
-				body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%%; }
+				body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%%; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 				table { border-collapse: collapse; }
 				
+				/* Animations for supported clients */
+				@keyframes pulseGlow {
+					0%% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
+					70%% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+					100%% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+				}
+
 				/* Dark Mode Variables & Styles */
 				@media (prefers-color-scheme: dark) {
-					.bg-body { background-color: #000000 !important; }
-					.bg-card { background-color: #1c1c1e !important; }
-					.border-card { border-color: #2c2c2e !important; }
-					.text-primary { color: #ffffff !important; }
-					.text-secondary { color: #98989d !important; }
-					.bg-otp { background-color: #2c2c2e !important; border-color: #3a3a3c !important; }
-					.text-otp { color: #ffffff !important; }
-					.bg-footer { background-color: #121212 !important; border-color: #2c2c2e !important; }
-					.text-brand { color: #5e5ce6 !important; }
-					.bg-warning { background-color: rgba(255, 69, 58, 0.15) !important; }
-					.text-warning { color: #ff453a !important; }
+					.bg-body { background-color: #09090b !important; }
+					.bg-card { background-color: #18181b !important; }
+					.border-card { border-color: #27272a !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important; }
+					.text-primary { color: #f4f4f5 !important; }
+					.text-secondary { color: #a1a1aa !important; }
+					.icon-bg { background: linear-gradient(135deg, #1f1f22 0%%, #141416 100%%) !important; box-shadow: 0 8px 16px rgba(0,0,0,0.3) !important; border: 1px solid #27272a !important; }
+					.bg-otp { 
+						background: linear-gradient(145deg, #1f1f22 0%%, #141416 100%%) !important; 
+						border: 1px solid #3f3f46 !important; 
+						box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+					}
+					.text-otp { 
+						background: linear-gradient(135deg, #a78bfa 0%%, #818cf8 100%%) !important;
+						-webkit-background-clip: text !important;
+						-webkit-text-fill-color: transparent !important;
+					}
+					.bg-footer { background-color: #09090b !important; border-color: #27272a !important; }
 				}
 			</style>
 		</head>
-		<body class="bg-body" style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f7;">
-			<table width="100%%" border="0" cellspacing="0" cellpadding="0" class="bg-body" style="background-color: #f2f2f7; padding: 40px 20px;">
+		<body class="bg-body" style="margin: 0; padding: 0; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
+			<table width="100%%" border="0" cellspacing="0" cellpadding="0" class="bg-body" style="background-color: #f3f4f6; padding: 50px 20px;">
 				<tr>
 					<td align="center">
-						<table border="0" cellspacing="0" cellpadding="0" class="bg-card border-card" style="width: 100%%; max-width: 500px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5ea; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
+						<table border="0" cellspacing="0" cellpadding="0" class="bg-card border-card" style="width: 100%%; max-width: 500px; background-color: #ffffff; border-radius: 20px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08);">
+							
+							<!-- Top Gradient Bar -->
+							<tr>
+								<td style="height: 6px; background: linear-gradient(90deg, #4f46e5 0%%, #ec4899 50%%, #f59e0b 100%%);"></td>
+							</tr>
+
 							<!-- Header -->
 							<tr>
-								<td align="center" style="padding: 40px 40px 20px 40px;">
-									<h1 class="text-primary" style="margin: 0; font-size: 28px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px;">Dormi<span class="text-brand" style="color: #4f46e5;">Net</span></h1>
+								<td align="center" style="padding: 40px 40px 10px 40px;">
+									<div class="icon-bg" style="width: 64px; height: 64px; background: linear-gradient(135deg, #eef2ff 0%%, #e0e7ff 100%%); border-radius: 18px; display: inline-block; margin-bottom: 24px; text-align: center; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.15);">
+										<img src="https://img.icons8.com/?size=100&id=82ZSIqW0k7J6&format=png&color=4f46e5" width="34" height="34" style="vertical-align: middle; padding-top: 15px;" alt="Lock">
+									</div>
+									<h1 class="text-primary" style="margin: 0; font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
+										Dormi<span style="background: linear-gradient(135deg, #4f46e5 0%%, #ec4899 100%%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #4f46e5;">Net</span>
+									</h1>
 								</td>
 							</tr>
+							
 							<!-- Body -->
 							<tr>
 								<td align="center" style="padding: 0 40px 40px 40px;">
-									<h2 class="text-primary" style="margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #1c1c1e;">รหัสยืนยันตัวตน (OTP)</h2>
-									<p class="text-secondary" style="margin: 0 0 32px 0; font-size: 15px; color: #3a3a3c; line-height: 1.6;">
-										คุณได้ทำการร้องขอเพื่อรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณ<br>
-										กรุณานำรหัส 6 หลักด้านล่างนี้กรอกในระบบเพื่อดำเนินการต่อ
+									<h2 class="text-primary" style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1e293b;">รหัสยืนยันตัวตน (OTP)</h2>
+									<p class="text-secondary" style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.6;">
+										เราได้รับคำขอรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณแล้ว<br>
+										โปรดใช้รหัส 6 หลักด้านล่างนี้เพื่อยืนยันตัวตน
 									</p>
+									
 									<!-- OTP Box -->
-									<table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px auto;">
+									<table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 32px auto;">
 										<tr>
-											<td class="bg-otp" align="center" style="background-color: #f2f2f7; border: 1px solid #e5e5ea; border-radius: 12px; padding: 20px 32px;">
-												<div class="text-otp" style="margin: 0; font-size: 40px; font-weight: 700; color: #1c1c1e; letter-spacing: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-indent: 12px;">%s</div>
+											<td class="bg-otp" align="center" style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 24px 32px; animation: pulseGlow 3s infinite;">
+												<div class="text-otp" style="margin: 0; font-size: 42px; font-weight: 800; color: #4f46e5; letter-spacing: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-indent: 12px;">%s</div>
 											</td>
 										</tr>
 									</table>
+									
 									<!-- Warning -->
 									<table border="0" cellspacing="0" cellpadding="0">
 										<tr>
-											<td class="bg-warning text-warning" style="background-color: #fef2f2; color: #dc2626; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 20px;">
-												รหัสนี้จะหมดอายุภายใน 15 นาที
+											<td style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.2);">
+												<span style="display: inline-block; vertical-align: middle; margin-right: 6px;">⏱</span> รหัสนี้จะหมดอายุภายใน 15 นาที
 											</td>
 										</tr>
 									</table>
 								</td>
 							</tr>
+							
 							<!-- Footer -->
 							<tr>
-								<td class="bg-footer border-card" align="center" style="background-color: #fafafa; border-top: 1px solid #e5e5ea; padding: 24px 40px;">
-									<p class="text-secondary" style="margin: 0 0 8px 0; font-size: 13px; color: #8e8e93; line-height: 1.5;">
-										หากคุณไม่ได้เป็นผู้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือเปลี่ยนรหัสผ่านเพื่อความปลอดภัย
+								<td class="bg-footer border-card" align="center" style="background-color: #f8fafc; border-top: 1px solid #e5e7eb; padding: 30px 40px;">
+									<p class="text-secondary" style="margin: 0 0 8px 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
+										หากคุณไม่ได้เป็นผู้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือทำการเปลี่ยนรหัสผ่านทันทีเพื่อความปลอดภัยของบัญชี
 									</p>
-									<p class="text-secondary" style="margin: 0; font-size: 12px; color: #aeaeb2;">
+									<p class="text-secondary" style="margin: 0; font-size: 12px; color: #cbd5e1;">
 										&copy; 2026 DormiNet System. All rights reserved.
 									</p>
 								</td>
 							</tr>
+							
 						</table>
 					</td>
 				</tr>
