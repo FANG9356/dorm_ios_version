@@ -1,9 +1,0 @@
-#!/usr/bin/expect -f
-set timeout 10
-set password "2550"
-spawn ssh fang@202.29.232.28 "ls -la /home/fang"
-expect {
-    "yes/no" { send "yes\r"; exp_continue }
-    "*?assword:*" { send "$password\r"; exp_continue }
-    eof
-}
