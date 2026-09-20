@@ -85,7 +85,7 @@ sha256sum /opt/dormitory/server_debian
 ### ตรวจจากเครื่องพัฒนาโดยไม่เปิด shell ค้าง
 
 ```bash
-ssh fang@202.29.232.28 'chmod +x /home/fang/deploy_flex_safe_remote.sh && /home/fang/deploy_flex_safe_remote.sh'
+ssh fang@202.29.232.28 'chmod +x /home/fang/dorminet_workspace/deploy_flex_safe_remote.sh && /home/fang/dorminet_workspace/deploy_flex_safe_remote.sh'
 ```
 
 > **Note:** การรันคำสั่งนี้ ระบบจะล็อกอินเข้าเซิร์ฟเวอร์แบบ Passwordless ผ่าน SSH Key ทันที แต่อาจจะมีการถามรหัสผ่าน `sudo` บนหน้าจอเซิร์ฟเวอร์ เพื่อใช้สำหรับสั่ง start/stop service
@@ -180,9 +180,9 @@ fi
 
 ```bash
 cd /Volumes/FangB/dorm_project
-scp "$DORMINETX_DEPLOY_TMP/dorminet-backend.tar.gz" fang@202.29.232.28:/home/fang/dorminet-flex-source.tar.gz
-scp backend-dorm/scripts/deploy_flex_safe_remote.sh fang@202.29.232.28:/home/fang/
-ssh -t fang@202.29.232.28 'chmod +x /home/fang/deploy_flex_safe_remote.sh && /home/fang/deploy_flex_safe_remote.sh'
+scp "$DORMINETX_DEPLOY_TMP/dorminet-backend.tar.gz" fang@202.29.232.28:/home/fang/dorminet_workspace/dorminet-flex-source.tar.gz
+scp backend-dorm/scripts/deploy_flex_safe_remote.sh fang@202.29.232.28:/home/fang/dorminet_workspace/
+ssh -t fang@202.29.232.28 'chmod +x /home/fang/dorminet_workspace/deploy_flex_safe_remote.sh && /home/fang/dorminet_workspace/deploy_flex_safe_remote.sh'
 ```
 
 สคริปต์นี้จะ:
@@ -190,7 +190,7 @@ ssh -t fang@202.29.232.28 'chmod +x /home/fang/deploy_flex_safe_remote.sh && /ho
 1. upload source และ remote deploy script
 2. ล็อก deployment ด้วย `flock` เพื่อไม่ให้ Agent/Terminal สองตัว deploy ทับกัน
 3. build ด้วย Linux/CGO บน server
-4. สำรอง binary, master DB และ tenant DB ลง `/home/fang/line_migration_backups/TIMESTAMP-pre-flex-ui`
+4. สำรอง binary, master DB และ tenant DB ลง `/home/fang/dorminet_workspace/backups/TIMESTAMP-pre-flex-ui`
 5. stop/install/start `dormitory.service`
 6. health check ที่ `127.0.0.1:4283`
 7. rollback binary อัตโนมัติถ้า install/start/health ล้มเหลว

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-archive_path="/home/fang/dorminet-flex-source.tar.gz"
+WORKSPACE_DIR="/home/fang/dorminet_workspace"
+archive_path="${WORKSPACE_DIR}/dorminet-flex-source.tar.gz"
 timestamp="$(date +%Y%m%d-%H%M%S)"
-build_dir="/home/fang/dorminet-flex-build-${timestamp}"
-backup_dir="/home/fang/line_migration_backups/${timestamp}-pre-flex-ui"
+build_dir="${WORKSPACE_DIR}/dorminet-flex-build-${timestamp}"
+backup_dir="${WORKSPACE_DIR}/backups/${timestamp}-pre-flex-ui"
 live_binary="/opt/dormitory/server_debian"
 master_database="/opt/dormitory/dormitory.db"
 tenant_database_dir="/opt/dormitory/dorm_data"
 ocr_directory="/opt/dormitory/ocr-bot"
 ocr_unit="/etc/systemd/system/dormitory-ocr.service"
-deploy_lock="/home/fang/.dorminet-flex-deploy.lock"
+deploy_lock="${WORKSPACE_DIR}/.dorminet-flex-deploy.lock"
 
 # Agents share this deployment path. Serialize deploys so a second agent
 # cannot replace the source archive or service binary while one deploy is in
@@ -141,7 +142,7 @@ cleanup_deploy_artifacts() {
   local -a builds automated_backups
 
   mapfile -d '' -t builds < <(
-    find /home/fang -maxdepth 1 -type d -name 'dorminet-flex-build-*' \
+    find "${WORKSPACE_DIR}" -maxdepth 1 -type d -name 'dorminet-flex-build-*' \
       -printf '%p\0' | sort -z
   )
   delete_count=$((${#builds[@]} - build_keep_count))
@@ -152,13 +153,13 @@ cleanup_deploy_artifacts() {
     [[ ! -L "$candidate" && -d "$candidate/backend-dorm" ]] || continue
     [[ "$(basename "$candidate")" =~ ^dorminet-flex-build-[0-9]{8}-[0-9]{6}$ ]] || continue
     resolved="$(realpath "$candidate")"
-    [[ "$(dirname "$resolved")" == "/home/fang" ]] || continue
+    [[ "$(dirname "$resolved")" == "${WORKSPACE_DIR}" ]] || continue
     sudo rm -rf --one-file-system -- "$candidate"
     removed_builds=$((removed_builds + 1))
   done
 
   mapfile -d '' -t automated_backups < <(
-    find /home/fang/line_migration_backups -mindepth 1 -maxdepth 1 -type d \
+    find "${WORKSPACE_DIR}/backups" -mindepth 1 -maxdepth 1 -type d \
       -regextype posix-extended \
       -regex '.*/[0-9]{8}-[0-9]{6}-pre-flex-ui' \
       -printf '%p\0' | sort -z
@@ -171,7 +172,7 @@ cleanup_deploy_artifacts() {
     [[ ! -L "$candidate" && -f "$candidate/server_debian" && -f "$candidate/dormitory.db" ]] || continue
     [[ "$(basename "$candidate")" =~ ^[0-9]{8}-[0-9]{6}-pre-flex-ui$ ]] || continue
     resolved="$(realpath "$candidate")"
-    [[ "$(dirname "$resolved")" == "/home/fang/line_migration_backups" ]] || continue
+    [[ "$(dirname "$resolved")" == "${WORKSPACE_DIR}/backups" ]] || continue
     sudo rm -rf --one-file-system -- "$candidate"
     removed_backups=$((removed_backups + 1))
   done
