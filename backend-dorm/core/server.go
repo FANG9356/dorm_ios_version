@@ -469,6 +469,15 @@ func RunServer() {
 func setupStaticHandler() {
 	const distDir = "./dist"
 	fileServer := http.FileServer(http.Dir(distDir))
+	http.HandleFunc("/contact", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "contact.html"))
+	})
+	http.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "privacy.html"))
+	})
+	http.HandleFunc("/terms", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "terms.html"))
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.NotFound(w, r)

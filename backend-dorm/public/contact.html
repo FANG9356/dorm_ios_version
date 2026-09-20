@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ติดต่อผู้ดูแลระบบ | DormiNet</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --accent: #818cf8;
+            --accent-hover: #6366f1;
+            --divider: #1f2937;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            line-height: 1.7;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 80px 24px;
+            box-sizing: border-box;
+        }
+
+        header {
+            margin-bottom: 60px;
+            border-bottom: 1px solid var(--divider);
+            padding-bottom: 30px;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 24px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .brand span {
+            color: var(--accent);
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 600;
+            margin: 0 0 16px;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+
+        p.lead {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .contact-group {
+            margin-bottom: 30px;
+        }
+
+        .contact-group h2 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .contact-value {
+            font-size: 20px;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .contact-desc {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .footer {
+            margin-top: 80px;
+            padding-top: 30px;
+            border-top: 1px solid var(--divider);
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">Dormi<span>Net</span></div>
+            <h1>ติดต่อผู้ดูแลระบบ</h1>
+            <p class="lead">หากคุณพบปัญหาในการใช้งานระบบ DormiNetX การส่งสลิปชำระเงินขัดข้อง หรือต้องการแจ้งซ่อมฉุกเฉิน สามารถติดต่อทีมงานได้ผ่านช่องทางอย่างเป็นทางการของเรา</p>
+        </header>
+
+        <div class="contact-grid">
+            <div class="contact-group">
+                <h2>ฝ่ายบริการลูกค้าและแจ้งปัญหา (Support)</h2>
+                <div class="contact-value"><a href="mailto:support@dorminet.studio">support@dorminet.studio</a></div>
+                <div class="contact-desc">สำหรับปัญหาด้านการใช้งานแอปพลิเคชัน การรีเซ็ตรหัสผ่าน หรือการแจ้งบั๊กในระบบ (ตอบกลับภายใน 24 ชั่วโมง)</div>
+            </div>
+
+            <div class="contact-group">
+                <h2>ฝ่ายบัญชีและการเงิน (Finance)</h2>
+                <div class="contact-value"><a href="mailto:billing@dorminet.studio">billing@dorminet.studio</a></div>
+                <div class="contact-desc">สำหรับการตรวจสอบยอดชำระเงินสลิปโอนเงินที่ระบบ OCR อ่านไม่สำเร็จ หรือขอใบเสร็จรับเงินย้อนหลัง</div>
+            </div>
+
+            <div class="contact-group">
+                <h2>LINE Official Account</h2>
+                <div class="contact-value">@dorminet_support</div>
+                <div class="contact-desc">ช่องทางที่รวดเร็วที่สุดสำหรับการแจ้งซ่อมฉุกเฉิน (เช่น ท่อน้ำแตก, ไฟฟ้าขัดข้อง) หรือสอบถามข้อมูลทั่วไปผ่านแชทบอทและการเชื่อมต่อระบบ LIFF</div>
+            </div>
+
+            <div class="contact-group">
+                <h2>ที่ตั้งสำนักงาน (Office)</h2>
+                <div class="contact-value">โครงการหอพัก DormiNet</div>
+                <div class="contact-desc">จังหวัดอุบลราชธานี, ประเทศไทย<br>เปิดทำการ: จันทร์ - ศุกร์ (09:00 - 18:00 น.)</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <span>&copy; 2026 DormiNet System</span>
+            <span>
+                <a href="/privacy">นโยบายความเป็นส่วนตัว</a> &nbsp;|&nbsp; 
+                <a href="/terms">ข้อกำหนดการใช้งาน</a>
+            </span>
+        </div>
+    </div>
+</body>
+</html>

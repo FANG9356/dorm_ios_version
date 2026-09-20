@@ -146,7 +146,7 @@ func sendEmailOTP(toEmail string, otp string, refCode string) error {
 				
 				.footer { background-color: #ffffff; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; }
 				.footer-links { margin-bottom: 16px; }
-				.footer-links a { color: #4f46e5; text-decoration: none; font-size: 13px; font-weight: 500; margin: 0 10px; }
+				.footer-links a { color: #4f46e5; text-decoration: none; font-size: 13px; font-weight: 500; margin: 0 10px; display: inline-block; white-space: nowrap; }
 				.footer-text { font-size: 12px; color: #9ca3af; line-height: 1.6; }
 
 				@media (prefers-color-scheme: dark) {
@@ -246,9 +246,9 @@ func sendEmailOTP(toEmail string, otp string, refCode string) error {
 							<tr>
 								<td class="footer">
 									<div class="footer-links">
-										<a href="#">ติดต่อผู้ดูแลระบบ</a>
-										<a href="#">นโยบายความเป็นส่วนตัว</a>
-										<a href="#">ข้อกำหนดการใช้งาน</a>
+										<a href="https://dorminet.studio/contact">ติดต่อผู้ดูแลระบบ</a>
+										<a href="https://dorminet.studio/privacy">นโยบายความเป็นส่วนตัว</a>
+										<a href="https://dorminet.studio/terms">ข้อกำหนดการใช้งาน</a>
 									</div>
 									<p class="footer-text">
 										ข้อมูลนี้ถูกส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลฉบับนี้<br>
