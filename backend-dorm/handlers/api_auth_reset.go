@@ -95,6 +95,14 @@ func sendEmailOTP(toEmail string, otp string) error {
 	}
 	client := resend.NewClient(apiKey)
 
+	now := time.Now().In(time.FixedZone("ICT", 7*3600))
+	monthsTh := []string{"มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"}
+	timeStr := fmt.Sprintf("%d %s %d, %02d:%02d น.", now.Day(), monthsTh[now.Month()-1], now.Year(), now.Hour(), now.Minute())
+	
+	b := make([]byte, 2)
+	rand.Read(b)
+	refCode := fmt.Sprintf("REQ-%s-%X", now.Format("20060102"), b)
+
 	htmlContent := fmt.Sprintf(`
 		<!DOCTYPE html>
 		<html lang="th">
@@ -104,112 +112,161 @@ func sendEmailOTP(toEmail string, otp string) error {
 			<meta name="color-scheme" content="light dark">
 			<meta name="supported-color-schemes" content="light dark">
 			<title>รหัส OTP สำหรับรีเซ็ตรหัสผ่าน</title>
-			<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 			<style>
-				/* Base resets */
-				body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%%; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-				table { border-collapse: collapse; }
+				body { margin: 0; padding: 0; background-color: #f4f5f7; font-family: 'Inter', -apple-system, sans-serif; color: #111827; -webkit-text-size-adjust: 100%%; }
+				table { border-collapse: collapse; width: 100%%; }
 				
-				/* Animations for supported clients */
-				@keyframes pulseGlow {
-					0%% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
-					70%% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
-					100%% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
-				}
+				.wrapper { padding: 40px 20px; }
+				.card { max-width: 560px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+				.header { padding: 32px 40px; border-bottom: 1px solid #e5e7eb; text-align: center; }
+				.content { padding: 40px; }
+				
+				h1, h2, h3, p { margin: 0; }
+				.brand { font-size: 26px; font-weight: 700; color: #111827; letter-spacing: -0.5px; }
+				.brand span { color: #4f46e5; }
+				
+				.greeting { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 16px; }
+				.message { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 32px; }
+				
+				.otp-container { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px; text-align: center; margin-bottom: 32px; }
+				.otp-label { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+				.otp-number { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 42px; font-weight: 700; color: #4f46e5; letter-spacing: 12px; margin-right: -12px; }
+				.otp-warning { margin-top: 16px; font-size: 13px; color: #4b5563; }
+				
+				.section-title { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 16px; border-left: 3px solid #4f46e5; padding-left: 10px; }
+				
+				.details-table { background-color: #ffffff; border-radius: 6px; margin-bottom: 32px; border: 1px solid #e5e7eb; }
+				.details-table td { padding: 14px 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; line-height: 1.4; }
+				.details-table tr:last-child td { border-bottom: none; }
+				.key { color: #6b7280; width: 35%%; font-weight: 500; }
+				.value { color: #111827; font-weight: 600; text-align: right; }
+				
+				.tips-box { background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 20px; }
+				.tip-title { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+				.tip-desc { font-size: 13px; color: #6b7280; line-height: 1.5; margin-bottom: 16px; }
+				.tip-desc:last-child { margin-bottom: 0; }
+				
+				.footer { background-color: #ffffff; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px; }
+				.footer-links { margin-bottom: 16px; }
+				.footer-links a { color: #4f46e5; text-decoration: none; font-size: 13px; font-weight: 500; margin: 0 10px; }
+				.footer-text { font-size: 12px; color: #9ca3af; line-height: 1.6; }
 
-				/* Dark Mode Variables & Styles */
 				@media (prefers-color-scheme: dark) {
-					.bg-body { background-color: #09090b !important; }
-					.bg-card { background-color: #18181b !important; }
-					.border-card { border-color: #27272a !important; box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important; }
-					.text-primary { color: #f4f4f5 !important; }
-					.text-secondary { color: #a1a1aa !important; }
-					.icon-bg { background: linear-gradient(135deg, #1f1f22 0%%, #141416 100%%) !important; box-shadow: 0 8px 16px rgba(0,0,0,0.3) !important; border: 1px solid #27272a !important; }
-					.bg-otp { 
-						background: linear-gradient(145deg, #1f1f22 0%%, #141416 100%%) !important; 
-						border: 1px solid #3f3f46 !important; 
-						box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05) !important;
-					}
-					.text-otp { 
-						background: linear-gradient(135deg, #a78bfa 0%%, #818cf8 100%%) !important;
-						-webkit-background-clip: text !important;
-						-webkit-text-fill-color: transparent !important;
-					}
-					.bg-footer { background-color: #09090b !important; border-color: #27272a !important; }
+					body { background-color: #0f1115 !important; color: #f9fafb !important; }
+					.card { background-color: #1a1d24 !important; border-color: #2a2e37 !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
+					.header { border-bottom-color: #2a2e37 !important; }
+					.brand { color: #f9fafb !important; }
+					.brand span { color: #818cf8 !important; }
+					
+					.greeting { color: #f9fafb !important; }
+					.message { color: #9ca3af !important; }
+					
+					.otp-container { background-color: #14161b !important; border-color: #2a2e37 !important; }
+					.otp-label { color: #6b7280 !important; }
+					.otp-number { color: #818cf8 !important; }
+					.otp-warning { color: #9ca3af !important; }
+					
+					.section-title { color: #f9fafb !important; border-left-color: #818cf8 !important; }
+					
+					.details-table { background-color: #14161b !important; border-color: #2a2e37 !important; }
+					.details-table td { border-bottom-color: #2a2e37 !important; }
+					.key { color: #9ca3af !important; }
+					.value { color: #f9fafb !important; }
+					
+					.tips-box { background-color: #14161b !important; border-color: #2a2e37 !important; }
+					.tip-title { color: #f9fafb !important; }
+					.tip-desc { color: #9ca3af !important; }
+					
+					.footer { background-color: #1a1d24 !important; border-top-color: #2a2e37 !important; }
+					.footer-links a { color: #818cf8 !important; }
+					.footer-text { color: #6b7280 !important; }
 				}
 			</style>
 		</head>
-		<body class="bg-body" style="margin: 0; padding: 0; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
-			<table width="100%%" border="0" cellspacing="0" cellpadding="0" class="bg-body" style="background-color: #f3f4f6; padding: 50px 20px;">
+		<body>
+			<table class="wrapper">
 				<tr>
 					<td align="center">
-						<table border="0" cellspacing="0" cellpadding="0" class="bg-card border-card" style="width: 100%%; max-width: 500px; background-color: #ffffff; border-radius: 20px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.08);">
-							
-							<!-- Top Gradient Bar -->
-							<tr>
-								<td style="height: 6px; background: linear-gradient(90deg, #4f46e5 0%%, #ec4899 50%%, #f59e0b 100%%);"></td>
-							</tr>
-
+						<table class="card" cellspacing="0" cellpadding="0">
 							<!-- Header -->
 							<tr>
-								<td align="center" style="padding: 40px 40px 10px 40px;">
-									<div class="icon-bg" style="width: 64px; height: 64px; background: linear-gradient(135deg, #eef2ff 0%%, #e0e7ff 100%%); border-radius: 18px; display: inline-block; margin-bottom: 24px; text-align: center; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.15);">
-										<img src="https://img.icons8.com/?size=100&id=82ZSIqW0k7J6&format=png&color=4f46e5" width="34" height="34" style="vertical-align: middle; padding-top: 15px;" alt="Lock">
-									</div>
-									<h1 class="text-primary" style="margin: 0; font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1px;">
-										Dormi<span style="background: linear-gradient(135deg, #4f46e5 0%%, #ec4899 100%%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; color: #4f46e5;">Net</span>
-									</h1>
+								<td class="header">
+									<div class="brand">Dormi<span>Net</span></div>
 								</td>
 							</tr>
 							
-							<!-- Body -->
+							<!-- Content -->
 							<tr>
-								<td align="center" style="padding: 0 40px 40px 40px;">
-									<h2 class="text-primary" style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #1e293b;">รหัสยืนยันตัวตน (OTP)</h2>
-									<p class="text-secondary" style="margin: 0 0 32px 0; font-size: 15px; color: #64748b; line-height: 1.6;">
-										เราได้รับคำขอรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณแล้ว<br>
-										โปรดใช้รหัส 6 หลักด้านล่างนี้เพื่อยืนยันตัวตน
+								<td class="content">
+									<h2 class="greeting">เรียน ผู้ใช้งานระบบ</h2>
+									<p class="message">
+										เราได้รับการร้องขอให้ตั้งรหัสผ่านใหม่สำหรับบัญชีของท่าน (<b>%s</b>) ผ่านแอปพลิเคชัน หากท่านเป็นผู้ทำรายการ โปรดใช้รหัสยืนยันตัวตน (OTP) ด้านล่างนี้เพื่อดำเนินการต่อ
 									</p>
-									
-									<!-- OTP Box -->
-									<table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 32px auto;">
+
+									<!-- OTP -->
+									<div class="otp-container">
+										<div class="otp-label">รหัสยืนยันตัวตน (OTP)</div>
+										<div class="otp-number">%s</div>
+										<div class="otp-warning">รหัสผ่านชั่วคราวนี้จะหมดอายุภายใน 15 นาที</div>
+									</div>
+
+									<!-- Details -->
+									<h3 class="section-title">ข้อมูลการทำรายการ</h3>
+									<table class="details-table" cellspacing="0" cellpadding="0">
 										<tr>
-											<td class="bg-otp" align="center" style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 24px 32px; animation: pulseGlow 3s infinite;">
-												<div class="text-otp" style="margin: 0; font-size: 42px; font-weight: 800; color: #4f46e5; letter-spacing: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-indent: 12px;">%s</div>
-											</td>
+											<td class="key">หมายเลขอ้างอิง</td>
+											<td class="value">%s</td>
+										</tr>
+										<tr>
+											<td class="key">บัญชีผู้ใช้</td>
+											<td class="value">%s</td>
+										</tr>
+										<tr>
+											<td class="key">เวลาที่บันทึก</td>
+											<td class="value">%s</td>
+										</tr>
+										<tr>
+											<td class="key">สถานะ</td>
+											<td class="value">รอการยืนยันรหัส OTP</td>
 										</tr>
 									</table>
-									
-									<!-- Warning -->
-									<table border="0" cellspacing="0" cellpadding="0">
-										<tr>
-											<td style="background-color: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(239, 68, 68, 0.2);">
-												<span style="display: inline-block; vertical-align: middle; margin-right: 6px;">⏱</span> รหัสนี้จะหมดอายุภายใน 15 นาที
-											</td>
-										</tr>
-									</table>
+
+									<!-- Security Tips -->
+									<h3 class="section-title">ข้อแนะนำด้านความปลอดภัย</h3>
+									<div class="tips-box">
+										<div class="tip-title">หากท่านไม่ได้ทำรายการนี้</div>
+										<div class="tip-desc">โปรดเพิกเฉยต่ออีเมลฉบับนี้ บัญชีของท่านยังคงปลอดภัยตราบใดที่ไม่มีผู้ใดทราบรหัส OTP ห้ามเปิดเผยรหัสนี้แก่บุคคลอื่นโดยเด็ดขาด รวมถึงเจ้าหน้าที่ของ DormiNet</div>
+										
+										<div class="tip-title">การตั้งรหัสผ่านใหม่</div>
+										<div class="tip-desc">รหัสผ่านควรมีความยาวอย่างน้อย 8 ตัวอักษร ประกอบด้วยตัวอักษรพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข ไม่ควรใช้ข้อมูลส่วนตัวที่คาดเดาได้ง่าย</div>
+									</div>
+
 								</td>
 							</tr>
 							
 							<!-- Footer -->
 							<tr>
-								<td class="bg-footer border-card" align="center" style="background-color: #f8fafc; border-top: 1px solid #e5e7eb; padding: 30px 40px;">
-									<p class="text-secondary" style="margin: 0 0 8px 0; font-size: 13px; color: #94a3b8; line-height: 1.5;">
-										หากคุณไม่ได้เป็นผู้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือทำการเปลี่ยนรหัสผ่านทันทีเพื่อความปลอดภัยของบัญชี
-									</p>
-									<p class="text-secondary" style="margin: 0; font-size: 12px; color: #cbd5e1;">
-										&copy; 2026 DormiNet System. All rights reserved.
+								<td class="footer">
+									<div class="footer-links">
+										<a href="#">ติดต่อผู้ดูแลระบบ</a>
+										<a href="#">นโยบายความเป็นส่วนตัว</a>
+										<a href="#">ข้อกำหนดการใช้งาน</a>
+									</div>
+									<p class="footer-text">
+										ข้อมูลนี้ถูกส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลฉบับนี้<br>
+										สงวนลิขสิทธิ์ &copy; 2026 DormiNet System<br>
+										อาคารหอพัก DormiNet, อุบลราชธานี, ประเทศไทย
 									</p>
 								</td>
 							</tr>
-							
 						</table>
 					</td>
 				</tr>
 			</table>
 		</body>
 		</html>
-	`, otp)
+	`, toEmail, otp, refCode, toEmail, timeStr)
 
 	params := &resend.SendEmailRequest{
 		From:    "DormiNet <noreply@dorminet.studio>",
