@@ -155,7 +155,7 @@ func sendEmailOTP(toEmail string, otp string) error {
 	`, otp)
 
 	params := &resend.SendEmailRequest{
-		From:    "DormiNet <noreply@dorminet.me>",
+		From:    "DormiNet <noreply@dorminet.studio>",
 		To:      []string{toEmail},
 		Subject: "รหัส OTP สำหรับรีเซ็ตรหัสผ่าน (DormiNet)",
 		Html:    htmlContent,
