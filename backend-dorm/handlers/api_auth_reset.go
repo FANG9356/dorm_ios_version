@@ -100,53 +100,80 @@ func sendEmailOTP(toEmail string, otp string) error {
 		<html lang="th">
 		<head>
 			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
 			<meta name="color-scheme" content="light dark">
 			<meta name="supported-color-schemes" content="light dark">
 			<title>รหัส OTP สำหรับรีเซ็ตรหัสผ่าน</title>
+			<style>
+				/* Base resets */
+				body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%%; }
+				table { border-collapse: collapse; }
+				
+				/* Dark Mode Variables & Styles */
+				@media (prefers-color-scheme: dark) {
+					.bg-body { background-color: #000000 !important; }
+					.bg-card { background-color: #1c1c1e !important; }
+					.border-card { border-color: #2c2c2e !important; }
+					.text-primary { color: #ffffff !important; }
+					.text-secondary { color: #98989d !important; }
+					.bg-otp { background-color: #2c2c2e !important; border-color: #3a3a3c !important; }
+					.text-otp { color: #ffffff !important; }
+					.bg-footer { background-color: #121212 !important; border-color: #2c2c2e !important; }
+					.text-brand { color: #5e5ce6 !important; }
+					.bg-warning { background-color: rgba(255, 69, 58, 0.15) !important; }
+					.text-warning { color: #ff453a !important; }
+				}
+			</style>
 		</head>
-		<body style="margin: 0; padding: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
-			<table width="100%%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-				<!-- Header -->
+		<body class="bg-body" style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f2f2f7;">
+			<table width="100%%" border="0" cellspacing="0" cellpadding="0" class="bg-body" style="background-color: #f2f2f7; padding: 40px 20px;">
 				<tr>
-					<td align="center" style="background-color: #0f172a; padding: 40px 20px;">
-						<img src="https://ui-avatars.com/api/?name=DormiNet&background=4f46e5&color=fff&size=120&rounded=true&bold=true" width="80" height="80" alt="DormiNet Logo" style="display: block; border-radius: 50%%; border: 3px solid #6366f1; margin-bottom: 15px;">
-						<h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: bold; letter-spacing: 1px;">DormiNet</h1>
-					</td>
-				</tr>
-				<!-- Body -->
-				<tr>
-					<td style="padding: 40px 30px; text-align: center;">
-						<h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px;">รหัสยืนยันตัวตน (OTP)</h2>
-						<p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-							คุณได้ทำการร้องขอเพื่อรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณ<br>
-							กรุณานำรหัส 6 หลักด้านล่างนี้กรอกในระบบเพื่อดำเนินการต่อ
-						</p>
-						
-						<!-- OTP Box -->
-						<table width="100%%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+					<td align="center">
+						<table border="0" cellspacing="0" cellpadding="0" class="bg-card border-card" style="width: 100%%; max-width: 500px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e5ea; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
+							<!-- Header -->
 							<tr>
-								<td align="center">
-									<div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px; display: inline-block; min-width: 250px;">
-										<span style="font-size: 40px; font-weight: bold; color: #4338ca; letter-spacing: 10px; font-family: 'Courier New', Courier, monospace;">%s</span>
-									</div>
+								<td align="center" style="padding: 40px 40px 20px 40px;">
+									<h1 class="text-primary" style="margin: 0; font-size: 28px; font-weight: 800; color: #1c1c1e; letter-spacing: -0.5px;">Dormi<span class="text-brand" style="color: #4f46e5;">Net</span></h1>
+								</td>
+							</tr>
+							<!-- Body -->
+							<tr>
+								<td align="center" style="padding: 0 40px 40px 40px;">
+									<h2 class="text-primary" style="margin: 0 0 12px 0; font-size: 20px; font-weight: 600; color: #1c1c1e;">รหัสยืนยันตัวตน (OTP)</h2>
+									<p class="text-secondary" style="margin: 0 0 32px 0; font-size: 15px; color: #3a3a3c; line-height: 1.6;">
+										คุณได้ทำการร้องขอเพื่อรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณ<br>
+										กรุณานำรหัส 6 หลักด้านล่างนี้กรอกในระบบเพื่อดำเนินการต่อ
+									</p>
+									<!-- OTP Box -->
+									<table border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 24px auto;">
+										<tr>
+											<td class="bg-otp" align="center" style="background-color: #f2f2f7; border: 1px solid #e5e5ea; border-radius: 12px; padding: 20px 32px;">
+												<div class="text-otp" style="margin: 0; font-size: 40px; font-weight: 700; color: #1c1c1e; letter-spacing: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; text-indent: 12px;">%s</div>
+											</td>
+										</tr>
+									</table>
+									<!-- Warning -->
+									<table border="0" cellspacing="0" cellpadding="0">
+										<tr>
+											<td class="bg-warning text-warning" style="background-color: #fef2f2; color: #dc2626; font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: 20px;">
+												รหัสนี้จะหมดอายุภายใน 15 นาที
+											</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<!-- Footer -->
+							<tr>
+								<td class="bg-footer border-card" align="center" style="background-color: #fafafa; border-top: 1px solid #e5e5ea; padding: 24px 40px;">
+									<p class="text-secondary" style="margin: 0 0 8px 0; font-size: 13px; color: #8e8e93; line-height: 1.5;">
+										หากคุณไม่ได้เป็นผู้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือเปลี่ยนรหัสผ่านเพื่อความปลอดภัย
+									</p>
+									<p class="text-secondary" style="margin: 0; font-size: 12px; color: #aeaeb2;">
+										&copy; 2026 DormiNet System. All rights reserved.
+									</p>
 								</td>
 							</tr>
 						</table>
-
-						<p style="color: #dc2626; font-size: 14px; font-weight: bold; margin: 0; padding: 10px; background-color: #fef2f2; border-radius: 6px; display: inline-block;">
-							รหัสนี้จะหมดอายุภายใน 15 นาที
-						</p>
-					</td>
-				</tr>
-				<!-- Footer -->
-				<tr>
-					<td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-						<p style="color: #64748b; font-size: 13px; margin: 0 0 10px 0; line-height: 1.5;">
-							หากคุณไม่ได้เป็นผู้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้
-						</p>
-						<p style="color: #94a3b8; font-size: 12px; margin: 0;">
-							&copy; 2026 DormiNet System. All rights reserved.
-						</p>
 					</td>
 				</tr>
 			</table>
