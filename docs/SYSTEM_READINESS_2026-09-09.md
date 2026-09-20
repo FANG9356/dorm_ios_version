@@ -34,7 +34,7 @@ Commit ที่ตรวจ: `e72d13a`
 | iOS unit/UI tests | รันไม่ได้ เพราะ scheme ไม่มี test action/ไม่มี test target |
 | Backend `go test ./...` | ผ่านการ compile ทุก package แต่ทุก package รายงาน `[no test files]` |
 | Backend `go vet ./...` | ผ่าน |
-| Production health endpoint | `https://api.dorminet.studio/api/system/ping` ตอบ HTTP 200 และ `{"status":"online"}` ณ เวลาประเมิน |
+| Production health endpoint | `https://dorminet.studio/api/system/ping` ตอบ HTTP 200 และ `{"status":"online"}` ณ เวลาประเมิน |
 | ทดสอบเปิดแอปบน Simulator | เคยผ่านถึงหน้า Login; ยังไม่ใช่ end-to-end test |
 | ทดสอบ iPhone จริงสองเครื่อง | ยังไม่ได้ทำ |
 

@@ -11,8 +11,8 @@
 | Workspace บนเครื่องพัฒนา | `/Volumes/FangB/dorm_project` |
 | Git branch หลัก | `main` |
 | Git remote | `git@github.com:FANG9356/dorm_ios_version.git` |
-| Production API | `https://api.dorminet.studio` |
-| Health endpoint | `https://api.dorminet.studio/api/system/ping` |
+| Production API | `https://dorminet.studio` |
+| Health endpoint | `https://dorminet.studio/api/system/ping` |
 | Production SSH host/IP | `202.29.232.28` |
 | SSH port | `22` |
 | SSH user | `fang` |
@@ -40,7 +40,7 @@
 cd /Volumes/FangB/dorm_project
 git branch --show-current
 git status --short
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 ผลที่คาดหวัง:
@@ -95,7 +95,7 @@ ssh -t fang@202.29.232.28 'sudo systemctl is-active dormitory.service'
 ssh -t fang@202.29.232.28 'sudo systemctl is-active dormitory-ocr.service'
 ssh -t fang@202.29.232.28 'sudo journalctl -u dormitory.service -n 100 --no-pager'
 ssh -t fang@202.29.232.28 'sudo journalctl -u dormitory-ocr.service -n 100 --no-pager'
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 ถ้าต้องตรวจ LINE outbox/workflow ให้ใช้สคริปต์ที่ลดการเปิดเผยข้อมูล:
@@ -139,7 +139,7 @@ go test ./...
 go test -race ./handlers
 go vet ./...
 cd ..
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 อ่าน diff ที่จะ deploy และยืนยันว่า archive ไม่มี `.env`, database, uploads, log หรือ binary เก่า
@@ -206,7 +206,7 @@ ssh -t fang@202.29.232.28 'chmod +x /home/fang/dorminet_workspace/deploy_flex_sa
 ### 5.4 ตรวจหลัง deploy
 
 ```bash
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ssh -t fang@202.29.232.28 'sudo systemctl is-active dormitory.service'
 ssh -t fang@202.29.232.28 'sudo systemctl is-active dormitory-ocr.service'
 ssh -t fang@202.29.232.28 'sudo journalctl -u dormitory.service -n 100 --no-pager'

@@ -71,7 +71,7 @@ sudo env DORMINET_MAINTENANCE_MODE=true ./server_debian restore-server-backup \
 ```bash
 sudo systemctl start dormitory.service
 sudo systemctl is-active dormitory.service
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 จากนั้นต้องตรวจอย่างน้อย:
@@ -98,7 +98,7 @@ sudo env DORMINET_MAINTENANCE_MODE=true ./server_debian rollback-server-restore 
   --uploads ./uploads \
   --failed-restores ./restore_rollbacks
 sudo systemctl start dormitory.service
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 คำสั่ง rollback จะตรวจฐานข้อมูลใน rollback set ก่อนสลับ และเก็บชุดที่ล้มเหลวไว้ใน path ที่คืนเป็น `failed_restore_path` เพื่อวิเคราะห์ภายหลัง

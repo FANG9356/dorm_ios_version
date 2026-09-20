@@ -7,7 +7,7 @@ class APIService {
     nonisolated deinit {}
     
     // โดเมนที่เจาะอุโมงค์ Cloudflare ไว้ ทะลุเข้าเซิร์ฟเวอร์เราโดยตรง
-    var baseURL = "https://api.dorminet.studio/api"
+    var baseURL = "https://dorminet.studio/api"
     
     // เก็บอีเมลล์ที่ใช้งานอยู่ปัจจุบัน
     var currentEmail: String?

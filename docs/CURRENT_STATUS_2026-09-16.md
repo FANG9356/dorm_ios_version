@@ -60,8 +60,8 @@
 
 ### LINE, LIFF และลูกบ้าน
 
-- production webhook ใช้ `https://api.dorminet.studio/api/webhook/line`
-- LIFF ใช้ `https://api.dorminet.studio/liff` และตรวจ LINE client ID/access token
+- production webhook ใช้ `https://dorminet.studio/api/webhook/line`
+- LIFF ใช้ `https://dorminet.studio/liff` และตรวจ LINE client ID/access token
 - ผูกบัญชีแบบกรอกเบอร์ก่อน ไม่เปิดรายการห้องทั้งหมด และ fail closed เมื่อเบอร์ตรงหลายห้อง
 - บัญชีที่ผูกแล้วเห็นหน้า “ข้อมูลของฉัน” แทนฟอร์มผูกซ้ำ
 - ข้อมูลห้อง/สัญญา/บิลค้างอ่านจาก tenant database ปัจจุบัน จึงเปลี่ยนตามเมื่อแอดมินย้ายห้องและซิงก์
@@ -78,7 +78,7 @@
 - backend `go test -count=1 -race ./...` และ `go vet ./...` ผ่าน
 - Debug device build/sign/install บน iPhone “F” ผ่าน และมี UAT จริงบาง flow
 - production binary ก่อนรอบ restore/media hardening คือ SHA-256 `a7d882c536839ba86c78382499d8a074341211580168539e90445ec7f3ea5e51` และถูกเก็บไว้ใน rollback set
-- production health ที่ `https://api.dorminet.studio/api/system/ping` ตอบ HTTP 200
+- production health ที่ `https://dorminet.studio/api/system/ping` ตอบ HTTP 200
 - production deploy binary ที่มี maintenance-mode restore/rollback แล้ว SHA-256 `2f069031e35d1a57eb5cefa8760849f651c5c6c57eaccc79f683f9b7660e5d6b`; archive ล่าสุดผ่าน `--verify-only` โดยพบ 2 databases และ 2 media files
 - production deploy private-media/checksum binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`; health ทั้ง loopback/โดเมนตอบ 200, known public upload ตอบ 404, tenant media ที่ไม่มี session ตอบ 401 และ unsigned LINE media ตอบ 404
 - วันที่ 17 กันยายน deploy maintenance notification outbox binary SHA-256 `0ee715d07ab469c8d61d19103b037fe238aab3d7c469210fb3402f02c7fcc783`; Linux tests, local unit/race/vet, loopback/public health และ SQLite master/tenant `quick_check` ผ่าน โดยยังรอ UAT เปลี่ยนสถานะจริงเพื่อยืนยันข้อความถึง LINE ปลายทาง

@@ -2,15 +2,15 @@
 
 วันที่: 10 กันยายน 2569
 
-ขอบเขต: ตรวจระบบจริงที่ `202.29.232.28`, ทดสอบ staging จากสำเนาฐานข้อมูล production, deploy backend ที่ `api.dorminet.studio` และย้าย LINE webhook จากโดเมนเดิม โดยไม่ย้อนหรือลบการแก้ไขใน working tree
+ขอบเขต: ตรวจระบบจริงที่ `202.29.232.28`, ทดสอบ staging จากสำเนาฐานข้อมูล production, deploy backend ที่ `dorminet.studio` และย้าย LINE webhook จากโดเมนเดิม โดยไม่ย้อนหรือลบการแก้ไขใน working tree
 
 > สรุปสถานะแบบ “ทำแล้ว / ทำบางส่วน / ยังเหลือ” อยู่ที่ [CURRENT_STATUS_2026-09-16.md](CURRENT_STATUS_2026-09-16.md)
 
 ## ผลที่ใช้งานจริงแล้ว
 
-- เปลี่ยน LINE Messaging API webhook จาก `https://dorminet.me/api/webhook/line` เป็น `https://api.dorminet.studio/api/webhook/line`
+- เปลี่ยน LINE Messaging API webhook จาก `https://dorminet.me/api/webhook/line` เป็น `https://dorminet.studio/api/webhook/line`
 - LINE รายงาน endpoint ใหม่เป็น active และ webhook test สำเร็จด้วย HTTP 200
-- วันที่ 15 กันยายน 2569 ย้าย LIFF endpoint จาก `https://dorminet.me/liff` เป็น `https://api.dorminet.studio/liff` สำเร็จ LIFF URL ของ LINE redirect มาที่โดเมนใหม่แล้ว และหน้าใหม่ถูกฝังใน backend binary เพื่อไม่ให้ deployment ขาดไฟล์ static
+- วันที่ 15 กันยายน 2569 ย้าย LIFF endpoint จาก `https://dorminet.me/liff` เป็น `https://dorminet.studio/liff` สำเร็จ LIFF URL ของ LINE redirect มาที่โดเมนใหม่แล้ว และหน้าใหม่ถูกฝังใน backend binary เพื่อไม่ให้ deployment ขาดไฟล์ static
 - ปรับหน้า LIFF ให้ใช้ธีมเดียวกับแอป DormiNetX: indigo/purple glass UI, icon อาคาร, responsive layout, Light/Dark Mode และแยกสีเขียวไว้เป็นสถานะ LINE
 - วันที่ 15 กันยายน 2569 ปรับขั้นตอน LIFF ให้กรอกเบอร์โทรก่อน แล้ว backend ค้นหาและแสดงเฉพาะห้องที่ผูกกับเบอร์นั้น ไม่ส่งรายการห้องทั้งหมดให้ browser; ถ้าเบอร์ตรงกับลูกบ้านที่ใช้งานอยู่มากกว่าหนึ่งห้องจะปฏิเสธแบบ fail closed และขั้นตอนบันทึกยังตรวจเบอร์กับห้องซ้ำอีกครั้ง
 - ปรับ LIFF รอบ UI ให้กลับเป็น minimal single-card layout ตัด stepper/ambient layers/การ์ดซ้อนออก คงสี indigo ของ DormiNetX และสีเขียวเฉพาะ LINE; หน้ากรอกกับหน้ายืนยันสูงเท่ากัน 304px ที่ viewport 390px และ input ใช้ 16px พร้อม blur ก่อนค้นหาเพื่อป้องกัน iOS auto-zoom
@@ -54,7 +54,7 @@
 - วันที่ 16 กันยายน 2569 ปิด public `/uploads`, เพิ่ม tenant ownership สำหรับสลิป/รูปแจ้งซ่อม/รูปจอง/หลักฐานสภาพห้อง, เปลี่ยนรูปใบเสร็จที่ LINE ต้องอ่านเป็น HMAC URL อายุ 24 ชั่วโมง และเพิ่ม SHA-256 response verification กับ retry 3 ครั้งใน iOS; production binary SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`
 - ผลกระทบที่ยอมรับจากการปิดช่องโหว่: รูปในข้อความ LINE เก่าที่ฝัง URL `/uploads/...` อาจเปิดซ้ำไม่ได้ แต่ไฟล์ต้นฉบับไม่ถูกลบและยังเข้าถึงได้ผ่านแอปที่ยืนยันสิทธิ์; ข้อความใหม่ใช้ signed URL
 - deploy backend binary ใหม่เข้า `dormitory.service` ที่พอร์ต 4283 หลังทดสอบบน Linux/amd64; binary รอบล่าสุดที่ตรวจหลัง restart มี SHA-256 `75e357083809fce83d28a13c0b4332329a5cecc6318feaa0dd14e8a3a5ff68cd`
-- production health ผ่านทั้ง loopback และ `https://api.dorminet.studio/api/system/ping`
+- production health ผ่านทั้ง loopback และ `https://dorminet.studio/api/system/ping`
 - session เดิมยังใช้ได้, token ผิดรูปแบบถูกปฏิเสธ 401, account scope ของรายชื่อผู้ดูแลและ sync metadata ตอบสำเร็จ
 - LINE webhook ที่ลงลายเซ็นถูกต้องผ่านบน production
 - LIFF ตรวจ `client_id` ของ access token ให้ตรงกับ channel ของโปรเจกต์และ token ต้องไม่หมดอายุ ไม่ยอมรับเพียงเพราะเป็น token ของ LINE channel อื่น
@@ -176,7 +176,7 @@ backend ใหม่สร้าง `server_backup_*.zip` แบบ multi-tenant
 | iOS build หลังเพิ่ม remote media hydration/self-healing | ผ่าน Debug Simulator build; sync regression tests รวมกรณี version เท่ากันแต่ local ขาดข้อมูลผ่าน และ XCTest ผ่าน 42/43 โดย 1 test เป็น Keychain Simulator entitlement `-34018` ไม่เกี่ยวกับ sync/media |
 | iOS pending-local + LINE remote rebase | CoreDataSafetyTests ผ่าน 18/18 รวม preservation ของ local dirty room และ remote maintenance; signed Debug device build/install บน iPhone 11 ผ่าน |
 | iOS unit tests หลังบังคับ month key เป็น Gregorian | ผ่านทุก test ใน scheme `DormiNetX` |
-| Production LIFF page/assets + LINE redirect หลังเปลี่ยน endpoint | ผ่าน, HTTP 200 และชี้ `api.dorminet.studio/liff` |
+| Production LIFF page/assets + LINE redirect หลังเปลี่ยน endpoint | ผ่าน, HTTP 200 และชี้ `dorminet.studio/liff` |
 | Production room-list endpoint เดิม | ปิดการเปิดเผยรายการห้อง, HTTP 410 |
 | Production phone lookup ด้วยเบอร์ที่ไม่มีในระบบ | ปฏิเสธ HTTP 401 โดยไม่เปิดเผยข้อมูลลูกบ้าน |
 | Admin cross-account authorization regression tests | ผ่าน |

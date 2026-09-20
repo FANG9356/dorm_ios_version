@@ -55,7 +55,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - Password reset เชื่อมจาก iOS แล้ว ตรวจจำนวนครั้งที่ลอง OTP และใช้ OTP ได้ครั้งเดียว โดยเปลี่ยนรหัสผ่านกับใช้สิทธิ์ OTP ใน transaction เดียวกัน
 - Session ถูกเก็บและตรวจในฐานข้อมูล เพิกถอนเมื่อเปลี่ยน/รีเซ็ตรหัสผ่าน และ endpoint สาธารณะมี rate limit; OTP lockout เก็บใน SQLite จึงคงอยู่หลัง restart
 - Backup ฝั่งเซิร์ฟเวอร์ครอบคลุม master/tenant database พร้อม manifest และ checksum; สิทธิ์จัดการ backup ทั้งระบบแยกเป็น system operator
-- LINE webhook production ใช้ `https://api.dorminet.studio/api/webhook/line` แล้ว และ identity เก่าที่จับคู่คนปัจจุบันไม่ได้ถูกพักเป็น `pending_relink`
+- LINE webhook production ใช้ `https://dorminet.studio/api/webhook/line` แล้ว และ identity เก่าที่จับคู่คนปัจจุบันไม่ได้ถูกพักเป็น `pending_relink`
 - การเพิ่มผู้ดูแลจาก iOS ใช้ authenticated staff endpoint ภายใต้หอเดิม ไม่สร้าง superadmin/tenant ใหม่ และไม่มีรหัสเริ่มต้นที่คาดเดาได้
 
 ## สิ่งที่ยังไม่เสร็จ

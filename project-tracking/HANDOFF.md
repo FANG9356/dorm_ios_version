@@ -73,7 +73,7 @@ go vet ./...
 ```bash
 git diff --check
 git status --short
-curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
+curl --fail --silent --show-error https://dorminet.studio/api/system/ping
 ```
 
 ## Production และ rollback
@@ -82,7 +82,7 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 
 - production binary ที่ตรวจเวลา 14:18 น. เคยเป็น SHA-256 `4262b9c08a3a6cef0721a2249e7e743bd9a98dce42c44c01a596a64934faab0c` แต่มี deploy ใหม่ใน activity report เวลา 14:20; **ห้ามถือ SHA นี้เป็น current** ให้ตรวจ `sha256sum /opt/dormitory/server_debian` สดก่อนทุกงาน
 - rollback set ที่ตรวจเวลา 14:18 น. คือ `/home/fang/dorminet_workspace/backups/20260918-002045-pre-flex-ui`; deploy หลังจากนั้นอาจมีชุดใหม่ ให้เรียง directory และใช้ path ที่ safe deploy รอบนั้นรายงาน ห้ามเดา (ทุกชุดยังไม่รวม atomic rollback ของ OCR)
-- health endpoint: `https://api.dorminet.studio/api/system/ping`
+- health endpoint: `https://dorminet.studio/api/system/ping`
 - safe deployment script จะสำรอง binary/master DB ตรวจ health และตรวจ schema additive ของ outbox
 - ระบบเชื่อมต่อ SSH ผ่าน Key (`id_ed25519`) แบบ Passwordless แล้ว ส่วนรหัสผ่าน `sudo` จะถูกถามตอนรันคำสั่ง restart service บนเซิร์ฟเวอร์
 - ห้ามใช้สคริปต์ `.exp` หรือสคริปต์อัตโนมัติในการรันคำสั่งที่ต้องใช้รหัสผ่าน (สคริปต์ตรวจสอบเก่าๆ เช่น inspect ถูกลบออกแล้วเพื่อความปลอดภัย)
