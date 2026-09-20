@@ -8,7 +8,7 @@
 
 | ลำดับ | งาน | สถานะ | ผู้ดำเนินการ/เงื่อนไข | เกณฑ์ปิดงาน |
 | ---: | --- | --- | --- | --- |
-| 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | กำลังทำบางส่วน | นำรหัสผ่าน SSH เซิร์ฟเวอร์ออกจากสคริปต์เก่าและใช้ SSH Key แล้ว (ส่วนของเซิร์ฟเวอร์เสร็จ) เหลือ JWT/LINE/Resend | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
+| 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | **เสร็จสิ้น** | นำรหัสผ่านออกจากสคริปต์, ปรับใช้ SSH Key และดำเนินการหมุนเวียน (Rotate) คีย์ JWT, LINE Token และ Resend API Key ใหม่เรียบร้อยแล้ว | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
 | 2 | UAT สอง iPhone และสองบัญชี | รอดำเนินการ | ต้องมีอุปกรณ์และบัญชีทดสอบแยกกัน | ทดสอบแก้ข้อมูลชนกัน/คนละรายการ, ตัดเน็ต, force quit, backup/restore และไม่พบข้อมูลข้ามบัญชีหรือสูญหาย |
 | 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
 | 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |

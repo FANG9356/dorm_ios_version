@@ -32,7 +32,7 @@ DormiNetX ขยับเข้าใกล้ Production Readiness ขึ้น
 
 | ระดับ | ความเสี่ยง | เหตุผลที่ยังไม่ผ่าน | หลักฐานที่ต้องมี |
 | --- | --- | --- | --- |
-| P0 | Provider secret rotation | JWT/LINE/Resend เคยอยู่ใน Git history | revoke/rotate ที่ provider, session cutover, login/LINE/email หลังเปลี่ยน |
+| ~~P0~~ | ~~Provider secret rotation~~ | ~~JWT/LINE/Resend เคยอยู่ใน Git history~~ | ~~revoke/rotate ที่ provider, session cutover, login/LINE/email หลังเปลี่ยน~~ |
 | P0 | สอง iPhone/สองบัญชี | ยังไม่พิสูจน์ conflict, interruption และ account isolation ครบ | UAT matrix พร้อมผลและหลักฐานไม่สูญหาย/ไม่ข้ามบัญชี |
 | P0 | Media lifecycle | access/checksum/retry ผ่าน แต่ cleanup/retention/UAT ยังขาด | cross-device download, orphan cleanup และ retention policy |
 | P0 | Financial ledger | transaction/receipt เริ่มมี แต่ refund/void/credit ยังไม่ครบ | immutable actor/reason audit และ migration/UAT |
@@ -41,7 +41,7 @@ DormiNetX ขยับเข้าใกล้ Production Readiness ขึ้น
 
 ## เป้าหมายรอบถัดไป
 
-1. หมุน provider secrets (JWT, LINE Token) ด้วย cutover/rollback plan
+1. ~~หมุน provider secrets (JWT, LINE Token) ด้วย cutover/rollback plan~~ (เสร็จสิ้น)
 2. ตรวจสอบการทำ Fallback แบบ Fail Closed ก่อนใช้งานตัดยอดจริง
 3. ทำ UAT สอง iPhone/สองบัญชี รวม conflict, offline, force quit และ tenant isolation
 4. ปิด media lifecycle, financial adjustment audit และ production restore drill

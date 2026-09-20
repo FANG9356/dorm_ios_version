@@ -56,4 +56,4 @@
 
 ## สิ่งที่ยังไม่เสร็จ
 
-สรุปเฉพาะหัวข้อหลัก: provider secret rotation, UAT สอง iPhone/สองบัญชี, maintenance quote/bill/slip UAT ครบวงจร, hardening การตรวจสลิปอัตโนมัติ, media cleanup/retention, full invoice/refund/void ledger, production restore drill, UI automation, monitoring/incident process, APNs, localization, accessibility และ performance soak รายละเอียดและเกณฑ์ปิดอยู่ใน [PENDING_WORK.md](PENDING_WORK.md)
+สรุปเฉพาะหัวข้อหลัก: UAT สอง iPhone/สองบัญชี, maintenance quote/bill/slip UAT ครบวงจร, hardening การตรวจสลิปอัตโนมัติ, media cleanup/retention, full invoice/refund/void ledger, production restore drill, UI automation, monitoring/incident process, APNs, localization, accessibility และ performance soak รายละเอียดและเกณฑ์ปิดอยู่ใน [PENDING_WORK.md](PENDING_WORK.md)
