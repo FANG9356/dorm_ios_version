@@ -8,7 +8,7 @@
 
 | ลำดับ | งาน | สถานะ | ผู้ดำเนินการ/เงื่อนไข | เกณฑ์ปิดงาน |
 | ---: | --- | --- | --- | --- |
-| 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | รอดำเนินการ | ต้องเข้าถึงหน้า provider และวางแผน session cutover ร่วมกับเจ้าของระบบ | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
+| 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | กำลังทำบางส่วน | นำรหัสผ่าน SSH เซิร์ฟเวอร์ออกจากสคริปต์เก่าและใช้ SSH Key แล้ว (ส่วนของเซิร์ฟเวอร์เสร็จ) เหลือ JWT/LINE/Resend | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
 | 2 | UAT สอง iPhone และสองบัญชี | รอดำเนินการ | ต้องมีอุปกรณ์และบัญชีทดสอบแยกกัน | ทดสอบแก้ข้อมูลชนกัน/คนละรายการ, ตัดเน็ต, force quit, backup/restore และไม่พบข้อมูลข้ามบัญชีหรือสูญหาย |
 | 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
 | 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |
@@ -76,3 +76,6 @@
 - [x] รวมค้นหา รอบบิล และสถานะของหน้าการเงินในการ์ดกระจกฝ้าใบเดียว พร้อมตัวเลือกเดือน–ปีและแท็บสถานะแบบแตะ/ลากเลือก
 - [x] Build/sign/install งาน UI รอบล่าสุดบน iPhone “F” สำเร็จ โดยใช้ฐานข้อมูลเดิม; รายการ `UI-001`–`UI-006` ยังรอผู้ใช้ตรวจซ้ำก่อนปิด issue
 - [x] ตรวจสอบและแก้ไขบั๊ก HTTP Response Body Leak (Memory & Connection Leak) ในฟังก์ชันส่งข้อความของ `line_bot.go`
+- [x] พัฒนาและอัปเกรด Tenant Portal บนเว็บแอปพลิเคชัน LIFF โดยดึงประวัติการชำระเงินบิลเก่าและประเมินยอดบิลล่วงหน้ามาแสดง 
+- [x] เปลี่ยนการตอบกลับของปุ่ม "ประวัติการชำระ" จาก Carousel เป็น Flex Message ขนาดเล็กที่ลิงก์ไปหน้า Tenant Portal LIFF
+- [x] อุดช่องโหว่ความปลอดภัยระดับ P0 โดยการทำ Passwordless SSH Key Authentication และลบสคริปต์ `.exp` ที่มีรหัสผ่านฮาร์ดโค้ดกว่า 30 ไฟล์ออกจาก Git History ของโค้ดปัจจุบัน

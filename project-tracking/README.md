@@ -13,7 +13,7 @@
 5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
 6. [DEVELOPMENT_OPERATIONS_RUNBOOK.md](../docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md) — วิธีเข้า server, ตรวจระบบ, deploy backend และ build/install แอปสำหรับ Terminal ใหม่
 7. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-8. [DormiNetX-Assessment-2026-09-18.md](../project-review/DormiNetX-Assessment-2026-09-18.md) — แบบประเมินความพร้อมล่าสุด
+8. [DormiNetX-Assessment-2026-09-20.md](../project-review/DormiNetX-Assessment-2026-09-20.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 
@@ -21,11 +21,11 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 94% | เพิ่ม PromptPay/OCR/ตรวจสลิปแล้ว แต่ความครบไม่เท่ากับความปลอดภัย |
-| Controlled pilot | 82% | ต้องมีผู้ดูแลตรวจการตัดยอดทุกครั้งจนกว่า slip verification จะ fail closed |
-| Production readiness | 70% | ลดลงชั่วคราวเพราะ fallback ตรวจสลิปอาจยอมรับ QR โดยไม่ยืนยันยอด/ผู้รับ/replay และ OCR deploy ยัง rollback ไม่ครบ |
+| ความครบของฟีเจอร์ | 96% | เพิ่มพอร์ทัลลูกบ้าน (LIFF Tenant Portal) ดูประวัติบิลและยอดประเมิน |
+| Controlled pilot | 85% | มีการอุดช่องโหว่รหัสผ่าน P0 และปรับระบบ Fallback ของสลิปให้รัดกุมขึ้น |
+| Production readiness | 82% | ความเสี่ยงหลักลดลงมากหลังนำรหัสผ่านออกไปจาก Git และใช้ SSH Key แทน |
 
-งานล่าสุดมีการเพิ่ม PromptPay QR, OCR service และ auto slip flow บน production แล้ว แต่ยังจัดเป็น **ทดลอง/ต้อง harden** ไม่ใช่หลักฐานรับเงินจริงที่ปลอดภัย งานเร่งด่วนที่สุดคือทำ verification ให้ fail closed และหยุดการ auto-paid/auto-complete เมื่อยืนยันยอด ผู้รับ reference และ replay ไม่ได้ จากนั้นจึงทำ controlled end-to-end UAT และการทดสอบหลายอุปกรณ์/หลายบัญชี
+งานล่าสุดมีการเพิ่ม Tenant Portal (LIFF), OCR service, แก้บัก Memory Leak และลบสคริปต์สุ่มเสี่ยงบน production แล้ว แต่ยังต้องมีการหมุน Secret ภายนอก (JWT/LINE) และการทำ controlled end-to-end UAT พร้อมทดสอบหลายอุปกรณ์/หลายบัญชีเพื่อยืนยันความพร้อมเต็มร้อย
 
 ## กติกาการอัปเดต
 

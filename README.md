@@ -2,7 +2,7 @@
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
 
-> สถานะ ณ 17 กันยายน 2569: backend hardening, LINE/LIFF, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, public-media closure, คิว retry และ workflow อนุมัติค่าซ่อม/ส่งบิลถูก deploy แล้ว ประเมินความครบของฟีเจอร์ **92%**, controlled pilot **89%** และ production readiness **79%** ยังไม่ใช่ production-ready 100% จนกว่าจะปิด provider secret rotation, UAT สองเครื่อง/สองบัญชี, media lifecycle ส่วนสุดท้าย, financial refund/void ledger และ production restore drill
+> สถานะ ณ 20 กันยายน 2569: backend hardening, LINE/LIFF Tenant Portal, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, คิว retry, อุดช่องโหว่รหัสผ่าน P0 ด้วย SSH Key และแก้ Memory Leak แล้ว ประเมินความครบของฟีเจอร์ **96%**, controlled pilot **85%** และ production readiness **82%** (เพิ่มขึ้นจากการปิดช่องโหว่รหัสผ่านและการเพิ่ม Tenant Portal) ยังไม่ใช่ production-ready 100% จนกว่าจะหมุนเวียน (Rotate) Secret ที่เหลือ และทดสอบ UAT ข้ามเครื่องอย่างสมบูรณ์
 
 เริ่มรับช่วงงานจาก [Project Tracking](project-tracking/README.md) ซึ่งรวม [วิสัยทัศน์](project-tracking/PROJECT_VISION.md), [สถานะปัจจุบัน](project-tracking/WORK_STATUS.md), [งานค้าง](project-tracking/PENDING_WORK.md), [คู่มือส่งต่อ](project-tracking/HANDOFF.md) และ [แบบประเมินล่าสุด](project-review/DormiNetX-Assessment-2026-09-17.md) ส่วน [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) เป็น baseline เดิม ไม่ใช่สถานะปัจจุบัน
 
@@ -12,7 +12,7 @@ DormiNetX เป็นระบบจัดการหอพักแบบ loc
 - ให้การทำงานประจำวันใช้ข้อมูลในเครื่องได้ก่อน แล้วค่อยซิงก์ snapshot ขึ้น backend
 - ลดการกรอกข้อมูลซ้ำ โดยสร้างรอบบิลรายเดือนจากข้อมูลลูกบ้าน ห้อง และประเภทห้อง
 - เก็บประวัติการเงินตามลูกบ้าน แม้มีการย้ายห้อง
-- รองรับการแจ้งยอด/ใบเสร็จผ่าน LINE และการแจ้งเตือนเข้าเครื่องในเป้าหมายสุดท้าย
+- รองรับการแจ้งยอด/ใบเสร็จผ่าน LINE และพอร์ทัลลูกบ้าน (Tenant Portal) ผ่าน Web App LIFF เพื่อดูประวัติย้อนหลังและประเมินยอดบิลล่วงหน้า
 
 ## สิ่งที่มีแล้ว
 

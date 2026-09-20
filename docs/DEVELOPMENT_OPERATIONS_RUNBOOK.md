@@ -16,7 +16,7 @@
 | Production SSH host/IP | `202.29.232.28` |
 | SSH port | `22` |
 | SSH user | `fang` |
-| SSH/sudo password | อ่านค่าปัจจุบันจาก `set password` ใน `backend-dorm/build_deploy.exp` บนเครื่องพัฒนาเท่านั้น ไฟล์นี้เป็นแหล่ง credential ชั่วคราว **ห้าม execute เป็น deploy script** และห้ามคัดลอกค่าจริงลงเอกสาร/chat/log/commit |
+| SSH/sudo password | ใช้ SSH Key (`id_ed25519`) ในการเชื่อมต่อแบบไม่ต้องพิมพ์รหัสผ่านแล้ว ส่วนรหัสผ่าน `sudo` ให้ใช้เมื่อระบบถามเท่านั้น (ห้ามบันทึกลงในสคริปต์แบบเก่า) |
 | systemd service | `dormitory.service` |
 | OCR systemd service | `dormitory-ocr.service` |
 | Backend working directory | `/opt/dormitory` |
@@ -83,6 +83,12 @@ sha256sum /opt/dormitory/server_debian
 ออกจาก server ด้วย `exit` เมื่อเสร็จ ห้ามเปิด process `./server_debian` เองขณะที่ systemd service ทำงานอยู่
 
 ### ตรวจจากเครื่องพัฒนาโดยไม่เปิด shell ค้าง
+
+```bash
+ssh fang@202.29.232.28 'chmod +x /home/fang/deploy_flex_safe_remote.sh && /home/fang/deploy_flex_safe_remote.sh'
+```
+
+> **Note:** การรันคำสั่งนี้ ระบบจะล็อกอินเข้าเซิร์ฟเวอร์แบบ Passwordless ผ่าน SSH Key ทันที แต่อาจจะมีการถามรหัสผ่าน `sudo` บนหน้าจอเซิร์ฟเวอร์ เพื่อใช้สำหรับสั่ง start/stop service
 
 ```bash
 ssh -t fang@202.29.232.28 'sudo systemctl is-active dormitory.service'
@@ -174,8 +180,9 @@ fi
 
 ```bash
 cd /Volumes/FangB/dorm_project
-backend-dorm/scripts/run_flex_safe_deploy.exp \
-  "$DORMINETX_DEPLOY_TMP/dorminet-backend.tar.gz"
+scp "$DORMINETX_DEPLOY_TMP/dorminet-backend.tar.gz" fang@202.29.232.28:/home/fang/dorminet-flex-source.tar.gz
+scp backend-dorm/scripts/deploy_flex_safe_remote.sh fang@202.29.232.28:/home/fang/
+ssh -t fang@202.29.232.28 'chmod +x /home/fang/deploy_flex_safe_remote.sh && /home/fang/deploy_flex_safe_remote.sh'
 ```
 
 สคริปต์นี้จะ:

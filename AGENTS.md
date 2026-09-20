@@ -14,8 +14,7 @@
 - Production SSH คือผู้ใช้และ host ที่ระบุใน runbook; credential จริงให้อ่านจากแหล่ง local ที่ runbook ระบุ ห้ามคัดลอกรหัสผ่าน, token, `.env` หรือข้อมูลลูกบ้านลงเอกสาร, chat, log หรือ commit
 - เริ่มด้วยคำสั่ง read-only เสมอ: health, service status, journal และ schema/check ที่ไม่เปลี่ยนข้อมูล
 - ห้ามแก้ source, binary, `.env` หรือ SQLite production โดยตรงผ่าน editor/`sed`/คำสั่ง SQL เว้นแต่มีขั้นตอนเฉพาะที่เจ้าของระบบอนุมัติและมี backup/rollback ชัดเจน
-- การ deploy backend ต้องใช้ safe deploy ใน runbook ซึ่ง build บน Linux, สำรอง binary/master/tenant DB, restart, health check และ rollback อัตโนมัติ
-- ห้ามใช้สคริปต์ legacy ที่หยุด service ก่อน upload/build เช่น `backend-dorm/deploy.exp` หรือ `backend-dorm/build_deploy.exp` เป็นเส้นทาง deploy ปกติ
+- การ deploy backend ต้องใช้ safe deploy ใน runbook ซึ่ง build บน Linux, สำรอง binary/master/tenant DB, restart, health check และ rollback อัตโนมัติ (ห้ามใช้การอัปโหลดไฟล์/build ตรงๆ แบบระบบเก่า)
 - ห้ามรัน `./server_debian` ซ้อนกับ `dormitory.service`
 - การทดสอบที่เปลี่ยนข้อมูล production ต้องใช้รายการ/บัญชีที่ได้รับอนุญาต บันทึก ID ที่ไม่เปิดเผย PII และมีแผนคืนสถานะ
 - ทุก deploy ต้องบันทึก SHA-256, backup path, service/health, database check, ขอบเขต UAT และ rollback ลง activity report และเอกสาร production ที่เกี่ยวข้อง
@@ -29,6 +28,6 @@
 
 ## ความปลอดภัยของ Secret
 
-- สคริปต์ `.exp` รุ่นเก่าบางไฟล์มี credential ฝังอยู่และถูกติดตามใน Git ถือเป็น known P0 ไม่ใช่รูปแบบที่ให้ทำซ้ำ
+- มีการเปลี่ยนไปใช้ SSH Key แทน Password บนเซิร์ฟเวอร์แล้ว (P0 แก้ไขแล้ว) ห้ามบันทึกรหัสผ่านลงสคริปต์อัตโนมัติใดๆ อีก
 - ห้ามสร้างเอกสารใหม่ที่ใส่รหัสผ่านจริง หาก credential source ที่ runbook ระบุไม่มีหรือใช้ไม่ได้ ให้หยุดและขอเจ้าของระบบ ไม่เดาและไม่ใส่รหัสลง command history
-- เป้าหมายระยะถัดไปคือ rotate credential เดิมและเปลี่ยนเป็น SSH key/secret store ที่ไม่อยู่ใน Git history
+- เป้าหมายระยะถัดไปคือหมุนเวียน (Rotate) credential เดิมที่หลุดไปในประวัติ (Git history) เช่น JWT Secret, LINE Token และ Resend API Key

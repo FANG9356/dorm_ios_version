@@ -29,7 +29,11 @@
 - build/sign/install แอปรอบ workflow ล่าสุดบน iPhone “F” สำเร็จ รวมการอ่านธงอนุมัติและล็อกยอดที่อนุมัติแล้ว
 - แก้กรณีข้อมูลแจ้งซ่อมจาก LINE อยู่ใน tenant DB/snapshot แต่ไม่เข้าแอปเมื่ออุปกรณ์มี local dirty record: เมื่อ push พบ 409 แอปจะดึง snapshot ใหม่, rebase ข้อมูลในเครื่อง และ push ซ้ำ พร้อม sync เมื่อเปิด dashboard/หน้าแจ้งซ่อม
 - ทำ `ปฏิเสธค่าใช้จ่าย` เป็นสถานะปลายทางที่ backend materialize ได้ ไม่ทำให้ snapshot ที่รับแล้วตอบ HTTP 500 และไม่ทำให้แอปติดวงจร conflict
-- ปรับ Flex ปฏิเสธใบเสนอราคาเป็นขาว–เทาแบบกระชับ และให้ approve/reject success path ส่ง Flex เพียงใบเดียว; text reply ใช้เฉพาะ error/fallback
+- แก้ Flex ปฏิเสธใบเสนอราคาเป็นขาว–เทาแบบกระชับ และให้ approve/reject success path ส่ง Flex เพียงใบเดียว; text reply ใช้เฉพาะ error/fallback
+- พัฒนาและอัปเกรด Tenant Portal บนเว็บแอปพลิเคชัน LIFF โดยดึงประวัติการชำระเงินบิลเก่า (Paid) และประเมินยอดบิลล่วงหน้า (Projected Bill) ของเดือนถัดไปมาแสดง
+- เปลี่ยนการตอบกลับของปุ่ม "ประวัติการชำระ" จาก Carousel ที่แสดงข้อมูลเยอะในแชท เป็น Flex Message ขนาดเล็ก (Mini Card) ที่มีปุ่มกดเปิด Tenant Portal LIFF
+- อุดช่องโหว่ความปลอดภัยระดับ P0 โดยการทำ Passwordless SSH Key Authentication และลบสคริปต์ `.exp` ที่มีรหัสผ่านฮาร์ดโค้ดกว่า 30 ไฟล์ออกจาก Git History ของโค้ดปัจจุบัน
+- ค้นหาและแพตช์บั๊ก HTTP Response Body Leak ในโค้ด `line_bot.go` เพื่อป้องกัน Memory/Connection Exhaustion ในขณะส่งข้อความหา LINE API
 
 ## หลักฐานทดสอบล่าสุด
 

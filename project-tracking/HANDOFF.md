@@ -84,9 +84,8 @@ curl --fail --silent --show-error https://api.dorminet.studio/api/system/ping
 - rollback set ที่ตรวจเวลา 14:18 น. คือ `/home/fang/line_migration_backups/20260918-002045-pre-flex-ui`; deploy หลังจากนั้นอาจมีชุดใหม่ ให้เรียง directory และใช้ path ที่ safe deploy รอบนั้นรายงาน ห้ามเดา (ทุกชุดยังไม่รวม atomic rollback ของ OCR)
 - health endpoint: `https://api.dorminet.studio/api/system/ping`
 - safe deployment script จะสำรอง binary/master DB ตรวจ health และตรวจ schema additive ของ outbox
-- credential deploy อยู่ในไฟล์ ignored ของเครื่องพัฒนา ห้ามพิมพ์ค่าออก log หรือ commit
-- ตรวจ outbox production แบบไม่แสดง LINE user ID ด้วย `backend-dorm/scripts/inspect_line_outbox.exp`; บังคับ retry เฉพาะรายการที่ยืนยัน ID แล้วด้วย `backend-dorm/scripts/retry_line_outbox.exp OUTBOX_ID`
-- ตรวจสถานะงานซ่อมทั้ง tenant DB และ snapshot ที่แอปจะดึงด้วย `backend-dorm/scripts/inspect_maintenance_workflow.exp MAINTENANCE_ID`
+- ระบบเชื่อมต่อ SSH ผ่าน Key (`id_ed25519`) แบบ Passwordless แล้ว ส่วนรหัสผ่าน `sudo` จะถูกถามตอนรันคำสั่ง restart service บนเซิร์ฟเวอร์
+- ห้ามใช้สคริปต์ `.exp` หรือสคริปต์อัตโนมัติในการรันคำสั่งที่ต้องใช้รหัสผ่าน (สคริปต์ตรวจสอบเก่าๆ เช่น inspect ถูกลบออกแล้วเพื่อความปลอดภัย)
 - ทุก production deploy ต้องบันทึก SHA, backup path, health, database check และขอบเขต UAT ลง `docs/PRODUCTION_HARDENING_2026-09-10.md`
 
 ## วิธีทำ controlled maintenance UAT
