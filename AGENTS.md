@@ -9,6 +9,16 @@
 3. ตรวจ `git status --short` ก่อนแก้ ห้ามลบหรือเขียนทับงานเดิมที่ไม่เกี่ยวข้อง
 4. ทุกคำขอและทุกการดำเนินงานต้องเพิ่มรายการใหม่แบบ append-only ใน `project-tracking/ACTIVITY_REPORT.md` ก่อนรายงานผล แม้เป็นเพียงการตรวจสอบหรือไม่มีไฟล์เปลี่ยน
 
+## กฎโครงสร้างและตำแหน่งไฟล์โปรเจกต์ (Project Structure & Workspaces)
+
+- **ฝั่งเครื่องพัฒนา (Local Mac):** 
+  - งานทั้งหมดต้องทำใน Workspace หลักเท่านั้นคือ `/Volumes/FangB/dorm_project/` ห้ามสร้างไฟล์โปรเจกต์หรือโค้ดทดสอบกระจัดกระจายไว้ที่ Desktop, tmp หรือโฟลเดอร์อื่น
+  - โค้ดฝั่ง Backend (Go/SQLite) จะอยู่ที่โฟลเดอร์ `backend-dorm/`
+  - โค้ดฝั่ง iOS App (Swift) จะอยู่ที่โฟลเดอร์ `DormAppSwift_Sources/DormiNetX/`
+- **ฝั่งเซิร์ฟเวอร์ (Remote Production):**
+  - **แอปพลิเคชันจริง:** รันจากตำแหน่ง `/opt/dormitory/` เท่านั้น (ห้ามแก้ไขโค้ดหรือฐานข้อมูลตรงๆ)
+  - **พื้นที่ทำงานบนเซิร์ฟเวอร์ (Workspace):** สคริปต์, ไฟล์บีบอัดสำหรับการ Deploy, และไฟล์ Backups **ต้องอยู่ภายใต้ `/home/fang/dorminet_workspace/` เท่านั้น** ห้ามแตกไฟล์โค้ดหรือโยนไฟล์ขยะทิ้งไว้ที่หน้า Home (`/home/fang/`) แบบสะเปะสะปะเด็ดขาด
+
 ## กฎ Server และ Production
 
 - Production SSH คือผู้ใช้และ host ที่ระบุใน runbook; credential จริงให้อ่านจากแหล่ง local ที่ runbook ระบุ ห้ามคัดลอกรหัสผ่าน, token, `.env` หรือข้อมูลลูกบ้านลงเอกสาร, chat, log หรือ commit
