@@ -257,6 +257,7 @@ class SyncManager: ObservableObject {
 
     private let recentRemoteAutoPullWindow: TimeInterval = 120
     
+    @MainActor
     func syncWithGoBackend(modelContext: ModelContext) async {
         if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
             await autoPushLocalChanges(modelContext: modelContext)
@@ -316,6 +317,7 @@ class SyncManager: ObservableObject {
         await autoPushLocalChanges(modelContext: modelContext)
     }
 
+    @MainActor
     func pullLatestSnapshot(modelContext: ModelContext) async {
         guard !isSyncing else { return }
 
@@ -458,16 +460,42 @@ class SyncManager: ObservableObject {
         checkpoint.pending
     }
 
+    @MainActor
     private func hasDirtyRecords(_ context: ModelContext) -> Bool {
         do {
-            return try context.fetch(FetchDescriptor<Room>()).contains { $0.isDirty || $0.isDeletedLocally } ||
-                context.fetch(FetchDescriptor<DormUser>()).contains { $0.isDirty || $0.isDeletedLocally } ||
-                context.fetch(FetchDescriptor<Payment>()).contains { $0.isDirty || $0.isDeletedLocally } ||
-                context.fetch(FetchDescriptor<PaymentTransaction>()).contains { $0.isDirty } ||
-                context.fetch(FetchDescriptor<FinancialReceipt>()).contains { $0.isDirty } ||
-                context.fetch(FetchDescriptor<Maintenance>()).contains { $0.isDirty || $0.isDeletedLocally } ||
-                context.fetch(FetchDescriptor<RoomType>()).contains { $0.isDirty }
-        } catch { return true }
+            let pRoomDirty = #Predicate<Room> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pRoomDirty)) > 0 { return true }
+            let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pRoomDeleted)) > 0 { return true }
+            
+            let pUserDirty = #Predicate<DormUser> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pUserDirty)) > 0 { return true }
+            let pUserDeleted = #Predicate<DormUser> { $0.isDeletedLocally == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pUserDeleted)) > 0 { return true }
+            
+            let pPaymentDirty = #Predicate<Payment> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pPaymentDirty)) > 0 { return true }
+            let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pPaymentDeleted)) > 0 { return true }
+            
+            let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pTransaction)) > 0 { return true }
+            
+            let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pReceipt)) > 0 { return true }
+            
+            let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDirty)) > 0 { return true }
+            let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDeleted)) > 0 { return true }
+            
+            let pRoomType = #Predicate<RoomType> { $0.isDirty == true }
+            if try context.fetchCount(FetchDescriptor(predicate: pRoomType)) > 0 { return true }
+            
+            return false
+        } catch { 
+            return true 
+        }
     }
 
     private func shouldAutoPullRemoteSnapshot() async -> Bool {

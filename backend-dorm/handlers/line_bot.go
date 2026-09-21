@@ -411,7 +411,23 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		isValid, verifyReason := utils.VerifySlip(filepath, amount)
+		isValid, verifyReason, payload := utils.VerifySlip(filepath, amount)
+		
+		// Replay Protection Check
+		if payload != "" {
+			var existingID int
+			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
+			if errCheck == nil {
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว (Duplicate Slip) หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
+				return
+			}
+			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
+			if errCheckMaint == nil {
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในงานแจ้งซ่อม (Duplicate Slip)")
+				return
+			}
+		}
+
 		newStatus := "checking"
 		var replyMessage string
 
@@ -423,7 +439,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		}
 
 		slipArrayJSON := fmt.Sprintf(`["%s"]`, newFileName)
-		res, err := db.Exec("UPDATE payments SET payment_status = ?, slip_path = ?, slip_path_array = ?, payment_date = ?, last_updated = ? WHERE payment_id = ? AND payment_status != 'paid'", newStatus, newFileName, slipArrayJSON, time.Now().Format("2006-01-02"), time.Now().UTC().Format(time.RFC3339Nano), paymentID)
+		res, err := db.Exec("UPDATE payments SET payment_status = ?, slip_path = ?, slip_path_array = ?, slip_payload = ?, payment_date = ?, last_updated = ? WHERE payment_id = ? AND payment_status != 'paid'", newStatus, newFileName, slipArrayJSON, payload, time.Now().Format("2006-01-02"), time.Now().UTC().Format(time.RFC3339Nano), paymentID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
@@ -543,7 +559,23 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		isValid, verifyReason := utils.VerifySlip(filepath, cost)
+		isValid, verifyReason, payload := utils.VerifySlip(filepath, cost)
+		
+		// Replay Protection Check
+		if payload != "" {
+			var existingID int
+			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
+			if errCheck == nil {
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในบิลค่าเช่า (Duplicate Slip)")
+				return
+			}
+			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
+			if errCheckMaint == nil {
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว (Duplicate Slip) หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
+				return
+			}
+		}
+
 		newStatus := "รอตรวจสอบชำระเงิน"
 		var replyMsg string
 		if isValid {
@@ -553,7 +585,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			replyMsg = fmt.Sprintf("ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ (%s) ระบบได้รับสลิปค่าซ่อมแซมเรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันให้อีกครั้งค่ะ", verifyReason)
 		}
 
-		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, status = ?, last_updated = ? WHERE id = ?", newFileName, newStatus, time.Now().UTC().Format(time.RFC3339Nano), maintID)
+		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, slip_payload = ?, status = ?, last_updated = ? WHERE id = ?", newFileName, payload, newStatus, time.Now().UTC().Format(time.RFC3339Nano), maintID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
@@ -1689,11 +1721,11 @@ func buildMaintenanceQuoteApprovedFlexMessage(notification maintenanceStatusNoti
 	costStr := formatLineMoney(notification.Cost)
 
 	promptPayID := os.Getenv("PROMPTPAY_ID")
-	if promptPayID == "" {
-		promptPayID = "0961950943" // Use actual number for testing if env is not set
+	var qrURL string
+	if promptPayID != "" {
+		payload := utils.GeneratePromptPayPayload(promptPayID, notification.Cost)
+		qrURL = "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + url.QueryEscape(payload)
 	}
-	payload := utils.GeneratePromptPayPayload(promptPayID, notification.Cost)
-	qrURL := "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + url.QueryEscape(payload)
 
 	detailRows := []interface{}{
 		maintenanceFlexDetailRow("แจ้งเมื่อ", reportedAt),
@@ -1797,12 +1829,17 @@ func buildMaintenanceQuoteApprovedFlexMessage(notification maintenanceStatusNoti
 		},
 	}
 
+	contentsList := []interface{}{bubble1}
+	if qrURL != "" {
+		contentsList = append(contentsList, bubble2)
+	}
+
 	return map[string]interface{}{
 		"type":     "flex",
 		"altText":  "อนุมัติใบเสนอราคา - กรุณาชำระเงิน",
 		"contents": map[string]interface{}{
 			"type": "carousel",
-			"contents": []interface{}{bubble1, bubble2},
+			"contents": contentsList,
 		},
 	}, nil
 }

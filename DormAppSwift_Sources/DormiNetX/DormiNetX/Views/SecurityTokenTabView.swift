@@ -25,7 +25,7 @@ struct SecurityTokenTabView: View {
                                     .fill(LinearGradient(colors: [.indigo, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
                                     .frame(width: 54, height: 54)
                                 Image(systemName: "lock.shield.fill")
-                                    .font(.system(size: 24))
+                                    .font(.custom("SukhumvitSet-Medium", size: 24))
                                     .foregroundColor(.white)
                             }
                             
@@ -232,7 +232,7 @@ struct SecurityTokenTabView: View {
                 VStack {
                     HStack(spacing: 12) {
                         Image(systemName: "sparkles")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 18))
                             .foregroundColor(.indigo)
                         
                         Text(alertMessage ?? "")

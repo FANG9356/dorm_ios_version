@@ -96,7 +96,7 @@ struct AppIconSettingsTabView: View {
                                 .scaleEffect(0.72)
                         } else if isSelected(option) {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.custom("SukhumvitSet-Bold", size: 13))
                                 .foregroundStyle(option.accent)
                         }
                     }

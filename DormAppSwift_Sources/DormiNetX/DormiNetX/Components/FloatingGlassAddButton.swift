@@ -40,11 +40,9 @@ struct FloatingGlassAddButton: View {
 
 extension View {
     func dismissKeyboardOnTap() -> some View {
-        simultaneousGesture(
-            TapGesture().onEnded {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-        )
+        onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
             .scrollDismissesKeyboard(.interactively)
     }
 

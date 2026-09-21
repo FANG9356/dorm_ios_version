@@ -157,7 +157,7 @@ struct AdminRow: View {
                     
                     HStack {
                         Image(systemName: "envelope.fill")
-                            .font(.system(size: 10))
+                            .font(.custom("SukhumvitSet-Medium", size: 10))
                         Text(admin.email)
                             .font(.custom("SukhumvitSet-Text", size: 13))
                             .lineLimit(1)
@@ -210,7 +210,7 @@ struct AddAdminSheet: View {
     @AppStorage("userEmail") var userEmail: String = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("ข้อมูลผู้ดูแลระบบ").font(.custom("SukhumvitSet-Medium", size: 13))) {
                     TextField("ชื่อผู้ดูแลระบบ", text: $name)
@@ -319,7 +319,7 @@ struct EditAdminSheet: View {
     @State private var errorMessage: String? = nil
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     HStack {

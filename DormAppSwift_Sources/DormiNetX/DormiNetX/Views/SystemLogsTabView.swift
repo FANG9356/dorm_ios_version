@@ -37,7 +37,7 @@ struct SystemLogsTabView: View {
                 GlassCard {
                     VStack(spacing: 12) {
                         Image(systemName: "doc.text.magnifyingglass")
-                            .font(.system(size: 34, weight: .semibold))
+                            .font(.custom("SukhumvitSet-SemiBold", size: 34))
                             .foregroundStyle(.secondary)
                         Text("ยังไม่มีประวัติการทำงาน")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -73,7 +73,7 @@ private struct SystemLogRow: View {
                         .frame(width: 44, height: 44)
 
                     Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.custom("SukhumvitSet-SemiBold", size: 18))
                         .foregroundStyle(.indigo)
                 }
 

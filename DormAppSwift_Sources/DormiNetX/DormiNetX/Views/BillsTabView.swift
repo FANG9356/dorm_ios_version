@@ -128,7 +128,7 @@ struct BillsTabView: View {
         GlassCard {
             VStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 38))
+                    .font(.custom("SukhumvitSet-Medium", size: 38))
                     .foregroundStyle(.secondary)
                 Text(title)
                     .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -233,7 +233,7 @@ private struct BillSectionView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.custom("SukhumvitSet-Bold", size: 14))
                     .foregroundStyle(.secondary)
                     .frame(width: 30, height: 30)
                     .background(.ultraThinMaterial, in: Circle())

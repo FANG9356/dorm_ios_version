@@ -337,7 +337,7 @@ struct LoginView: View {
                                             .frame(width: 44, height: 44)
                                             .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
                                         Image(systemName: "chevron.down.circle.fill")
-                                            .font(.system(size: 20))
+                                            .font(.custom("SukhumvitSet-Medium", size: 20))
                                             .foregroundColor(colorScheme == .dark ? .white : .indigo)
                                     }
                                 }
@@ -371,7 +371,7 @@ struct LoginView: View {
                                             .shadow(color: .indigo.opacity(0.3), radius: 8, x: 0, y: 4)
                                         
                                         Image(systemName: "lock.shield.fill")
-                                            .font(.system(size: 26))
+                                            .font(.custom("SukhumvitSet-Medium", size: 26))
                                             .foregroundColor(.white)
                                     }
                                     

@@ -95,7 +95,7 @@ struct MaintenanceTabView: View {
                 GlassCard {
                     VStack(spacing: 12) {
                         Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 34))
+                            .font(.custom("SukhumvitSet-Medium", size: 34))
                             .foregroundStyle(.secondary)
                         Text("ยังไม่มีรายการแจ้งซ่อม")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -108,7 +108,7 @@ struct MaintenanceTabView: View {
                 GlassCard {
                     VStack(spacing: 12) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 34))
+                            .font(.custom("SukhumvitSet-Medium", size: 34))
                             .foregroundStyle(.secondary)
                         Text("ไม่พบงานซ่อมที่ค้นหา")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -205,7 +205,7 @@ private struct MaintenanceRow: View {
                 VStack(alignment: .leading, spacing: 18) {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.custom("SukhumvitSet-SemiBold", size: 18))
                             .foregroundStyle(.orange)
                             .frame(width: 38, height: 38)
                             .background(Color.orange.opacity(0.12), in: Circle())
@@ -228,7 +228,7 @@ private struct MaintenanceRow: View {
                                 .font(.custom("SukhumvitSet-Medium", size: 12))
                                 .lineLimit(1)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(.custom("SukhumvitSet-SemiBold", size: 11))
                         }
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 11)
@@ -272,7 +272,7 @@ private struct MaintenanceRow: View {
                             .font(.custom("SukhumvitSet-Medium", size: 12))
                             .foregroundStyle(.secondary)
                         Image(systemName: "arrow.up.right")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.custom("SukhumvitSet-SemiBold", size: 11))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -537,7 +537,7 @@ private struct MaintenanceEditor: View {
                                 Text("ลบรายการแจ้งซ่อม")
                                 Spacer()
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .font(.custom("SukhumvitSet-SemiBold", size: 11))
                             }
                             .font(.custom("SukhumvitSet-Medium", size: 15))
                             .padding(.horizontal, 18)
@@ -610,7 +610,7 @@ private struct MaintenanceEditor: View {
         if isEditing {
             HStack(spacing: 12) {
                 Image(systemName: "door.left.hand.open")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 17))
                     .foregroundStyle(.indigo)
                     .frame(width: 38, height: 38)
                     .background(Color.indigo.opacity(0.10), in: Circle())
@@ -661,7 +661,7 @@ private struct MaintenanceEditor: View {
                     }
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.custom("SukhumvitSet-SemiBold", size: 12))
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 16)
@@ -763,7 +763,7 @@ private struct MaintenanceEditor: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: paymentMethod == "เงินสด" ? "banknote" : "building.columns")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 16))
                     .foregroundStyle(.indigo)
                     .frame(width: 36, height: 36)
                     .background(Color.indigo.opacity(0.09), in: Circle())
@@ -772,7 +772,7 @@ private struct MaintenanceEditor: View {
                     .foregroundStyle(paymentMethod.isEmpty ? Color.secondary : Color.primary)
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 12))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 14)
@@ -893,7 +893,7 @@ private struct MaintenanceEvidenceView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(alignment: .bottomTrailing) {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 12))
                             .foregroundStyle(.white)
                             .padding(8)
                             .background(.black.opacity(0.62), in: Circle())
@@ -905,7 +905,7 @@ private struct MaintenanceEvidenceView: View {
         } else {
             VStack(spacing: 6) {
                 Image(systemName: "photo.badge.exclamationmark")
-                    .font(.system(size: 22))
+                    .font(.custom("SukhumvitSet-Medium", size: 22))
                 Text("ไม่พบไฟล์ในเครื่อง")
                     .font(.custom("SukhumvitSet-Text", size: 11))
             }

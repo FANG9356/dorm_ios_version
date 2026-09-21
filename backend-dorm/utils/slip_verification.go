@@ -37,19 +37,40 @@ type EasySlipResponse struct {
 
 // VerifySlip checks if the uploaded slip is valid and matches the expected amount.
 // It uses EasySlip API if EASYSLIP_TOKEN is set, otherwise falls back to a Mock Verification (decodes QR locally).
-func VerifySlip(filePath string, expectedAmount float64) (isValid bool, reason string) {
+func VerifySlip(filePath string, expectedAmount float64) (isValid bool, reason string, payload string) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return false, "Could not open slip image"
+		return false, "Could not open slip image", ""
 	}
 	defer file.Close()
 
-	token := os.Getenv("EASYSLIP_TOKEN")
-	if token != "" {
-		return verifyWithEasySlip(file, token, expectedAmount)
+	// Extract QR Payload to prevent Replay Attacks
+	img, _, err := image.Decode(file)
+	if err == nil {
+		bmp, err := gozxing.NewBinaryBitmapFromImage(img)
+		if err == nil {
+			qrReader := qrcode.NewQRCodeReader()
+			result, err := qrReader.Decode(bmp, nil)
+			if err == nil {
+				payload = result.GetText()
+			}
+		}
+	}
+	file.Seek(0, 0) // Reset file pointer
+
+	// Fail closed if no QR code is found on the slip (Replay protection requires QR)
+	if payload == "" {
+		return false, "ไม่พบ QR Code บนสลิป หรือสลิปไม่ชัดเจน", ""
 	}
 
-	return verifyMock(file, expectedAmount)
+	token := os.Getenv("EASYSLIP_TOKEN")
+	if token != "" {
+		v, r := verifyWithEasySlip(file, token, expectedAmount)
+		return v, r, payload
+	}
+
+	v, r := verifyMock(file, expectedAmount, payload)
+	return v, r, payload
 }
 
 func verifyWithEasySlip(file *os.File, token string, expectedAmount float64) (bool, string) {
@@ -101,7 +122,7 @@ func verifyWithEasySlip(file *os.File, token string, expectedAmount float64) (bo
 	return true, "Verified automatically via API"
 }
 
-func verifyMock(file *os.File, expectedAmount float64) (bool, string) {
+func verifyMock(file *os.File, expectedAmount float64, payload string) (bool, string) {
 	// First, try to call the Python OCR Bot
 	absPath, err := filepath.Abs(file.Name())
 	if err == nil {
@@ -128,25 +149,7 @@ func verifyMock(file *os.File, expectedAmount float64) (bool, string) {
 	}
 
 	// Fallback to basic QR code decoding if OCR bot is down
-	// We don't verify the amount in fallback mock mode, just check if it's a valid PromptPay slip
-	file.Seek(0, 0) // Reset file pointer
-	img, _, err := image.Decode(file)
-	if err != nil {
-		return false, "Cannot decode image. Please ensure it's a valid JPG or PNG."
-	}
-
-	bmp, err := gozxing.NewBinaryBitmapFromImage(img)
-	if err != nil {
-		return false, "Cannot process image for QR decoding."
-	}
-
-	qrReader := qrcode.NewQRCodeReader()
-	result, err := qrReader.Decode(bmp, nil)
-	if err != nil {
-		return false, "No QR Code found on the slip."
-	}
-
-	payload := result.GetText()
+	// We already extracted the payload in VerifySlip.
 	
 	if strings.Contains(payload, "00410006000001") || len(payload) > 20 {
 		return false, "พบ QR Code แต่ไม่สามารถตรวจสอบยอดเงินอัตโนมัติได้ กรุณารอแอดมินยืนยัน"

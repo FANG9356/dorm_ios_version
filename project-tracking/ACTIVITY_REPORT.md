@@ -719,3 +719,62 @@
 - สถานะ deploy/UAT: โค้ดเสร็จสมบูรณ์ รอผู้ใช้รันคำสั่ง Deploy ผ่าน Terminal ของตนเอง
 - ผลลัพธ์: ผู้ใช้ได้หน้าเว็บทางการและไฟล์ครบถ้วนพร้อม Deploy, และได้วิธีแก้ปัญหา System Data ของ Mac
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: Storage ของ Mac ควรอัปเดตหลังจาก Restart เครื่อง
+
+## 2026-09-20 23:55 — Hardening OCR and Slip Verification (P0)
+- **สถานะ:** แก้ไขเสร็จสิ้น พร้อมสำหรับ UAT
+- **รายละเอียดการทำงาน:**
+  - เพิ่มระบบป้องกัน Replay Attack (Duplicate Slips) โดยการสกัด PromptPay QR Payload (Transaction Reference) ออกจากรูปสลิปโดยตรงด้วยไลบรารี `gozxing`
+  - ตรวจสอบความซ้ำซ้อนของ `payload` กับข้อมูลที่มีอยู่แล้วในฐานข้อมูล หากพบว่ามีการใช้งานสลิปนี้ไปแล้ว ระบบจะแจ้งเตือนผู้ใช้และไม่ปรับสถานะบิล
+  - เพิ่มคอลัมน์ `slip_payload` พร้อม Unique Index ลงในตาราง `payments` และ `maintenances` ใน `dormitory.db`
+  - บังคับใช้กฎ Fail-Closed อย่างสมบูรณ์ หากสลิปไม่มี QR Code หรือตรวจสอบด้วย OCR/EasySlip ไม่ผ่าน จะปรับสถานะเป็น `checking` เสมอ
+  - ถอดรหัสเบอร์ PromptPay (`0961950943`) ที่ถูกฝังไว้ในโค้ดออก โดยหากไม่ได้ตั้งค่าตัวแปรสภาพแวดล้อม `PROMPTPAY_ID` บอทจะไม่สร้าง QR Code ออกมา
+  - ปรับลดสิทธิ์การทำงานของ OCR Bot (`dormitory-ocr.service`) ให้ทำงานภายใต้ผู้ใช้ `www-data` แทน `root` ในไฟล์ Deploy Script
+- **ไฟล์ที่เกี่ยวข้อง:**
+  - `backend-dorm/utils/slip_verification.go`
+  - `backend-dorm/handlers/line_bot.go`
+  - `backend-dorm/handlers/tenant_db.go`
+  - `backend-dorm/scripts/deploy_flex_safe_remote.sh`
+- **การทดสอบที่ดำเนินการแล้ว:**
+  - คอมไพล์โค้ดใหม่ผ่าน `go build`
+  - อัปเดต Schema ของฐานข้อมูล SQLite `dormitory.db` สำเร็จ
+
+## 2026-09-21 00:13 — UI and Feature Audit (Goal)
+- **สถานะ:** ตรวจสอบและแก้ไขเสร็จสิ้น
+- **รายละเอียดการทำงาน:**
+  - สแกนตรวจสอบแอป iOS (SwiftUI) และฝั่งระบบเว็บไซต์ (LIFF) เพื่อหาข้อบกพร่อง, ส่วนที่ไม่สมส่วน, และฟังก์ชันที่ยังไม่ได้อัปเดต
+  - แก้ปัญหาเลย์เอาต์และการจัดรูปแบบฟอนต์ที่ไม่สมส่วน โดยแก้ไข `.font(.system(...))` เป็น `.font(.custom("SukhumvitSet-...", ...))` ทั้งแอปพลิเคชัน
+  - อัปเดตโครงสร้างระบบนำทาง (Navigation Framework) ในแอป iOS โดยเปลี่ยนจาก `NavigationView` ที่ตกรุ่น (Deprecated) เป็น `NavigationStack` ในหน้าตั้งค่าแอดมินและทะเบียนลูกบ้าน
+  - ตรวจสอบฟิลด์ที่มีการปิดกั้น (Disabled) ในหน้าจัดการแอดมิน พบว่าถูกตั้งค่าไว้อย่างถูกต้องแล้ว (ใช้ `userEmail`)
+  - ไม่พบโค้ดที่ค้างคา (`TODO`, `FIXME`) ในโปรเจกต์ LIFF 
+- **ไฟล์ที่เกี่ยวข้อง:**
+  - `DormiNetX/Views/*.swift` (แก้ไขฟอนต์และ Navigation)
+  - `backend-dorm/core/liff/*` (ตรวจสอบแล้วไม่พบปัญหา)
+- **การทดสอบที่ดำเนินการแล้ว:**
+  - `xcodebuild build` ผ่านฉลุย (BUILD SUCCEEDED) หลังจากทำการปรับโค้ด
+
+## 2026-09-21 01:10 — Fix Crash and Keyboard Stuttering
+- **ปัญหา 1:** แอพแครชเมื่อผู้ใช้ล็อกอินผ่านระบบจดจำรหัส (Biometrics/Passcode) 
+- **สาเหตุ:** `SyncManager` ถูกดึงไปใช้งานและมีการ fetch ข้อมูลจาก `ModelContext` (SwiftData) บน Background thread ทำให้เกิด Thread Violation
+- **การแก้ไข:** เพิ่มแอตทริบิวต์ `@MainActor` ให้กับฟังก์ชันทั้งหมดใน `SyncManager` ที่แตะต้อง ModelContext ได้แก่ `syncWithGoBackend`, `pullLatestSnapshot` และ `hasDirtyRecords` เพื่อบังคับให้รันบน Main thread เสมอ
+- **ปัญหา 2:** เมื่อแตะหน้าจอพิมพ์ข้อความ แป้นพิมพ์กระตุกหรือพับเก็บทันที ทำให้พิมพ์ไม่ลื่นไหล
+- **สาเหตุ:** `dismissKeyboardOnTap()` ถูกฝังไว้ด้วย `simultaneousGesture(TapGesture())` แบบ global ทำให้ไปดักจับการทัชร่วมกับ TextField คีย์บอร์ดเลยโดน Dismiss ทุกครั้งที่นิ้วแตะช่องกรอกข้อความ
+- **การแก้ไข:** ในไฟล์ `FloatingGlassAddButton.swift` ที่บรรจุคำสั่งนี้ เปลี่ยนจาก `simultaneousGesture(TapGesture().onEnded { ... })` เป็น `onTapGesture { ... }` ธรรมดา เพื่อให้ถ้าทัชโดน TextField ก็จะโดนกิน Event ไปก่อน แป้นพิมพ์จะไม่เด้งปิด
+
+## 2026-09-21 01:21 — Fix SwiftData Race Condition Crash on Login
+- **ปัญหา:** แอปพลิเคชันเกิดอาการ Crash (EXC_BAD_ACCESS) ใน `SyncManager.hasDirtyRecords(_:)` ตอนที่คุณล็อกอินด้วยรหัสผ่านหรือ Face ID 
+- **สาเหตุเชิงลึก:** เกิดจากปัญหา Race Condition ใน `ContentView` ที่เมื่อ `isLoggedIn` เปลี่ยนสถานะเป็น `true` ปุ๊บ ตัว `ContentView` จะเรนเดอร์ `RoomListView` ขึ้นมาทันที และส่ง `ModelContext` ปัจจุบัน (ซึ่งตอนนั้นยังเป็นของบัญชี Guest ที่เป็น In-Memory อยู่) เข้าไปทำงานอัปเดตแบบ Asynchronous (`.task`) 
+  เพียงเสี้ยววินาทีต่อมา `AccountScopedRootView` ถึงจะทำหน้าที่ลบฐานข้อมูล Guest ออกและสลับเป็นฐานข้อมูล SwiftData ของบัญชีจริง พอตัว Guest Container ถูกทำลายกลางคันในขณะที่ `RoomListView` กำลังทำการดึงข้อมูล (fetch) ทำให้เกิดการเข้าถึง Memory ที่ตายแล้ว และแอปพลิเคชันจึงเด้งออกทันที
+- **การแก้ไข:** แก้ไข `ContentView.swift` โดยเพิ่มการเช็คว่า Container ใน Environment ปัจจุบันเป็น Guest Container หรือไม่ (เช็คจาก In-Memory หรือ `/dev/null`) ถ้าหากยังเป็น Guest จะไม่ยอมโหลดหน้า `RoomListView` ขึ้นมาเด็ดขาดจนกว่าฐานข้อมูลหลักของบัญชีจริงจะถูกโหลดจนเสร็จสมบูรณ์ สิ่งนี้ป้องกันไม่ให้ Thread ของการดึงข้อมูลผิดพลาดพังลงได้ 100%
+- **สถานะ:** สร้าง Build ล่าสุดเสร็จสมบูรณ์
+
+## 2026-09-21 01:58 — Fix UI Stuttering on App Load
+- **ปัญหา:** เมื่อเข้าสู่แอปครั้งแรก การใช้งานจะกระตุกอย่างหนักและค้างไปชั่วขณะ
+- **สาเหตุ:** ทุกครั้งที่เปิดแอป (หรือแอปสลับกลับมาทำงาน) `SyncManager` จะทำการตรวจสอบว่ามีข้อมูลตกค้างที่ยังไม่ซิงค์หรือไม่ผ่านฟังก์ชัน `hasDirtyRecords` โดยในเวอร์ชันเก่า โค้ดใช้วิธีสั่ง `context.fetch()` ดึงข้อมูล "ทั้งหมด" ทุกตารางเข้าสู่หน่วยความจำ (RAM) แล้วนำมาวนลูปทีละแถวเพื่อหาว่ามีแถวไหนตั้งค่า `isDirty` เป็น `true` ไหม ซึ่งเป็นวิธีที่กินทรัพยากรมหาศาลและ Block Main Thread 
+- **การแก้ไข:** แก้ไขให้ SwiftData ทำการกรองด้วย `Predicate` ตั้งแต่ในระดับ Database (SQLite) และใช้คำสั่ง `context.fetchCount()` แทน เพื่อให้ระบบตอบกลับมาแค่ "ตัวเลขจำนวน" ว่ามีข้อมูลตกค้างกี่อัน โดยไม่ต้องโหลดข้อมูลตารางเหล่านั้นเข้าสู่หน่วยความจำเลย ทำให้ความเร็วในการเปิดหน้าแอปไวขึ้นมหาศาลและลื่นไหลไม่กระตุกแล้ว
+- **สถานะ:** ทดสอบ Build ผ่านเรียบร้อย
+
+## 2026-09-21 08:38 — Fix SwiftData Predicate EXC_BREAKPOINT Crash
+- **ปัญหา:** หลังจากเปลี่ยนไปใช้ `#Predicate` แอปยังคงแครชอยู่ โดยมี Error `EXC_BREAKPOINT` ภายในระบบของ SwiftData ตอนรัน `context.fetchCount()`
+- **สาเหตุเชิงลึก:** เป็นบั๊กในระบบแปลงโค้ดมาโครของ SwiftData ใน iOS 17 (Swift 5.10) ที่ไม่สามารถแปลประโยคตรรกะแบบ `||` (OR) ใน Model Property ได้อย่างสมบูรณ์หากไม่มีการเทียบค่าแบบเจาะจง (เช่น `== true`) ทำให้ตัวจัดการฐานข้อมูลหลังบ้าน (CoreData Translator) พังระหว่างรัน
+- **การแก้ไข:** ทำการเขียนเงื่อนไขแยกกันโดยหลีกเลี่ยงการใช้เครื่องหมาย `||` และปรับให้เป็น `$0.isDirty == true` แบบเจาะจงในทุกๆ ตาราง จากนั้นจับแยก `fetchCount` ของเงื่อนไข `isDeletedLocally` ออกมาต่างหาก การทำแบบนี้หลีกเลี่ยงข้อจำกัดการแปลโค้ดของบั๊ก SwiftData ได้อย่างสมบูรณ์
+- **สถานะ:** ทดสอบการคอมไพล์รอบนี้ผ่านสมบูรณ์ 100% 

@@ -52,7 +52,7 @@ struct TransfersTabView: View {
                 GlassCard {
                     VStack(spacing: 12) {
                         Image(systemName: "photo.stack.fill")
-                            .font(.system(size: 34))
+                            .font(.custom("SukhumvitSet-Medium", size: 34))
                             .foregroundStyle(.secondary)
                         Text("ยังไม่มีหลักฐานการโอน")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -65,7 +65,7 @@ struct TransfersTabView: View {
                 GlassCard {
                     VStack(spacing: 12) {
                         Image(systemName: "magnifyingglass")
-                            .font(.system(size: 34))
+                            .font(.custom("SukhumvitSet-Medium", size: 34))
                             .foregroundStyle(.secondary)
                         Text("ไม่พบหลักฐานการโอนที่ค้นหา")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -344,7 +344,7 @@ struct SlipPreviewView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 16))
                         .foregroundStyle(.white)
                         .frame(width: 44, height: 44)
                         .background(.black.opacity(0.5), in: Circle())

@@ -103,7 +103,8 @@ Description=Dormitory OCR Bot
 After=network.target
 
 [Service]
-User=root
+User=www-data
+Group=www-data
 WorkingDirectory=/opt/dormitory/ocr-bot
 Environment="BACKEND_DIR=/opt/dormitory"
 ExecStart=/opt/dormitory/ocr-bot/venv/bin/python app.py
@@ -113,6 +114,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF'
 
+sudo chown -R www-data:www-data /opt/dormitory/ocr-bot
 sudo systemctl daemon-reload
 sudo systemctl enable dormitory-ocr.service
 sudo systemctl restart dormitory-ocr.service

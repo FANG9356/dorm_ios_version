@@ -190,7 +190,7 @@ struct AppBackgroundSettingsTabView: View {
             )
 
             Image(systemName: "sparkles")
-                .font(.system(size: 26, weight: .bold))
+                .font(.custom("SukhumvitSet-Bold", size: 26))
                 .foregroundStyle(.white.opacity(colorScheme == .dark ? 0.9 : 0.7))
         }
     }
@@ -203,7 +203,7 @@ struct AppBackgroundSettingsTabView: View {
                     .frame(width: 48, height: 48)
 
                 Image(systemName: icon)
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.custom("SukhumvitSet-Bold", size: 19))
                     .foregroundStyle(accent)
             }
 
@@ -221,7 +221,7 @@ struct AppBackgroundSettingsTabView: View {
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 15, weight: .bold))
+                .font(.custom("SukhumvitSet-Bold", size: 15))
                 .foregroundStyle(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity, alignment: .leading)

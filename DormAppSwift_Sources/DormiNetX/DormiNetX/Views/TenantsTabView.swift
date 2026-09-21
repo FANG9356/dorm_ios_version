@@ -48,7 +48,7 @@ struct TenantsTabView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "magnifyingglass")
                                     .foregroundColor(.secondary)
-                                    .font(.system(size: 15, weight: .medium))
+                                    .font(.custom("SukhumvitSet-Medium", size: 15))
                                 TextField("ค้นหาห้อง, ชื่อ, เบอร์โทร...", text: $viewModel.searchText)
                                     .font(.custom("SukhumvitSet-Text", size: 14))
                                 if !viewModel.searchText.isEmpty {
@@ -57,7 +57,7 @@ struct TenantsTabView: View {
                                     } label: {
                                         Image(systemName: "xmark.circle.fill")
                                             .foregroundColor(.secondary)
-                                            .font(.system(size: 14))
+                                            .font(.custom("SukhumvitSet-Medium", size: 14))
                                     }
                                 }
                             }
@@ -86,7 +86,7 @@ struct TenantsTabView: View {
                             } label: {
                                 ZStack {
                                     Image(systemName: "arrow.up.arrow.down")
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .font(.custom("SukhumvitSet-SemiBold", size: 14))
                                         .foregroundColor(.primary.opacity(0.85))
                                 }
                                 .frame(width: 42, height: 40, alignment: .center)
@@ -139,7 +139,7 @@ struct TenantsTabView: View {
                     } else if viewModel.filteredUsers.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "person.3.fill")
-                                .font(.system(size: 50))
+                                .font(.custom("SukhumvitSet-Medium", size: 50))
                                 .foregroundColor(.blue.opacity(0.3))
                             Text("ไม่พบข้อมูลลูกบ้าน")
                                 .font(.custom("SukhumvitSet-Bold", size: 16))
@@ -478,7 +478,7 @@ struct PremiumTenantCard: View {
                     
                     HStack(spacing: 6) {
                         Image(systemName: "phone.fill")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.custom("SukhumvitSet-Medium", size: 10))
                             .foregroundColor(.secondary)
                         Text(viewModel.formatPhone(user.phone))
                             .font(.custom("SukhumvitSet-Text", size: 12))
@@ -510,7 +510,7 @@ struct PremiumTenantCard: View {
                     .background(Capsule().fill(statusChipFill))
                     
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.custom("SukhumvitSet-SemiBold", size: 11))
                         .foregroundColor(.secondary.opacity(0.5))
                 }
             }
@@ -592,7 +592,7 @@ struct TenantDetailSheet: View {
     @State private var showDeleteAlert = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
                     VStack(spacing: 12) {
@@ -1321,7 +1321,7 @@ struct TenantFormSheet: View {
                                     removeBookingSlip(at: index)
                                 } label: {
                                     Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.custom("SukhumvitSet-Bold", size: 10))
                                         .foregroundStyle(.white)
                                         .frame(width: 24, height: 24)
                                         .background(.black.opacity(0.55), in: Circle())
@@ -1342,7 +1342,7 @@ struct TenantFormSheet: View {
                             .scaleEffect(0.82)
                     } else {
                         Image(systemName: bookingSlipPaths.isEmpty ? "photo.badge.plus" : "photo.on.rectangle")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 17))
                     }
 
                     Text(bookingSlipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
@@ -1351,7 +1351,7 @@ struct TenantFormSheet: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.blue)
@@ -1802,7 +1802,7 @@ struct DetailRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.custom("SukhumvitSet-SemiBold", size: 14))
                 .foregroundColor(iconColor)
                 .frame(width: 26, height: 26)
                 .background(Circle().fill(iconFillColor))
@@ -1845,7 +1845,7 @@ private struct PaymentMethodOptionRow: View {
                     .frame(width: 38, height: 38)
 
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 16))
                     .foregroundStyle(iconColor)
             }
 
@@ -1873,7 +1873,7 @@ private struct PaymentMethodOptionRow: View {
                         .frame(width: 18, height: 18)
 
                     Image(systemName: "checkmark")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 9))
                         .foregroundStyle(.white)
                 }
             }

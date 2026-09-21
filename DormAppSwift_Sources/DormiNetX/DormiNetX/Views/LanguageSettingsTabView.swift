@@ -29,7 +29,7 @@ struct LanguageSettingsTabView: View {
                             .frame(width: 74, height: 74)
 
                         Image(systemName: currentOption.icon)
-                            .font(.system(size: 30, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 30))
                             .foregroundStyle(currentOption.accent)
                     }
 
@@ -91,7 +91,7 @@ struct LanguageSettingsTabView: View {
                         .frame(width: 48, height: 48)
 
                     Image(systemName: option.icon)
-                        .font(.system(size: 19, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 19))
                         .foregroundStyle(option.accent)
                 }
 
@@ -110,11 +110,11 @@ struct LanguageSettingsTabView: View {
 
                 if option.id == appLanguageCode {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 22))
                         .foregroundStyle(option.accent)
                 } else {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 15))
                         .foregroundStyle(.secondary.opacity(0.7))
                 }
             }

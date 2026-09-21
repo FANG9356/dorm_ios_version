@@ -630,7 +630,7 @@ struct SyncAnimationOverlay: View {
                     
                     VStack(spacing: 2) {
                         Image(systemName: "arrow.down")
-                            .font(.system(size: 28, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 28))
                             .foregroundColor(.indigo)
                     }
                     .offset(y: arrowOffset)

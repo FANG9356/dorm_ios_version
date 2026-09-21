@@ -73,7 +73,7 @@ struct RoomsTabView: View {
         GlassCard {
             VStack(spacing: 12) {
                 Image(systemName: "door.left.hand.open")
-                    .font(.system(size: 34))
+                    .font(.custom("SukhumvitSet-Medium", size: 34))
                     .foregroundStyle(.secondary)
                 Text("ยังไม่มีข้อมูลห้องพัก")
                     .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -88,7 +88,7 @@ struct RoomsTabView: View {
         GlassCard {
             VStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 34))
+                    .font(.custom("SukhumvitSet-Medium", size: 34))
                     .foregroundStyle(.secondary)
                 Text("ไม่พบห้องพักที่ค้นหา")
                     .font(.custom("SukhumvitSet-Medium", size: 14))

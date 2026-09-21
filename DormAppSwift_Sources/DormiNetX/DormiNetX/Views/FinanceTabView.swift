@@ -228,7 +228,7 @@ struct FinanceTabView: View {
                 GlassCard {
                     VStack(spacing: 10) {
                         Image(systemName: "tray")
-                            .font(.system(size: 30))
+                            .font(.custom("SukhumvitSet-Medium", size: 30))
                             .foregroundStyle(.secondary)
                         Text("ยังไม่มีรายการตามตัวกรอง")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -277,7 +277,7 @@ struct FinanceTabView: View {
                 GlassCard {
                     VStack(spacing: 10) {
                         Image(systemName: "person.text.rectangle")
-                            .font(.system(size: 30))
+                            .font(.custom("SukhumvitSet-Medium", size: 30))
                             .foregroundStyle(.secondary)
                         Text(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                              ? "ยังไม่มีลูกบ้านที่ต้องออกบิล"
@@ -563,7 +563,7 @@ private struct FinanceFilterPanel: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.custom("SukhumvitSet-Medium", size: 15))
                     .foregroundStyle(.secondary)
 
                 TextField("ค้นหาห้อง, ชื่อลูกบ้าน, เบอร์โทร...", text: $searchText)
@@ -574,7 +574,7 @@ private struct FinanceFilterPanel: View {
                 if !searchText.isEmpty {
                     Button { searchText = "" } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
@@ -589,7 +589,7 @@ private struct FinanceFilterPanel: View {
             Button(action: onSelectMonth) {
                 HStack(spacing: 12) {
                     Image(systemName: "calendar")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.custom("SukhumvitSet-SemiBold", size: 16))
                         .foregroundStyle(.secondary)
                     Text("รอบบิล")
                         .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -597,7 +597,7 @@ private struct FinanceFilterPanel: View {
                     Text(monthLabel)
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                     Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.custom("SukhumvitSet-SemiBold", size: 11))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.primary)
@@ -1237,7 +1237,7 @@ private struct PaymentReceiptView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 14))
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .background(.white.opacity(0.12), in: Circle())
@@ -1366,7 +1366,7 @@ private struct ReceiptExportCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("DormiNet")
-                        .font(.system(size: 24, weight: .black))
+                        .font(.custom("SukhumvitSet-Medium", size: 24))
                         .foregroundStyle(.black)
                     Text("ใบเสร็จรับเงิน")
                         .font(.custom("SukhumvitSet-Bold", size: 28))
@@ -1562,7 +1562,7 @@ private struct PaymentRow: View {
                         Text(payment.roomNumber)
                             .font(.custom("SukhumvitSet-Bold", size: 18))
                         Image(systemName: "door.left.hand.open")
-                            .font(.system(size: 12))
+                            .font(.custom("SukhumvitSet-Medium", size: 12))
                             .foregroundStyle(.secondary)
                     }
                     .frame(width: 48)
@@ -1596,11 +1596,11 @@ private struct PaymentRow: View {
                         Button(action: onMarkPaid) {
                             HStack(spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .font(.custom("SukhumvitSet-Bold", size: 13))
                                 Text("รับชำระเต็มจำนวน")
                                     .font(.custom("SukhumvitSet-Bold", size: 12))
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.custom("SukhumvitSet-Bold", size: 10))
                                     .opacity(0.75)
                             }
                             .foregroundStyle(.white)
@@ -1897,7 +1897,7 @@ struct PaymentEditor: View {
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "door.left.hand.open")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.custom("SukhumvitSet-Bold", size: 18))
                     .foregroundStyle(.blue)
                     .frame(width: 36, height: 36)
                     .background(Color.blue.opacity(0.12), in: Circle())
@@ -1917,7 +1917,7 @@ struct PaymentEditor: View {
                     .font(.custom("SukhumvitSet-Medium", size: 11))
                     .foregroundStyle(.secondary)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.custom("SukhumvitSet-Bold", size: 12))
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 14)
@@ -1980,7 +1980,7 @@ struct PaymentEditor: View {
     private var statusHelper: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "info.circle")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.custom("SukhumvitSet-SemiBold", size: 13))
                 .foregroundStyle(.secondary)
             Text(statusDescription)
                 .font(.custom("SukhumvitSet-Text", size: 12))
@@ -1996,7 +1996,7 @@ struct PaymentEditor: View {
     private var paymentDateSummary: some View {
         HStack(spacing: 12) {
             Image(systemName: paymentStatus == "pending" ? "calendar.badge.clock" : "calendar.badge.checkmark")
-                .font(.system(size: 18, weight: .semibold))
+                .font(.custom("SukhumvitSet-SemiBold", size: 18))
                 .foregroundStyle(paymentStatus == "pending" ? Color.secondary : Color.green)
                 .frame(width: 34, height: 34)
                 .background(Color.primary.opacity(0.06), in: Circle())
@@ -2128,7 +2128,7 @@ struct PaymentEditor: View {
                                     removeSlip(at: index)
                                 } label: {
                                     Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .bold))
+                                        .font(.custom("SukhumvitSet-Bold", size: 10))
                                         .foregroundStyle(.white)
                                         .frame(width: 24, height: 24)
                                         .background(.black.opacity(0.55), in: Circle())
@@ -2149,7 +2149,7 @@ struct PaymentEditor: View {
                             .scaleEffect(0.82)
                     } else {
                         Image(systemName: slipPaths.isEmpty ? "photo.badge.plus" : "photo.on.rectangle")
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.custom("SukhumvitSet-Bold", size: 17))
                     }
 
                     Text(slipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
@@ -2158,7 +2158,7 @@ struct PaymentEditor: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.custom("SukhumvitSet-Bold", size: 13))
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.blue)

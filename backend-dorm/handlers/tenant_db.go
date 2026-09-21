@@ -125,4 +125,10 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id) WHERE external_id != ''`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_external_id ON payments(external_id) WHERE external_id != ''`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_external_id ON maintenances(external_id) WHERE external_id != ''`)
+	
+	// Replay Protection for slips
+	db.Exec(`ALTER TABLE payments ADD COLUMN slip_payload TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE maintenances ADD COLUMN slip_payload TEXT DEFAULT ''`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_slip_payload ON payments(slip_payload) WHERE slip_payload != '' AND slip_payload IS NOT NULL`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenances_slip_payload ON maintenances(slip_payload) WHERE slip_payload != '' AND slip_payload IS NOT NULL`)
 }

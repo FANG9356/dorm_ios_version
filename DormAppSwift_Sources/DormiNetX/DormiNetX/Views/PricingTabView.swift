@@ -220,7 +220,7 @@ struct PricingTabView: View {
                 GlassCard {
                     VStack(spacing: 8) {
                         Image(systemName: "door.left.hand.open")
-                            .font(.system(size: 30))
+                            .font(.custom("SukhumvitSet-Medium", size: 30))
                             .foregroundStyle(.secondary)
                         Text(rooms.isEmpty ? "ยังไม่มีห้องพัก" : "ไม่พบห้องพักที่ค้นหา")
                             .font(.custom("SukhumvitSet-Medium", size: 14))
@@ -398,7 +398,7 @@ private struct PricingAddActionSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 28))
                     .foregroundStyle(Color.indigo)
                     .frame(width: 38, height: 38)
                     .background(Circle().fill(.primary.opacity(colorScheme == .dark ? 0.08 : 0.04)))
@@ -449,7 +449,7 @@ private struct PricingAddActionSheet: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.custom("SukhumvitSet-SemiBold", size: 16))
                     .foregroundStyle(isEnabled ? Color.indigo : .secondary)
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(.primary.opacity(colorScheme == .dark ? 0.08 : 0.045)))
@@ -466,7 +466,7 @@ private struct PricingAddActionSheet: View {
                 Spacer(minLength: 8)
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.custom("SukhumvitSet-Bold", size: 11))
                     .foregroundStyle(.secondary.opacity(0.8))
             }
             .foregroundStyle(isEnabled ? .primary : .secondary)
