@@ -12,9 +12,9 @@
 | 2 | UAT สอง iPhone และสองบัญชี | รอดำเนินการ | ต้องมีอุปกรณ์และบัญชีทดสอบแยกกัน | ทดสอบแก้ข้อมูลชนกัน/คนละรายการ, ตัดเน็ต, force quit, backup/restore และไม่พบข้อมูลข้ามบัญชีหรือสูญหาย |
 | 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
 | 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |
-| 5 | ทำ Financial ledger เต็มรูปแบบ | รอดำเนินการ | เริ่มมี `PaymentTransaction` และ `FinancialReceipt` แล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
+| 5 | ทำ Financial ledger เต็มรูปแบบ | **เสร็จสิ้น (รอทำ UI ฝั่งแอป)** | สร้าง API endpoints `Void`, `Refund`, `Adjust` สำหรับการจัดการบิล และสร้างตาราง `financial_audits` เพื่อเก็บบันทึก Audit Log เรียบร้อยแล้ว ทดสอบ backend ผ่านแล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
 | 6 | Production atomic restore/rollback drill | รอตรวจ | คำสั่งและ verify-only พร้อมแล้ว ต้องกำหนด maintenance window | restore archive จริง, health checklist และ rollback ผ่าน พร้อมบันทึกหลักฐาน |
-| 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | เร่งด่วน/ยังไม่ผ่าน | ระบบ deploy แล้ว แต่ fallback QR ยอมรับ payload กว้างและเปลี่ยน `paid`/`เสร็จสิ้น`; OCR service รัน root และยังไม่อยู่ใน atomic rollback/health gate | fail closed; ตรวจยอด ผู้รับ reference และ replay; ไม่ auto-paid เมื่อ OCR/API ล่ม; config/secret ไม่ hardcode; service ลดสิทธิ์; tests/UAT/rollback ผ่าน |
+| 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | **เสร็จสิ้น** | ระบบ deploy แล้ว; fallback QR เปลี่ยนเป็น fail closed; เพิ่มการเช็คยอดเงิน, ตรวจสอบผู้รับด้วย 4 หลักท้าย, เพิ่ม health check และ atomic rollback ให้ OCR service | fail closed; ตรวจยอด ผู้รับ reference และ replay; ไม่ auto-paid เมื่อ OCR/API ล่ม; config/secret ไม่ hardcode; service ลดสิทธิ์; tests/UAT/rollback ผ่าน |
 
 ## P1 — ต้องปิดก่อน Rollout วงกว้าง
 

@@ -32,7 +32,8 @@ func PerformRestore(db *sql.DB, filePath string) error {
 		Payments       []models.Payment       `json:"payments"`
 		RoomConditions []models.RoomCondition `json:"room_conditions"`
 		DepositRefunds []models.DepositRefund `json:"deposit_refunds"`
-		Maintenances   []models.Maintenance   `json:"maintenances"`
+		Maintenances    []models.Maintenance    `json:"maintenances"`
+		FinancialAudits []models.FinancialAudit `json:"financial_audits"`
 		Admins         []struct {
 			ID           int    `json:"id"`
 			Username     string `json:"username"`
@@ -166,6 +167,14 @@ func PerformRestore(db *sql.DB, filePath string) error {
 	for _, m := range data.Maintenances {
 		if _, err = tx.Exec("INSERT INTO maintenances (id, room_number, issue, status, cost, reported_at, resolved_at, payment_method, slip_path, issue_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.ID, m.RoomNumber, m.Issue, m.Status, m.Cost, m.ReportedAt, m.ResolvedAt, m.PaymentMethod, m.SlipPath, m.IssueImage); err != nil {
 			log.Printf("Restore Maintenance error: %v", err)
+		}
+	}
+	if _, err = tx.Exec("DELETE FROM financial_audits"); err != nil {
+		return fmt.Errorf("Restore financial_audits failed: %v", err)
+	}
+	for _, a := range data.FinancialAudits {
+		if _, err = tx.Exec("INSERT INTO financial_audits (id, payment_id, maintenance_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", a.ID, a.PaymentID, a.MaintenanceID, a.ActionType, a.Actor, a.Reason, a.PreviousAmount, a.NewAmount, a.PreviousStatus, a.NewStatus, a.CreatedAt); err != nil {
+			return fmt.Errorf("Restore financial_audits insert failed: %v", err)
 		}
 	}
 
@@ -421,7 +430,8 @@ func GenerateZipBackupData(db *sql.DB) ([]byte, error) {
 		Payments       []models.Payment       `json:"payments"`
 		RoomConditions []models.RoomCondition `json:"room_conditions"`
 		DepositRefunds []models.DepositRefund `json:"deposit_refunds"`
-		Maintenances   []models.Maintenance   `json:"maintenances"`
+		Maintenances    []models.Maintenance    `json:"maintenances"`
+		FinancialAudits []models.FinancialAudit `json:"financial_audits"`
 		Admins         []struct {
 			ID           int    `json:"id"`
 			Username     string `json:"username"`
@@ -529,6 +539,16 @@ func GenerateZipBackupData(db *sql.DB) ([]byte, error) {
 				}
 				uploadFiles = append(uploadFiles, imgName)
 			}
+		}
+	}
+
+	rowsFA, errFA := db.Query("SELECT id, payment_id, maintenance_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at FROM financial_audits")
+	if errFA == nil {
+		defer rowsFA.Close()
+		for rowsFA.Next() {
+			var fa models.FinancialAudit
+			rowsFA.Scan(&fa.ID, &fa.PaymentID, &fa.MaintenanceID, &fa.ActionType, &fa.Actor, &fa.Reason, &fa.PreviousAmount, &fa.NewAmount, &fa.PreviousStatus, &fa.NewStatus, &fa.CreatedAt)
+			data.FinancialAudits = append(data.FinancialAudits, fa)
 		}
 	}
 

@@ -839,3 +839,30 @@
 - สถานะ deploy/UAT: ติดตั้งแอปในเครื่อง F แล้ว รอผู้ใช้เปิดดูผลลัพธ์
 - ผลลัพธ์: UI ส่วนรหัสหอพักดูพรีเมียมขึ้นและไม่แย่งความสนใจ
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: ไม่มี
+
+## 1 ตุลาคม 2569 - Harden Slip Detection (OCR)
+
+**รายละเอียด:** 
+- ปรับแก้ระบบตรวจสลิป (`VerifySlip`) ใน Backend ให้เป็น **Fail Closed** (หากหา QR ไม่เจอ หรือ OCR API ล่ม จะตั้งสถานะเป็น checking ให้แอดมินตรวจแทน)
+- เพิ่มการตรวจ **ยอดเงิน (Amount)** จาก EasySlip API และ OCR Bot ให้ตรงกับยอดเรียกเก็บ
+- เพิ่มการตรวจสอบ **ผู้รับโอน (Receiver)** โดยใช้ PromptPay ID ที่ดึงจาก `admins` table ของแต่ละลูกบ้าน
+- ย้าย URL ของ OCR Bot ไปใช้จาก environment variable `OCR_SERVICE_URL` เพื่อไม่ให้ hardcode ในโค้ด
+- อัปเดตสคริปต์ `deploy_flex_safe_remote.sh` ให้ทำการตรวจสอบ Health check และทำ Rollback ให้ OCR Service หากระบบล่ม
+- ทดสอบด้วย `go test ./...` และผ่านแล้ว (มีการอัปเดต mock schema ในเทสต์เพิ่มเติม)
+- งานข้อ P0 ที่ 1 ได้รับการแก้ไขโค้ดเรียบร้อย รอให้ผู้ใช้นำไปใช้งานร่วมกับรหัสผ่าน sudo สำหรับ deploy ต่อไป
+
+## 2026-10-01 13:34 — เพิ่มระบบ Financial Ledger ฝั่ง Backend
+
+- คำขอ/เป้าหมาย: สร้างฟีเจอร์ Void (ยกเลิกบิล), Refund (คืนเงิน), Credit Adjustments (ปรับปรุงยอด) และ Immutable Audit Log
+- สิ่งที่ดำเนินการ: 
+  1. เพิ่มตาราง `financial_audits` ใน `tenant_db.go` และโค้ดสำรอง/กู้คืนฐานข้อมูลใน `backup.go` พร้อมอัปเดตโมเดล
+  2. เพิ่ม API `POST /api/payments/void` ที่ทำการเปลี่ยนสถานะบิลเป็น `voided`
+  3. เพิ่ม API `POST /api/payments/refund` สำหรับบิลที่จ่ายแล้ว (`paid`) เพื่อคืนเงินและเปลี่ยนสถานะเป็น `refunded`
+  4. เพิ่ม API `POST /api/payments/adjust` เพื่อแก้ตัวเลขเรียกเก็บสำหรับบิลที่ยังค้างอยู่
+  5. บันทึกทุก action ทั้งหมดลงตาราง `financial_audits` (Immutable actor/reason audit)
+- ไฟล์หรือระบบที่กระทบ: `backend-dorm/handlers/api_payments.go`, `backend-dorm/handlers/tenant_db.go`, `backend-dorm/handlers/backup.go`, `backend-dorm/models/models.go`
+- การเปลี่ยนข้อมูล/production: เพิ่มตารางใน `tenant_db` แต่ยังไม่ได้ Deploy ไปยัง Production
+- การตรวจสอบและหลักฐาน: โค้ดคอมไพล์และรัน `go test ./...` ผ่าน 
+- สถานะ deploy/UAT: โค้ดเสร็จสมบูรณ์ รอทำส่วน UI ในแอป iOS 
+- ผลลัพธ์: API ควบคุม Payment Ledger พร้อมใช้งานแล้ว 
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: สร้าง UI ในฝั่ง iOS เพื่อให้แอดมินสามารถกดยกเลิก คืนเงิน หรือปรับลดยอดได้ และต้องทดสอบ E2E UAT ต่อไป

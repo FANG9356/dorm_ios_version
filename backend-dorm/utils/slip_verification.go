@@ -37,7 +37,7 @@ type EasySlipResponse struct {
 
 // VerifySlip checks if the uploaded slip is valid and matches the expected amount.
 // It uses EasySlip API if EASYSLIP_TOKEN is set, otherwise falls back to a Mock Verification (decodes QR locally).
-func VerifySlip(filePath string, expectedAmount float64) (isValid bool, reason string, payload string) {
+func VerifySlip(filePath string, expectedAmount float64, expectedReceiver string) (isValid bool, reason string, payload string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return false, "Could not open slip image", ""
@@ -65,15 +65,15 @@ func VerifySlip(filePath string, expectedAmount float64) (isValid bool, reason s
 
 	token := os.Getenv("EASYSLIP_TOKEN")
 	if token != "" {
-		v, r := verifyWithEasySlip(file, token, expectedAmount)
+		v, r := verifyWithEasySlip(file, token, expectedAmount, expectedReceiver)
 		return v, r, payload
 	}
 
-	v, r := verifyMock(file, expectedAmount, payload)
+	v, r := verifyMock(file, expectedAmount, payload, expectedReceiver)
 	return v, r, payload
 }
 
-func verifyWithEasySlip(file *os.File, token string, expectedAmount float64) (bool, string) {
+func verifyWithEasySlip(file *os.File, token string, expectedAmount float64, expectedReceiver string) (bool, string) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -114,25 +114,45 @@ func verifyWithEasySlip(file *os.File, token string, expectedAmount float64) (bo
 		return false, "Slip verification failed (Invalid slip)"
 	}
 
-	// Optionally check amount
+	// Check amount
 	if result.Data.Amount.Amount < expectedAmount-0.01 { // Allow slight float tolerance
-		return false, fmt.Sprintf("Amount mismatch. Expected %.2f but found %.2f", expectedAmount, result.Data.Amount.Amount)
+		return false, fmt.Sprintf("ยอดเงินในสลิป (%.2f) ไม่ตรงกับยอดที่เรียกเก็บ (%.2f)", result.Data.Amount.Amount, expectedAmount)
+	}
+
+	// Check receiver if expectedReceiver is provided
+	if expectedReceiver != "" {
+		// EasySlip often returns proxy account masked (e.g., xxx-xxx-1234 or 081xxxx123)
+		// We extract the last 4 digits to compare
+		accountStr := strings.ReplaceAll(result.Data.Receiver.Proxy.Account, "-", "")
+		expectedStr := strings.ReplaceAll(expectedReceiver, "-", "")
+		
+		if len(accountStr) >= 4 && len(expectedStr) >= 4 {
+			if !strings.HasSuffix(accountStr, expectedStr[len(expectedStr)-4:]) {
+				return false, "ชื่อหรือบัญชีผู้รับโอนเงินไม่ถูกต้อง กรุณาโอนเงินเข้าบัญชีหอพักเท่านั้น"
+			}
+		}
 	}
 
 	return true, "Verified automatically via API"
 }
 
-func verifyMock(file *os.File, expectedAmount float64, payload string) (bool, string) {
+func verifyMock(file *os.File, expectedAmount float64, payload string, expectedReceiver string) (bool, string) {
 	// First, try to call the Python OCR Bot
 	absPath, err := filepath.Abs(file.Name())
 	if err == nil {
 		reqBody, _ := json.Marshal(map[string]interface{}{
-			"filepath": absPath,
-			"amount":   expectedAmount,
+			"filepath":          absPath,
+			"amount":            expectedAmount,
+			"expected_receiver": expectedReceiver,
 		})
 		
+		ocrUrl := os.Getenv("OCR_SERVICE_URL")
+		if ocrUrl == "" {
+			ocrUrl = "http://127.0.0.1:5001/verify"
+		}
+		
 		client := &http.Client{Timeout: 15 * time.Second}
-		resp, err := client.Post("http://127.0.0.1:5001/verify", "application/json", bytes.NewBuffer(reqBody))
+		resp, err := client.Post(ocrUrl, "application/json", bytes.NewBuffer(reqBody))
 		
 		if err == nil {
 			defer resp.Body.Close()

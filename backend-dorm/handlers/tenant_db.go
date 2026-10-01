@@ -86,6 +86,7 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0'))`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS system_logs (log_id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT, details TEXT, timestamp TEXT)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS financial_audits (id INTEGER PRIMARY KEY AUTOINCREMENT, payment_id INTEGER, maintenance_id INTEGER, action_type TEXT, actor TEXT, reason TEXT, previous_amount REAL, new_amount REAL, previous_status TEXT, new_status TEXT, created_at TEXT)`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS deposit_refunds (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, room_number TEXT, original_deposit REAL, cleaning_fee REAL, damage_fee REAL, net_refund REAL, refund_date TEXT)`)
 

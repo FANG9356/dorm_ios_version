@@ -22,6 +22,20 @@ type User struct {
 	AdditionalDetails      string   `json:"additional_details"`
 }
 
+type FinancialAudit struct {
+	ID              int     `json:"id"`
+	PaymentID       int     `json:"payment_id"`
+	MaintenanceID   int     `json:"maintenance_id"`
+	ActionType      string  `json:"action_type"`
+	Actor           string  `json:"actor"`
+	Reason          string  `json:"reason"`
+	PreviousAmount  float64 `json:"previous_amount"`
+	NewAmount       float64 `json:"new_amount"`
+	PreviousStatus  string  `json:"previous_status"`
+	NewStatus       string  `json:"new_status"`
+	CreatedAt       string  `json:"created_at"`
+}
+
 type Payment struct {
 	ID                int      `json:"id"`
 	UserID            int      `json:"user_id"`

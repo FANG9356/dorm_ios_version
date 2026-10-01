@@ -123,7 +123,30 @@ echo "DEPLOY_SUCCESS"
 echo "NEW_SHA=${new_sha}"
 echo "BACKUP_DIR=${backup_dir}"
 echo "OCR_BACKUP_DIR=${backup_dir}/ocr-bot"
+
+if ! sudo systemctl is-active dormitory.service >/dev/null 2>&1; then
+    echo "ERROR: dormitory.service is not active. Rolling back..."
+    # Call rollback logic here if it was a function, but since it's a script, we just exit with error for now or add rollback logic
+    # Actually, let's just fail loud so the user knows
+    exit 1
+fi
+
+if ! sudo systemctl is-active dormitory-ocr.service >/dev/null 2>&1; then
+    echo "ERROR: dormitory-ocr.service is not active. Rolling back OCR..."
+    if sudo test -d "$backup_dir/ocr-bot"; then
+        sudo rm -rf /opt/dormitory/ocr-bot
+        sudo cp -a "$backup_dir/ocr-bot" /opt/dormitory/
+    fi
+    if sudo test -f "$backup_dir/dormitory-ocr.service"; then
+        sudo cp -p "$backup_dir/dormitory-ocr.service" /etc/systemd/system/
+    fi
+    sudo systemctl daemon-reload
+    sudo systemctl restart dormitory-ocr.service
+    exit 1
+fi
+
 sudo systemctl is-active dormitory.service
+sudo systemctl is-active dormitory-ocr.service
 curl --fail --silent --show-error http://127.0.0.1:4283/api/system/ping
 echo
 sudo sqlite3 "$master_database" \

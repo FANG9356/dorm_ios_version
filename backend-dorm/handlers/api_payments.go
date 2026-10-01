@@ -429,4 +429,218 @@ func SetupPaymentRoutes(db *sql.DB) {
 			w.WriteHeader(http.StatusOK)
 		}
 	})
+
+	http.HandleFunc("/api/payments/void", func(w http.ResponseWriter, r *http.Request) {
+		db := getTenantDB(r, db)
+		utils.EnableCORS(w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var payload struct {
+			PaymentID int    `json:"payment_id"`
+			Reason    string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		var currentStatus string
+		var currentAmount float64
+		err = tx.QueryRow("SELECT COALESCE(payment_status, 'pending'), COALESCE(amount, 0) FROM payments WHERE payment_id = ?", payload.PaymentID).Scan(&currentStatus, &currentAmount)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Payment not found", http.StatusNotFound)
+			return
+		}
+		
+		if currentStatus == "voided" {
+			tx.Rollback()
+			http.Error(w, "Payment already voided", http.StatusBadRequest)
+			return
+		}
+
+		_, err = tx.Exec("UPDATE payments SET payment_status = 'voided' WHERE payment_id = ?", payload.PaymentID)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Update failed", http.StatusInternalServerError)
+			return
+		}
+
+		// Audit Log
+		var adminName string
+		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+		
+		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "VOID", adminName, payload.Reason, currentAmount, currentAmount, currentStatus, "voided", time.Now().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Audit log failed", http.StatusInternalServerError)
+			return
+		}
+
+		tx.Commit()
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Void successful"})
+	})
+
+	http.HandleFunc("/api/payments/refund", func(w http.ResponseWriter, r *http.Request) {
+		db := getTenantDB(r, db)
+		utils.EnableCORS(w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var payload struct {
+			PaymentID int    `json:"payment_id"`
+			Reason    string `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		var currentStatus string
+		var currentAmount float64
+		err = tx.QueryRow("SELECT COALESCE(payment_status, 'pending'), COALESCE(amount, 0) FROM payments WHERE payment_id = ?", payload.PaymentID).Scan(&currentStatus, &currentAmount)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Payment not found", http.StatusNotFound)
+			return
+		}
+		
+		if currentStatus != "paid" {
+			tx.Rollback()
+			http.Error(w, "Only paid bills can be refunded", http.StatusBadRequest)
+			return
+		}
+
+		_, err = tx.Exec("UPDATE payments SET payment_status = 'refunded' WHERE payment_id = ?", payload.PaymentID)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Update failed", http.StatusInternalServerError)
+			return
+		}
+
+		// Audit Log
+		var adminName string
+		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+		
+		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "REFUND", adminName, payload.Reason, currentAmount, currentAmount, currentStatus, "refunded", time.Now().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Audit log failed", http.StatusInternalServerError)
+			return
+		}
+
+		tx.Commit()
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Refund successful"})
+	})
+	http.HandleFunc("/api/payments/adjust", func(w http.ResponseWriter, r *http.Request) {
+		db := getTenantDB(r, db)
+		utils.EnableCORS(w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		var payload struct {
+			PaymentID int     `json:"payment_id"`
+			NewAmount float64 `json:"new_amount"`
+			Reason    string  `json:"reason"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Invalid payload", http.StatusBadRequest)
+			return
+		}
+		if payload.NewAmount < 0 {
+			http.Error(w, "Amount cannot be negative", http.StatusBadRequest)
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		var currentStatus string
+		var currentAmount float64
+		err = tx.QueryRow("SELECT COALESCE(payment_status, 'pending'), COALESCE(amount, 0) FROM payments WHERE payment_id = ?", payload.PaymentID).Scan(&currentStatus, &currentAmount)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Payment not found", http.StatusNotFound)
+			return
+		}
+		
+		if currentStatus == "paid" || currentStatus == "voided" || currentStatus == "refunded" {
+			tx.Rollback()
+			http.Error(w, "Cannot adjust paid, voided, or refunded bills", http.StatusBadRequest)
+			return
+		}
+
+		_, err = tx.Exec("UPDATE payments SET amount = ? WHERE payment_id = ?", payload.NewAmount, payload.PaymentID)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Update failed", http.StatusInternalServerError)
+			return
+		}
+
+		// Audit Log
+		var adminName string
+		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+		
+		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "ADJUST", adminName, payload.Reason, currentAmount, payload.NewAmount, currentStatus, currentStatus, time.Now().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Audit log failed", http.StatusInternalServerError)
+			return
+		}
+
+		tx.Commit()
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"message": "Adjustment successful"})
+	})
 }

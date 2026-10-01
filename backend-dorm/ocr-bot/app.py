@@ -32,6 +32,7 @@ def verify_slip():
     data = request.json
     filepath = data.get("filepath")
     expected_amount = data.get("amount")
+    expected_receiver = data.get("expected_receiver")
     
     if not filepath or expected_amount is None:
         return jsonify({"valid": False, "reason": "Missing filepath or amount"}), 400
@@ -56,8 +57,15 @@ def verify_slip():
         clean_text = text.replace(" ", "").replace(",", "")
         
         # 1. Verify Name
-        if RECEIVER_NAME not in clean_text:
-            return jsonify({"valid": False, "reason": f"Recipient name '{RECEIVER_NAME}' not found on slip"}), 200
+        receiver_to_check = expected_receiver if expected_receiver else RECEIVER_NAME
+        
+        # Use last 4 digits of PromptPay or just standard Name check
+        # Since expected_receiver can be a PromptPay ID, we'll check for it
+        if receiver_to_check:
+            # Only use last 4 digits of PromptPay ID if it's numeric/phone/nid
+            search_term = receiver_to_check[-4:] if receiver_to_check.replace("-", "").isdigit() and len(receiver_to_check) >= 4 else receiver_to_check
+            if search_term not in clean_text:
+                return jsonify({"valid": False, "reason": f"Recipient identifier '{search_term}' not found on slip"}), 200
             
         # 2. Verify Amount
         amount_exact = f"{float(expected_amount):.2f}"

@@ -411,7 +411,10 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		isValid, verifyReason, payload := utils.VerifySlip(filepath, amount)
+		var expectedReceiver string
+		_ = master.QueryRow("SELECT COALESCE(promptpay_id, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&expectedReceiver)
+
+		isValid, verifyReason, payload := utils.VerifySlip(filepath, amount, expectedReceiver)
 		
 		// Replay Protection Check
 		if payload != "" {
@@ -559,7 +562,10 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		isValid, verifyReason, payload := utils.VerifySlip(filepath, cost)
+		var expectedReceiver string
+		_ = master.QueryRow("SELECT COALESCE(promptpay_id, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&expectedReceiver)
+
+		isValid, verifyReason, payload := utils.VerifySlip(filepath, cost, expectedReceiver)
 		
 		// Replay Protection Check
 		if payload != "" {
