@@ -3,7 +3,7 @@ import SwiftUI
 struct LanguageSettingsTabView: View {
     @AppStorage("appLanguageCode") private var appLanguageCode = AppLanguageOption.system.id
     @Environment(\.colorScheme) private var colorScheme
-    @State private var message: String?
+
 
     private let options = AppLanguageOption.all
 
@@ -59,21 +59,11 @@ struct LanguageSettingsTabView: View {
                     languageOptionRow(option)
                 }
             }
-
-            if let message {
-                Text(message)
-                    .font(.custom("SukhumvitSet-Medium", size: 12))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 126)
         .padding(.horizontal, 20)
         .animation(.spring(response: 0.36, dampingFraction: 0.82), value: appLanguageCode)
-        .animation(.easeInOut(duration: 0.22), value: message)
     }
 
     private var currentOption: AppLanguageOption {
@@ -136,7 +126,7 @@ struct LanguageSettingsTabView: View {
 
     private func apply(_ option: AppLanguageOption) {
         appLanguageCode = option.id
-        message = "เปลี่ยนภาษาเป็น \(option.title) แล้ว"
+
     }
 }
 

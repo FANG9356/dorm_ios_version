@@ -1,6 +1,6 @@
 # สถานะการทำงานปัจจุบัน
 
-อัปเดตล่าสุด: 18 กันยายน 2569 (Asia/Bangkok)
+อัปเดตล่าสุด: 1 ตุลาคม 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ
 
@@ -34,6 +34,11 @@
 - เปลี่ยนการตอบกลับของปุ่ม "ประวัติการชำระ" จาก Carousel ที่แสดงข้อมูลเยอะในแชท เป็น Flex Message ขนาดเล็ก (Mini Card) ที่มีปุ่มกดเปิด Tenant Portal LIFF
 - อุดช่องโหว่ความปลอดภัยระดับ P0 โดยการทำ Passwordless SSH Key Authentication และลบสคริปต์ `.exp` ที่มีรหัสผ่านฮาร์ดโค้ดกว่า 30 ไฟล์ออกจาก Git History ของโค้ดปัจจุบัน
 - ค้นหาและแพตช์บั๊ก HTTP Response Body Leak ในโค้ด `line_bot.go` เพื่อป้องกัน Memory/Connection Exhaustion ในขณะส่งข้อความหา LINE API
+- แก้ไขปัญหา iOS App Crash `EXC_BREAKPOINT` ภายใน SwiftData จากข้อจำกัดการแปลโค้ด (Predicate OR condition) ใน `context.fetchCount()`
+- พัฒนาระบบรองรับ PromptPay ID แบบ Multi-Tenant (แยกตามแอดมิน) อัปเดตทั้งหน้า iOS App, Backend API และ LINE Bot ที่ใช้สร้าง QR Code
+- แก้ไขให้ `BackupTabView` แสดง Alert ผลการดำเนินการสำเร็จและผิดพลาดได้ตามปกติ
+- ปรับ Maintenance Workflow ให้รัดกุมยิ่งขึ้น (iOS/Backend): ป้องกันสถานะปริศนา, ห้ามแอปข้ามการอนุมัติใบเสนอราคา, และบังคับ Backend ตรวจ `quoteApproved` ก่อนขอให้ชำระเงิน
+- เพิ่มระบบตรวจสอบ LIFF โดยเช็กว่ารหัสหอมีจริงก่อนอนุญาตสร้าง/เปิด Tenant DB ป้องกันผู้สุ่มเดา
 
 ## หลักฐานทดสอบล่าสุด
 

@@ -25,17 +25,27 @@ enum MaintenanceWorkflow {
 
     static func canTransition(from originalStatus: String, to newStatus: String, hasCost: Bool) -> Bool {
         if originalStatus == newStatus { return true }
+        if originalStatus == "ปฏิเสธค่าใช้จ่าย" { return false }
         let flow = statuses(hasCost: hasCost)
-        
-        let original = originalStatus == "ปฏิเสธค่าใช้จ่าย" ? "รออนุมัติค่าใช้จ่าย" : (originalStatus.isEmpty ? flow[0] : originalStatus)
+        let original = originalStatus.isEmpty ? flow[0] : originalStatus
         guard let currentIndex = flow.firstIndex(of: original),
               let newIndex = flow.firstIndex(of: newStatus) else {
-            // ถ้า originalStatus ไม่อยู่ใน flow (เช่น เปลี่ยนใจลบค่าใช้จ่าย)
-            return true 
+            return false
         }
-        
-        // อนุญาตให้เดินหน้าทีละ 1 ขั้น หรือถอยหลังได้ 1 ขั้น เพื่อแก้ไขข้อมูล
-        return abs(newIndex - currentIndex) <= 1
+
+        // Quote approval and the transition to payment are performed by LINE.
+        if hasCost {
+            if originalStatus == "รออนุมัติค่าใช้จ่าย" {
+                return newStatus == "กำลังติดต่อช่าง" // Can return for edit
+            }
+            if originalStatus == "รอตรวจสอบชำระเงิน" {
+                return newStatus == "กำลังซ่อม"
+            }
+            if currentIndex < 2 && newIndex > 2 {
+                return false // Cannot skip quote approval
+            }
+        }
+        return newIndex > currentIndex || (newIndex - currentIndex == 1)
     }
 }
 
@@ -473,6 +483,8 @@ private struct MaintenanceEditor: View {
                             if !newValue {
                                 cost = ""
                                 paymentMethod = ""
+                            } else if status == "รอดำเนินการ" || status == "กำลังติดต่อช่าง" {
+                                status = "รออนุมัติค่าใช้จ่าย"
                             }
                         }
 
@@ -764,12 +776,12 @@ private struct MaintenanceEditor: View {
             HStack(spacing: 12) {
                 Image(systemName: paymentMethod == "เงินสด" ? "banknote" : "building.columns")
                     .font(.custom("SukhumvitSet-SemiBold", size: 16))
-                    .foregroundStyle(.indigo)
+                    .foregroundStyle(.primary.opacity(0.7))
                     .frame(width: 36, height: 36)
-                    .background(Color.indigo.opacity(0.09), in: Circle())
+                    .background(Color.primary.opacity(0.06), in: Circle())
                 Text(paymentMethodTitle)
                     .font(.custom("SukhumvitSet-Medium", size: 15))
-                    .foregroundStyle(paymentMethod.isEmpty ? Color.secondary : Color.primary)
+                    .foregroundColor(.primary)
                 Spacer()
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.custom("SukhumvitSet-SemiBold", size: 12))
@@ -790,7 +802,7 @@ private struct MaintenanceEditor: View {
     }
 
     private var paymentMethodTitle: String {
-        paymentMethods.first(where: { $0.value == paymentMethod })?.title ?? paymentMethod
+        paymentMethods.first(where: { $0.value == paymentMethod })?.title ?? (paymentMethod.isEmpty ? "ยังไม่ระบุ" : paymentMethod)
     }
 
     private var canEditCost: Bool {

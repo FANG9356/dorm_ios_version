@@ -1,0 +1,696 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ยืนยันการลบ",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 222
+        }
+      },
+      {
+        "comment": "",
+        "key": "ทะเบียนลูกบ้าน",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "ค้นหา ตรวจสถานะ และจัดการข้อมูลผู้พักอาศัย",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "ค้นหาห้อง, ชื่อ, เบอร์โทร...",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง 1 → 9",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 74
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง 9 → 1",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "พักอาศัยก่อน",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "ย้ายออกก่อน",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 84
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไม่พบข้อมูลลูกบ้าน",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 144
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลองเปลี่ยนคำค้นหาใหม่",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "รายการลูกบ้าน",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld รายการ",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 223
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบ",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 224
+        }
+      },
+      {
+        "comment": "",
+        "key": "ต้องการลบลูกบ้านห้อง %@ (%@ %@) จริงหรือไม่?",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 316
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 397
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 459
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@%@ %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 474
+        }
+      },
+      {
+        "comment": "",
+        "key": "แก้ไขข้อมูล",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 532
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบลูกบ้าน",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 537
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยืนยันการลบ",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 718
+        }
+      },
+      {
+        "comment": "",
+        "key": "รายละเอียดลูกบ้าน",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 706
+        }
+      },
+      {
+        "comment": "",
+        "key": "แก้ไขข้อมูล",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 623
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบลูกบ้าน",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 643
+        }
+      },
+      {
+        "comment": "",
+        "key": "ปิด",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 710
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 719
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบ",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 720
+        }
+      },
+      {
+        "comment": "",
+        "key": "ต้องการลบลูกบ้านห้อง %@ จริงหรือไม่?",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 730
+        }
+      },
+      {
+        "comment": "",
+        "key": "แก้ไขลูกบ้าน",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 1053
+        }
+      },
+      {
+        "comment": "",
+        "key": "เพิ่มลูกบ้านใหม่",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 1053
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลส่วนตัว",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 847
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลห้องพัก",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 885
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลสัญญา",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 940
+        }
+      },
+      {
+        "comment": "",
+        "key": "การชำระเงินตอนเข้าอยู่",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 992
+        }
+      },
+      {
+        "comment": "",
+        "key": "คำนำหน้า",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 848
+        }
+      },
+      {
+        "comment": "",
+        "key": "ชื่อ",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 856
+        }
+      },
+      {
+        "comment": "",
+        "key": "นามสกุล",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 861
+        }
+      },
+      {
+        "comment": "",
+        "key": "เบอร์โทรศัพท์",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 866
+        }
+      },
+      {
+        "comment": "",
+        "key": "เลขบัตรประชาชน",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 872
+        }
+      },
+      {
+        "comment": "",
+        "key": "ที่อยู่",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 878
+        }
+      },
+      {
+        "comment": "",
+        "key": "นาย",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 849
+        }
+      },
+      {
+        "comment": "",
+        "key": "นาง",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 850
+        }
+      },
+      {
+        "comment": "",
+        "key": "นางสาว",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 851
+        }
+      },
+      {
+        "comment": "",
+        "key": "ชื่อ",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 857
+        }
+      },
+      {
+        "comment": "",
+        "key": "นามสกุล",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 862
+        }
+      },
+      {
+        "comment": "",
+        "key": "10 หลัก",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 867
+        }
+      },
+      {
+        "comment": "",
+        "key": "13 หลัก",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 873
+        }
+      },
+      {
+        "comment": "",
+        "key": "ที่อยู่",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 879
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยังไม่มีห้องว่างให้เลือก กรุณาสร้างประเภทห้องในหน้าตั้งราคา แล้วเพิ่มห้องในหน้าจัดการห้องพักก่อน",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 887
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 891
+        }
+      },
+      {
+        "comment": "",
+        "key": "สถานะ",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 931
+        }
+      },
+      {
+        "comment": "",
+        "key": "เลือกห้อง",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 892
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้องเดิม %@",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 894
+        }
+      },
+      {
+        "comment": "",
+        "key": "ประเภทห้อง",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 911
+        }
+      },
+      {
+        "comment": "",
+        "key": "ค่าเช่าตั้งต้น",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 921
+        }
+      },
+      {
+        "comment": "",
+        "key": "กำลังพักอาศัย",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 932
+        }
+      },
+      {
+        "comment": "",
+        "key": "จอง",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 933
+        }
+      },
+      {
+        "comment": "",
+        "key": "ย้ายออกแล้ว",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 934
+        }
+      },
+      {
+        "comment": "",
+        "key": "วันที่คาดว่าจะเข้าอยู่",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 941
+        }
+      },
+      {
+        "comment": "",
+        "key": "วันเข้าอยู่",
+        "location": {
+          "startingColumn": 127,
+          "startingLine": 941
+        }
+      },
+      {
+        "comment": "",
+        "key": "หมดเขตจอง",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 946
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไม่กำหนดระยะเวลาสัญญา",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 952
+        }
+      },
+      {
+        "comment": "",
+        "key": "วันหมดสัญญา",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 955
+        }
+      },
+      {
+        "comment": "",
+        "key": "เงินมัดจำ",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 960
+        }
+      },
+      {
+        "comment": "",
+        "key": "เงินจอง/มัดจำ",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 974
+        }
+      },
+      {
+        "comment": "",
+        "key": "บาท",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 970
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 961
+        }
+      },
+      {
+        "comment": "",
+        "key": "บาท",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 984
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 975
+        }
+      },
+      {
+        "comment": "",
+        "key": "จำนวนงวด",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 996
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยอดชำระต่องวด",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 1005
+        }
+      },
+      {
+        "comment": "",
+        "key": "เช่น 2",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 997
+        }
+      },
+      {
+        "comment": "",
+        "key": "บาท",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1014
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 1006
+        }
+      },
+      {
+        "comment": "",
+        "key": "บันทึกการแก้ไข",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 1041
+        }
+      },
+      {
+        "comment": "",
+        "key": "เพิ่มลูกบ้าน",
+        "location": {
+          "startingColumn": 97,
+          "startingLine": 1041
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1057
+        }
+      },
+      {
+        "comment": "",
+        "key": "วิธีชำระเงิน",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1098
+        }
+      },
+      {
+        "comment": "",
+        "key": "ค่าน้ำ ค่าไฟ และค่าส่วนกลางจะแยกไปคิดในบิลรายเดือนตามรอบใช้งาน",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1154
+        }
+      },
+      {
+        "comment": "",
+        "key": "มัดจำ %@%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1139
+        }
+      },
+      {
+        "comment": "",
+        "key": "สรุปยอดแรกเข้า",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 1135
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld งวด × %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1168
+        }
+      },
+      {
+        "comment": "",
+        "key": "ช่องทางชำระ",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1190
+        }
+      },
+      {
+        "comment": "",
+        "key": "เพิ่มรูปสลิป",
+        "location": {
+          "startingColumn": 53,
+          "startingLine": 1348
+        }
+      },
+      {
+        "comment": "",
+        "key": "เพิ่มรูปสลิปอีก",
+        "location": {
+          "startingColumn": 94,
+          "startingLine": 1348
+        }
+      }
+    ]
+  },
+  "version": 1
+}

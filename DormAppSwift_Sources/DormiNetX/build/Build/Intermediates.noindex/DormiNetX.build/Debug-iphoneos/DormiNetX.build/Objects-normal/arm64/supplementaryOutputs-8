@@ -1,0 +1,51 @@
+{
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/DormApp.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/DormApp.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/DormApp.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/DormApp.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/DormApp.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/SplashView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SplashView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SplashView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SplashView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SplashView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SplashView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/SystemLogsTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SystemLogsTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SystemLogsTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SystemLogsTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SystemLogsTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SystemLogsTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsViewModel.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsViewModel.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsViewModel.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsViewModel.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsViewModel.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TenantsViewModel.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TransfersTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TransfersTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TransfersTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TransfersTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TransfersTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/TransfersTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  }
+}

@@ -59,15 +59,17 @@ func processPendingLineNotifications(db *sql.DB, sender func(notification mainte
 		var id int64
 		var notification maintenanceStatusNotification
 		now := time.Now().UTC().Format(time.RFC3339Nano)
-		err := db.QueryRow(`SELECT id, event_key, maintenance_record_id, line_user_id, room_number, issue, maintenance_status,
-			cost, reported_at, resolved_at, payment_method, maintenance_updated_at
-			FROM line_notification_outbox
-			WHERE status = 'pending' AND julianday(next_attempt_at) <= julianday(?)
-			ORDER BY id LIMIT 1`, now).Scan(
+		err := db.QueryRow(`SELECT o.id, o.event_key, o.maintenance_record_id, o.line_user_id, o.room_number, o.issue, o.maintenance_status,
+			o.cost, o.reported_at, o.resolved_at, o.payment_method, o.maintenance_updated_at, COALESCE(a.promptpay_id, '')
+			FROM line_notification_outbox o
+			LEFT JOIN admins a ON o.account_id = a.id
+			WHERE o.status = 'pending' AND julianday(o.next_attempt_at) <= julianday(?)
+			ORDER BY o.id LIMIT 1`, now).Scan(
 			&id, &notification.EventKey, &notification.MaintenanceID,
 			&notification.LineUserID, &notification.RoomNumber,
 			&notification.Issue, &notification.Status, &notification.Cost, &notification.ReportedAt,
 			&notification.ResolvedAt, &notification.PaymentMethod, &notification.LastUpdated,
+			&notification.PromptPayID,
 		)
 		if err == sql.ErrNoRows {
 			return

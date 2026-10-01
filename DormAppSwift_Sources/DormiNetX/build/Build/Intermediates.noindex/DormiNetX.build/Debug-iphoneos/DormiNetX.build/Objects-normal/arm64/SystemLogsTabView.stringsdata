@@ -1,0 +1,48 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/SystemLogsTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ประวัติการทำงาน",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 10
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตรวจดูเหตุการณ์ล่าสุดที่แอปบันทึกไว้ในเครื่อง",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 14
+        }
+      },
+      {
+        "comment": "",
+        "key": "เหตุการณ์ล่าสุด",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 21
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld รายการ",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 27
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยังไม่มีประวัติการทำงาน",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 42
+        }
+      }
+    ]
+  },
+  "version": 1
+}

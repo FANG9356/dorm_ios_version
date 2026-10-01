@@ -510,7 +510,35 @@ func InitializeDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE admins ADD COLUMN email TEXT`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN must_change_password INTEGER DEFAULT 0`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN line_user_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN backup_email TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN promptpay_id TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN dorm_code TEXT DEFAULT ''`)
 
+	// Populate missing dorm_code for superadmins
+	rows, err := db.Query("SELECT id FROM admins WHERE role = 'superadmin' AND dorm_code = ''")
+	if err == nil {
+		defer rows.Close()
+		var ids []int
+		for rows.Next() {
+			var id int
+			if rows.Scan(&id) == nil {
+				ids = append(ids, id)
+			}
+		}
+		for _, id := range ids {
+			// Quick unique code generation in migration
+			for i := 0; i < 100; i++ {
+				var code string
+				db.QueryRow("SELECT printf('%06d', abs(random() % 1000000))").Scan(&code)
+				var exists bool
+				db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE dorm_code = ?)", code).Scan(&exists)
+				if !exists {
+					db.Exec("UPDATE admins SET dorm_code = ? WHERE id = ?", code, id)
+					break
+				}
+			}
+		}
+	}
 	db.Exec(`CREATE TABLE IF NOT EXISTS password_resets (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		email TEXT,

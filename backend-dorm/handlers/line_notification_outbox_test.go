@@ -22,6 +22,7 @@ func TestMaintenanceNotificationOutboxIsIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 
 	for i := 0; i < 2; i++ {
@@ -41,6 +42,7 @@ func TestMaintenanceNotificationOutboxIsIdempotent(t *testing.T) {
 func TestProcessMaintenanceNotificationMarksSent(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("sent-event")); err != nil {
 		t.Fatal(err)
@@ -68,6 +70,7 @@ func TestProcessMaintenanceNotificationMarksSent(t *testing.T) {
 func TestProcessMaintenanceNotificationSchedulesRetry(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("retry-event")); err != nil {
 		t.Fatal(err)
@@ -88,6 +91,7 @@ func TestProcessMaintenanceNotificationSchedulesRetry(t *testing.T) {
 func TestInitializeLineIntegrationRecoversClaimedNotification(t *testing.T) {
 	db, _ := sql.Open("sqlite3", ":memory:")
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 	if err := EnqueueMaintenanceStatusNotification(db, 7, testMaintenanceNotification("event")); err != nil {
 		t.Fatal(err)
@@ -115,6 +119,7 @@ func TestDuplicateNotificationFromTwoPathsIsPreventedByEventKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 
 	// event_key เดิม: สร้างจาก maintenance ID + status + last_updated
@@ -169,6 +174,7 @@ func TestDifferentStatusTransitionGeneratesSeparateOutboxEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	db.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, promptpay_id TEXT)`)
 	InitializeLineIntegration(db)
 
 	base := maintenanceStatusNotification{

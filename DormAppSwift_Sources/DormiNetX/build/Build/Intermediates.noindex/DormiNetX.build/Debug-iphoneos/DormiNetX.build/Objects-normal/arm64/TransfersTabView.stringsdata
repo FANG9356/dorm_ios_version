@@ -1,0 +1,112 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TransfersTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ไม่สามารถแก้ประวัติรับเงิน",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตรวจสอบสลิป",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "อนุมัติ แก้ไข หรือส่งกลับรายการชำระเงินที่แนบหลักฐาน",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยังไม่มีหลักฐานการโอน",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 57
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไม่พบหลักฐานการโอนที่ค้นหา",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตกลง",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตรวจแล้ว",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "รอตรวจ",
+        "location": {
+          "startingColumn": 89,
+          "startingLine": 209
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "รอบบิล %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 204
+        }
+      },
+      {
+        "comment": "",
+        "key": "ดูเต็มจอ",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 89,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld / %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 333
+        }
+      }
+    ]
+  },
+  "version": 1
+}

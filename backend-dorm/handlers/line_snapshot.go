@@ -109,6 +109,7 @@ type maintenanceStatusNotification struct {
 	ResolvedAt    string
 	PaymentMethod string
 	LastUpdated   string
+	PromptPayID   string
 }
 
 type maintenanceStatusNotifier func(notification maintenanceStatusNotification) error
@@ -674,6 +675,14 @@ func validateMaintenanceAppTransition(previousStatus, nextStatus string, cost fl
 	// รออนุมัติค่าใช้จ่าย → กำลังติดต่อช่าง: ถอยกลับได้
 	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังติดต่อช่าง" {
 		return nil
+	}
+	// รออนุมัติค่าใช้จ่าย → รอตรวจสอบชำระเงิน: ต้องให้ลูกบ้านกดอนุมัติ
+	// ผ่าน LINE ก่อนเท่านั้น เพื่อป้องกันผู้ดูแลข้ามขั้นตอนอนุมัติราคา
+	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "รอตรวจสอบชำระเงิน" {
+		if quoteApproved {
+			return nil
+		}
+		return fmt.Errorf("quote must be approved by the resident before payment")
 	}
 	// รออนุมัติค่าใช้จ่าย → กำลังซ่อม: ไม่อนุญาต ต้องผ่านชำระก่อน
 	if previousStatus == "รออนุมัติค่าใช้จ่าย" && nextStatus == "กำลังซ่อม" {

@@ -1,0 +1,200 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/OverviewTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "แดชบอร์ดวันนี้",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 28
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลเชิงลึกและสถานะการดำเนินงานของระบบ",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 31
+        }
+      },
+      {
+        "comment": "",
+        "key": "แนวโน้มรายรับทางการเงิน",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "เดือน",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "รายรับ",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 87
+        }
+      },
+      {
+        "comment": "",
+        "key": "เดือน",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "รายรับ",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "สถิติผู้เช่าใหม่รายเดือน",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "เดือน",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 122
+        }
+      },
+      {
+        "comment": "",
+        "key": "จำนวน",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไม่มีข้อมูลห้องพัก",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 160
+        }
+      },
+      {
+        "comment": "",
+        "key": "สถานะห้องพัก",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "จำนวน",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 150
+        }
+      },
+      {
+        "comment": "",
+        "key": "รวม %lld รายการ",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "เมื่อมีรายการ สถิติทุกสถานะจะแสดงที่นี่",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 208
+        }
+      },
+      {
+        "comment": "",
+        "key": "สถิติการแจ้งซ่อม",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยังไม่มีรายการแจ้งซ่อม",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 206
+        }
+      },
+      {
+        "comment": "",
+        "key": "สถานะ",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "จำนวน",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 197
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไม่มีบิลค้างชำระ",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 229
+        }
+      },
+      {
+        "comment": "",
+        "key": "รอชำระเงิน (%lld)",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 224
+        }
+      },
+      {
+        "comment": "",
+        "key": "ห้อง %@",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 236
+        }
+      },
+      {
+        "comment": "",
+        "key": "รอชำระ",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 239
+        }
+      }
+    ]
+  },
+  "version": 1
+}

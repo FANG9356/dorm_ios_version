@@ -1,0 +1,51 @@
+{
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/MaintenanceTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/MaintenanceTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/MaintenanceTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/MaintenanceTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/MaintenanceTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/MaintenanceTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/OverviewTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/OverviewTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/OverviewTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/OverviewTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/OverviewTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/OverviewTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/PasswordResetView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PasswordResetView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PasswordResetView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PasswordResetView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PasswordResetView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PasswordResetView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/PricingTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PricingTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PricingTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PricingTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PricingTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PricingTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomListView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomListView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomListView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomListView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomListView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomsTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomsTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomsTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomsTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomsTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/RoomsTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/SecurityTokenTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SecurityTokenTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SecurityTokenTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SecurityTokenTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SecurityTokenTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SecurityTokenTabView.swiftdeps"
+  }
+}

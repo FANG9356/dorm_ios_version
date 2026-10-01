@@ -274,6 +274,7 @@ func TestMaintenanceQuoteApprovedFlexMessage(t *testing.T) {
 		Status:        "กำลังติดต่อช่าง", // Status จะเป็นแบบนี้เมื่ออนุมัติ
 		Cost:          500,
 		LastUpdated:   "2026-09-18T12:00:00Z",
+		PromptPayID:   "0961950943",
 	}
 
 	message, err := buildMaintenanceStatusFlexMessage(notification, time.Time{})

@@ -95,6 +95,21 @@ func TestLiffRoomsNoLongerExposesRoomInventory(t *testing.T) {
 	}
 }
 
+func TestResolveTenantDBFromCodeRejectsUnknownOwnerBeforeOpeningTenantDB(t *testing.T) {
+	master, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	if _, err := master.Exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY, role TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := resolveTenantDBFromCode(master, "00042"); err == nil {
+		t.Fatal("unknown dorm code unexpectedly resolved a tenant database")
+	}
+}
+
 func TestLiffStatusReturnsCurrentLinkedRoom(t *testing.T) {
 	master, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {

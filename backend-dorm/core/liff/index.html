@@ -98,6 +98,23 @@
 
         <form id="link-form" hidden>
           <div class="field-group">
+            <label for="dorm-code">รหัสหอพัก (Dormitory Code)</label>
+            <div class="control">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+              <input
+                id="dorm-code"
+                name="dorm_code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="off"
+                maxlength="5"
+                placeholder="กรอกรหัส 5 หลักจากหอพัก"
+                required
+              >
+            </div>
+          </div>
+          
+          <div class="field-group">
             <label for="phone">เบอร์โทรศัพท์ยืนยัน</label>
             <div class="control">
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7.2 3.5 9.7 8 7.9 9.8c1.1 2.5 3.1 4.5 5.6 5.6l1.8-1.8 4.5 2.5v3.1c0 1-1 1.8-2 1.7C9.7 20.2 3.2 13.7 2.5 5.6c-.1-1 .7-2 1.7-2h3Z"/></svg>

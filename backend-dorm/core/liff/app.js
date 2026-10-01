@@ -6,6 +6,7 @@
   const notice = document.getElementById("notice");
   const form = document.getElementById("link-form");
   const phone = document.getElementById("phone");
+  const dormCode = document.getElementById("dorm-code");
   const lineName = document.getElementById("line-name");
   const pageTitle = document.getElementById("page-title");
   const shell = document.querySelector(".shell");
@@ -320,18 +321,31 @@
       return;
     }
 
+    const normalizedDormCode = (dormCode.value || "").trim();
+    if (!normalizedDormCode || normalizedDormCode.length !== 5) {
+      showNotice("กรุณากรอกรหัสหอพัก 5 หลักให้ถูกต้อง");
+      return;
+    }
+
     setBusy(verifyButton, true, "กำลังค้นหาห้อง…", "ค้นหาห้องของฉัน");
     try {
       const response = await fetch("/api/liff/verify-tenant", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ phone: normalizedPhone })
+        body: JSON.stringify({ 
+          dorm_code: normalizedDormCode,
+          phone: normalizedPhone 
+        })
       });
       const data = await parseResponse(response);
       if (!response.ok) throw new Error(data.error || "ตรวจสอบข้อมูลไม่สำเร็จ");
       if (!data.room_number) throw new Error("ไม่พบหมายเลขห้อง กรุณาติดต่อผู้ดูแลหอพัก");
 
-      verified = { roomNumber: data.room_number, phone: normalizedPhone };
+      verified = { 
+        roomNumber: data.room_number, 
+        phone: normalizedPhone,
+        dormCode: normalizedDormCode
+      };
       confirmationText.textContent = `คุณ ${data.masked_name} · ห้อง ${data.room_number}`;
       await animateProgressTo(2);
       await swapContent(form, confirmation);
@@ -365,6 +379,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
+          dorm_code: verified.dormCode,
           access_token: accessToken,
           room_number: verified.roomNumber,
           phone: verified.phone

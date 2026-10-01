@@ -4,7 +4,8 @@ import PhotosUI
 struct AdminManagementTabView: View {
     @State private var admins: [Admin] = []
     @State private var isLoading = true
-    @State private var errorMessage: String? = nil
+    @State private var errorMessage: String = ""
+    @State private var showErrorAlert = false
     
     // For Add/Edit Modal
     @State private var showingAddAdmin = false
@@ -17,47 +18,90 @@ struct AdminManagementTabView: View {
     var body: some View {
         VStack(spacing: 20) {
             
-            // Header actions & Summary
-            HStack {
-                // Left side: Summary
+            // Standard Settings Header
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("จัดการผู้ดูแลระบบ")
+                        .font(.custom("SukhumvitSet-Bold", size: 30))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Button(action: {
+                        showingAddAdmin = true
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                            Text("เพิ่ม")
+                                .font(.custom("SukhumvitSet-Bold", size: 14))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(LinearGradient(colors: [.indigo, .purple], startPoint: .leading, endPoint: .trailing))
+                        .clipShape(Capsule())
+                        .shadow(color: .indigo.opacity(0.3), radius: 5, x: 0, y: 3)
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                }
+
+                Text("ดูแลสิทธิ์และข้อมูลเข้าสู่ระบบของผู้ใช้งานทั้งหมด \(admins.count) บัญชี")
+                    .font(.custom("SukhumvitSet-Text", size: 13))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.bottom, 6)
+            .padding(.top, 20)
+            
+            // Dormitory Code Banner for LINE Bot
+            let owner = admins.first(where: { $0.role == "superadmin" })
+            let dormCode = owner?.dorm_code?.isEmpty == false ? owner!.dorm_code! : "000000"
+            
+            HStack(spacing: 15) {
+                ZStack {
+                    Circle()
+                        .fill(Color.indigo.opacity(0.15))
+                        .frame(width: 45, height: 45)
+                    Image(systemName: "number.circle.fill")
+                        .foregroundColor(.indigo)
+                        .font(.system(size: 20))
+                }
+                
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("บัญชีที่เข้าถึงระบบได้")
-                        .font(.custom("SukhumvitSet-Bold", size: 18))
+                    Text("รหัสหอพัก (Dormitory Code)")
+                        .font(.custom("SukhumvitSet-Bold", size: 16))
                         .foregroundColor(.primary)
-                    Text("ดูแลสิทธิ์และข้อมูลเข้าสู่ระบบของผู้ใช้งาน \(admins.count) บัญชี")
-                        .font(.custom("SukhumvitSet-Medium", size: 14))
+                    
+                    Text("รหัสสำหรับให้ลูกบ้านใช้ผูกบัญชี LINE Bot")
+                        .font(.custom("SukhumvitSet-Text", size: 13))
                         .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
                 Button(action: {
-                    showingAddAdmin = true
+                    UIPasteboard.general.string = dormCode
                 }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("เพิ่มผู้ดูแลระบบ")
-                            .font(.custom("SukhumvitSet-Bold", size: 14))
+                    HStack(spacing: 6) {
+                        Text(dormCode)
+                            .font(.system(.title3, design: .monospaced).bold())
+                            .foregroundColor(.primary)
+                        
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(LinearGradient(colors: [.indigo, .purple], startPoint: .leading, endPoint: .trailing))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.08))
                     .clipShape(Capsule())
-                    .shadow(color: .indigo.opacity(0.3), radius: 5, x: 0, y: 3)
                 }
-                .buttonStyle(PressableButtonStyle())
+                .buttonStyle(PlainButtonStyle())
             }
-            .padding(.top, 20)
-            
-            if let error = errorMessage {
-                Text(error)
-                    .font(.custom("SukhumvitSet-Medium", size: 14))
-                    .foregroundColor(.red)
-                    .padding()
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(10)
-            }
+            .padding(16)
+            .background(.ultraThinMaterial)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 6)
             
             if isLoading && admins.isEmpty {
                 Spacer()
@@ -81,7 +125,12 @@ struct AdminManagementTabView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.top, 70) // To clear floating header
+        .padding(.top, 126) // To clear floating header
+        .alert("เกิดข้อผิดพลาด", isPresented: $showErrorAlert) {
+            Button("ตกลง", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
         .onAppear {
             Task {
                 await loadAdmins(showLoadingSpinner: admins.isEmpty)
@@ -107,7 +156,6 @@ struct AdminManagementTabView: View {
         if showLoadingSpinner {
             isLoading = true
         }
-        errorMessage = nil
         do {
             let fetchedAdmins = try await APIService.shared.fetchAdmins()
             withAnimation(.easeInOut(duration: 0.25)) {
@@ -115,6 +163,7 @@ struct AdminManagementTabView: View {
             }
         } catch {
             errorMessage = "ไม่สามารถดึงข้อมูลได้: \(error.localizedDescription)"
+            showErrorAlert = true
         }
         isLoading = false
     }
@@ -124,14 +173,14 @@ struct AdminManagementTabView: View {
             do {
                 let success = try await APIService.shared.deleteAdmin(id: adminID)
                 if success {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        admins.removeAll { $0.id == adminID }
-                    }
+                    await loadAdmins(showLoadingSpinner: true)
                 } else {
                     errorMessage = "ลบข้อมูลไม่สำเร็จ"
+                    showErrorAlert = true
                 }
             } catch {
                 errorMessage = "เกิดข้อผิดพลาดในการลบ: \(error.localizedDescription)"
+                showErrorAlert = true
             }
         }
     }
@@ -313,6 +362,7 @@ struct EditAdminSheet: View {
     @State private var username = ""
     @State private var email = ""
     @State private var backupEmail = ""
+    @State private var promptPayID = ""
     @State private var oldPassword = ""
     @State private var newPassword = ""
     @State private var isLoading = false
@@ -353,7 +403,16 @@ struct EditAdminSheet: View {
                         .normalizedEmail($backupEmail)
                 }
                 
-                Section(header: Text("เปลี่ยนรหัสผ่าน"), footer: Text("หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้")) {
+                if admin.role == "superadmin" {
+                    Section(header: Text("การรับชำระเงิน"), footer: Text("หมายเลข PromptPay สำหรับให้ลูกบ้านสแกนจ่ายค่าเช่าและค่าซ่อม (เช่น เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน)")) {
+                        TextField("หมายเลข PromptPay (ไม่บังคับ)", text: $promptPayID)
+                            .keyboardType(.numbersAndPunctuation)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                    }
+                }
+                
+                Section(header: Text("เปลี่ยนรหัสผ่าน"), footer: Text("หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้\n(ระบบจะออกจากระบบอัตโนมัติหากเปลี่ยนรหัสผ่านของตนเอง)")) {
                     SecureField("รหัสผ่านเดิม", text: $oldPassword)
                         .limitedText($oldPassword, maxLength: 64, trimNewlines: true)
                     SecureField("รหัสผ่านใหม่", text: $newPassword)
@@ -395,6 +454,7 @@ struct EditAdminSheet: View {
                 username = admin.username
                 email = admin.email
                 backupEmail = admin.backup_email ?? ""
+                promptPayID = admin.promptpay_id ?? ""
             }
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -407,8 +467,15 @@ struct EditAdminSheet: View {
         errorMessage = nil
         
         do {
-            let success = try await APIService.shared.updateAdmin(id: admin.id, username: username, email: email, backupEmail: backupEmail, oldPassword: oldPassword.isEmpty ? nil : oldPassword, newPassword: newPassword.isEmpty ? nil : newPassword)
+            let success = try await APIService.shared.updateAdmin(id: admin.id, username: username, email: email, backupEmail: backupEmail, promptPayID: promptPayID, oldPassword: oldPassword.isEmpty ? nil : oldPassword, newPassword: newPassword.isEmpty ? nil : newPassword)
             if success {
+                let currentAdminID = UserDefaults.standard.integer(forKey: "adminID")
+                if admin.id == currentAdminID && !newPassword.isEmpty {
+                    // Log out automatically if they changed their own password
+                    try? CredentialStore.shared.setToken(nil)
+                    NotificationCenter.default.post(name: Notification.Name("LogoutNotification"), object: nil)
+                }
+                
                 onSuccess()
                 dismiss()
             } else {

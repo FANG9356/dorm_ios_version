@@ -1461,6 +1461,8 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 	if approved {
 		nextStatus = "รอตรวจสอบชำระเงิน"
 		approvedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		// Fetch PromptPay ID from master DB for the superadmin
+		_ = master.QueryRow("SELECT COALESCE(promptpay_id, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&notification.PromptPayID)
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	result, err := db.Exec(`UPDATE maintenances SET status = ?, quote_approved_at = ?, last_updated = ?
@@ -1720,7 +1722,7 @@ func buildMaintenanceQuoteApprovedFlexMessage(notification maintenanceStatusNoti
 	reportedAt := formatThaiMaintenanceDateTime(notification.ReportedAt, time.Time{}, false)
 	costStr := formatLineMoney(notification.Cost)
 
-	promptPayID := os.Getenv("PROMPTPAY_ID")
+	promptPayID := notification.PromptPayID
 	var qrURL string
 	if promptPayID != "" {
 		payload := utils.GeneratePromptPayPayload(promptPayID, notification.Cost)

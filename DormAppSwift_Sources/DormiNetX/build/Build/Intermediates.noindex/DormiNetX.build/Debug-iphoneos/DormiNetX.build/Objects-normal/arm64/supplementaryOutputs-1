@@ -1,0 +1,58 @@
+{
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/FloatingGlassAddButton.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/FloatingGlassAddButton.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/FloatingGlassAddButton.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/FloatingGlassAddButton.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/FloatingGlassAddButton.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/FloatingGlassAddButton.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/GlassBackgroundView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassBackgroundView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassBackgroundView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassBackgroundView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassBackgroundView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassBackgroundView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/GlassCard.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassCard.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassCard.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassCard.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassCard.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/GlassCard.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/InputFormatters.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/InputFormatters.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/InputFormatters.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/InputFormatters.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/InputFormatters.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/InputFormatters.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/KeyboardDismissInstaller.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/KeyboardDismissInstaller.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/KeyboardDismissInstaller.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/KeyboardDismissInstaller.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/KeyboardDismissInstaller.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/KeyboardDismissInstaller.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/LoopingBackgroundVideoView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/LoopingBackgroundVideoView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/LoopingBackgroundVideoView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/LoopingBackgroundVideoView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/LoopingBackgroundVideoView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/LoopingBackgroundVideoView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/ManagementSearchField.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/ManagementSearchField.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/ManagementSearchField.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/ManagementSearchField.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/ManagementSearchField.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/ManagementSearchField.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Components/PressableButtonStyle.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PressableButtonStyle.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PressableButtonStyle.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PressableButtonStyle.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PressableButtonStyle.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/PressableButtonStyle.swiftdeps"
+  }
+}

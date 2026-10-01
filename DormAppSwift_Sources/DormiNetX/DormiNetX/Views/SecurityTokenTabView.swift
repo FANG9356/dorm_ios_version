@@ -7,40 +7,28 @@ struct SecurityTokenTabView: View {
     
     @State private var customCode: String = ""
     @State private var showCustomInput: Bool = false
-    @State private var alertMessage: String? = nil
-    @State private var showAlert: Bool = false
+    @State private var errorMessage: String = ""
+    @State private var showErrorAlert: Bool = false
     @FocusState private var isCustomInputFocused: Bool
     
     var body: some View {
         ZStack {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 18) {
+                // Standard Settings Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("โทเคนเข้าสู่ระบบ")
+                        .font(.custom("SukhumvitSet-Bold", size: 30))
+                        .foregroundStyle(.primary)
+
+                    Text("เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบเพื่อความปลอดภัย")
+                        .font(.custom("SukhumvitSet-Text", size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 6)
+
                 // Fixed non-scrollable content area
                 VStack(spacing: 16) {
-                    
-                    // Header Card
-                    GlassCard {
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(LinearGradient(colors: [.indigo, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .frame(width: 54, height: 54)
-                                Image(systemName: "lock.shield.fill")
-                                    .font(.custom("SukhumvitSet-Medium", size: 24))
-                                    .foregroundColor(.white)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("ยืนยันตัวตนหลังเข้าสู่ระบบ")
-                                    .font(.custom("SukhumvitSet-Bold", size: 18))
-                                    .foregroundColor(.primary)
-                                Text("เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบ")
-                                    .font(.custom("SukhumvitSet-Medium", size: 13))
-                                    .foregroundColor(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .padding(16)
-                    }
                     
                     // Enable/Disable Toggle — fixed height so toggling doesn't shift layout
                     GlassCard {
@@ -60,7 +48,10 @@ struct SecurityTokenTabView: View {
                                         try credentials.setPasscode(String(format: "%06d", Int.random(in: 0...999999)))
                                     }
                                     securityTokenEnabled = enabled
-                                } catch { showAlertMessage(error.localizedDescription) }
+                                } catch { 
+                                        errorMessage = error.localizedDescription
+                                        showErrorAlert = true
+                                    }
                             }))
                                 .tint(.indigo)
                                 .labelsHidden()
@@ -186,13 +177,18 @@ struct SecurityTokenTabView: View {
                                     
                                     Button("บันทึก") {
                                         if customCode.count == 6 {
-                                            do { try credentials.setPasscode(customCode) }
-                                            catch { showAlertMessage(error.localizedDescription); return }
+                                            do { 
+                                                try credentials.setPasscode(customCode) 
+                                            } catch { 
+                                                errorMessage = error.localizedDescription
+                                                showErrorAlert = true
+                                                return 
+                                            }
                                             isCustomInputFocused = false
-                                            showAlertMessage("บันทึกรหัสผ่าน 6 หลักเรียบร้อยแล้ว")
                                             withAnimation(.easeInOut(duration: 0.2)) { showCustomInput = false }
                                         } else {
-                                            showAlertMessage("กรุณากรอกตัวเลขให้ครบ 6 หลัก")
+                                            errorMessage = "กรุณากรอกตัวเลขให้ครบ 6 หลัก"
+                                            showErrorAlert = true
                                         }
                                     }
                                     .font(.custom("SukhumvitSet-Bold", size: 14))
@@ -210,8 +206,6 @@ struct SecurityTokenTabView: View {
                     
                     Spacer()
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 110)
                 .dismissKeyboardOnTap()
                 .padding(.bottom, 20)
                 .offset(y: isCustomInputFocused ? -330 : 0)
@@ -224,69 +218,25 @@ struct SecurityTokenTabView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal, 20)
+            .padding(.top, 126)
             // Intercept scroll gestures so page cannot be dragged
             .gesture(DragGesture().onChanged { _ in })
-            
-            // Ultra-Sleek Floating Top Toast Banner
-            if showAlert {
-                VStack {
-                    HStack(spacing: 12) {
-                        Image(systemName: "sparkles")
-                            .font(.custom("SukhumvitSet-Bold", size: 18))
-                            .foregroundColor(.indigo)
-                        
-                        Text(alertMessage ?? "")
-                            .font(.custom("SukhumvitSet-Bold", size: 14))
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(.regularMaterial)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(
-                                LinearGradient(colors: [.indigo.opacity(0.6), .purple.opacity(0.3)], startPoint: .leading, endPoint: .trailing),
-                                lineWidth: 1.5
-                            )
-                    )
-                    .shadow(color: .indigo.opacity(0.25), radius: 15, x: 0, y: 8)
-                    .padding(.top, 60)
-                    
-                    Spacer()
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        showAlert = false
-                    }
-                }
-            }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.75), value: showAlert)
-    }
-    
-    private func showAlertMessage(_ msg: String) {
-        alertMessage = msg
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-            showAlert = true
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                if alertMessage == msg {
-                    showAlert = false
-                }
-            }
+        .alert("เกิดข้อผิดพลาด", isPresented: $showErrorAlert) {
+            Button("ตกลง", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
         }
     }
-    
+
     private func generateRandomPasscode() {
         let newCode = String((0..<6).map { _ in Int.random(in: 0...9) }.map(String.init).joined())
         do {
             try credentials.setPasscode(newCode)
-            showAlertMessage("สุ่มรหัสผ่านใหม่เรียบร้อยแล้ว")
-        } catch { showAlertMessage(error.localizedDescription) }
+        } catch { 
+            errorMessage = error.localizedDescription
+            showErrorAlert = true
+        }
     }
 }

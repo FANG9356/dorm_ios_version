@@ -58,19 +58,34 @@ struct BackupTabView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
-                summaryCard
-                statusBanner
-                actionsCard
-                if case .failed = sync.state {
-                    BackupActionButton(title: "ใช้ข้อมูลล่าสุดจากเซิร์ฟเวอร์", icon: "icloud.and.arrow.down",
-                                       tint: .primary, isLoading: isBusy || sync.isSyncing,
-                                       action: { confirmation = .useRemote })
+            VStack(alignment: .leading, spacing: 18) {
+                // Standard Settings Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("สำรองและกู้คืนข้อมูล")
+                        .font(.custom("SukhumvitSet-Bold", size: 30))
+                        .foregroundStyle(.primary)
+
+                    Text("จัดการไฟล์สำรองข้อมูลของระบบภายในเครื่อง")
+                        .font(.custom("SukhumvitSet-Text", size: 13))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.bottom, 6)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    summaryCard
+                    statusBanner
+                    actionsCard
+                    if case .failed = sync.state {
+                        BackupActionButton(title: "ใช้ข้อมูลล่าสุดจากเซิร์ฟเวอร์", icon: "icloud.and.arrow.down",
+                                           tint: .primary, isLoading: isBusy || sync.isSyncing,
+                                           action: { confirmation = .useRemote })
+                    }
                 }
                 backupListCard
                 dangerCard
             }
-            .padding(.top, 90)
+            .padding(.top, 126)
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
@@ -97,9 +112,9 @@ struct BackupTabView: View {
                         .font(.custom("SukhumvitSet-Bold", size: 28))
                         .foregroundStyle(.primary)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("ไฟล์ข้อมูลของระบบนี้")
+                        Text("สรุปข้อมูลของระบบนี้")
                             .font(.custom("SukhumvitSet-Bold", size: 20))
-                        Text("สำรองข้อมูลไว้ในเครื่อง แยกตามอีเมลหลักของแต่ละระบบ")
+                        Text("แยกตามอีเมลหลัก: \(currentEmail)")
                             .font(.custom("SukhumvitSet-Text", size: 13))
                             .foregroundStyle(.secondary)
                     }
@@ -451,6 +466,7 @@ private struct BackupStatusBanner: View {
         )
     }
 }
+
 
 private struct BackupMetricView: View {
     let title: String

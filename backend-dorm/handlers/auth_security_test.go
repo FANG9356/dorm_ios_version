@@ -26,7 +26,7 @@ func securityTestDB(t *testing.T) *sql.DB {
 	if _, err = db.Exec(`CREATE TABLE admins (
 		id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, role TEXT,
 		email TEXT, backup_email TEXT, profile_image TEXT, must_change_password INTEGER,
-		last_active TEXT
+		last_active TEXT, promptpay_id TEXT
 	);
 	CREATE TABLE sessions (id INTEGER PRIMARY KEY, admin_id INTEGER, token TEXT UNIQUE);`); err != nil {
 		t.Fatal(err)
@@ -35,7 +35,7 @@ func securityTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec("INSERT INTO admins VALUES (1, 'owner', ?, 'superadmin', 'owner@example.test', '', '', 0, NULL)", string(hash)); err != nil {
+	if _, err = db.Exec("INSERT INTO admins VALUES (1, 'owner', ?, 'superadmin', 'owner@example.test', '', '', 0, NULL, '')", string(hash)); err != nil {
 		t.Fatal(err)
 	}
 	previousSecret := jwtSecretKey
@@ -136,8 +136,8 @@ func TestChangePasswordRevokesSessionsAndDoesNotLeakDebugDetails(t *testing.T) {
 func TestGetAdminsRequiresAccountScopeAndDoesNotFallBackToAllAdmins(t *testing.T) {
 	db := securityTestDB(t)
 	if _, err := db.Exec(`INSERT INTO admins VALUES
-		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL),
-		(3, 'other', '', 'superadmin', 'other@example.test', '', '', 0, NULL)`); err != nil {
+		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL, ''),
+		(3, 'other', '', 'superadmin', 'other@example.test', '', '', 0, NULL, '')`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -212,8 +212,8 @@ func scopedAdminRequest(t *testing.T, method, path string, adminID int, body map
 func TestAdminMutationsStayInsideOwnerAccount(t *testing.T) {
 	db := securityTestDB(t)
 	if _, err := db.Exec(`INSERT INTO admins VALUES
-		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL),
-		(3, 'other', '', 'superadmin', 'other@example.test', '', '', 0, NULL)`); err != nil {
+		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL, ''),
+		(3, 'other', '', 'superadmin', 'other@example.test', '', '', 0, NULL, '')`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -245,7 +245,7 @@ func TestAdminMutationsStayInsideOwnerAccount(t *testing.T) {
 func TestAdminRoleOrPasswordChangeRevokesTargetSessions(t *testing.T) {
 	db := securityTestDB(t)
 	if _, err := db.Exec(`INSERT INTO admins VALUES
-		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL);
+		(2, 'staff', '', 'admin', 'owner@example.test', 'staff@example.test', '', 0, NULL, '');
 		INSERT INTO sessions VALUES (5, 2, 'staff-session')`); err != nil {
 		t.Fatal(err)
 	}
@@ -267,6 +267,27 @@ func TestAdminRoleOrPasswordChangeRevokesTargetSessions(t *testing.T) {
 	UpdateAdminHandler(db)(selfWithoutPassword, scopedAdminRequest(t, http.MethodPut, "/api/admins/1", 1, map[string]string{"new_password": "AnotherPassword1"}))
 	if selfWithoutPassword.Code != http.StatusBadRequest {
 		t.Fatalf("self password change without old password: got %d, want 400", selfWithoutPassword.Code)
+	}
+}
+
+func TestUpdateAdminCanClearPromptPayIDWhenFieldIsPresent(t *testing.T) {
+	db := securityTestDB(t)
+	if _, err := db.Exec("UPDATE admins SET promptpay_id = ? WHERE id = 1", "0812345678"); err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	UpdateAdminHandler(db)(w, scopedAdminRequest(t, http.MethodPut, "/api/admins/1", 1, map[string]string{"promptpay_id": ""}))
+	if w.Code != http.StatusOK {
+		t.Fatalf("clear PromptPay: %d %s", w.Code, w.Body.String())
+	}
+
+	var promptPayID string
+	if err := db.QueryRow("SELECT promptpay_id FROM admins WHERE id = 1").Scan(&promptPayID); err != nil {
+		t.Fatal(err)
+	}
+	if promptPayID != "" {
+		t.Fatalf("PromptPay was not cleared: %q", promptPayID)
 	}
 }
 

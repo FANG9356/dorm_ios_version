@@ -3,52 +3,36 @@ import XCTest
 
 final class MaintenanceWorkflowTests: XCTestCase {
     func testCardAndEditorExposeEveryMaintenanceStatus() {
-        XCTAssertEqual(MaintenanceWorkflow.statuses, [
+        XCTAssertEqual(MaintenanceWorkflow.statuses(hasCost: true), [
             "รอดำเนินการ",
             "กำลังติดต่อช่าง",
             "รออนุมัติค่าใช้จ่าย",
-            "ปฏิเสธค่าใช้จ่าย",
-            "กำลังซ่อม",
             "รอตรวจสอบชำระเงิน",
+            "กำลังซ่อม",
             "เสร็จสิ้น"
         ])
-        XCTAssertEqual(Set(MaintenanceWorkflow.statuses).count, 7)
-        XCTAssertEqual(MaintenanceWorkflow.statuses.map(MaintenanceWorkflow.shortTitle), [
-            "รอ", "ติดต่อช่าง", "อนุมัติราคา", "ปฏิเสธ", "ซ่อม", "ตรวจชำระ", "เสร็จ"
+        XCTAssertEqual(MaintenanceWorkflow.statuses(hasCost: false), [
+            "รอดำเนินการ", "กำลังติดต่อช่าง", "กำลังซ่อม", "เสร็จสิ้น"
+        ])
+        XCTAssertEqual(MaintenanceWorkflow.statuses(hasCost: true).map(MaintenanceWorkflow.shortTitle), [
+            "รอ", "ติดต่อช่าง", "อนุมัติราคา", "ตรวจชำระ", "ซ่อม", "เสร็จ"
         ])
     }
 
     func testStatusTransitionCannotSkipWorkflowSteps() {
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "รอดำเนินการ"))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "กำลังติดต่อช่าง"))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "กำลังซ่อม"))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "เสร็จสิ้น"))
-
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "รออนุมัติค่าใช้จ่าย", cost: 500))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "รอตรวจสอบชำระเงิน", cost: 500))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500))
-
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "เสร็จสิ้น", to: "รอตรวจสอบชำระเงิน"))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "เสร็จสิ้น", to: "กำลังซ่อม"))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "unknown", to: "รอดำเนินการ"))
+        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "กำลังติดต่อช่าง", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รอดำเนินการ", to: "กำลังซ่อม", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "เสร็จสิ้น", to: "กำลังซ่อม", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "unknown", to: "รอดำเนินการ", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "ปฏิเสธค่าใช้จ่าย", to: "กำลังติดต่อช่าง", hasCost: true))
     }
 
     func testPaidRepairRequiresResidentApprovalButFreeRepairCanSkipQuote() {
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", cost: 0))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", cost: 500))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 0))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, quoteApproved: true))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รออนุมัติค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 0))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น", cost: 500))
-    }
-
-    func testRejectedQuoteIsTerminalAndApprovalDoesNotSkipRepairStart() {
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รออนุมัติค่าใช้จ่าย", to: "กำลังซ่อม", cost: 500, quoteApproved: true))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "รออนุมัติค่าใช้จ่าย", to: "กำลังติดต่อช่าง", cost: 500, quoteApproved: true))
-        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, quoteApproved: true))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "ปฏิเสธค่าใช้จ่าย", to: "กำลังติดต่อช่าง", cost: 500))
-        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "ปฏิเสธค่าใช้จ่าย", to: "รออนุมัติค่าใช้จ่าย", cost: 500))
+        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "รออนุมัติค่าใช้จ่าย", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", hasCost: true))
+        XCTAssertFalse(MaintenanceWorkflow.canTransition(from: "รออนุมัติค่าใช้จ่าย", to: "รอตรวจสอบชำระเงิน", hasCost: true))
+        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "รออนุมัติค่าใช้จ่าย", to: "กำลังติดต่อช่าง", hasCost: true))
+        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", hasCost: false))
+        XCTAssertTrue(MaintenanceWorkflow.canTransition(from: "กำลังซ่อม", to: "เสร็จสิ้น", hasCost: false))
     }
 }

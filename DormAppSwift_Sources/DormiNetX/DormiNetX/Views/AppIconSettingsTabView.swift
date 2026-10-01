@@ -4,7 +4,7 @@ struct AppIconSettingsTabView: View {
     @AppStorage("selectedHomeIconName") private var selectedHomeIconName: String = "default"
     @Environment(\.colorScheme) private var colorScheme
     @State private var isChanging = false
-    @State private var message: String?
+
 
     private let options: [HomeIconOption] = [
         HomeIconOption(id: "default", title: "มาตรฐาน", subtitle: "โทนหลักของ DormiNet", previewAssetName: "AppIconPreviewDefault", alternateName: nil, accent: .indigo),
@@ -55,14 +55,6 @@ struct AppIconSettingsTabView: View {
                 ForEach(options) { option in
                     iconOptionCard(option)
                 }
-            }
-
-            if let message {
-                Text(message)
-                    .font(.custom("SukhumvitSet-Medium", size: 12))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
             }
         }
         .padding(.top, 126)
@@ -135,12 +127,12 @@ struct AppIconSettingsTabView: View {
 
     private func apply(_ option: HomeIconOption) {
         guard AppIconManager.supportsAlternateIcons else {
-            message = "เครื่องนี้ยังไม่รองรับการเปลี่ยนไอคอนแอพ"
+
             return
         }
 
         isChanging = true
-        message = nil
+
 
         Task {
             let result = await AppIconManager.setIcon(option.alternateName)
@@ -149,10 +141,10 @@ struct AppIconSettingsTabView: View {
                 switch result {
                 case .success:
                     selectedHomeIconName = option.id
-                    message = "เปลี่ยนเป็น \(option.title) แล้ว"
+
                 case .failure(let error):
                     selectedHomeIconName = optionID(for: AppIconManager.currentIconName)
-                    message = error.localizedDescription
+
                 }
             }
         }

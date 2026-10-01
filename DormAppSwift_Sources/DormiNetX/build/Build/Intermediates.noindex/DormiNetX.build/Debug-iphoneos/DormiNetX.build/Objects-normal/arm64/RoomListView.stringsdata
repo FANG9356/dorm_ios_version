@@ -1,0 +1,48 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "ออกจากระบบ...",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 194
+        }
+      },
+      {
+        "comment": "",
+        "key": "MENU",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 789
+        }
+      },
+      {
+        "comment": "",
+        "key": "MAINTENANCE",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 780
+        }
+      },
+      {
+        "comment": "",
+        "key": "DORMINET ADMIN",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 780
+        }
+      },
+      {
+        "comment": "",
+        "key": "Administrator",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 842
+        }
+      }
+    ]
+  },
+  "version": 1
+}

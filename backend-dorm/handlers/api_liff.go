@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -67,12 +68,14 @@ func allowRequestAttempt(r *http.Request, action string, limit int, window time.
 }
 
 type LiffLinkRequest struct {
+	DormCode    string `json:"dorm_code"`
 	AccessToken string `json:"access_token"`
 	RoomNumber  string `json:"room_number"`
 	Phone       string `json:"phone"`
 }
 
 type LiffVerifyRequest struct {
+	DormCode   string `json:"dorm_code"`
 	RoomNumber string `json:"room_number"`
 	Phone      string `json:"phone"`
 }
@@ -128,33 +131,36 @@ type LiffLinkedSummary struct {
 	Billing  LiffBillingSummary  `json:"billing"`
 }
 
-func singleLineAccount(master *sql.DB) (int, error) {
-	rows, err := master.Query(`SELECT account_id FROM sync_snapshots GROUP BY account_id ORDER BY account_id LIMIT 2`)
-	if err != nil {
-		return 0, err
+func resolveTenantDBFromCode(master *sql.DB, code string) (*sql.DB, int, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return nil, 0, fmt.Errorf("กรุณากรอกรหัสหอพัก")
 	}
-	defer rows.Close()
-	var accounts []int
-	for rows.Next() {
-		var accountID int
-		if err := rows.Scan(&accountID); err != nil {
-			return 0, err
-		}
-		accounts = append(accounts, accountID)
-	}
-	if len(accounts) != 1 {
-		return 0, fmt.Errorf("LINE linking needs exactly one active account, found %d", len(accounts))
-	}
-	return accounts[0], nil
-}
 
-func lineLinkTenantDB(master *sql.DB) (*sql.DB, int, error) {
-	accountID, err := singleLineAccount(master)
-	if err != nil {
-		return nil, 0, err
+	// Tenant databases are owned by superadmin accounts. Validate against the
+	// master database before opening one so a guessed code cannot create an
+	// empty tenant database on disk.
+	var ownerID int
+	if err := master.QueryRow(`SELECT id FROM admins WHERE dorm_code = ? AND role = 'superadmin'`, code).Scan(&ownerID); err != nil {
+		if err == sql.ErrNoRows {
+			// Fallback for legacy numerical ID in case it hasn't migrated or users are still using it during transition
+			accountID, errAtoi := strconv.Atoi(code)
+			if errAtoi == nil {
+				if err := master.QueryRow(`SELECT id FROM admins WHERE id = ? AND role = 'superadmin'`, accountID).Scan(&ownerID); err == nil {
+					goto found
+				}
+			}
+			return nil, 0, fmt.Errorf("ไม่พบข้อมูลหอพักรหัสนี้")
+		}
+		return nil, 0, fmt.Errorf("ตรวจสอบรหัสหอพักไม่สำเร็จ")
 	}
-	tenantDB, err := GetTenantDB(accountID)
-	return tenantDB, accountID, err
+found:
+
+	tenantDB, err := GetTenantDB(ownerID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ไม่พบข้อมูลหอพักรหัสนี้")
+	}
+	return tenantDB, ownerID, nil
 }
 
 func HandleLiffRooms(_ *sql.DB) http.HandlerFunc {
@@ -348,9 +354,9 @@ func HandleLiffVerify(master *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error":"กรุณากรอกเบอร์โทรศัพท์ที่แจ้งกับหอพัก"}`, http.StatusBadRequest)
 			return
 		}
-		db, _, err := lineLinkTenantDB(master)
+		db, _, err := resolveTenantDBFromCode(master, request.DormCode)
 		if err != nil {
-			http.Error(w, `{"error":"ยังไม่พร้อมเชื่อมบัญชี LINE กรุณาติดต่อผู้ดูแลหอพัก"}`, http.StatusServiceUnavailable)
+			writeLineJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 
@@ -406,9 +412,9 @@ func HandleLiffLink(master *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error":"การยืนยันตัวตนกับ LINE ล้มเหลว"}`, http.StatusUnauthorized)
 			return
 		}
-		tenantDB, accountID, err := lineLinkTenantDB(master)
+		tenantDB, accountID, err := resolveTenantDBFromCode(master, request.DormCode)
 		if err != nil {
-			http.Error(w, `{"error":"ยังไม่พร้อมเชื่อมบัญชี LINE กรุณาติดต่อผู้ดูแลหอพัก"}`, http.StatusServiceUnavailable)
+			writeLineJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 			return
 		}
 		if _, err := verifyLineTenant(tenantDB, request.RoomNumber, request.Phone); err != nil {

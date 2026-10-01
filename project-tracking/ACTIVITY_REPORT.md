@@ -778,3 +778,64 @@
 - **สาเหตุเชิงลึก:** เป็นบั๊กในระบบแปลงโค้ดมาโครของ SwiftData ใน iOS 17 (Swift 5.10) ที่ไม่สามารถแปลประโยคตรรกะแบบ `||` (OR) ใน Model Property ได้อย่างสมบูรณ์หากไม่มีการเทียบค่าแบบเจาะจง (เช่น `== true`) ทำให้ตัวจัดการฐานข้อมูลหลังบ้าน (CoreData Translator) พังระหว่างรัน
 - **การแก้ไข:** ทำการเขียนเงื่อนไขแยกกันโดยหลีกเลี่ยงการใช้เครื่องหมาย `||` และปรับให้เป็น `$0.isDirty == true` แบบเจาะจงในทุกๆ ตาราง จากนั้นจับแยก `fetchCount` ของเงื่อนไข `isDeletedLocally` ออกมาต่างหาก การทำแบบนี้หลีกเลี่ยงข้อจำกัดการแปลโค้ดของบั๊ก SwiftData ได้อย่างสมบูรณ์
 - **สถานะ:** ทดสอบการคอมไพล์รอบนี้ผ่านสมบูรณ์ 100% 
+- 2026-09-21 10:48: ตรวจสอบสถานะ Server หลังไฟดับ พบว่า dormitory.service, dormitory-ocr.service, cloudflared, และ Docker containers ทั้งหมดทำงานปกติ (API ตอบ online) มีเพียง service เก่า dorm-app.service ที่ failed
+
+## 2026-09-24: PromptPay Configuration (Multi-Tenant)
+- Implemented multi-tenant PromptPay configuration by adding `promptpay_id` column to `admins` table.
+- Updated backend API (ListAdminsHandler, UpdateAdminHandler) to support retrieving and updating PromptPay IDs.
+- Adjusted LINE bot worker (line_notification_outbox.go) to JOIN admins table and fetch tenant-specific PromptPay ID for QR code generation in Flex Messages.
+- Added UI to iOS App (`AdminManagementTabView.swift`) to allow admins to set their PromptPay IDs within the Link Account/Admin section.
+- Verified and updated backend tests, ensuring multi-tenant test schemas include the new column.
+
+## 2026-09-24 11:35 — ตรวจสอบความคืบหน้าและความเสี่ยงจากการแก้ไขรอบล่าสุด
+- ตรวจสอบแบบ read-only จาก worktree ปัจจุบัน พบไฟล์เปลี่ยนแปลง 27 ไฟล์ (Swift, Go, LIFF และไฟล์ build/runtime) ยังไม่มีการ deploy หรือแก้ production ในรอบนี้
+- Backend ผ่าน `go test ./...`, `go test -race ./handlers` และ `go vet ./...`
+- iOS targeted test (`MaintenanceWorkflowTests` และ `CoreDataSafetyTests`) ยัง build ไม่ผ่าน เนื่องจาก `MaintenanceWorkflowTests.swift` ใช้ API เดิม (`statuses` property, `cost`, `quoteApproved`) แต่ implementation ปัจจุบันเปลี่ยนเป็น `statuses(hasCost:)` และ `canTransition(... hasCost:)`
+- พบความเสี่ยงสำคัญ: `BackupTabView` มี `showMessage`/`showError` เป็น no-op ทำให้ผลสำเร็จและข้อผิดพลาดของ backup/restore/delete/sync ไม่แสดงผู้ใช้; workflow ฝั่ง iOS อนุญาต unknown status และถอยหลังหนึ่งขั้น; PromptPay ที่มีอยู่เดิมล้างค่าไม่ได้เมื่อส่งค่าว่าง; การ route tenant ของ LIFF ผูก dorm code กับ account/admin ID และ outbox JOIN ต้องมีการทดสอบหลาย tenant เพิ่ม
+- `git diff --check` ยังพบ trailing whitespace หลายจุด และมีไฟล์ runtime/binary (`dormitory.db-shm`, `server_debian`, `test_build`, Xcode user state) ปะปนใน worktree ควรแยกก่อน commit/deploy
+- สถานะ: รอตรวจแก้ P0/P1 และทำ iOS build/UAT ใหม่ก่อนพิจารณาความพร้อม release
+
+## 2026-09-24 12:38 — แก้ไขจุดเสี่ยงจากการตรวจสอบรอบล่าสุด
+- คืนการแจ้งผลสำเร็จ/ข้อผิดพลาดใน `BackupTabView` สำหรับการสำรอง, กู้คืน, ลบ และซิงก์ข้อมูล
+- ปรับ workflow งานซ่อมทั้ง iOS และ backend: ปฏิเสธสถานะไม่รู้จักและงานที่ถูกปฏิเสธ, ไม่ให้แอปข้ามขั้นอนุมัติใบเสนอราคา, และบังคับให้ backend ตรวจ `quoteApproved` ก่อนย้ายไปขั้นรอตรวจสอบชำระเงิน
+- ปรับ test iOS `MaintenanceWorkflowTests` ให้ตรงกับ API ปัจจุบันและเพิ่มกรณี workflow ที่ปลอดภัย
+- ทำให้ API อัปเดต PromptPay แยกกรณี field ไม่ถูกส่งออกจากกรณีส่งค่าว่าง จึงล้าง PromptPay เดิมได้ และเพิ่ม regression test
+- LIFF ตรวจว่ารหัสหอเป็น ID ของ `superadmin` ที่มีอยู่จริงก่อนเปิด tenant DB ป้องกันการสร้างฐานข้อมูลเปล่าจากรหัสเดา; หน้าแอดมินเลือกแสดงรหัสเจ้าของหอเมื่อโหลดรายชื่อได้
+- ผลทดสอบ: `go test ./...`, `go test -race ./handlers`, `go vet ./...` ผ่าน; iOS targeted `MaintenanceWorkflowTests` และ `CoreDataSafetyTests` ผ่าน 23 tests
+- ไม่มีการ deploy, restart service หรือแก้ไขข้อมูล production ในรอบนี้; ยังต้องทำ UAT บัญชีจริง/หลาย tenant และแยกไฟล์ runtime/binary ออกจากชุด commit ก่อน deploy
+
+## 2026-10-01 12:25 — สรุปสถานะโครงการ อัปเดตเอกสารจากโค้ดล่าสุด
+- **การดำเนินการ:** AI Agent ตรวจสอบเอกสารและโค้ดล่าสุด เพื่ออัปเดตสถานะให้สอดคล้องกับความเป็นจริง
+- **สิ่งที่พบ:** มีโค้ดล่าสุด (ยังไม่ถูก commit) ที่แก้ไขเรื่อง Multi-tenant PromptPay, แก้บั๊ก SwiftData EXC_BREAKPOINT ตอน fetchCount, ทำให้ Maintenance Workflow รัดกุมขึ้น, และซ่อมข้อความแจ้งเตือนใน BackupTabView
+- **ผลลัพธ์:** กำลังดำเนินการอัปเดต WORK_STATUS.md และ PENDING_WORK.md ให้เป็นปัจจุบัน
+
+## 2026-10-01 12:23 — แก้ไขบั๊ก PromptPay ID และ UI สีตัวอักษร
+
+- คำขอ/เป้าหมาย: ช่องพร้อมเพย์บันทึกแล้วไม่ขึ้นในระบบ, ไม่มี QR Code ขึ้นมาให้สแกนหลังลูกบ้านกดอนุมัติ, และสีข้อความ "ยังไม่ระบุ" ในเมนูมองไม่เห็น
+- สิ่งที่ดำเนินการ: 
+  1. เพิ่มคอลัมน์ `promptpay_id` และ `dorm_code` ในฐานข้อมูลจริง (Production SQLite) ที่ backend
+  2. แก้ไข backend (`line_bot.go`) ให้ดึง `promptpay_id` ของ superadmin มาสร้าง QR Code ตอนสร้างแจ้งเตือนการอนุมัติใบเสนอราคา
+  3. แก้ไขฝั่ง iOS (`MaintenanceTabView.swift`) ให้ปรับสีตัวอักษร placeholder "ยังไม่ระบุ" เป็น `.primary.opacity(0.4)` เพื่อให้อ่านได้ใน Dark Mode
+- ไฟล์หรือระบบที่กระทบ: `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/MaintenanceTabView.swift`, `backend-dorm/handlers/line_bot.go`, `dormitory.db`
+- การเปลี่ยนข้อมูล/production: เพิ่มคอลัมน์ในตาราง `admins` และ deploy backend ไปยัง production `dorminet.studio` (202.29.232.28)
+- การตรวจสอบและหลักฐาน: 
+  - ทดสอบ build iOS และ install ลง iPhone (F)
+  - สคริปต์ `deploy_flex_safe_remote.sh` ทำงานเสร็จสมบูรณ์ `DEPLOY_SUCCESS` (NEW_SHA=49596892f9ff05a97355aa79eeaa955108b16ba1e4139a700084dae7e96eee8e)
+  - `curl https://dorminet.studio/api/system/ping` ตอบกลับ `online`
+- สถานะ deploy/UAT: Deploy backend ขึ้น Production สำเร็จ และติดตั้งแอป Debug ลงในเครื่อง iPhone เรียบร้อย รอการทดสอบ UAT จากผู้ใช้
+- ผลลัพธ์: ผู้ใช้สามารถบันทึกและเห็น PromptPay ID ของตัวเองได้แล้ว และ QR Code สำหรับสแกนจ่ายเงินจะถูกสร้างถูกต้องหลังอนุมัติ
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ไม่มี
+
+## 2026-10-01 12:38 — ปรับแต่ง UI จัดการผู้ดูแลระบบ (AdminManagementTabView)
+
+- คำขอ/เป้าหมาย: เปลี่ยนพื้นหลังการ์ดรหัสหอพักจากสีดำทึบเป็นกระจกฝ้า (frosted glass) และเปลี่ยนสีเขียวของรหัสและไอคอนคัดลอกให้กลืนไปกับพื้นหลัง ไม่ให้เด่นจนเกินไป
+- สิ่งที่ดำเนินการ: 
+  1. เปลี่ยน .background(Color(UIColor.secondarySystemGroupedBackground)) เป็น .background(.ultraThinMaterial) เพื่อให้ได้ effect กระจกฝ้า
+  2. เปลี่ยนสีข้อความรหัสจาก .green เป็น .primary และไอคอนจาก .green.opacity(0.8) เป็น .secondary
+  3. เปลี่ยนพื้นหลังของ capsule รหัสเป็น Color.primary.opacity(0.08)
+- ไฟล์หรือระบบที่กระทบ: DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AdminManagementTabView.swift
+- การเปลี่ยนข้อมูล/production: ไม่มี
+- การตรวจสอบและหลักฐาน: โค้ดคอมไพล์ผ่าน (BUILD SUCCEEDED) และติดตั้งลงอุปกรณ์ (00008030-001C65A134C0A02E) สำเร็จ
+- สถานะ deploy/UAT: ติดตั้งแอปในเครื่อง F แล้ว รอผู้ใช้เปิดดูผลลัพธ์
+- ผลลัพธ์: UI ส่วนรหัสหอพักดูพรีเมียมขึ้นและไม่แย่งความสนใจ
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ไม่มี

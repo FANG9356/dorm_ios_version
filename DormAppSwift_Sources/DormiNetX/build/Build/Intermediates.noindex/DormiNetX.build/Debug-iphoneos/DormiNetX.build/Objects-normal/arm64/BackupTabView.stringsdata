@@ -1,0 +1,208 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/BackupTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "สำรองและกู้คืนข้อมูล",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 64
+        }
+      },
+      {
+        "comment": "",
+        "key": "จัดการไฟล์สำรองข้อมูลของระบบภายในเครื่อง",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "ใช้ข้อมูลจากเซิร์ฟเวอร์แทนข้อมูลในเครื่อง?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 371
+        }
+      },
+      {
+        "comment": "",
+        "key": "ระบบจะเก็บข้อมูลในเครื่องเป็นไฟล์สำรองก่อน การแก้ไขที่ยังไม่ส่งจะอยู่ในไฟล์สำรอง แต่จะไม่รวมกับข้อมูลที่รับมา",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 372
+        }
+      },
+      {
+        "comment": "",
+        "key": "สำรองแล้วรับข้อมูล",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 373
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 374
+        }
+      },
+      {
+        "comment": "",
+        "key": "กู้คืนไฟล์นี้?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 378
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลภายในเครื่องปัจจุบันบนเครื่องนี้จะถูกเขียนทับด้วย %@",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 379
+        }
+      },
+      {
+        "comment": "",
+        "key": "กู้คืน",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 380
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 381
+        }
+      },
+      {
+        "comment": "",
+        "key": "นำเข้าและกู้คืนไฟล์?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 385
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลภายในเครื่องปัจจุบันบนเครื่องนี้จะถูกเขียนทับด้วย %@",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 386
+        }
+      },
+      {
+        "comment": "",
+        "key": "กู้คืน",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 387
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 388
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบไฟล์สำรอง?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 392
+        }
+      },
+      {
+        "comment": "",
+        "key": "ลบ",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 394
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 395
+        }
+      },
+      {
+        "comment": "",
+        "key": "ล้างข้อมูลในเครื่อง?",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 399
+        }
+      },
+      {
+        "comment": "",
+        "key": "ข้อมูลภายในเครื่องของเครื่องนี้จะถูกลบ ควรสร้างไฟล์สำรองก่อน",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 400
+        }
+      },
+      {
+        "comment": "",
+        "key": "ล้างข้อมูล",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 401
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 402
+        }
+      },
+      {
+        "comment": "",
+        "key": "สรุปข้อมูลของระบบนี้",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "แยกตามอีเมลหลัก: %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 117
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 484
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ • %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 569
+        }
+      }
+    ]
+  },
+  "version": 1
+}

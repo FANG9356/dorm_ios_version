@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/mail"
@@ -30,6 +31,8 @@ type Admin struct {
 	Role         string `json:"role"`
 	Email        string `json:"email"`
 	ProfileImage string `json:"profile_image"`
+	PromptPayID  string `json:"promptpay_id"`
+	DormCode     string `json:"dorm_code"`
 }
 
 var jwtSecretKey []byte
@@ -554,8 +557,7 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Multi-tenant: only show admins with the same primary email (= same dorm).
-		rows, err := db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, '') FROM admins WHERE email = ? ORDER BY id ASC", strings.ToLower(strings.TrimSpace(filterEmail)))
+		rows, err := db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, ''), COALESCE(promptpay_id, ''), COALESCE(dorm_code, '') FROM admins WHERE email = ? ORDER BY id ASC", strings.ToLower(strings.TrimSpace(filterEmail)))
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
@@ -571,7 +573,9 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 			var email string
 			var profileImage string
 			var backupEmail string
-			if err := rows.Scan(&id, &username, &lastActive, &role, &email, &profileImage, &backupEmail); err != nil {
+			var promptPayID string
+			var dormCode string
+			if err := rows.Scan(&id, &username, &lastActive, &role, &email, &profileImage, &backupEmail, &promptPayID, &dormCode); err != nil {
 				continue
 			}
 			admins = append(admins, map[string]interface{}{
@@ -582,6 +586,8 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 				"email":         email,
 				"profile_image": profileImage,
 				"backup_email":  backupEmail,
+				"promptpay_id":  promptPayID,
+				"dorm_code":     dormCode,
 			})
 		}
 
@@ -773,12 +779,13 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		var req struct {
-			Username    string `json:"username"`
-			OldPassword string `json:"old_password"`
-			NewPassword string `json:"new_password"`
-			Role        string `json:"role"`
-			Email       string `json:"email"`
-			BackupEmail string `json:"backup_email"`
+			Username    string  `json:"username"`
+			OldPassword string  `json:"old_password"`
+			NewPassword string  `json:"new_password"`
+			Role        string  `json:"role"`
+			Email       string  `json:"email"`
+			BackupEmail string  `json:"backup_email"`
+			PromptPayID *string `json:"promptpay_id"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -865,6 +872,10 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			args = append(args, req.Email)
 			query += "backup_email = ?, "
 			args = append(args, req.BackupEmail)
+		}
+		if req.PromptPayID != nil {
+			query += "promptpay_id = ?, "
+			args = append(args, strings.TrimSpace(*req.PromptPayID))
 		}
 
 		// If nothing to update, return success
@@ -1073,6 +1084,21 @@ func UpdateProfileImageHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func generateUniqueDormCode(db *sql.DB) string {
+	max := big.NewInt(1000000)
+	for {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			continue
+		}
+		code := fmt.Sprintf("%06d", n.Int64())
+		var exists bool
+		if err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE dorm_code = ?)", code).Scan(&exists); err == nil && !exists {
+			return code
+		}
+	}
+}
+
 func RegisterHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
@@ -1138,7 +1164,8 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Create as superadmin for their own new dorm
-		result, err := db.Exec("INSERT INTO admins (username, password, role, email) VALUES (?, ?, 'superadmin', ?)", req.Name, hashedPassword, req.Email)
+		dormCode := generateUniqueDormCode(db)
+		result, err := db.Exec("INSERT INTO admins (username, password, role, email, dorm_code) VALUES (?, ?, 'superadmin', ?, ?)", req.Name, hashedPassword, req.Email, dormCode)
 		if err != nil {
 			http.Error(w, `{"status": "error", "message": "ไม่สามารถสร้างบัญชีได้"}`, http.StatusInternalServerError)
 			return

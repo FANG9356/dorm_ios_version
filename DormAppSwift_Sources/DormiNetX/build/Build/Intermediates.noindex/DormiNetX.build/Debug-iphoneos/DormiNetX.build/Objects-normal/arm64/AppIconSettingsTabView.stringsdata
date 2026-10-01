@@ -1,0 +1,40 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AppIconSettingsTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "หน้าปกแอพ",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "เลือกไอคอนที่จะแสดงบนหน้า Home Screen ของ iPhone",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "ระบบอาจแสดงข้อความยืนยันหลังเลือก",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "ไอคอนที่ใช้อยู่",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 34
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -10,7 +10,7 @@ struct AppBackgroundSettingsTabView: View {
     @State private var selectedImageItem: PhotosPickerItem?
     @State private var selectedVideoItem: PhotosPickerItem?
     @State private var isImporting = false
-    @State private var message: String?
+
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -65,10 +65,6 @@ struct AppBackgroundSettingsTabView: View {
                                 .font(.custom("SukhumvitSet-Medium", size: 13))
                                 .foregroundStyle(.secondary)
                         }
-                    } else if let message {
-                        Text(message)
-                            .font(.custom("SukhumvitSet-Medium", size: 12))
-                            .foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -241,7 +237,7 @@ struct AppBackgroundSettingsTabView: View {
         guard let item else { return }
 
         isImporting = true
-        message = nil
+
 
         Task {
             do {
@@ -264,12 +260,12 @@ struct AppBackgroundSettingsTabView: View {
                     backgroundKind = kind.rawValue
                     backgroundUpdateToken = UUID().uuidString
                     isImporting = false
-                    message = kind == .image ? "เปลี่ยนเป็นรูปภาพแล้ว" : "เปลี่ยนเป็นวิดีโอแล้ว"
+
                 }
             } catch {
                 await MainActor.run {
                     isImporting = false
-                    message = "นำเข้าไฟล์ไม่สำเร็จ"
+
                 }
             }
         }
@@ -280,6 +276,6 @@ struct AppBackgroundSettingsTabView: View {
         backgroundKind = AppBackgroundKind.system.rawValue
         backgroundFileName = ""
         backgroundUpdateToken = UUID().uuidString
-        message = "กลับไปใช้พื้นหลังระบบแล้ว"
+
     }
 }

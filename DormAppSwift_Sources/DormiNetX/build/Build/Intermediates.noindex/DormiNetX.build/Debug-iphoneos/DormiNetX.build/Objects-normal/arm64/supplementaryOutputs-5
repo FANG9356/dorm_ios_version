@@ -1,0 +1,51 @@
+{
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SlipImageManager.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SlipImageManager.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SlipImageManager.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SlipImageManager.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SlipImageManager.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SlipImageManager.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncCheckpoint.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncCheckpoint.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncCheckpoint.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncCheckpoint.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncCheckpoint.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncCheckpoint.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncManager.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncManager.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncManager.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncManager.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncManager.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncManager.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncOutbox.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncOutbox.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncOutbox.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncOutbox.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncOutbox.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/SyncOutbox.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AdminManagementTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AdminManagementTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AdminManagementTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AdminManagementTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AdminManagementTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AdminManagementTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AppBackgroundSettingsTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppBackgroundSettingsTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppBackgroundSettingsTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppBackgroundSettingsTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppBackgroundSettingsTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppBackgroundSettingsTabView.swiftdeps"
+  },
+  "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AppIconSettingsTabView.swift" : {
+    "const-values" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppIconSettingsTabView.swiftconstvalues",
+    "dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppIconSettingsTabView.d",
+    "diagnostics" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppIconSettingsTabView.dia",
+    "object" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppIconSettingsTabView.o",
+    "swift-dependencies" : "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/build/Build/Intermediates.noindex/DormiNetX.build/Debug-iphoneos/DormiNetX.build/Objects-normal/arm64/AppIconSettingsTabView.swiftdeps"
+  }
+}

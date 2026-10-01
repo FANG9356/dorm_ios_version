@@ -83,7 +83,8 @@ enum PaymentLedger {
     }
 
     private static func transactions(for paymentID: UUID, in context: ModelContext) throws -> [PaymentTransaction] {
-        try context.fetch(FetchDescriptor<PaymentTransaction>()).filter { $0.paymentID == paymentID }
+        let p = #Predicate<PaymentTransaction> { $0.paymentID == paymentID }
+        return try context.fetch(FetchDescriptor(predicate: p))
     }
 
     private static func evidencePaths(for payment: Payment) -> [String] {

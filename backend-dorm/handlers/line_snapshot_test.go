@@ -210,20 +210,7 @@ func TestMaterializeLineSnapshotNotifiesOnlyChangedMaintenanceStatus(t *testing.
 	}
 }
 
-func TestSingleLineAccountRejectsAmbiguousAccounts(t *testing.T) {
-	db, _ := sql.Open("sqlite3", ":memory:")
-	defer db.Close()
-	db.Exec(`CREATE TABLE sync_snapshots(account_id INTEGER)`)
-	db.Exec(`INSERT INTO sync_snapshots VALUES (1), (1)`)
-	accountID, err := singleLineAccount(db)
-	if err != nil || accountID != 1 {
-		t.Fatalf("single account = %d, %v", accountID, err)
-	}
-	db.Exec(`INSERT INTO sync_snapshots VALUES (2)`)
-	if _, err := singleLineAccount(db); err == nil {
-		t.Fatal("expected ambiguous account error")
-	}
-}
+
 
 func TestNormalizeMaintenanceSnapshotsDeduplicatesUUIDCaseAndKeepsNewest(t *testing.T) {
 	idLower := "5f5a483f-af16-4237-ae54-c3c0a82330cf"

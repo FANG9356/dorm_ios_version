@@ -1,0 +1,128 @@
+{
+  "source": "/Volumes/FangB/dorm_project/DormAppSwift_Sources/DormiNetX/DormiNetX/Views/SecurityTokenTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "เกิดข้อผิดพลาด",
+        "location": {
+          "startingColumn": 16,
+          "startingLine": 226
+        }
+      },
+      {
+        "comment": "",
+        "key": "โทเคนเข้าสู่ระบบ",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบเพื่อความปลอดภัย",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "ขอรหัสก่อนเข้าแอป",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 37
+        }
+      },
+      {
+        "comment": "",
+        "key": "เปิดใช้งานอยู่",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "ปิดการใช้งานอยู่",
+        "location": {
+          "startingColumn": 108,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "รหัสที่ใช้อยู่ตอนนี้",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "สุ่มรหัสผ่านใหม่",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตั้งค่ารหัสเอง",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 113
+        }
+      },
+      {
+        "comment": "",
+        "key": "กำหนดรหัสผ่าน 6 หลัก",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 134
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "ยกเลิก",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "บันทึก",
+        "location": {
+          "startingColumn": 44,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "ตกลง",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 227
+        }
+      }
+    ]
+  },
+  "version": 1
+}

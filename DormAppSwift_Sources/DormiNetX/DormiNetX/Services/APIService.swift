@@ -464,7 +464,7 @@ class APIService {
         return false
     }
     
-    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
+    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", promptPayID: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
         guard let url = URL(string: "\(baseURL)/admins/\(id)") else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -476,7 +476,8 @@ class APIService {
         var body: [String: Any] = [
             "username": username,
             "email": email,
-            "backup_email": backupEmail
+            "backup_email": backupEmail,
+            "promptpay_id": promptPayID
         ]
         if let newPassword = newPassword, !newPassword.isEmpty {
             body["new_password"] = newPassword
@@ -491,7 +492,13 @@ class APIService {
         if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
             return true
         } else {
-            let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown Error"
+            var errorMsg = "Unknown Error"
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errMsg = json["error"] as? String {
+                errorMsg = errMsg
+            } else if let str = String(data: data, encoding: .utf8), !str.isEmpty {
+                errorMsg = str
+            }
             throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
     }
@@ -552,14 +559,18 @@ struct Admin: Identifiable, Codable {
     let email: String
     let profile_image: String?
     let backup_email: String?
+    let promptpay_id: String?
+    let dorm_code: String?
     
-    init(id: Int, username: String, role: String, email: String, profile_image: String? = nil, backup_email: String? = nil) {
+    init(id: Int, username: String, role: String, email: String, profile_image: String? = nil, backup_email: String? = nil, promptpay_id: String? = nil, dorm_code: String? = nil) {
         self.id = id
         self.username = username
         self.role = role
         self.email = email
         self.profile_image = profile_image
         self.backup_email = backup_email
+        self.promptpay_id = promptpay_id
+        self.dorm_code = dorm_code
     }
 }
 

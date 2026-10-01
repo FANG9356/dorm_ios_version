@@ -54,7 +54,7 @@ struct SystemLogsTabView: View {
                 }
             }
         }
-        .padding(.top, 106)
+        .padding(.top, 126)
         .padding(.horizontal, 20)
         .padding(.bottom, 32)
         .frame(maxWidth: .infinity, alignment: .topLeading)

@@ -54,8 +54,10 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 				http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
 			} else if attempts >= maxOTPAttempts {
 				status = http.StatusTooManyRequests
+				http.Error(w, `{"error":"กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาที"}`, status)
+				return
 			}
-			http.Error(w, `{"error":"รหัสยืนยันไม่ถูกต้องหรือกรอกผิดเกินจำนวนครั้งที่กำหนด"}`, status)
+			http.Error(w, `{"error":"รหัสยืนยัน (OTP) ไม่ถูกต้อง"}`, status)
 			return
 		}
 		if err != nil {

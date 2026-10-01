@@ -16,6 +16,7 @@ func TestValidateMaintenanceAppTransitionRequiresQuoteApproval(t *testing.T) {
 		{name: "paid repair cannot skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, shouldFail: true},
 		{name: "approved paid repair cannot start without payment", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม", cost: 500, approved: true, shouldFail: true},
 		{name: "approved paid repair must await payment", from: "รออนุมัติค่าใช้จ่าย", to: "รอตรวจสอบชำระเงิน", cost: 500, approved: true},
+		{name: "unapproved quote cannot enter payment", from: "รออนุมัติค่าใช้จ่าย", to: "รอตรวจสอบชำระเงิน", cost: 500, shouldFail: true},
 		{name: "paid repair starts after payment", from: "รอตรวจสอบชำระเงิน", to: "กำลังซ่อม", cost: 500},
 		{name: "free repair can skip quote", from: "กำลังติดต่อช่าง", to: "กำลังซ่อม"},
 		{name: "free repair can skip payment", from: "กำลังซ่อม", to: "เสร็จสิ้น"},
