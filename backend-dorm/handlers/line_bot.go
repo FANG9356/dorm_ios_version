@@ -411,8 +411,9 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		var expectedReceiver string
-		_ = master.QueryRow("SELECT COALESCE(promptpay_id, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&expectedReceiver)
+		var promptpayID, bankAccount string
+		_ = master.QueryRow("SELECT COALESCE(promptpay_id, ''), COALESCE(bank_account, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&promptpayID, &bankAccount)
+		expectedReceiver := promptpayID + "_" + bankAccount
 
 		isValid, verifyReason, payload := utils.VerifySlip(filepath, amount, expectedReceiver)
 		
@@ -421,12 +422,12 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			var existingID int
 			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheck == nil {
-				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว (Duplicate Slip) หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
 				return
 			}
 			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheckMaint == nil {
-				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในงานแจ้งซ่อม (Duplicate Slip)")
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในงานแจ้งซ่อม")
 				return
 			}
 		}
@@ -438,7 +439,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			newStatus = "paid"
 			replyMessage = fmt.Sprintf("ยืนยันการชำระเงินเรียบร้อย ระบบตรวจสอบสลิปอัตโนมัติพบยอดเงิน %.2f บาทเข้าบัญชีแล้วค่ะ", amount)
 		} else {
-			replyMessage = fmt.Sprintf("ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ (%s) ระบบได้รับสลิปแล้ว แอดมินจะตรวจสอบให้อีกครั้งนะคะ", verifyReason)
+			replyMessage = "ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ ระบบได้รับสลิปแล้ว แอดมินจะตรวจสอบให้อีกครั้งนะคะ"
 		}
 
 		slipArrayJSON := fmt.Sprintf(`["%s"]`, newFileName)
@@ -562,8 +563,9 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			return
 		}
 
-		var expectedReceiver string
-		_ = master.QueryRow("SELECT COALESCE(promptpay_id, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&expectedReceiver)
+		var promptpayID, bankAccount string
+		_ = master.QueryRow("SELECT COALESCE(promptpay_id, ''), COALESCE(bank_account, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&promptpayID, &bankAccount)
+		expectedReceiver := promptpayID + "_" + bankAccount
 
 		isValid, verifyReason, payload := utils.VerifySlip(filepath, cost, expectedReceiver)
 		
@@ -572,12 +574,12 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			var existingID int
 			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheck == nil {
-				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในบิลค่าเช่า (Duplicate Slip)")
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในบิลค่าเช่า")
 				return
 			}
 			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheckMaint == nil {
-				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว (Duplicate Slip) หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
+				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
 				return
 			}
 		}
@@ -588,7 +590,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 			newStatus = "รอตรวจสอบชำระเงิน"
 			replyMsg = fmt.Sprintf("ระบบตรวจสอบสลิปอัตโนมัติ: ยืนยันการชำระเงินค่าซ่อมแซมสำเร็จ ยอด %.2f บาท เรียบร้อยแล้วค่ะ", cost)
 		} else {
-			replyMsg = fmt.Sprintf("ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ (%s) ระบบได้รับสลิปค่าซ่อมแซมเรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันให้อีกครั้งค่ะ", verifyReason)
+			replyMsg = "ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ ระบบได้รับสลิปค่าซ่อมแซมเรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันให้อีกครั้งค่ะ"
 		}
 
 		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, slip_payload = ?, status = ?, last_updated = ? WHERE id = ?", newFileName, payload, newStatus, time.Now().UTC().Format(time.RFC3339Nano), maintID)
@@ -1486,6 +1488,8 @@ func handleMaintenanceQuoteDecision(master, db *sql.DB, accountID int, replyToke
 	actionName := "rejected"
 	if approved {
 		actionName = "approved"
+		// Ensure the user's state is ready to receive a slip for this maintenance right away
+		db.Exec("UPDATE users SET bot_state = ? WHERE line_user_id = ?", "pay_maint_"+maintenanceID, lineUserID)
 	}
 	notification.EventKey = fmt.Sprintf("maintenance-quote-%s:%d:%s:%s", actionName, accountID, maintenanceID, now)
 	notification.MaintenanceID = maintenanceID

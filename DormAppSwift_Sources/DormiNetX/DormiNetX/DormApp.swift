@@ -247,6 +247,7 @@ private struct AccountStoreLoadingView: View {
 @main
 struct DormApp: App {
     @AppStorage("appTheme") private var appTheme: Int = AppTheme.system.rawValue
+    @AppStorage("appLanguageCode") private var appLanguageCode = "system"
 
     init() {
         UIScrollView.appearance().keyboardDismissMode = .interactive
@@ -257,6 +258,7 @@ struct DormApp: App {
             AccountScopedRootView()
                 .globalKeyboardDismiss()
                 .preferredColorScheme(AppTheme(rawValue: appTheme)?.colorScheme)
+                .environment(\.locale, appLanguageCode == "system" ? .current : Locale(identifier: appLanguageCode))
         }
     }
 }

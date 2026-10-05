@@ -557,7 +557,7 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		rows, err := db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, ''), COALESCE(promptpay_id, ''), COALESCE(dorm_code, '') FROM admins WHERE email = ? ORDER BY id ASC", strings.ToLower(strings.TrimSpace(filterEmail)))
+		rows, err := db.Query("SELECT id, username, last_active, COALESCE(role, 'admin'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(backup_email, ''), COALESCE(promptpay_id, ''), COALESCE(dorm_code, ''), COALESCE(payment_type, 'promptpay'), COALESCE(bank_account, ''), COALESCE(account_name, '') FROM admins WHERE email = ? ORDER BY id ASC", strings.ToLower(strings.TrimSpace(filterEmail)))
 		if err != nil {
 			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
 			return
@@ -575,7 +575,10 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 			var backupEmail string
 			var promptPayID string
 			var dormCode string
-			if err := rows.Scan(&id, &username, &lastActive, &role, &email, &profileImage, &backupEmail, &promptPayID, &dormCode); err != nil {
+			var paymentType string
+			var bankAccount string
+			var accountName string
+			if err := rows.Scan(&id, &username, &lastActive, &role, &email, &profileImage, &backupEmail, &promptPayID, &dormCode, &paymentType, &bankAccount, &accountName); err != nil {
 				continue
 			}
 			admins = append(admins, map[string]interface{}{
@@ -588,6 +591,9 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 				"backup_email":  backupEmail,
 				"promptpay_id":  promptPayID,
 				"dorm_code":     dormCode,
+				"payment_type":  paymentType,
+				"bank_account":  bankAccount,
+				"account_name":  accountName,
 			})
 		}
 
@@ -786,6 +792,9 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			Email       string  `json:"email"`
 			BackupEmail string  `json:"backup_email"`
 			PromptPayID *string `json:"promptpay_id"`
+			PaymentType *string `json:"payment_type"`
+			BankAccount *string `json:"bank_account"`
+			AccountName *string `json:"account_name"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -876,6 +885,18 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 		if req.PromptPayID != nil {
 			query += "promptpay_id = ?, "
 			args = append(args, strings.TrimSpace(*req.PromptPayID))
+		}
+		if req.PaymentType != nil {
+			query += "payment_type = ?, "
+			args = append(args, strings.TrimSpace(*req.PaymentType))
+		}
+		if req.BankAccount != nil {
+			query += "bank_account = ?, "
+			args = append(args, strings.TrimSpace(*req.BankAccount))
+		}
+		if req.AccountName != nil {
+			query += "account_name = ?, "
+			args = append(args, strings.TrimSpace(*req.AccountName))
 		}
 
 		// If nothing to update, return success

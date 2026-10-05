@@ -513,6 +513,9 @@ func InitializeDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE admins ADD COLUMN backup_email TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN promptpay_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN dorm_code TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN payment_type TEXT DEFAULT 'promptpay'`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN bank_account TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN account_name TEXT DEFAULT ''`)
 
 	// Populate missing dorm_code for superadmins
 	rows, err := db.Query("SELECT id FROM admins WHERE role = 'superadmin' AND dorm_code = ''")

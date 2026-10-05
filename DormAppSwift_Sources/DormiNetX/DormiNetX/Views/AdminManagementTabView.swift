@@ -363,6 +363,9 @@ struct EditAdminSheet: View {
     @State private var email = ""
     @State private var backupEmail = ""
     @State private var promptPayID = ""
+    @State private var paymentType = "promptpay"
+    @State private var bankAccount = ""
+    @State private var accountName = ""
     @State private var oldPassword = ""
     @State private var newPassword = ""
     @State private var isLoading = false
@@ -404,10 +407,28 @@ struct EditAdminSheet: View {
                 }
                 
                 if admin.role == "superadmin" {
-                    Section(header: Text("การรับชำระเงิน"), footer: Text("หมายเลข PromptPay สำหรับให้ลูกบ้านสแกนจ่ายค่าเช่าและค่าซ่อม (เช่น เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน)")) {
-                        TextField("หมายเลข PromptPay (ไม่บังคับ)", text: $promptPayID)
-                            .keyboardType(.numbersAndPunctuation)
-                            .autocapitalization(.none)
+                    Section(header: Text("การรับชำระเงิน"), footer: Text("ข้อมูลบัญชีสำหรับให้ลูกบ้านสแกนจ่ายค่าเช่าและค่าซ่อม")) {
+                        Picker("ประเภทการรับเงิน", selection: $paymentType) {
+                            Text("พร้อมเพย์").tag("promptpay")
+                            Text("เลขบัญชีธนาคาร").tag("bank_account")
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.vertical, 5)
+                        
+                        if paymentType == "promptpay" {
+                            TextField("หมายเลข PromptPay (เบอร์โทร/บัตรประชาชน)", text: $promptPayID)
+                                .keyboardType(.numbersAndPunctuation)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                        } else {
+                            TextField("เลขบัญชีธนาคาร", text: $bankAccount)
+                                .keyboardType(.numberPad)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                        }
+                        
+                        TextField("ชื่อบัญชีผู้รับเงิน", text: $accountName)
+                            .autocapitalization(.words)
                             .disableAutocorrection(true)
                     }
                 }
@@ -455,6 +476,9 @@ struct EditAdminSheet: View {
                 email = admin.email
                 backupEmail = admin.backup_email ?? ""
                 promptPayID = admin.promptpay_id ?? ""
+                paymentType = admin.payment_type ?? "promptpay"
+                bankAccount = admin.bank_account ?? ""
+                accountName = admin.account_name ?? ""
             }
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -467,7 +491,7 @@ struct EditAdminSheet: View {
         errorMessage = nil
         
         do {
-            let success = try await APIService.shared.updateAdmin(id: admin.id, username: username, email: email, backupEmail: backupEmail, promptPayID: promptPayID, oldPassword: oldPassword.isEmpty ? nil : oldPassword, newPassword: newPassword.isEmpty ? nil : newPassword)
+            let success = try await APIService.shared.updateAdmin(id: admin.id, username: username, email: email, backupEmail: backupEmail, promptPayID: promptPayID, paymentType: paymentType, bankAccount: bankAccount, accountName: accountName, oldPassword: oldPassword.isEmpty ? nil : oldPassword, newPassword: newPassword.isEmpty ? nil : newPassword)
             if success {
                 let currentAdminID = UserDefaults.standard.integer(forKey: "adminID")
                 if admin.id == currentAdminID && !newPassword.isEmpty {

@@ -11,7 +11,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,24 +18,26 @@ import (
 	"github.com/makiuchi-d/gozxing/qrcode"
 )
 
-type EasySlipResponse struct {
-	Status int `json:"status"`
-	Data   struct {
-		Payload string `json:"payload"`
-		Amount  struct {
-			Amount float64 `json:"amount"`
-		} `json:"amount"`
+type SlipOkResponse struct {
+	Success bool `json:"success"`
+	Code    int  `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		Success  bool    `json:"success"`
+		Amount   float64 `json:"amount"`
 		Receiver struct {
 			Proxy struct {
-				Account string `json:"account"`
+				Value *string `json:"value"`
 			} `json:"proxy"`
+			Account struct {
+				Value *string `json:"value"`
+			} `json:"account"`
 		} `json:"receiver"`
 	} `json:"data"`
-	Message string `json:"message"`
 }
 
 // VerifySlip checks if the uploaded slip is valid and matches the expected amount.
-// It uses EasySlip API if EASYSLIP_TOKEN is set, otherwise falls back to a Mock Verification (decodes QR locally).
+// It uses SlipOK API if EASYSLIP_API_KEY is set, otherwise falls back to a Mock Verification (decodes QR locally).
 func VerifySlip(filePath string, expectedAmount float64, expectedReceiver string) (isValid bool, reason string, payload string) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -63,9 +64,11 @@ func VerifySlip(filePath string, expectedAmount float64, expectedReceiver string
 		return false, "ไม่พบ QR Code บนสลิป หรือสลิปไม่ชัดเจน", ""
 	}
 
-	token := os.Getenv("EASYSLIP_TOKEN")
-	if token != "" {
-		v, r := verifyWithEasySlip(file, token, expectedAmount, expectedReceiver)
+	apiKey := os.Getenv("EASYSLIP_API_KEY")
+	apiUrl := os.Getenv("EASYSLIP_API")
+
+	if apiKey != "" && apiUrl != "" {
+		v, r := verifyWithSlipOK(file, apiUrl, apiKey, expectedAmount, expectedReceiver)
 		return v, r, payload
 	}
 
@@ -73,11 +76,11 @@ func VerifySlip(filePath string, expectedAmount float64, expectedReceiver string
 	return v, r, payload
 }
 
-func verifyWithEasySlip(file *os.File, token string, expectedAmount float64, expectedReceiver string) (bool, string) {
+func verifyWithSlipOK(file *os.File, apiUrl, apiKey string, expectedAmount float64, expectedReceiver string) (bool, string) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	part, err := writer.CreateFormFile("file", "slip.jpg")
+	part, err := writer.CreateFormFile("files", "slip.jpg")
 	if err != nil {
 		return false, "Internal error preparing API request"
 	}
@@ -86,13 +89,14 @@ func verifyWithEasySlip(file *os.File, token string, expectedAmount float64, exp
 	if err != nil {
 		return false, "Internal error copying file"
 	}
+	_ = writer.WriteField("log", "true")
 	writer.Close()
 
-	req, err := http.NewRequest("POST", "https://developer.easyslip.com/api/v1/verify", body)
+	req, err := http.NewRequest("POST", apiUrl, body)
 	if err != nil {
 		return false, "Internal error creating request"
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("x-authorization", apiKey)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{Timeout: 15 * time.Second}
@@ -102,32 +106,56 @@ func verifyWithEasySlip(file *os.File, token string, expectedAmount float64, exp
 	}
 	defer resp.Body.Close()
 
-	var result EasySlipResponse
+	var result SlipOkResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return false, "Invalid API response"
 	}
 
-	if result.Status != 200 {
+	// 400 Bad Request or API business logic failure
+	if !result.Success {
 		if result.Message != "" {
-			return false, fmt.Sprintf("Slip verification failed: %s", result.Message)
+			return false, fmt.Sprintf("ตรวจสอบสลิปไม่ผ่าน: %s", result.Message)
 		}
-		return false, "Slip verification failed (Invalid slip)"
+		return false, "สลิปไม่ถูกต้อง หรือไม่สามารถตรวจสอบได้"
+	}
+
+	if !result.Data.Success {
+		return false, "ตรวจสอบสลิปไม่ผ่าน"
 	}
 
 	// Check amount
-	if result.Data.Amount.Amount < expectedAmount-0.01 { // Allow slight float tolerance
-		return false, fmt.Sprintf("ยอดเงินในสลิป (%.2f) ไม่ตรงกับยอดที่เรียกเก็บ (%.2f)", result.Data.Amount.Amount, expectedAmount)
+	if result.Data.Amount < expectedAmount-0.01 || result.Data.Amount > expectedAmount+0.01 {
+		return false, fmt.Sprintf("ยอดเงินในสลิป (%.2f) ไม่ตรงกับยอดที่เรียกเก็บ (%.2f)", result.Data.Amount, expectedAmount)
 	}
 
 	// Check receiver if expectedReceiver is provided
 	if expectedReceiver != "" {
-		// EasySlip often returns proxy account masked (e.g., xxx-xxx-1234 or 081xxxx123)
-		// We extract the last 4 digits to compare
-		accountStr := strings.ReplaceAll(result.Data.Receiver.Proxy.Account, "-", "")
-		expectedStr := strings.ReplaceAll(expectedReceiver, "-", "")
+		var accountStr string
+		if result.Data.Receiver.Proxy.Value != nil {
+			accountStr = strings.ReplaceAll(*result.Data.Receiver.Proxy.Value, "-", "")
+		} else if result.Data.Receiver.Account.Value != nil {
+			accountStr = strings.ReplaceAll(*result.Data.Receiver.Account.Value, "-", "")
+		}
 		
-		if len(accountStr) >= 4 && len(expectedStr) >= 4 {
-			if !strings.HasSuffix(accountStr, expectedStr[len(expectedStr)-4:]) {
+		accountStr = strings.ReplaceAll(accountStr, "x", "")
+		accountStr = strings.ReplaceAll(accountStr, "X", "")
+
+		if len(accountStr) >= 4 {
+			// support format like "0812345678_1234567890" or "0812345678/1234567890"
+			parts := strings.FieldsFunc(expectedReceiver, func(r rune) bool {
+				return r == '_' || r == '/' || r == '|' || r == ' '
+			})
+			
+			matched := false
+			for _, p := range parts {
+				expectedStr := strings.ReplaceAll(p, "-", "")
+				if len(expectedStr) >= 4 && strings.HasSuffix(accountStr, expectedStr[len(expectedStr)-4:]) {
+					matched = true
+					break
+				}
+			}
+			
+			if !matched {
 				return false, "ชื่อหรือบัญชีผู้รับโอนเงินไม่ถูกต้อง กรุณาโอนเงินเข้าบัญชีหอพักเท่านั้น"
 			}
 		}
@@ -137,43 +165,9 @@ func verifyWithEasySlip(file *os.File, token string, expectedAmount float64, exp
 }
 
 func verifyMock(file *os.File, expectedAmount float64, payload string, expectedReceiver string) (bool, string) {
-	// First, try to call the Python OCR Bot
-	absPath, err := filepath.Abs(file.Name())
-	if err == nil {
-		reqBody, _ := json.Marshal(map[string]interface{}{
-			"filepath":          absPath,
-			"amount":            expectedAmount,
-			"expected_receiver": expectedReceiver,
-		})
-		
-		ocrUrl := os.Getenv("OCR_SERVICE_URL")
-		if ocrUrl == "" {
-			ocrUrl = "http://127.0.0.1:5001/verify"
-		}
-		
-		client := &http.Client{Timeout: 15 * time.Second}
-		resp, err := client.Post(ocrUrl, "application/json", bytes.NewBuffer(reqBody))
-		
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == 200 {
-				var ocrResult struct {
-					Valid  bool   `json:"valid"`
-					Reason string `json:"reason"`
-				}
-				if json.NewDecoder(resp.Body).Decode(&ocrResult) == nil {
-					return ocrResult.Valid, ocrResult.Reason
-				}
-			}
-		}
-	}
-
 	// Fallback to basic QR code decoding if OCR bot is down
-	// We already extracted the payload in VerifySlip.
-	
 	if strings.Contains(payload, "00410006000001") || len(payload) > 20 {
 		return false, "พบ QR Code แต่ไม่สามารถตรวจสอบยอดเงินอัตโนมัติได้ กรุณารอแอดมินยืนยัน"
 	}
-
 	return false, "QR code is not a valid transfer slip."
 }

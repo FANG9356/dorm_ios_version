@@ -464,7 +464,7 @@ class APIService {
         return false
     }
     
-    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", promptPayID: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
+    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", promptPayID: String = "", paymentType: String = "promptpay", bankAccount: String = "", accountName: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
         guard let url = URL(string: "\(baseURL)/admins/\(id)") else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -477,7 +477,10 @@ class APIService {
             "username": username,
             "email": email,
             "backup_email": backupEmail,
-            "promptpay_id": promptPayID
+            "promptpay_id": promptPayID,
+            "payment_type": paymentType,
+            "bank_account": bankAccount,
+            "account_name": accountName
         ]
         if let newPassword = newPassword, !newPassword.isEmpty {
             body["new_password"] = newPassword
@@ -560,9 +563,12 @@ struct Admin: Identifiable, Codable {
     let profile_image: String?
     let backup_email: String?
     let promptpay_id: String?
+    let payment_type: String?
+    let bank_account: String?
+    let account_name: String?
     let dorm_code: String?
     
-    init(id: Int, username: String, role: String, email: String, profile_image: String? = nil, backup_email: String? = nil, promptpay_id: String? = nil, dorm_code: String? = nil) {
+    init(id: Int, username: String, role: String, email: String, profile_image: String? = nil, backup_email: String? = nil, promptpay_id: String? = nil, payment_type: String? = "promptpay", bank_account: String? = nil, account_name: String? = nil, dorm_code: String? = nil) {
         self.id = id
         self.username = username
         self.role = role
@@ -570,6 +576,9 @@ struct Admin: Identifiable, Codable {
         self.profile_image = profile_image
         self.backup_email = backup_email
         self.promptpay_id = promptpay_id
+        self.payment_type = payment_type
+        self.bank_account = bank_account
+        self.account_name = account_name
         self.dorm_code = dorm_code
     }
 }
