@@ -770,9 +770,9 @@ private struct MaintenanceEditor: View {
                     paymentMethod = method.value
                 } label: {
                     if paymentMethod == method.value {
-                        Label(method.title, systemImage: "checkmark")
+                        Label(LocalizedStringKey(method.title), systemImage: "checkmark")
                     } else {
-                        Text(method.title)
+                        Text(LocalizedStringKey(method.title))
                     }
                 }
             }

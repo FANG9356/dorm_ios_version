@@ -310,7 +310,7 @@ struct LoupeFilterTabs: View {
                         let count = getCount(for: tabData.0)
                         
                         HStack(spacing: 4) {
-                            Text(tabData.1)
+                            Text(LocalizedStringKey(tabData.1))
                                 .font(.custom("SukhumvitSet-Bold", size: 14))
                                 .lineLimit(1)
                             Text("\(count)")
@@ -389,7 +389,7 @@ struct LiquidFilterTab: View {
     
     var body: some View {
         HStack(spacing: 4) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Bold", size: 13))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -500,7 +500,7 @@ struct PremiumTenantCard: View {
                         Circle()
                             .fill(viewModel.statusColor(user.status))
                             .frame(width: 7, height: 7)
-                        Text(user.status ?? "-")
+                        Text(LocalizedStringKey(user.status ?? "-"))
                             .font(.custom("SukhumvitSet-Bold", size: 11))
                             .foregroundColor(.primary)
                             .lineLimit(1)
@@ -610,7 +610,7 @@ struct TenantDetailSheet: View {
                             Circle()
                                 .fill(viewModel.statusColor(displayUser.status))
                                 .frame(width: 7, height: 7)
-                            Text(displayUser.status ?? "-")
+                            Text(LocalizedStringKey(displayUser.status ?? "-"))
                                 .font(.custom("SukhumvitSet-Bold", size: 13))
                         }
                         .foregroundColor(.primary)

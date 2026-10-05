@@ -35,7 +35,7 @@ struct AppIconSettingsTabView: View {
                             .font(.custom("SukhumvitSet-Bold", size: 18))
                             .foregroundStyle(.primary)
 
-                        Text(currentOption.title)
+                        Text(LocalizedStringKey(currentOption.title))
                             .font(.custom("SukhumvitSet-Bold", size: 26))
                             .foregroundStyle(.primary)
 
@@ -95,11 +95,11 @@ struct AppIconSettingsTabView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(option.title)
+                    Text(LocalizedStringKey(option.title))
                         .font(.custom("SukhumvitSet-Bold", size: 17))
                         .foregroundStyle(.primary)
 
-                    Text(option.subtitle)
+                    Text(LocalizedStringKey(option.subtitle))
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -142,7 +142,7 @@ struct AppIconSettingsTabView: View {
                 case .success:
                     selectedHomeIconName = option.id
 
-                case .failure(let error):
+                case .failure(_):
                     selectedHomeIconName = optionID(for: AppIconManager.currentIconName)
 
                 }

@@ -11,10 +11,23 @@ enum AppDate {
 
     private static func formatter(_ format: String, locale: String = "en_US_POSIX", buddhist: Bool = false) -> DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: locale)
-        formatter.calendar = buddhist ? Calendar(identifier: .buddhist) : gregorianCalendar
+        let isThai = Locale.autoupdatingCurrent.language.languageCode?.identifier == "th"
+        if locale == "th_TH" {
+            formatter.locale = Locale.autoupdatingCurrent
+            formatter.calendar = isThai ? Calendar(identifier: .buddhist) : gregorianCalendar
+            // Adjust format for English (e.g., remove "เวลา" and "น.")
+            var adjustedFormat = format
+            if !isThai {
+                adjustedFormat = adjustedFormat.replacingOccurrences(of: " เวลา ", with: " ")
+                adjustedFormat = adjustedFormat.replacingOccurrences(of: " น.", with: "")
+            }
+            formatter.dateFormat = adjustedFormat
+        } else {
+            formatter.locale = Locale(identifier: locale)
+            formatter.calendar = buddhist ? Calendar(identifier: .buddhist) : gregorianCalendar
+            formatter.dateFormat = format
+        }
         formatter.timeZone = timeZone
-        formatter.dateFormat = format
         formatter.isLenient = false
         return formatter
     }

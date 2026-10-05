@@ -42,11 +42,11 @@ struct AppBackgroundSettingsTabView: View {
                                 .font(.custom("SukhumvitSet-Bold", size: 18))
                                 .foregroundStyle(.primary)
 
-                            Text(currentTitle)
+                            Text(LocalizedStringKey(currentTitle))
                                 .font(.custom("SukhumvitSet-Bold", size: 25))
                                 .foregroundStyle(.primary)
 
-                            Text(currentSubtitle)
+                            Text(LocalizedStringKey(currentSubtitle))
                                 .font(.custom("SukhumvitSet-Text", size: 12))
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -204,11 +204,11 @@ struct AppBackgroundSettingsTabView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Bold", size: 17))
                     .foregroundStyle(.primary)
 
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.custom("SukhumvitSet-Text", size: 12))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

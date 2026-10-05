@@ -177,7 +177,7 @@ struct PricingTabView: View {
                     GlassCard {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text(roomType.name).font(.custom("SukhumvitSet-Bold", size: 16))
+                                Text(LocalizedStringKey(roomType.name)).font(.custom("SukhumvitSet-Bold", size: 16))
                                 Spacer()
                                 Text(roomType.price.formatted(.number.precision(.fractionLength(0))) + " ฿")
                                     .font(.custom("SukhumvitSet-Bold", size: 16)).foregroundStyle(.indigo)
@@ -618,7 +618,7 @@ private struct PricingRoomEditor: View {
 
                     Picker("ประเภทห้อง", selection: $roomType) {
                         ForEach(roomTypes) { type in
-                            Text(type.name).tag(type.name)
+                            Text(LocalizedStringKey(type.name)).tag(type.name)
                         }
                     }
                     .pickerStyle(.menu)

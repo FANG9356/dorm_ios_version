@@ -38,11 +38,11 @@ struct LanguageSettingsTabView: View {
                             .font(.custom("SukhumvitSet-Bold", size: 18))
                             .foregroundStyle(.primary)
 
-                        Text(currentOption.title)
+                        Text(LocalizedStringKey(currentOption.title))
                             .font(.custom("SukhumvitSet-Bold", size: 26))
                             .foregroundStyle(.primary)
 
-                        Text(currentOption.currentDescription)
+                        Text(LocalizedStringKey(currentOption.currentDescription))
                             .font(.custom("SukhumvitSet-Text", size: 12))
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -86,11 +86,11 @@ struct LanguageSettingsTabView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(option.title)
+                    Text(LocalizedStringKey(option.title))
                         .font(.custom("SukhumvitSet-Bold", size: 17))
                         .foregroundStyle(.primary)
 
-                    Text(option.subtitle)
+                    Text(LocalizedStringKey(option.subtitle))
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

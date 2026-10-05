@@ -4,6 +4,12 @@
     "" : {
 
     },
+    " บาท" : {
+      "extractionState" : "manual"
+    },
+    ")) เป็นกำลังพักอาศัย" : {
+      "extractionState" : "manual"
+    },
     "%@ %@" : {
       "localizations" : {
         "en" : {
@@ -64,20 +70,50 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld งวด × %2$@"
+            "state" : "translated",
+            "value" : "%lld installments × %@"
           }
         }
       }
     },
     "%lld รายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
+          }
+        }
+      }
     },
     "%lld รูปสลิป" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Photo slip"
+          }
+        }
+      }
     },
     "%lld ห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld rooms"
+          }
+        }
+      }
+    },
+    "฿" : {
+      "extractionState" : "manual"
+    },
+    "฿%.0f" : {
+      "extractionState" : "manual"
+    },
+    "฿%.0f/เดือน" : {
+      "extractionState" : "manual"
     },
     "0" : {
 
@@ -86,13 +122,30 @@
 
     },
     "10 หลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 digits"
+          }
+        }
+      }
     },
     "13 หลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "13 digits"
+          }
+        }
+      }
     },
     "Administrator" : {
 
+    },
+    "d MMMM yyyy เวลา HH:mm น." : {
+      "extractionState" : "manual"
     },
     "DormiNet" : {
       "extractionState" : "manual",
@@ -120,941 +173,4022 @@
     "MENU" : {
 
     },
+    "server ตอบกลับข้อมูล sync ไม่ถูกต้อง" : {
+      "extractionState" : "manual"
+    },
     "กดปุ่ม + เพื่อเพิ่มเลขห้องและเลือกประเภท" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press the + button to add a room number and select a type."
+          }
+        }
+      }
+    },
+    "กดสร้างไฟล์สำรองเพื่อเก็บข้อมูลล่าสุด รูปสลิป และพื้นหลังไว้ในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "กรกฎาคม" : {
+      "extractionState" : "manual"
     },
     "กรอกรหัสความปลอดภัยเพื่อเข้าใช้งานต่อ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the security code to continue using it."
+          }
+        }
+      }
+    },
+    "กรอกรหัสผิดหลายครั้ง กรุณารอ 1 นาทีแล้วลองใหม่" : {
+      "extractionState" : "manual"
+    },
+    "กรุณากรอกชื่อ นามสกุล และเลือกห้อง" : {
+      "extractionState" : "manual"
+    },
+    "กรุณากรอกตัวเลขให้ครบ 6 หลัก" : {
+      "extractionState" : "manual"
+    },
+    "กรุณากรอกรหัสยืนยัน 6 หลัก" : {
+      "extractionState" : "manual"
+    },
+    "กรุณากรอกอีเมลให้ถูกต้อง" : {
+      "extractionState" : "manual"
     },
     "กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please log in with a new password."
+          }
+        }
+      }
+    },
+    "กรุณาตรวจสอบยอดค่าใช้จ่าย ต้องเป็นตัวเลขที่ไม่ติดลบ" : {
+      "extractionState" : "manual"
+    },
+    "กรุณารอให้การซิงก์เสร็จก่อน" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาระบุจำนวนงวด" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาระบุตัวเลข 0 ถึง 9 ให้ครบ 6 หลัก" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาระบุยอดชำระต่องวด" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาเลือกห้องจากรายการที่สร้างไว้ในหน้าจัดการห้องพัก" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาอนุญาตให้บันทึกรูปภาพในการตั้งค่าของเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "กรุณาอัปเดตแอปก่อนซิงก์ข้อมูล" : {
+      "extractionState" : "manual"
     },
     "กลับไปเข้าสู่ระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go back to login"
+          }
+        }
+      }
+    },
+    "กลับไปใช้พื้นหลังเดิมที่เปลี่ยนตามธีม" : {
+      "extractionState" : "manual"
+    },
+    "กันยายน" : {
+      "extractionState" : "manual"
+    },
+    "การแก้ไขข้อมูลล้มเหลว" : {
+      "extractionState" : "manual"
+    },
+    "การเงินและชำระเงิน" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finance"
+          }
+        }
+      }
     },
     "การชำระเงินตอนเข้าอยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment upon arrival"
+          }
+        }
+      }
+    },
+    "การตอบกลับจากเซิร์ฟเวอร์ไม่ถูกต้อง" : {
+      "extractionState" : "manual"
     },
     "การรับชำระเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receiving payment"
+          }
+        }
+      }
     },
     "การส่งบิลผ่าน LINE" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sending bills via LINE"
+          }
+        }
+      }
+    },
+    "กำลังเชื่อมต่อ..." : {
+      "extractionState" : "manual"
+    },
+    "กำลังซ่อม" : {
+      "extractionState" : "manual"
+    },
+    "กำลังซิงก์" : {
+      "extractionState" : "manual"
+    },
+    "กำลังดาวน์โหลดข้อมูล..." : {
+      "extractionState" : "manual"
     },
     "กำลังดำเนินการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "in progress"
+          }
+        }
+      }
+    },
+    "กำลังดำเนินงาน" : {
+      "extractionState" : "manual"
+    },
+    "กำลังดึงข้อมูลล่าสุด" : {
+      "extractionState" : "manual"
+    },
+    "กำลังติดต่อช่าง" : {
+      "extractionState" : "manual"
+    },
+    "กำลังเตรียมข้อมูล..." : {
+      "extractionState" : "manual"
     },
     "กำลังนำเข้าไฟล์..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importing file..."
+          }
+        }
+      }
+    },
+    "กำลังบันทึกขึ้น cloud" : {
+      "extractionState" : "manual"
     },
     "กำลังบันทึกใบเสร็จ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving receipt"
+          }
+        }
+      }
     },
     "กำลังเปิดข้อมูลของบัญชีนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening information for this account"
+          }
+        }
+      }
     },
     "กำลังพักอาศัย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "currently living"
+          }
+        }
+      }
+    },
+    "กำลังรวมข้อมูลในเครื่องกับ cloud" : {
+      "extractionState" : "manual"
+    },
+    "กำลังรวมข้อมูลใหม่จาก LINE กับข้อมูลในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "กำลังลบ..." : {
+      "extractionState" : "manual"
+    },
+    "กำลังอัปเดตข้อมูลในเครื่อง..." : {
+      "extractionState" : "manual"
     },
     "กำหนดชำระวันที่ %lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment is due on %lldth day."
+          }
+        }
+      }
     },
     "กำหนดรหัสผ่าน 6 หลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a 6-digit password."
+          }
+        }
+      }
+    },
+    "กุมภาพันธ์" : {
+      "extractionState" : "manual"
     },
     "กู้คืน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recover"
+          }
+        }
+      }
+    },
+    "กู้คืนข้อมูลในเครื่องเรียบร้อยแล้ว" : {
+      "extractionState" : "manual"
     },
     "กู้คืนไฟล์นี้?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recover this file?"
+          }
+        }
+      }
     },
     "เกิดข้อผิดพลาด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An error occurred."
+          }
+        }
+      }
+    },
+    "เกิดปัญหาเครือข่าย หรือเซิร์ฟเวอร์ไม่ตอบสนอง" : {
+      "extractionState" : "manual"
     },
     "แก้ไข" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "correct"
+          }
+        }
+      }
     },
     "แก้ไขข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit information"
+          }
+        }
+      }
+    },
+    "แก้ไขบิล" : {
+      "extractionState" : "manual"
+    },
+    "แก้ไขประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "แก้ไขไม่ได้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't edit"
+          }
+        }
+      }
     },
     "แก้ไขรายการชำระเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit payment list"
+          }
+        }
+      }
     },
     "แก้ไขลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Correct the residents"
+          }
+        }
+      }
+    },
+    "แก้ไขเลขห้อง" : {
+      "extractionState" : "manual"
+    },
+    "ข้อมูล sync ไม่ตรงกับ checksum" : {
+      "extractionState" : "manual"
     },
     "ข้อมูลความปลอดภัย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safety information"
+          }
+        }
+      }
     },
     "ข้อมูลเชิงลึกและสถานะการดำเนินงานของระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System operational insights and status"
+          }
+        }
+      }
     },
     "ข้อมูลบัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account information"
+          }
+        }
+      }
     },
     "ข้อมูลบัญชีสำหรับให้ลูกบ้านสแกนจ่ายค่าเช่าและค่าซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account information for residents to scan to pay rent and repair costs."
+          }
+        }
+      }
+    },
+    "ข้อมูลบันทึกในเครื่องแล้ว รออัปเดตเซิร์ฟเวอร์ซิงก์เวอร์ชันใหม่" : {
+      "extractionState" : "manual"
+    },
+    "ข้อมูลบิล" : {
+      "extractionState" : "manual"
     },
     "ข้อมูลประเภทห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room type information"
+          }
+        }
+      }
+    },
+    "ข้อมูลเป็นล่าสุดแล้ว" : {
+      "extractionState" : "manual"
     },
     "ข้อมูลผู้ดูแลระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admin Info"
+          }
+        }
+      }
     },
     "ข้อมูลภายในเครื่องของเครื่องนี้จะถูกลบ ควรสร้างไฟล์สำรองก่อน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The local data of this machine will be deleted. You should create a backup file first."
+          }
+        }
+      }
     },
     "ข้อมูลภายในเครื่องปัจจุบันบนเครื่องนี้จะถูกเขียนทับด้วย %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current local data on this machine will be overwritten with %@."
+          }
+        }
+      }
     },
     "ข้อมูลมีปัญหา (Schema Mismatch)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is a problem with the data (Schema Mismatch)."
+          }
+        }
+      }
+    },
+    "ข้อมูลลูกบ้าน" : {
+      "extractionState" : "manual"
     },
     "ข้อมูลส่วนตัว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "personal information"
+          }
+        }
+      }
     },
     "ข้อมูลสัญญา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contract information"
+          }
+        }
+      }
     },
     "ข้อมูลห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room information"
+          }
+        }
+      }
     },
     "ข้อมูลห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room information"
+          }
+        }
+      }
     },
     "ขอรหัสก่อนเข้าแอป" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request a code before entering the app"
+          }
+        }
+      }
     },
     "ขอรหัสใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request a new code"
+          }
+        }
+      }
     },
     "ขอรหัสใหม่ใน %lld วินาที" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Request a new code in 20 seconds"
+          }
+        }
+      }
     },
     "ขั้นต่ำ 5%" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Minimum 5%"
+          }
+        }
+      }
+    },
+    "เข้ากับพื้นหลังมืด" : {
+      "extractionState" : "manual"
+    },
+    "เข้าถึงที่เก็บข้อมูลลับไม่ได้ กรุณาปลดล็อกเครื่องแล้วลองใหม่" : {
+      "extractionState" : "manual"
     },
     "เข้าสู่ระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Login"
+          }
+        }
+      }
+    },
+    "เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Login failed. Please check your email and password."
+          }
+        }
+      }
+    },
+    "เขียนทับข้อมูลในเครื่อง" : {
+      "extractionState" : "manual"
     },
     "ค้นหา ตรวจสถานะ และจัดการข้อมูลผู้พักอาศัย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search, check status, and manage resident information"
+          }
+        }
+      }
+    },
+    "ค้นหาประเภทห้อง, เลขห้อง, ชื่อลูกบ้าน..." : {
+      "extractionState" : "manual"
     },
     "ค้นหาห้อง, ชื่อ, เบอร์โทร..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for room, name, phone number..."
+          }
+        }
+      }
     },
     "ค้นหาห้อง, ชื่อลูกบ้าน, เบอร์โทร..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for rooms, names of residents, phone numbers..."
+          }
+        }
+      }
+    },
+    "ค้นหาห้อง, ชื่อลูกบ้าน, รอบบิล..." : {
+      "extractionState" : "manual"
+    },
+    "ค้นหาห้อง, ประเภทห้อง, ชื่อลูกบ้าน..." : {
+      "extractionState" : "manual"
+    },
+    "ค้นหาห้อง, อาการ, สถานะงานซ่อม..." : {
+      "extractionState" : "manual"
     },
     "ความคืบหน้า" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "progress"
+          }
+        }
+      }
+    },
+    "ค้างชำระ" : {
+      "extractionState" : "manual"
+    },
+    "ค่างวดโดยประมาณ" : {
+      "extractionState" : "manual"
+    },
+    "ค่าเช่า" : {
+      "extractionState" : "manual"
     },
     "ค่าเช่าตั้งต้น" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Initial rent"
+          }
+        }
+      }
+    },
+    "ค่าเช่ารายเดือน" : {
+      "extractionState" : "manual"
+    },
+    "ค่าเช่าห้องเดือนแรก" : {
+      "extractionState" : "manual"
+    },
+    "ค่าใช้จ่าย" : {
+      "extractionState" : "manual"
+    },
+    "ค่าใช้จ่ายเพิ่ม" : {
+      "extractionState" : "manual"
     },
     "ค่าใช้จ่ายเพิ่มเติม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Additional costs"
+          }
+        }
+      }
+    },
+    "ค่าน้ำ" : {
+      "extractionState" : "manual"
     },
     "ค่าน้ำ ค่าไฟ และค่าส่วนกลางจะแยกไปคิดในบิลรายเดือนตามรอบใช้งาน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Water, electricity and common expenses will be calculated separately in the monthly bill according to the usage cycle."
+          }
+        }
+      }
+    },
+    "ค่าบริการประจำเดือนถ้ามี" : {
+      "extractionState" : "manual"
+    },
+    "ค่าปรับ" : {
+      "extractionState" : "manual"
+    },
+    "ค่าปรับล่าช้า" : {
+      "extractionState" : "manual"
+    },
+    "ค่าไฟ" : {
+      "extractionState" : "manual"
+    },
+    "ค่าส่วนกลาง" : {
+      "extractionState" : "manual"
+    },
+    "ค่าอุปกรณ์เสริม" : {
+      "extractionState" : "manual"
     },
     "คำนำหน้า" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "prefix"
+          }
+        }
+      }
     },
     "คืนเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refund"
+          }
+        }
+      }
+    },
+    "คืนเงิน (Refund)" : {
+      "extractionState" : "manual"
     },
     "คุณต้องการคืนเงินบิลนี้ใช่หรือไม่?\n(สถานะจะเปลี่ยนเป็นคืนเงินเรียบร้อย)" : {
 
     },
     "คุณต้องการปรับปรุงยอดเงินบิลนี้ใช่หรือไม่?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to improve this bill balance?"
+          }
+        }
+      }
     },
     "คุณต้องการยกเลิกบิลนี้ใช่หรือไม่?\n(เมื่อยกเลิกแล้วจะไม่สามารถรับชำระได้อีก)" : {
 
     },
     "คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี %@?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Are you sure you want to delete your %@ account?"
+          }
+        }
+      }
+    },
+    "เครื่องใช้ไฟฟ้าเพิ่มเติม" : {
+      "extractionState" : "manual"
+    },
+    "เครื่องนี้ยังไม่รองรับการเปลี่ยนไอคอนแอพ" : {
+      "extractionState" : "manual"
     },
     "งวด %lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installment %lld"
+          }
+        }
+      }
+    },
+    "งานแจ้งซ่อม" : {
+      "extractionState" : "manual"
     },
     "งานซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenance"
+          }
+        }
+      }
     },
     "งานซ่อมที่ต้องติดตาม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repair work that must be followed up"
+          }
+        }
+      }
     },
     "เงินจอง/มัดจำ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reservation money/deposit"
+          }
+        }
+      }
     },
     "เงินมัดจำ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deposit"
+          }
+        }
+      }
     },
     "เงินมัดจำเริ่มต้น" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Initial deposit"
+          }
+        }
+      }
+    },
+    "เงินสด" : {
+      "extractionState" : "manual"
+    },
+    "เงินสด (Cash)" : {
+      "extractionState" : "manual"
+    },
+    "เงินสดรับเดือนนี้" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cash Received This Month"
+          }
+        }
+      }
+    },
+    "เงินโอน (Transfer)" : {
+      "extractionState" : "manual"
     },
     "จอง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "reserve"
+          }
+        }
+      }
+    },
+    "จัดการบัญชี" : {
+      "extractionState" : "manual"
     },
     "จัดการผู้ดูแลระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Admin Management"
+          }
+        }
+      }
     },
     "จัดการไฟล์สำรองข้อมูลของระบบภายในเครื่อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage local system backup files"
+          }
+        }
+      }
     },
     "จัดการภาษา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manage language"
+          }
+        }
+      }
+    },
+    "จัดการลูกบ้าน" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tenants"
+          }
+        }
+      }
+    },
+    "จัดการห้องพัก" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rooms"
+          }
+        }
+      }
+    },
+    "จ่ายบางส่วน" : {
+      "extractionState" : "manual"
+    },
+    "จ่ายบางส่วนต้องมากกว่า 0 และน้อยกว่ายอดบิล" : {
+      "extractionState" : "manual"
     },
     "จำนวน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "quantity"
+          }
+        }
+      }
     },
     "จำนวนงวด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Number of installments"
+          }
+        }
+      }
     },
     "จำนวนเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amount of money"
+          }
+        }
+      }
+    },
+    "แจ้งซ่อม" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenance"
+          }
+        }
+      }
+    },
+    "แจ้งเตือนเมื่อมีการออกบิลใหม่" : {
+      "extractionState" : "manual"
+    },
+    "แจ้งเตือนเมื่อสัญญาเช่าใกล้หมดอายุ" : {
+      "extractionState" : "manual"
     },
     "ช่องทางชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment channels"
+          }
+        }
+      }
+    },
+    "ช่องทางชำระเงิน" : {
+      "extractionState" : "manual"
+    },
+    "ชำระเงิน" : {
+      "extractionState" : "manual"
+    },
+    "ชำระเต็มจำนวน" : {
+      "extractionState" : "manual"
+    },
+    "ชำระบางส่วน" : {
+      "extractionState" : "manual"
+    },
+    "ชำระบางส่วน ผ่อนชำระ" : {
+      "extractionState" : "manual"
+    },
+    "ชำระแล้ว" : {
+      "extractionState" : "manual"
     },
     "ชื่อ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First Name"
+          }
+        }
+      }
+    },
+    "ชื่อ-นามสกุล" : {
+      "extractionState" : "manual"
     },
     "ชื่อบัญชีผู้รับเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beneficiary account name"
+          }
+        }
+      }
+    },
+    "ชื่อประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "ชื่อผู้ใช้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Username"
+          }
+        }
+      }
+    },
+    "ชื่อผู้ใช้ต้องมีอย่างน้อย 5 ตัวอักษร" : {
+      "extractionState" : "manual"
     },
     "ชื่อผู้ดูแลระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Administrator name"
+          }
+        }
+      }
     },
     "เช่น 2" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "such as 2"
+          }
+        }
+      }
+    },
+    "เช่น 101" : {
+      "extractionState" : "manual"
+    },
+    "เช่น เงินสด หรือ โอนผ่านธนาคาร" : {
+      "extractionState" : "manual"
     },
     "เช่น ไฟดับ น้ำไม่ไหล หรืออุปกรณ์ชำรุด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Such as a power outage, water not flowing, or damaged equipment."
+          }
+        }
+      }
+    },
+    "เช่น ห้องพัดลม" : {
+      "extractionState" : "manual"
+    },
+    "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่" : {
+      "extractionState" : "manual"
+    },
+    "แชร์" : {
+      "extractionState" : "manual"
     },
     "ใช้ข้อมูลจากเซิร์ฟเวอร์แทนข้อมูลในเครื่อง?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use data from the server instead of local data?"
+          }
+        }
+      }
+    },
+    "ใช้ข้อมูลล่าสุดจากเซิร์ฟเวอร์" : {
+      "extractionState" : "manual"
+    },
+    "ใช้ข้อมูลล่าสุดแล้ว และเก็บข้อมูลเดิมเป็นไฟล์สำรองไว้แล้ว" : {
+      "extractionState" : "manual"
     },
     "ใช้คำนวณอัตโนมัติในหน้าเพิ่มลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use automatic calculations on the add residents page."
+          }
+        }
+      }
+    },
+    "ใช้พื้นหลังเดิมของ DormiNet และเปลี่ยนตามธีม" : {
+      "extractionState" : "manual"
+    },
+    "ใช้พื้นหลังระบบ" : {
+      "extractionState" : "manual"
+    },
+    "ใช้ภาษาตามการตั้งค่าของ iPhone" : {
+      "extractionState" : "manual"
+    },
+    "ใช้ภาษาอังกฤษเป็นภาษาหลักของแอพ" : {
+      "extractionState" : "manual"
+    },
+    "ใช้เมื่อแน่ใจว่ามีไฟล์สำรองแล้ว ข้อมูลบนเครื่องนี้จะถูกลบ แต่ไม่กระทบข้อมูลของอีเมลอื่น" : {
+      "extractionState" : "manual"
+    },
+    "ใช้เมื่อยังไม่ได้รับเงิน บิลนี้จะถูกนับเป็นยอดค้างชำระ" : {
+      "extractionState" : "manual"
+    },
+    "ใช้เมื่อรับครบทั้งยอดแล้ว ระบบจะเติมยอดชำระและวันที่ชำระของวันนี้ให้อัตโนมัติ" : {
+      "extractionState" : "manual"
+    },
+    "ใช้เมื่อรับเงินมาแล้วบางส่วน ยังไม่ถือว่าปิดบิล เหลือยอดคงค้างให้ตามต่อ" : {
+      "extractionState" : "manual"
+    },
+    "ใช้รูปจาก Photos เป็นพื้นหลัง" : {
+      "extractionState" : "manual"
+    },
+    "ซ่อม" : {
+      "extractionState" : "manual"
+    },
+    "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว" : {
+      "extractionState" : "manual"
+    },
+    "ซิงค์ข้อมูลไม่สำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "ซิงค์ข้อมูลสำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านอีกครั้ง" : {
+      "extractionState" : "manual"
     },
     "ดำเนินการกับบิลไม่ได้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to process bill"
+          }
+        }
+      }
+    },
+    "ดึงข้อมูลล่าสุดแล้ว" : {
+      "extractionState" : "manual"
     },
     "ดู%@แบบเต็มจอ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View %@ in full screen"
+          }
+        }
+      }
     },
     "ดูเต็มจอ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View full screen"
+          }
+        }
+      }
     },
     "ดูแลสิทธิ์และข้อมูลเข้าสู่ระบบของผู้ใช้งานทั้งหมด %lld บัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take care of the rights and login information of all users, %lld accounts."
+          }
+        }
+      }
     },
     "ดูสถานะห้อง ประเภทห้อง และแก้ไขข้อมูลที่บันทึกไว้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View room status, room type, and edit saved information."
+          }
+        }
+      }
     },
     "เดือน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "month"
+          }
+        }
+      }
     },
     "แดชบอร์ดวันนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today's dashboard"
+          }
+        }
+      }
     },
     "ตกลง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "agree"
+          }
+        }
+      }
+    },
+    "ตรวจชำระ" : {
+      "extractionState" : "manual"
     },
     "ตรวจดูเหตุการณ์ล่าสุดที่แอปบันทึกไว้ในเครื่อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the latest events the app recorded on your device."
+          }
+        }
+      }
     },
     "ตรวจแล้ว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verified"
+          }
+        }
+      }
+    },
+    "ตรวจแล้ว อนุมัติ" : {
+      "extractionState" : "manual"
     },
     "ตรวจสอบสลิป" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the slip"
+          }
+        }
+      }
     },
     "ต้องการลบรายการแจ้งซ่อมนี้หรือไม่? รายการจะถูกซิงก์ออกจากอุปกรณ์อื่นด้วย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you want to delete this repair report? Items will also be synced from other devices."
+          }
+        }
+      }
     },
     "ต้องการลบลูกบ้านห้อง %@ (%@ %@) จริงหรือไม่?" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "ต้องการลบลูกบ้านห้อง %1$@ (%2$@ %3$@) จริงหรือไม่?"
+            "state" : "translated",
+            "value" : "Do you really want to delete the room owner %@ (%@ %@)?"
           }
         }
       }
     },
     "ต้องการลบลูกบ้านห้อง %@ จริงหรือไม่?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do you really want to delete %@ room residents?"
+          }
+        }
+      }
     },
     "ต้องบันทึกสถานะตามลำดับก่อน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The status must be saved in order first."
+          }
+        }
+      }
+    },
+    "ต้องเพิ่มประเภทห้องก่อน" : {
+      "extractionState" : "manual"
     },
     "ตั้งค่ารหัสเอง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set your own code"
+          }
+        }
+      }
+    },
+    "ตั้งค่าราคา" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pricing"
+          }
+        }
+      }
     },
     "ตั้งค่าห้องและราคา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set room and price"
+          }
+        }
+      }
+    },
+    "ตั้งชื่อ ค่าเช่า และค่าบริการ" : {
+      "extractionState" : "manual"
     },
     "ตั้งรหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a new password"
+          }
+        }
+      }
     },
     "ตั้งราคาเป็นจุดเริ่มต้นของข้อมูลห้องทั้งหมด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set the price as the starting point for all room information."
+          }
+        }
+      }
+    },
+    "ตามระบบ" : {
+      "extractionState" : "manual"
+    },
+    "ติดต่อช่าง" : {
+      "extractionState" : "manual"
     },
     "ติดตามยอดรับแล้ว ค้างชำระ และรายการที่ต้องดูแล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow up on totals received, outstanding payments, and items that need attention."
+          }
+        }
+      }
+    },
+    "ตุลาคม" : {
+      "extractionState" : "manual"
     },
     "เตรียมข้อมูลภายในเครื่อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare data within the machine"
+          }
+        }
+      }
     },
     "เตรียมบิลล่วงหน้า" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prepare the bill in advance"
+          }
+        }
+      }
+    },
+    "เตรียมส่งบิลผ่าน LINE" : {
+      "extractionState" : "manual"
     },
     "เติมราคาจากประเภทห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fill in the price from the room type."
+          }
+        }
+      }
     },
     "แตะเพื่อดูรายละเอียด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to see details."
+          }
+        }
+      }
     },
     "แตะเพื่อดูรายละเอียดและแก้ไข" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to view details and edit."
+          }
+        }
+      }
     },
     "แตะเพื่อเลือก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to select"
+          }
+        }
+      }
     },
     "ถ้ามีค่าใช้จ่าย ต้องส่งราคาให้ลูกบ้านอนุมัติใน LINE ก่อนเริ่มซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If there is a cost The price must be submitted to the residents for approval on LINE before repairs begin."
+          }
+        }
+      }
     },
     "ทะเบียนลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resident registration"
+          }
+        }
+      }
     },
     "ทะเบียนห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "room registration"
+          }
+        }
+      }
+    },
+    "ทั้งหมด" : {
+      "extractionState" : "manual"
     },
     "ทำงานตามลำดับ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work in order"
+          }
+        }
+      }
+    },
+    "ทำรายการเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาทีแล้วลองใหม่" : {
+      "extractionState" : "manual"
+    },
+    "ทำรายการไม่สำเร็จ กรุณาลองใหม่ภายหลัง" : {
+      "extractionState" : "manual"
     },
     "ที่อยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "address"
+          }
+        }
+      }
     },
     "โทเคนเข้าสู่ระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Login Token"
+          }
+        }
+      }
+    },
+    "โทนมืด" : {
+      "extractionState" : "manual"
+    },
+    "โทนสว่าง" : {
+      "extractionState" : "manual"
+    },
+    "โทนหลักของ DormiNet" : {
+      "extractionState" : "manual"
+    },
+    "ธันวาคม" : {
+      "extractionState" : "manual"
+    },
+    "น." : {
+      "extractionState" : "manual"
     },
     "นาง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mrs."
+          }
+        }
+      }
     },
     "นางสาว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "miss"
+          }
+        }
+      }
     },
     "นามสกุล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last Name"
+          }
+        }
+      }
     },
     "นาย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mr."
+          }
+        }
+      }
     },
     "น้ำ %@ ฿  •  ไฟ %@ ฿  •  ส่วนกลาง %@ ฿" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "น้ำ %1$@ ฿  •  ไฟ %2$@ ฿  •  ส่วนกลาง %3$@ ฿"
+            "state" : "translated",
+            "value" : "Water %@ ฿ • Fire %@ ฿ • Central %@ ฿"
           }
         }
       }
     },
+    "นำเข้าไฟล์" : {
+      "extractionState" : "manual"
+    },
     "นำเข้าและกู้คืนไฟล์?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import and restore files?"
+          }
+        }
+      }
+    },
+    "แนบสลิปไว้เป็นหลักฐานในเครื่อง" : {
+      "extractionState" : "manual"
     },
     "แนวโน้มรายรับทางการเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "financial income trends"
+          }
+        }
+      }
     },
     "บัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "account"
+          }
+        }
+      }
+    },
+    "บัญชีเข้าสู่ระบบเปลี่ยนแล้ว กรุณาซิงก์อีกครั้ง" : {
+      "extractionState" : "manual"
     },
     "บันทึก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "record"
+          }
+        }
+      }
     },
     "บันทึกการแก้ไข" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save the edits."
+          }
+        }
+      }
+    },
+    "บันทึกข้อมูลล่าสุด" : {
+      "extractionState" : "manual"
+    },
+    "บันทึกขึ้น cloud แล้ว" : {
+      "extractionState" : "manual"
     },
     "บันทึกใบเสร็จ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save the receipt"
+          }
+        }
+      }
+    },
+    "บันทึกใบเสร็จลงรูปภาพแล้ว" : {
+      "extractionState" : "manual"
     },
     "บันทึกปัญหา ค่าใช้จ่าย และสถานะของแต่ละห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record problems, costs, and status of each room."
+          }
+        }
+      }
+    },
+    "บันทึกเป็นรายการค้างบางส่วนและติดตามต่อในหน้าการเงิน" : {
+      "extractionState" : "manual"
     },
     "บันทึกไม่ได้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't save"
+          }
+        }
+      }
     },
     "บันทึกรหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save the new password."
+          }
+        }
+      }
+    },
+    "บันทึกระบบ" : {
+      "extractionState" : "manual"
+    },
+    "บันทึกรับเงินสด ไม่ต้องแนบสลิป" : {
+      "extractionState" : "manual"
+    },
+    "บันทึกลงเครื่องไม่สำเร็จ กรุณาตรวจสอบพื้นที่ว่างแล้วลองใหม่" : {
+      "extractionState" : "manual"
+    },
+    "บางส่วน" : {
+      "extractionState" : "manual"
     },
     "บาท" : {
-
+      "comment" : "A label displayed below the amount of money.",
+      "isCommentAutoGenerated" : true
+    },
+    "บิลค้างชำระ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpaid Bills"
+          }
+        }
+      }
+    },
+    "บิลค่าเช่า" : {
+      "extractionState" : "manual"
+    },
+    "บิลค่าใช้จ่าย (เข้า-ออก)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bills (In-Out)"
+          }
+        }
+      }
+    },
+    "บิลนี้มีการรับเงินแล้ว ไม่สามารถลดยอดรับเงินเดิมจากฟอร์มแก้ไขได้" : {
+      "extractionState" : "manual"
+    },
+    "บิลนี้มีประวัติรับเงินแล้ว ต้องใช้ขั้นตอนคืนเงินหรือปรับยอดแทนการลบ" : {
+      "extractionState" : "manual"
+    },
+    "บิลรอชำระต้องไม่มียอดรับเงิน" : {
+      "extractionState" : "manual"
+    },
+    "บิลรายเดือน" : {
+      "extractionState" : "manual"
     },
     "เบอร์โทรศัพท์" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "telephone number"
+          }
+        }
+      }
     },
     "ใบเสร็จ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "receipt"
+          }
+        }
+      }
     },
     "ใบเสร็จรับเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "receipt"
+          }
+        }
+      }
+    },
+    "ปฏิเสธ" : {
+      "extractionState" : "manual"
+    },
+    "ปฏิเสธค่าใช้จ่าย" : {
+      "extractionState" : "manual"
     },
     "ประเภทการรับเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type of money received"
+          }
+        }
+      }
     },
     "ประเภทห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room type"
+          }
+        }
+      }
     },
     "ประวัติการชำระเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment history"
+          }
+        }
+      }
     },
     "ประวัติการทำงาน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work history"
+          }
+        }
+      }
     },
     "ประวัติบิลและธุรกรรม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bill and transaction history"
+          }
+        }
+      }
+    },
+    "ประวัติรับเงินที่ปิดรายการแล้ว" : {
+      "extractionState" : "manual"
     },
     "ปรับปรุงยอด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Improve balance"
+          }
+        }
+      }
     },
     "ปัจจุบัน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "current"
+          }
+        }
+      }
     },
     "ปิด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "turn off"
+          }
+        }
+      }
     },
     "ปิดการใช้งานอยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "is disabled"
+          }
+        }
+      }
     },
     "ปี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "year"
+          }
+        }
+      }
     },
     "เปลี่ยนรหัสผ่าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change password"
+          }
+        }
+      }
     },
     "เปลี่ยนรหัสผ่านสำเร็จ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password changed successfully"
+          }
+        }
+      }
+    },
+    "เปลี่ยนสถานะจองอัตโนมัติ" : {
+      "extractionState" : "manual"
     },
     "เปิดใช้งานการแจ้งเตือน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable notifications"
+          }
+        }
+      }
     },
     "เปิดใช้งานอยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It's enabled."
+          }
+        }
+      }
     },
     "เปิดรับการแจ้งเตือน เพื่อรับรู้สถานะห้องพัก\nใบแจ้งหนี้ และอัปเดตงานแจ้งซ่อมได้ทันที" : {
-
+      "comment" : "A description of the features available with the notification feature.",
+      "isCommentAutoGenerated" : true
+    },
+    "ผลการรับเงิน" : {
+      "extractionState" : "manual"
+    },
+    "ผ่อนชำระ" : {
+      "extractionState" : "manual"
     },
     "ผ่อนชำระ งวดที่ %lld" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installment installment number 1"
+          }
+        }
+      }
+    },
+    "ผู้ใช้" : {
+      "extractionState" : "manual"
+    },
+    "ผู้ดูแลทั่วไป" : {
+      "extractionState" : "manual"
     },
     "พบปัญหาขณะอัปเกรดโครงสร้างฐานข้อมูล หรือไฟล์ฐานข้อมูลในเครื่องเสียหาย\n(%@)" : {
-
+      "comment" : "A paragraph explaining what might be causing the issue, and offering a retry option.",
+      "isCommentAutoGenerated" : true
     },
     "พร้อมเพย์" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PromptPay"
+          }
+        }
+      }
+    },
+    "พฤศจิกายน" : {
+      "extractionState" : "manual"
+    },
+    "พฤษภาคม" : {
+      "extractionState" : "manual"
+    },
+    "พักอาศัย" : {
+      "extractionState" : "manual"
     },
     "พักอาศัยก่อน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay first."
+          }
+        }
+      }
     },
     "พื้นที่เก็บข้อมูลเต็ม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage space full"
+          }
+        }
+      }
     },
     "พื้นหลังที่ใช้อยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The background in use"
+          }
+        }
+      }
+    },
+    "พื้นหลังระบบ" : {
+      "extractionState" : "manual"
     },
     "พื้นหลังแอพ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "app background"
+          }
+        }
+      }
     },
     "เพิ่ม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
     },
     "เพิ่มข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add information"
+          }
+        }
+      }
+    },
+    "เพิ่มประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "เพิ่มผู้ดูแลระบบใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a new admin"
+          }
+        }
+      }
     },
     "เพิ่มรหัสผ่าน 6 หลักอีกชั้นก่อนเข้าใช้งานระบบเพื่อความปลอดภัย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add another 6-digit password before using the system for security."
+          }
+        }
+      }
     },
     "เพิ่มรูปสลิป" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a picture of the slip"
+          }
+        }
+      }
+    },
+    "เพิ่มรูปสลิปไม่สำเร็จ" : {
+      "extractionState" : "manual"
     },
     "เพิ่มรูปสลิปอีก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add another picture of the slip"
+          }
+        }
+      }
     },
     "เพิ่มลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a resident"
+          }
+        }
+      }
     },
     "เพิ่มลูกบ้านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add new residents"
+          }
+        }
+      }
+    },
+    "เพิ่มเลขห้อง" : {
+      "extractionState" : "manual"
+    },
+    "ไฟล์ถูกเก็บไว้ภายในเครื่องนี้เท่านั้น" : {
+      "extractionState" : "manual"
+    },
+    "ไฟล์สำรองในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "ไฟล์สำรองไม่ตรงกับบัญชีนี้หรือเป็นรูปแบบที่ยังไม่รองรับ" : {
+      "extractionState" : "manual"
+    },
+    "ภาพรวมระบบ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overview"
+          }
+        }
+      }
     },
     "ภาษาที่ใช้อยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current language"
+          }
+        }
+      }
+    },
+    "ภาษาไทย" : {
+      "extractionState" : "manual"
+    },
+    "ภาษาอังกฤษ" : {
+      "extractionState" : "manual"
+    },
+    "มกราคม" : {
+      "extractionState" : "manual"
     },
     "มัดจำ %@%%" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deposit %@%%"
+          }
+        }
+      }
+    },
+    "มัดจำแรกเข้า" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Initial Deposit"
+          }
+        }
+      }
+    },
+    "มาตรฐาน" : {
+      "extractionState" : "manual"
+    },
+    "มิถุนายน" : {
+      "extractionState" : "manual"
+    },
+    "มินิมอล" : {
+      "extractionState" : "manual"
+    },
+    "มีการแก้ไขระหว่างดาวน์โหลด จึงเก็บข้อมูลในเครื่องไว้ก่อน" : {
+      "extractionState" : "manual"
+    },
+    "มีข้อมูลใหม่จากอีกเครื่อง ข้อมูลในเครื่องนี้ยังอยู่ครบ กรุณาสำรองข้อมูลก่อนตรวจสอบรายการที่ต่างกัน" : {
+      "extractionState" : "manual"
     },
     "มีค่าใช้จ่ายเพิ่มเติม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is an additional cost."
+          }
+        }
+      }
+    },
+    "มีนาคม" : {
+      "extractionState" : "manual"
     },
     "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already have an account? Login"
+          }
+        }
+      }
+    },
+    "มีผู้เช่า" : {
+      "extractionState" : "manual"
     },
     "มีผู้พัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are people staying."
+          }
+        }
+      }
+    },
+    "มีรายการรับเงินในประวัติแล้ว ไม่สามารถลดยอดสะสมโดยแก้บิลทับได้" : {
+      "extractionState" : "manual"
+    },
+    "เมษายน" : {
+      "extractionState" : "manual"
     },
     "เมื่อมีรายการ สถิติทุกสถานะจะแสดงที่นี่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When there is an item All state statistics are displayed here."
+          }
+        }
+      }
+    },
+    "ไม่กำหนดระยะเวลา" : {
+      "extractionState" : "manual"
     },
     "ไม่กำหนดระยะเวลาสัญญา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The contract period is not specified."
+          }
+        }
+      }
     },
     "ไม่พบข้อมูลลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No resident information found."
+          }
+        }
+      }
     },
     "ไม่พบงานซ่อมที่ค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The repair job you were looking for was not found."
+          }
+        }
+      }
+    },
+    "ไม่พบชื่อลูกบ้าน" : {
+      "extractionState" : "manual"
+    },
+    "ไม่พบเซสชันที่บันทึกไว้ กรุณาเข้าสู่ระบบใหม่" : {
+      "extractionState" : "manual"
+    },
+    "ไม่พบที่อยู่เซิร์ฟเวอร์" : {
+      "extractionState" : "manual"
+    },
+    "ไม่พบบิลที่ค้นหา" : {
+      "extractionState" : "manual"
     },
     "ไม่พบประเภทห้องที่ค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The room type you were searching for was not found."
+          }
+        }
+      }
     },
     "ไม่พบไฟล์ในเครื่อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file was not found on the machine."
+          }
+        }
+      }
+    },
+    "ไม่พบรหัสยืนยันของเครื่องนี้ กรุณาตรวจสอบการตั้งค่าความปลอดภัย" : {
+      "extractionState" : "manual"
     },
     "ไม่พบรายการการเงินที่ค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The searched financial item was not found."
+          }
+        }
+      }
     },
     "ไม่พบหลักฐานการโอนที่ค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The searched transfer evidence was not found."
+          }
+        }
+      }
+    },
+    "ไม่พบห้องปลายทาง กรุณาเลือกห้องใหม่" : {
+      "extractionState" : "manual"
     },
     "ไม่พบห้องพักที่ค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The room you were looking for was not found."
+          }
+        }
+      }
     },
     "ไม่พลาดทุกความเคลื่อนไหว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't miss every movement."
+          }
+        }
+      }
     },
     "ไม่มีข้อมูลห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No room information"
+          }
+        }
+      }
     },
     "ไม่มีบิลค้างชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no outstanding bills."
+          }
+        }
+      }
+    },
+    "ไม่ระบุประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "ไม่สามารถแก้ประวัติรับเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unable to edit payment history"
+          }
+        }
+      }
     },
     "ไม่สามารถเปิดฐานข้อมูลได้เนื่องจากพื้นที่ในเครื่องของคุณไม่เพียงพอ กรุณาลบข้อมูลที่ไม่จำเป็นแล้วลองใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The database cannot be opened because there is not enough space on your machine. Please delete unnecessary information and try again."
+          }
+        }
+      }
+    },
+    "ไม่สามารถโหลดข้อมูลจากเครื่องได้" : {
+      "extractionState" : "manual"
+    },
+    "ไม่สามารถโหลดข้อมูลได้" : {
+      "extractionState" : "manual"
+    },
+    "ไม่สามารถโหลดข้อมูลลูกบ้านได้" : {
+      "extractionState" : "manual"
+    },
+    "ไม่สามารถโหลดข้อมูลลูกบ้านในเครื่องได้" : {
+      "extractionState" : "manual"
     },
     "ยกเลิก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cancel"
+          }
+        }
+      }
+    },
+    "ยกเลิก (Void)" : {
+      "extractionState" : "manual"
     },
     "ยกเลิกบิล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel bill"
+          }
+        }
+      }
     },
     "ยกเลิกรายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel item"
+          }
+        }
+      }
+    },
+    "ยอดเก็บรอบบิลนี้" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Billed This Cycle"
+          }
+        }
+      }
+    },
+    "ยอดคงเหลือ" : {
+      "extractionState" : "manual"
+    },
+    "ยอดเงินต้องเป็นตัวเลขที่ไม่ติดลบ" : {
+      "extractionState" : "manual"
     },
     "ยอดเงินใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New balance"
+          }
+        }
+      }
     },
     "ยอดชำระต่องวด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment amount per installment"
+          }
+        }
+      }
     },
     "ยอดเดิมที่ยังไม่แยกรายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The original amount that has not yet been itemized."
+          }
+        }
+      }
+    },
+    "ยอดต่องวด" : {
+      "extractionState" : "manual"
+    },
+    "ยอดที่คิดเงิน" : {
+      "extractionState" : "manual"
     },
     "ยอดนี้ถูกส่งให้ลูกบ้านแล้ว หากต้องแก้ให้ย้อนกลับไปออกใบเสนอราคาใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This amount has been sent to the residents. If you need to fix it, go back and issue a new quotation."
+          }
+        }
+      }
+    },
+    "ยอดรวม" : {
+      "extractionState" : "manual"
+    },
+    "ยอดรวมที่นำไปผ่อน" : {
+      "extractionState" : "manual"
     },
     "ยอดรวมบิล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total bill"
+          }
+        }
+      }
+    },
+    "ยอดรับชำระมากกว่ายอดบิล กรุณาตรวจสอบจำนวนเงิน" : {
+      "extractionState" : "manual"
+    },
+    "ยอดรับชำระไม่ถูกต้อง" : {
+      "extractionState" : "manual"
+    },
+    "ยอดรับชำระยังไม่ครบยอดบิล" : {
+      "extractionState" : "manual"
     },
     "ยอดรับชำระสะสม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cumulative payment amount"
+          }
+        }
+      }
+    },
+    "ยอดหลักที่ใช้สร้างบิลรายเดือน" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่ได้ระบุช่องทาง" : {
+      "extractionState" : "manual"
     },
     "ยังไม่ได้เลือก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not yet chosen"
+          }
+        }
+      }
+    },
+    "ยังไม่ถึงรอบบิล" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่บันทึกวันที่ เพราะยังรอชำระ" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่ปิดบิล" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่พบข้อมูลห้อง" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่พบลูกบ้านของห้องนี้" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่มีข้อมูลบน cloud" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่มีข้อมูลบิล" : {
+      "extractionState" : "manual"
     },
     "ยังไม่มีข้อมูลห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no room information yet."
+          }
+        }
+      }
     },
     "ยังไม่มีบัญชี? สมัครบัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't have an account yet? Apply for an account"
+          }
+        }
+      }
     },
     "ยังไม่มีประเภทห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no room type yet."
+          }
+        }
+      }
     },
     "ยังไม่มีประวัติการทำงาน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No work history yet"
+          }
+        }
+      }
+    },
+    "ยังไม่มีไฟล์สำรองในเครื่องนี้" : {
+      "extractionState" : "manual"
     },
     "ยังไม่มีรายการแจ้งซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no repair report yet."
+          }
+        }
+      }
     },
     "ยังไม่มีรายการตามตัวกรอง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no filter items yet."
+          }
+        }
+      }
+    },
+    "ยังไม่มีรูปอาการเสีย" : {
+      "extractionState" : "manual"
     },
     "ยังไม่มีลูกบ้านที่ต้องออกบิล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are still no residents who need to pay bills."
+          }
+        }
+      }
+    },
+    "ยังไม่มีสลิปชำระเงิน" : {
+      "extractionState" : "manual"
     },
     "ยังไม่มีหลักฐานการโอน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no evidence of transfer yet."
+          }
+        }
+      }
     },
     "ยังไม่มีห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no rooms yet."
+          }
+        }
+      }
     },
     "ยังไม่มีห้องว่างให้เลือก กรุณาสร้างประเภทห้องในหน้าตั้งราคา แล้วเพิ่มห้องในหน้าจัดการห้องพักก่อน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There are no rooms available to choose from. Please create a room type on the pricing page. Then add the room on the room management page first."
+          }
+        }
+      }
+    },
+    "ยังไม่ระบุ" : {
+      "extractionState" : "manual"
+    },
+    "ยังไม่ระบุประเภท" : {
+      "extractionState" : "manual"
     },
     "ย้าย" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "maternal grandmother"
+          }
+        }
+      }
     },
     "ย้ายไปห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "move to room"
+          }
+        }
+      }
     },
     "ย้ายห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move room"
+          }
+        }
+      }
+    },
+    "ย้ายออก" : {
+      "extractionState" : "manual"
     },
     "ย้ายออกก่อน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move out first"
+          }
+        }
+      }
     },
     "ย้ายออกแล้ว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already moved out"
+          }
+        }
+      }
     },
     "ยืนยัน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "confirm"
+          }
+        }
+      }
     },
     "ยืนยันการลบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm deletion"
+          }
+        }
+      }
     },
     "ยืนยันรหัสผ่าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm password"
+          }
+        }
+      }
     },
     "ยืนยันรหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirm new password"
+          }
+        }
+      }
     },
     "แยกตามอีเมลหลัก: %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Broken down by primary email: %@"
+          }
+        }
+      }
+    },
+    "แยกรายการค่าใช้จ่ายเพื่อให้ตรวจสอบง่าย" : {
+      "extractionState" : "manual"
     },
     "รวม %lld รายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total of %lld items"
+          }
+        }
+      }
+    },
+    "รวมข้อมูลในเครื่องกับ cloud แล้ว" : {
+      "extractionState" : "manual"
     },
     "รวมค่าใช้จ่ายทั้งหมดของรอบนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total expenses for this round"
+          }
+        }
+      }
     },
     "รหัสที่ใช้อยู่ตอนนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code currently in use"
+          }
+        }
+      }
     },
     "รหัสผ่าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password"
+          }
+        }
+      }
     },
     "รหัสผ่านชั่วคราว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temporary password"
+          }
+        }
+      }
     },
     "รหัสผ่านเดิม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "original password"
+          }
+        }
+      }
+    },
+    "รหัสผ่านต้องมีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ" : {
+      "extractionState" : "manual"
+    },
+    "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" : {
+      "extractionState" : "manual"
+    },
+    "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และไม่เกิน 72 ไบต์" : {
+      "extractionState" : "manual"
+    },
+    "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน" : {
+      "extractionState" : "manual"
     },
     "รหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password"
+          }
+        }
+      }
     },
     "รหัสผ่านใหม่อย่างน้อย 8 ตัวอักษร" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New password must be at least 8 characters."
+          }
+        }
+      }
     },
     "รหัสยืนยัน 6 หลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 digit verification code"
+          }
+        }
+      }
+    },
+    "รหัสยืนยัน 6 หลักไม่ถูกต้อง" : {
+      "extractionState" : "manual"
     },
     "รหัสยืนยันจากอีเมล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verification code from email"
+          }
+        }
+      }
     },
     "รหัสสำหรับให้ลูกบ้านใช้ผูกบัญชี LINE Bot" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Code for residents to use to connect to LINE Bot accounts."
+          }
+        }
+      }
     },
     "รหัสหอพัก (Dormitory Code)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dormitory Code"
+          }
+        }
+      }
+    },
+    "รอ" : {
+      "extractionState" : "manual"
+    },
+    "รอการลบ" : {
+      "extractionState" : "manual"
     },
     "รอชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for payment"
+          }
+        }
+      }
+    },
+    "รอชำระเงิน" : {
+      "extractionState" : "manual"
     },
     "รอชำระเงิน (%lld)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for payment (%lld)"
+          }
+        }
+      }
+    },
+    "รอดำเนินการ" : {
+      "extractionState" : "manual"
     },
     "รอตรวจ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for inspection"
+          }
+        }
+      }
+    },
+    "รอตรวจสอบชำระเงิน" : {
+      "extractionState" : "manual"
+    },
+    "รอตรวจสอบสลิป" : {
+      "extractionState" : "manual"
     },
     "รอบบิล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Billing cycle"
+          }
+        }
+      }
     },
     "รอบบิล %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ billing cycle"
+          }
+        }
+      }
+    },
+    "รอระบุ" : {
+      "extractionState" : "manual"
+    },
+    "รอรับชำระ" : {
+      "extractionState" : "manual"
+    },
+    "รออนุมัติค่าใช้จ่าย" : {
+      "extractionState" : "manual"
+    },
+    "รอออกบิล" : {
+      "extractionState" : "manual"
     },
     "ระบบคำนวณรอบบิลรายเดือนจากวันเข้าอยู่และสัญญา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The system calculates the monthly billing cycle from the date of move-in and contract."
+          }
+        }
+      }
     },
     "ระบบจะเก็บข้อมูลในเครื่องเป็นไฟล์สำรองก่อน การแก้ไขที่ยังไม่ส่งจะอยู่ในไฟล์สำรอง แต่จะไม่รวมกับข้อมูลที่รับมา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The system will store data on the device as a backup file first. Unsubmitted edits will be in the backup file. But it will not be combined with the received data."
+          }
+        }
+      }
     },
     "ระบบปรับค่าให้ไม่ต่ำกว่า 5% แล้ว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The system has adjusted the value to not less than 5%."
+          }
+        }
+      }
     },
     "ระบบอาจแสดงข้อความยืนยันหลังเลือก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The system may display a confirmation message after selection."
+          }
+        }
+      }
     },
     "ระบุเหตุผล (บังคับ)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Specify reason (mandatory)"
+          }
+        }
+      }
+    },
+    "รับข้อมูลใหม่จากเครื่องอื่น" : {
+      "extractionState" : "manual"
+    },
+    "รับชำระ" : {
+      "extractionState" : "manual"
+    },
+    "รับชำระเงิน" : {
+      "extractionState" : "manual"
     },
     "รับชำระเต็มจำนวน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Receive full payment"
+          }
+        }
+      }
+    },
+    "รับชำระแล้ว" : {
+      "extractionState" : "manual"
+    },
+    "รับแล้ว" : {
+      "extractionState" : "manual"
+    },
+    "ราคา" : {
+      "extractionState" : "manual"
     },
     "ราคาจากประเภทห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Price by room type"
+          }
+        }
+      }
     },
     "รายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "list"
+          }
+        }
+      }
+    },
+    "รายการจอง/แรกเข้า" : {
+      "extractionState" : "manual"
+    },
+    "รายการทั้งหมด" : {
+      "extractionState" : "manual"
+    },
+    "รายการที่ยังต้องติดตาม" : {
+      "extractionState" : "manual"
+    },
+    "รายการที่รับบางส่วนหรืออยู่ในแผนผ่อน" : {
+      "extractionState" : "manual"
+    },
+    "รายการนี้รับเงินและออกใบเสร็จแล้ว ต้องใช้ขั้นตอนคืนเงินหรือปรับยอดแทนการปฏิเสธสลิป" : {
+      "extractionState" : "manual"
     },
     "รายการนี้สร้างจากลูกบ้าน รอบบิล และการรับชำระของระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This list is created from residents, billing cycles, and payment receipts from the system."
+          }
+        }
+      }
+    },
+    "รายการในเครื่อง" : {
+      "extractionState" : "manual"
     },
     "รายการประจำเดือน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly list"
+          }
+        }
+      }
     },
     "รายการลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "List of residents"
+          }
+        }
+      }
     },
     "รายรับ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "revenue"
+          }
+        }
+      }
     },
     "รายละเอียดลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resident details"
+          }
+        }
+      }
     },
     "รีเซ็ตรหัสผ่าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset password"
+          }
+        }
+      }
+    },
+    "รูปแบบอีเมลไม่ถูกต้อง" : {
+      "extractionState" : "manual"
+    },
+    "รูปภาพในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "รูปและหลักฐาน" : {
+      "extractionState" : "manual"
+    },
+    "รูปอาการเสีย" : {
+      "extractionState" : "manual"
+    },
+    "เรียบ ขาวดำ ใช้งานได้ทุกธีม" : {
+      "extractionState" : "manual"
     },
     "ลบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "delete"
+          }
+        }
+      }
     },
     "ลบ %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %@"
+          }
+        }
+      }
     },
     "ลบข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete data"
+          }
+        }
+      }
+    },
+    "ลบข้อมูลไม่สำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "ลบบิล" : {
+      "extractionState" : "manual"
     },
     "ลบบิลนี้หรือไม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this bill?"
+          }
+        }
+      }
     },
     "ลบบิลห้อง %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %@ room bill"
+          }
+        }
+      }
+    },
+    "ลบประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "ลบประเภทห้องนี้หรือไม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this room type?"
+          }
+        }
+      }
     },
     "ลบไฟล์สำรอง?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete backup files?"
+          }
+        }
+      }
+    },
+    "ลบไฟล์สำรองแล้ว" : {
+      "extractionState" : "manual"
     },
     "ลบรายการ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete item"
+          }
+        }
+      }
     },
     "ลบรายการแจ้งซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete repair notification list"
+          }
+        }
+      }
+    },
+    "ลบรายการชำระเงิน" : {
+      "extractionState" : "manual"
     },
     "ลบรายการชำระเงินนี้หรือไม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this payment item?"
+          }
+        }
+      }
     },
     "ลบรายการห้อง %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %@ room entry"
+          }
+        }
+      }
     },
     "ลบลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete a resident"
+          }
+        }
+      }
+    },
+    "ลบเลขห้อง" : {
+      "extractionState" : "manual"
     },
     "ลบห้อง %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %@ room"
+          }
+        }
+      }
     },
     "ลบห้องพักนี้หรือไม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this room?"
+          }
+        }
+      }
     },
     "ลองเปลี่ยนคำค้นหาใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try changing your search term."
+          }
+        }
+      }
     },
     "ลองใหม่อีกครั้ง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        }
+      }
     },
     "ล้างข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear data"
+          }
+        }
+      }
+    },
+    "ล้างข้อมูลในเครื่อง" : {
+      "extractionState" : "manual"
     },
     "ล้างข้อมูลในเครื่อง?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear data on the device?"
+          }
+        }
+      }
     },
     "ล้างข้อมูลในเครื่องและโหลดใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear data on the device and reload."
+          }
+        }
+      }
+    },
+    "ล้างข้อมูลภายในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "ล้างข้อมูลภายในเครื่องของเครื่องนี้เรียบร้อยแล้ว" : {
+      "extractionState" : "manual"
     },
     "ล้างคำค้นหา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear search terms"
+          }
+        }
+      }
     },
     "ลืมรหัสผ่าน?" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forgot your password?"
+          }
+        }
+      }
     },
     "ลูกบ้าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resident"
+          }
+        }
+      }
     },
     "ลูกบ้านปฏิเสธใบเสนอราคา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The residents rejected the bid."
+          }
+        }
+      }
     },
     "ลูกบ้านปฏิเสธใบเสนอราคา: ระบบจะยกเลิกเคสทิ้งอัตโนมัติใน 24 ชม." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The resident rejects the quotation: The system will automatically cancel the case within 24 hours."
+          }
+        }
+      }
     },
     "เลขบัญชีธนาคาร" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bank account number"
+          }
+        }
+      }
     },
     "เลขบัตรประชาชน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ID card number"
+          }
+        }
+      }
     },
     "เลขห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room Number"
+          }
+        }
+      }
+    },
+    "เล่นวนแบบไม่มีเสียงอยู่หลังทุกหน้า" : {
+      "extractionState" : "manual"
     },
     "เลือก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "choose"
+          }
+        }
+      }
     },
     "เลือก “รออนุมัติค่าใช้จ่าย” เพื่อส่งใบเสนอราคาไปยัง LINE" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select “Wait for expense approval” to send the quote to LINE."
+          }
+        }
+      }
+    },
+    "เลือกประเภทห้องที่ตั้งราคาไว้" : {
+      "extractionState" : "manual"
     },
     "เลือกภาษาหลักที่ต้องการใช้ในแอพ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select the main language you want to use in the app."
+          }
+        }
+      }
     },
     "เลือกรอบบิล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select billing cycle"
+          }
+        }
+      }
     },
     "เลือกรอบบิล %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select %@ billing cycle"
+          }
+        }
+      }
+    },
+    "เลือกรูปภาพ" : {
+      "extractionState" : "manual"
     },
     "เลือกรูปหรือวิดีโอจากเครื่องเพื่อใช้เป็นพื้นหลังของทุกหน้า" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a photo or video from your device to use as the background for every page."
+          }
+        }
+      }
+    },
+    "เลือกวิดีโอ" : {
+      "extractionState" : "manual"
     },
     "เลือกสถานะนี้ได้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can choose this status."
+          }
+        }
+      }
     },
     "เลือกห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a room"
+          }
+        }
+      }
+    },
+    "เลือกห้องและรอบที่ต้องการแก้ไข" : {
+      "extractionState" : "manual"
     },
     "เลือกไอคอนที่จะแสดงบนหน้า Home Screen ของ iPhone" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose which icons to display on your iPhone's Home Screen."
+          }
+        }
+      }
     },
     "วันเข้าอยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Day of moving in"
+          }
+        }
+      }
     },
     "วันครบกำหนด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Due date"
+          }
+        }
+      }
     },
     "วันที่คาดว่าจะเข้าอยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expected date of arrival"
+          }
+        }
+      }
     },
     "วันที่แจ้งซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repair notification date"
+          }
+        }
+      }
     },
     "วันที่ชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment date"
+          }
+        }
+      }
     },
     "วันหมดสัญญา" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contract expiration date"
+          }
+        }
+      }
     },
     "ว่าง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "free"
+          }
+        }
+      }
+    },
+    "วิดีโอในเครื่อง" : {
+      "extractionState" : "manual"
+    },
+    "วิดีโอเล่นวนแบบปิดเสียงและเก็บไว้ภายในเครื่องนี้" : {
+      "extractionState" : "manual"
     },
     "วิธีชำระเงิน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment method"
+          }
+        }
+      }
+    },
+    "เวลา" : {
+      "extractionState" : "manual"
     },
     "ไว้ทีหลัง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "for later"
+          }
+        }
+      }
+    },
+    "ส่งคำขอรหัสใหม่แล้ว หากมีบัญชีนี้ในระบบ กรุณาตรวจสอบอีเมล" : {
+      "extractionState" : "manual"
     },
     "ส่งคำขอรีเซ็ตรหัสผ่าน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Submit a password reset request"
+          }
+        }
+      }
+    },
+    "ส่งบิลไปยัง LINE ไม่สำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "ส่งบิลไปยัง LINE แล้ว" : {
+      "extractionState" : "manual"
+    },
+    "ส่งบิลผ่าน LINE" : {
+      "extractionState" : "manual"
+    },
+    "ส่งไม่สำเร็จ" : {
+      "extractionState" : "manual"
     },
     "สถานะ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "status"
+          }
+        }
+      }
     },
     "สถานะการชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payment status"
+          }
+        }
+      }
+    },
+    "สถานะการชำระไม่ถูกต้อง" : {
+      "extractionState" : "manual"
     },
     "สถานะห้องพัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room status"
+          }
+        }
+      }
     },
     "สถานะใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "new status"
+          }
+        }
+      }
     },
     "สถิติการแจ้งซ่อม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repair notification statistics"
+          }
+        }
+      }
     },
     "สถิติผู้เช่าใหม่รายเดือน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly new tenant statistics"
+          }
+        }
+      }
     },
     "สมัครบัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apply for an account"
+          }
+        }
+      }
+    },
+    "สมัครบัญชีไม่สำเร็จ" : {
+      "extractionState" : "manual"
     },
     "สร้างบัญชี" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create an account"
+          }
+        }
+      }
     },
     "สร้างประเภทห้อง ตั้งราคา และเพิ่มเลขห้องจากข้อมูลชุดเดียว" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create room types, set prices, and add room numbers from a single set of information."
+          }
+        }
+      }
     },
     "สร้างประเภทห้องก่อน แล้วค่อยเพิ่มเลขห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a room type first. Then gradually add room numbers."
+          }
+        }
+      }
+    },
+    "สร้างผู้ดูแลไม่สำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "สร้างแผนผ่อนชำระ" : {
+      "extractionState" : "manual"
+    },
+    "สร้างไฟล์จากข้อมูลภายในเครื่องปัจจุบัน พร้อมรูปสลิปและพื้นหลังแอป แล้วเลือกแชร์เก็บไว้ที่ Files, iCloud Drive หรือ AirDrop ได้" : {
+      "extractionState" : "manual"
+    },
+    "สร้างไฟล์สำรอง" : {
+      "extractionState" : "manual"
+    },
+    "สร้างไฟล์สำรองไว้ในเครื่องเรียบร้อยแล้ว" : {
+      "extractionState" : "manual"
+    },
+    "สร้างรายการชำระอัตโนมัติ" : {
+      "extractionState" : "manual"
+    },
+    "สร้างรูปใบเสร็จไม่สำเร็จ" : {
+      "extractionState" : "manual"
+    },
+    "สร้างเอกสารสำหรับพิมพ์ไม่สำเร็จ" : {
+      "extractionState" : "manual"
     },
     "สรุปข้อมูลของระบบนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary of this system"
+          }
+        }
+      }
     },
     "สรุปยอดเดือนนี้" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary of this month's balance"
+          }
+        }
+      }
     },
     "สรุปยอดแรกเข้า" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary of the first amount entered"
+          }
+        }
+      }
+    },
+    "สลิปชำระเงิน" : {
+      "extractionState" : "manual"
+    },
+    "สลิปแนบ" : {
+      "extractionState" : "manual"
+    },
+    "ส่วนกลาง" : {
+      "extractionState" : "manual"
     },
     "สำรองแล้วรับข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back up and receive data"
+          }
+        }
+      }
     },
     "สำรองและกู้คืนข้อมูล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backup and restore data"
+          }
+        }
+      }
+    },
+    "สิงหาคม" : {
+      "extractionState" : "manual"
     },
     "สิทธิ์การใช้งาน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "License"
+          }
+        }
+      }
     },
     "สุ่มรหัสผ่านใหม่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Random new password"
+          }
+        }
+      }
+    },
+    "เสร็จ" : {
+      "extractionState" : "manual"
+    },
+    "เสร็จสิ้น" : {
+      "extractionState" : "manual"
+    },
+    "ใส่ 0 ถ้าคิดตามมิเตอร์ภายหลัง" : {
+      "extractionState" : "manual"
+    },
+    "ใส่ 0 ถ้ายังไม่คิดรวมในประเภทห้อง" : {
+      "extractionState" : "manual"
     },
     "ใส่รหัสยืนยัน 6 หลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the 6 digit verification code."
+          }
+        }
+      }
     },
     "หน้าปกแอพ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App cover"
+          }
+        }
+      }
     },
     "หมดเขตจอง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reservation deadline"
+          }
+        }
+      }
     },
     "หมายเลข PromptPay (เบอร์โทร/บัตรประชาชน)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PromptPay number (phone number/ID card)"
+          }
+        }
+      }
     },
     "หมายเลขอ้างอิง: %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reference number: %@"
+          }
+        }
+      }
+    },
+    "หมายเหตุ" : {
+      "extractionState" : "manual"
+    },
+    "หลักฐาน" : {
+      "extractionState" : "manual"
+    },
+    "หลักฐานการโอน" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Transfers"
+          }
+        }
+      }
     },
     "ห้อง" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "room"
+          }
+        }
+      }
     },
     "ห้อง %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ room"
+          }
+        }
+      }
     },
     "ห้อง %@ • %@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "ห้อง %1$@ • %2$@"
+            "state" : "translated",
+            "value" : "%@ Room • %@"
           }
         }
       }
@@ -1063,66 +4197,278 @@
       "localizations" : {
         "en" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "ห้อง %1$@, %2$@, สถานะ %3$@"
+            "state" : "translated",
+            "value" : "%@ room, %@, %@ status"
           }
         }
       }
     },
     "ห้อง 1 → 9" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room 1 → 9"
+          }
+        }
+      }
     },
     "ห้อง 9 → 1" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room 9 → 1"
+          }
+        }
+      }
     },
     "ห้องเดิม %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original room %@"
+          }
+        }
+      }
     },
     "ห้องที่ต้องติดตาม" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rooms to follow"
+          }
+        }
+      }
+    },
+    "ห้องนี้มีผู้พักหรือผู้จองแล้ว กรุณาเลือกห้องอื่น" : {
+      "extractionState" : "manual"
     },
     "ห้องปัจจุบัน %@" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current room %@"
+          }
+        }
+      }
+    },
+    "ห้องและรายละเอียด" : {
+      "extractionState" : "manual"
+    },
+    "ห้องว่าง" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available Rooms"
+          }
+        }
+      }
     },
     "หากไม่ต้องการเปลี่ยนรหัสผ่าน ให้เว้นว่างไว้\n(ระบบจะออกจากระบบอัตโนมัติหากเปลี่ยนรหัสผ่านของตนเอง)" : {
 
     },
+    "หากอีเมลนี้อยู่ในระบบ คุณจะได้รับรหัสยืนยันทางอีเมล" : {
+      "extractionState" : "manual"
+    },
     "เหตุการณ์ล่าสุด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latest events"
+          }
+        }
+      }
+    },
+    "เหมาะกับการใช้งานหลักในหอพัก" : {
+      "extractionState" : "manual"
+    },
+    "เหมาะกับลูกบ้านที่ชำระครบตอนเข้าอยู่" : {
+      "extractionState" : "manual"
+    },
+    "เหมาะกับหน้าจอสว่าง" : {
+      "extractionState" : "manual"
+    },
+    "อนุมัติ" : {
+      "extractionState" : "manual"
     },
     "อนุมัติ แก้ไข หรือส่งกลับรายการชำระเงินที่แนบหลักฐาน" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Approve, edit, or return an attached payment."
+          }
+        }
+      }
+    },
+    "อนุมัติราคา" : {
+      "extractionState" : "manual"
+    },
+    "อยู่ในเครื่อง" : {
+      "extractionState" : "manual"
     },
     "ออกจากระบบ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Logout"
+          }
+        }
+      }
     },
     "ออกจากระบบ..." : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Log out..."
+          }
+        }
+      }
+    },
+    "ออกบิล" : {
+      "extractionState" : "manual"
     },
     "ออกบิล / รับชำระ" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issue bills / receive payments"
+          }
+        }
+      }
+    },
+    "อัตราการเข้าพัก" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Occupancy Rate"
+          }
+        }
+      }
+    },
+    "อัปเดตสถานะ" : {
+      "extractionState" : "manual"
+    },
+    "อัปเดตสถานะ ช่องทางชำระ และหลักฐานสลิป" : {
+      "extractionState" : "manual"
+    },
+    "อัปเดตสถานะการซ่อมรวดเร็วทันใจ" : {
+      "extractionState" : "manual"
     },
     "อาการ / รายละเอียด" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Symptoms/Details"
+          }
+        }
+      }
     },
     "อีเมล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        }
+      }
     },
     "อีเมลสำรอง (ไม่บังคับ)" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternative email (optional)"
+          }
+        }
+      }
     },
     "อีเมลสำหรับผู้ดูแล" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email for the administrator"
+          }
+        }
+      }
     },
     "อีเมลหลัก" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Primary email"
+          }
+        }
+      }
+    },
+    "อุปกรณ์เสริม" : {
+      "extractionState" : "manual"
     },
     "เอกสารนี้สร้างจากข้อมูลภายในเครื่องของระบบ DormiNet" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This document was generated from local data of the DormiNet system."
+          }
+        }
+      }
+    },
+    "แอพจะแสดงผลโดยยึดภาษาไทยเป็นหลัก" : {
+      "extractionState" : "manual"
+    },
+    "แอพจะแสดงภาษาอังกฤษในส่วนที่รองรับการแปล" : {
+      "extractionState" : "manual"
+    },
+    "แอพจะอ้างอิงภาษาหลักจากเครื่องนี้" : {
+      "extractionState" : "manual"
+    },
+    "โอนเงิน" : {
+      "extractionState" : "manual"
+    },
+    "โอนธนาคาร" : {
+      "extractionState" : "manual"
+    },
+    "โอนผ่านธนาคาร" : {
+      "extractionState" : "manual"
     },
     "ไอคอนที่ใช้อยู่" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The icon in use"
+          }
+        }
+      }
+    },
+    "ไอคอนแอพ" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Icon"
+          }
+        }
+      }
     }
   },
-  "version" : "1.0"
+  "version" : "1.1"
 }

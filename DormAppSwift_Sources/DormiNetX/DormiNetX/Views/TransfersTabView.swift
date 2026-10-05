@@ -206,7 +206,7 @@ private struct TransferEvidenceRow: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Text(payment.paymentStatus == "paid" ? "ตรวจแล้ว" : "รอตรวจ")
+                    Text(payment.paymentStatus == "paid" ? LocalizedStringKey("ตรวจแล้ว") : LocalizedStringKey("รอตรวจ"))
                         .font(.custom("SukhumvitSet-Medium", size: 10))
                         .foregroundStyle(payment.paymentStatus == "paid" ? .green : .orange)
                 }

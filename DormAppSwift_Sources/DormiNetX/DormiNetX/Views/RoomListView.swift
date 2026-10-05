@@ -98,7 +98,7 @@ struct RoomListView: View {
                         }
                         .buttonStyle(PressableButtonStyle())
                         
-                        Text(selectedTab.rawValue)
+                        Text(LocalizedStringKey(selectedTab.rawValue))
                             .font(.custom("SukhumvitSet-Bold", size: 24))
                             .foregroundColor(.primary)
                             .padding(.leading, 8)
@@ -1001,7 +1001,7 @@ struct SidebarItem: View {
                 Image(systemName: tab.icon)
                     .font(.custom("SukhumvitSet-Text", size: 16))
                     .frame(width: 24)
-                Text(tab.rawValue)
+                Text(LocalizedStringKey(tab.rawValue))
                     .font(.custom("SukhumvitSet-Medium", size: 14))
                 Spacer()
             }
