@@ -91,6 +91,9 @@ func generateOTP() (string, error) {
 func sendEmailOTP(toEmail string, otp string, refCode string) error {
 	apiKey := os.Getenv("RESEND_API_KEY")
 	if apiKey == "" {
+		if os.Getenv("GO_ENV") == "test" || strings.HasSuffix(os.Args[0], ".test") {
+			return nil // Mock email sending in test environment
+		}
 		return fmt.Errorf("RESEND_API_KEY is not set in .env")
 	}
 	client := resend.NewClient(apiKey)

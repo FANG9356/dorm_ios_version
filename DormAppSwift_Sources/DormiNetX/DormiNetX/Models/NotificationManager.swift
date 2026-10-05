@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import UserNotifications
 import os.log
 
@@ -14,7 +15,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
         logger.info("Device Token: \(token)")
-        // TODO: Send this token to the backend
+        Task {
+            do {
+                try await APIService.shared.registerDeviceToken(token: token)
+                logger.info("Successfully sent device token to backend.")
+            } catch {
+                logger.error("Failed to send device token: \(error.localizedDescription)")
+            }
+        }
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {

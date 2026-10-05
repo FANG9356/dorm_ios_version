@@ -319,8 +319,8 @@ class DashboardViewModel: ObservableObject {
             // Expiring Contracts
             let upcoming = activeUsers.filter { $0.contract_end_date != nil && $0.contract_end_date != "" }
                 .sorted {
-                    let d1 = AppDate.date(fromStorageDate: $0.contract_end_date!) ?? Date.distantFuture
-                    let d2 = AppDate.date(fromStorageDate: $1.contract_end_date!) ?? Date.distantFuture
+                    let d1 = AppDate.date(fromStorageDate: $0.contract_end_date ?? "") ?? Date.distantFuture
+                    let d2 = AppDate.date(fromStorageDate: $1.contract_end_date ?? "") ?? Date.distantFuture
                     return d1 < d2
                 }
             self.expiringContracts = Array(upcoming.prefix(5))

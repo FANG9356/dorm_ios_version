@@ -105,30 +105,43 @@ struct AccountScopedRootView: View {
     @State private var storeInitError: Error? = nil
 
     init() {
-        let initialContainer: ModelContainer
-        let initialStoreKey: String
+        var initialContainer: ModelContainer?
+        var initialStoreKey: String = "guest"
+        var initError: Error? = nil
 
         if UserDefaults.standard.bool(forKey: "isLoggedIn"),
-           let accountID = Self.resolveAccountID(),
-           let container = try? AccountScopedStore.makeContainer(accountID: accountID) {
-            initialContainer = container
-            let token = CredentialStore.shared.token ?? ""
-            initialStoreKey = "account-\(accountID)-\(token)"
-        } else {
-            initialContainer = (try? AccountScopedStore.makeGuestContainer())
-                ?? Self.fallbackContainer()
-            initialStoreKey = "guest"
+           let accountID = Self.resolveAccountID() {
+            do {
+                initialContainer = try AccountScopedStore.makeContainer(accountID: accountID)
+                let token = CredentialStore.shared.token ?? ""
+                initialStoreKey = "account-\(accountID)-\(token)"
+            } catch {
+                initError = error
+            }
         }
 
-        _modelContainer = State(initialValue: initialContainer)
+        if initialContainer == nil {
+            do {
+                initialContainer = try AccountScopedStore.makeGuestContainer()
+            } catch {
+                if initError == nil {
+                    initError = error
+                }
+            }
+        }
+
+        _modelContainer = State(initialValue: initialContainer ?? Self.fallbackContainer())
         _loadedStoreKey = State(initialValue: initialStoreKey)
+        if let initError = initError {
+            _storeInitError = State(initialValue: initError)
+        }
     }
 
     private static func fallbackContainer() -> ModelContainer {
         do {
-            return try AccountScopedStore.makeGuestContainer()
+            return try ModelContainer(for: Room.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         } catch {
-            fatalError("Could not create guest ModelContainer: \(error)")
+            fatalError("Critical SwiftData failure: \(error)")
         }
     }
 
@@ -177,8 +190,10 @@ struct AccountScopedRootView: View {
             do {
                 modelContainer = try AccountScopedStore.makeGuestContainer()
                 loadedStoreKey = "guest"
+                storeInitError = nil
             } catch {
                 print("❌ Failed to create guest SwiftData container: \(error)")
+                storeInitError = error
             }
             return
         }

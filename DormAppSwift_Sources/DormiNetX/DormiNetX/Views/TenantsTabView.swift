@@ -1072,12 +1072,20 @@ struct TenantFormSheet: View {
                     address = u.address ?? ""
                     status = u.status ?? "กำลังพักอาศัย"
                     roomType = existingRoom(for: u.room_number ?? "")?.roomType ?? ""
-                    deposit = u.deposit != nil ? String(format: "%.0f", u.deposit!) : ""
+                    if let dep = u.deposit {
+                        deposit = String(format: "%.0f", dep)
+                    } else {
+                        deposit = ""
+                    }
                     depositWasEdited = true
                     paymentMethod = u.payment_method ?? "full_payment"
                     paymentChannel = u.payment_channel ?? "bank_transfer"
                     installmentMonths = (u.installment_months ?? 0) > 0 ? "\(u.installment_months ?? 0)" : ""
-                    installmentAmount = u.installment_amount != nil ? String(format: "%.0f", u.installment_amount!) : ""
+                    if let installment = u.installment_amount {
+                        installmentAmount = String(format: "%.0f", installment)
+                    } else {
+                        installmentAmount = ""
+                    }
                     installmentWasEdited = true
                     bookingSlipPaths = u.booking_slips ?? []
                     indefiniteContract = (u.indefinite_contract ?? 0) == 1

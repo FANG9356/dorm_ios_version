@@ -290,6 +290,25 @@ class APIService {
         return data
     }
 
+    func registerDeviceToken(token: String) async throws {
+        let payload = ["device_token": token]
+        let jsonData = try JSONEncoder().encode(payload)
+        
+        guard let url = URL(string: baseURL + "/device-token") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = jsonData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let authToken = authToken {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+    }
+
     func fetchLatestSyncSnapshot() async throws -> Data {
         return try await performGetRequest(path: "/sync/latest")
     }

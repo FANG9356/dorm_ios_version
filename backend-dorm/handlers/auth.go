@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
@@ -599,6 +600,48 @@ func GetAdminsHandler(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(admins)
+	}
+}
+
+func RegisterDeviceTokenHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		utils.EnableCORS(w)
+		if r.Method == "OPTIONS" {
+			return
+		}
+		if r.Method != "POST" {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		adminID, ok := r.Context().Value("admin_id").(int)
+		if !ok || adminID <= 0 {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			DeviceToken string `json:"device_token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error": "Invalid request payload"}`, http.StatusBadRequest)
+			return
+		}
+
+		if req.DeviceToken == "" {
+			http.Error(w, `{"error": "Token is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		_, err := db.Exec("UPDATE admins SET apns_token = ? WHERE id = ?", req.DeviceToken, adminID)
+		if err != nil {
+			log.Printf("Error saving device token for admin %d: %v", adminID, err)
+			http.Error(w, `{"error": "Database error"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "ok"}`))
 	}
 }
 

@@ -10,8 +10,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 )
 
@@ -42,17 +40,8 @@ func HandleSyncPush(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if req.BaseVersion == nil {
-			if !strings.EqualFold(strings.TrimSpace(os.Getenv("ALLOW_LEGACY_SYNC_PUSH")), "true") {
-				http.Error(w, "Update the app before syncing (base_version required)", http.StatusPreconditionRequired)
-				return
-			}
-			var latestVersion int
-			if err := db.QueryRow(`SELECT COALESCE(MAX(version), 0) FROM sync_snapshots WHERE account_id = ?`, accountID).Scan(&latestVersion); err != nil {
-				http.Error(w, "Sync version lookup failed", http.StatusInternalServerError)
-				return
-			}
-			req.BaseVersion = &latestVersion
-			log.Printf("[SECURITY] Accepted legacy sync push for account %d; remove ALLOW_LEGACY_SYNC_PUSH after all devices update", accountID)
+			http.Error(w, "Update the app before syncing (base_version required)", http.StatusPreconditionRequired)
+			return
 		}
 		if *req.BaseVersion < 0 || req.DeviceID == "" || len(req.DeviceID) > 200 {
 			http.Error(w, "Invalid sync version or device", http.StatusBadRequest)

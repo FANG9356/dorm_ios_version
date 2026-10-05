@@ -985,3 +985,24 @@
 - การตรวจสอบและหลักฐาน: `go test ./...` — PASS ทุก package หลังแก้ไข; `go test -race ./handlers/` — PASS
 - สถานะ: แก้ไข HIGH bug เสร็จสมบูรณ์; MEDIUM/LOW bugs บันทึกไว้ใน bug_scan_report สำหรับแก้ตามลำดับ
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: (1) ยืนยัน device อัปเดต Protocol-2 ครบก่อนปิด ALLOW_LEGACY_SYNC_PUSH; (2) implement APNs token upload endpoint; (3) ขยับไปทำ UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE (P1)
+
+## 2026-10-05 18:21 — แก้ไขระบบตามรายงาน Bug Scan (BUG-002 ถึง BUG-006)
+
+- คำขอ/เป้าหมาย: ดำเนินการแก้ไขข้อผิดพลาดที่พบจาก `bug_scan_report_2026-10-05.md` ตามคำสั่งผู้ใช้
+- สิ่งที่ดำเนินการ:
+  - **BUG-002**: นำ fallback block `ALLOW_LEGACY_SYNC_PUSH` ออกจาก `sync_push.go` และปรับเทส `sync_push_test.go` ให้ปฎิเสธ Protocol-1 ทันที
+  - **BUG-003**: ลบไฟล์ `panic_log.txt` ทิ้ง
+  - **BUG-004**: เปลี่ยน `fatalError` ใน `makeGuestContainer` เป็นการจับ Error และส่งเข้าสู่ `storeInitError` เพื่อเปิดหน้า SwiftDataRecoveryView แทนการ crash นิ่ง
+  - **BUG-005**: 
+    1. เพิ่มคอลัมน์ `apns_token` ในตาราง `admins` (`core/server.go`)
+    2. เพิ่ม endpoint `/api/device-token` และ handler (`handlers/auth.go`)
+    3. เพิ่ม `APIService.shared.registerDeviceToken` ใน Swift
+    4. แก้ไข `import Combine` ที่ตกหล่นใน `NotificationManager.swift`
+  - **BUG-006**: เพิ่มการหน่วงเวลาหน้า `NotificationOnboardingView` เป็น 2.5 วินาทีหลัง `onAppear` เพื่อป้องกันการซ้อนทับกับ Sheet อื่น
+- ไฟล์หรือระบบที่กระทบ: `sync_push.go`, `sync_push_test.go`, `core/server.go`, `handlers/auth.go`, `DormApp.swift`, `RoomListView.swift`, `APIService.swift`, `NotificationManager.swift`
+- การเปลี่ยนข้อมูล/production: เพิ่มคอลัมน์ `apns_token` ใน production DB (รอ deploy)
+- การตรวจสอบและหลักฐาน: 
+  - `go test -run TestLegacySync ./handlers/` (PASS)
+  - Xcode build Simulator `iPhone 17` สำเร็จ `** BUILD SUCCEEDED **`
+- สถานะ: แก้ไขเสร็จสิ้นในฝั่ง Code พร้อมอัปเดต Activity Report 
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: รอดำเนินการ TestFlight Pilot และ UAT งานซ่อมผ่าน LINE (P1)

@@ -151,20 +151,9 @@ func TestSyncConcurrentWritersCannotOverwrite(t *testing.T) {
 	}
 }
 
-func TestLegacySyncCompatibilityRequiresExplicitFlag(t *testing.T) {
+func TestLegacySyncRejectsWithoutBaseVersion(t *testing.T) {
 	db := syncTestDB(t)
-	t.Setenv("ALLOW_LEGACY_SYNC_PUSH", "true")
-	if w := pushTestRequest(db, 1, "legacy", nil, []byte(`{"accountID":1,"revision":1}`)); w.Code != http.StatusOK {
-		t.Fatalf("first legacy push: %d %s", w.Code, w.Body.String())
-	}
-	if w := pushTestRequest(db, 1, "legacy", nil, []byte(`{"accountID":1,"revision":2}`)); w.Code != http.StatusOK {
-		t.Fatalf("second legacy push: %d %s", w.Code, w.Body.String())
-	}
-	var latest int
-	if err := db.QueryRow("SELECT MAX(version) FROM sync_snapshots WHERE account_id = 1").Scan(&latest); err != nil {
-		t.Fatal(err)
-	}
-	if latest != 2 {
-		t.Fatalf("latest legacy version = %d, want 2", latest)
+	if w := pushTestRequest(db, 1, "legacy", nil, []byte(`{"accountID":1,"revision":1}`)); w.Code != http.StatusPreconditionRequired {
+		t.Fatalf("expected 428 Precondition Required, got %d", w.Code)
 	}
 }

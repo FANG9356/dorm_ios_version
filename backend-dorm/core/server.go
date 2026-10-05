@@ -113,6 +113,7 @@ func RunServer() {
 		}
 	})
 	http.HandleFunc("/api/admins/profile-image", handlers.UpdateProfileImageHandler(db))
+	http.Handle("/api/device-token", handlers.AuthMiddleware(db, handlers.RegisterDeviceTokenHandler(db)))
 	http.HandleFunc("/api/admins/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "DELETE" || r.Method == "OPTIONS" {
 			handlers.DeleteAdminHandler(db)(w, r)
@@ -516,6 +517,7 @@ func InitializeDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE admins ADD COLUMN payment_type TEXT DEFAULT 'promptpay'`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN bank_account TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE admins ADD COLUMN account_name TEXT DEFAULT ''`)
+	db.Exec(`ALTER TABLE admins ADD COLUMN apns_token TEXT DEFAULT ''`)
 
 	// Populate missing dorm_code for superadmins
 	rows, err := db.Query("SELECT id FROM admins WHERE role = 'superadmin' AND dorm_code = ''")

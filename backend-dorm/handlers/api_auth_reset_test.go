@@ -25,11 +25,20 @@ func setupTestDBForReset(t *testing.T) *sql.DB {
 	// Create admins table
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS admins (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		username TEXT,
+		username TEXT UNIQUE,
 		password TEXT,
+		role TEXT DEFAULT 'services',
+		profile_image TEXT DEFAULT '',
 		email TEXT,
-		role TEXT,
-		profile_image TEXT
+		backup_email TEXT,
+		line_user_id TEXT,
+		last_active TEXT,
+		promptpay_id TEXT,
+		dorm_code TEXT,
+		payment_type TEXT DEFAULT 'promptpay',
+		bank_account TEXT DEFAULT '',
+		account_name TEXT DEFAULT '',
+		apns_token TEXT DEFAULT ''
 	)`)
 	if err != nil {
 		t.Fatalf("Failed to create admins table: %v", err)
