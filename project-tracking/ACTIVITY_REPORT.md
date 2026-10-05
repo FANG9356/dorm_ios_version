@@ -866,3 +866,17 @@
 - สถานะ deploy/UAT: โค้ดเสร็จสมบูรณ์ รอทำส่วน UI ในแอป iOS 
 - ผลลัพธ์: API ควบคุม Payment Ledger พร้อมใช้งานแล้ว 
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: สร้าง UI ในฝั่ง iOS เพื่อให้แอดมินสามารถกดยกเลิก คืนเงิน หรือปรับลดยอดได้ และต้องทดสอบ E2E UAT ต่อไป
+
+## 2026-10-05 15:40 — เพิ่ม UI ใน iOS สำหรับระบบบัญชี และทำ UAT บน Production
+
+- คำขอ/เป้าหมาย: สร้าง UI สำหรับ Void, Refund, Adjust บิลใน iOS และทำ User Acceptance Testing (UAT) การทำงานของ backend บนเซิร์ฟเวอร์จริง
+- สิ่งที่ดำเนินการ:
+  1. อัปเดต `APIService.swift` เพิ่มเมธอดเรียกใช้ endpoint บัญชี
+  2. เพิ่มส่วน UI เมนู 'การจัดการบัญชี' ให้กับบิลในหน้า `PaymentReceiptView` 
+  3. ดำเนินการ UAT บน Production DB (`tenant_1.db`) โดยจำลองสิทธิ์เป็น Admin (ใช้ ID และ Email ของ superadmin ชั่วคราว) เพื่อทดสอบ `/api/payments/void`, `/api/payments/refund`, `/api/payments/adjust`
+  4. ทำการ rollback ข้อมูลหลังเสร็จสิ้นการทดสอบเพื่อความถูกต้องของข้อมูลจริง และคืนรหัสผ่านของ superadmin กลับเป็นค่าเดิม
+- ไฟล์หรือระบบที่กระทบ: `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/FinanceTabView.swift`, `DormiNetX/Services/APIService.swift`
+- การตรวจสอบและหลักฐาน:
+  - iOS Build Compile `** BUILD SUCCEEDED **`
+  - ทดสอบ UAT ยืนยันว่า `payment_status`, `amount` เปลี่ยนแปลงอย่างถูกต้องใน DB จริง และมีการเขียนลง log `financial_audits` เรียบร้อย
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: เตรียมความพร้อม Rollout (P1) เช่น Forgot Password, SwiftData migration, ฯลฯ

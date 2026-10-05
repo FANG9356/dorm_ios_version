@@ -1,6 +1,6 @@
 # สถานะการทำงานปัจจุบัน
 
-อัปเดตล่าสุด: 1 ตุลาคม 2569 (Asia/Bangkok)
+อัปเดตล่าสุด: 5 ตุลาคม 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ
 
@@ -11,6 +11,7 @@
 | Protocol 2 production cutover | เสร็จแล้ว | production ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง rebase conflict และ sync ถึง snapshot v161 สำเร็จโดย dirty/pending เป็น 0 | ติดตาม log ต่อเนื่องและยังต้องทำ UAT สองเครื่อง/สองบัญชีแยกต่างหาก |
 | Media lifecycle | กำลังทำบางส่วน | tenant ownership, checksum, retry, authenticated hydration และปิด public `/uploads` แล้ว | UAT ข้ามสองเครื่อง, orphan cleanup และ retention policy |
 | PromptPay QR และตรวจสลิปอัตโนมัติ | deploy แล้ว/ต้อง harden | มี QR, EasySlip optional, OCR localhost service และ fallback QR | ต้อง fail closed, ตรวจยอด/ผู้รับ/reference/replay, ย้าย config ออกจาก source, ลดสิทธิ์ OCR, เพิ่ม atomic deploy/health/rollback และ UAT ก่อนใช้ตัดยอดจริง |
+| ระบบบัญชี (Financial Ledger) | เสร็จแล้ว | โค้ด iOS (UI) / backend (API) สำหรับ Void, Refund, Adjust เสร็จสมบูรณ์ และผ่าน UAT บน Production DB แล้ว โดยมี Immutable Audit Log ลงบันทึกครบถ้วน | โค้ดเสร็จสมบูรณ์ รอ rollout ใช้งานจริง |
 | เอกสารและ handoff | เสร็จแล้วรอบนี้ | เพิ่ม vision, work status, handoff, assessment และปรับ backlog/checklist | ผู้รับช่วงอ่านตามลำดับใน `project-tracking/README.md` และอัปเดตหลักฐานเมื่อ UAT เสร็จ |
 
 ## ทำเสร็จแล้วล่าสุด
@@ -39,6 +40,8 @@
 - แก้ไขให้ `BackupTabView` แสดง Alert ผลการดำเนินการสำเร็จและผิดพลาดได้ตามปกติ
 - ปรับ Maintenance Workflow ให้รัดกุมยิ่งขึ้น (iOS/Backend): ป้องกันสถานะปริศนา, ห้ามแอปข้ามการอนุมัติใบเสนอราคา, และบังคับ Backend ตรวจ `quoteApproved` ก่อนขอให้ชำระเงิน
 - เพิ่มระบบตรวจสอบ LIFF โดยเช็กว่ารหัสหอมีจริงก่อนอนุญาตสร้าง/เปิด Tenant DB ป้องกันผู้สุ่มเดา
+- พัฒนาระบบ Financial Ledger: เพิ่ม API และ iOS UI สำหรับการดำเนินการ Void (ยกเลิกบิล), Refund (คืนเงิน) และ Adjust (ปรับปรุงยอด) บิลค่าเช่า โดยระบบมีการเขียน Immutable Audit Log สำหรับทุก action 
+- ทำ User Acceptance Testing (UAT) สำหรับระบบ Financial Ledger บน Production Server จริง โดยดำเนินการกับข้อมูลทดสอบที่ได้รับอนุญาตและผ่านการตรวจเช็กความถูกต้องแล้ว (Rollback ข้อมูลหลังเสร็จสิ้นการ UAT)
 
 ## หลักฐานทดสอบล่าสุด
 

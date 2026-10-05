@@ -1211,6 +1211,13 @@ private struct PaymentReceiptView: View {
     @State private var saveMessage: String?
     @State private var showingSaveAlert = false
     @State private var isSavingReceipt = false
+    
+    @State private var showingLedgerAlert = false
+    @State private var ledgerActionType: String = ""
+    @State private var ledgerReason: String = ""
+    @State private var ledgerAmount: String = ""
+    @State private var isProcessingLedger = false
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         NavigationStack {
@@ -1244,6 +1251,41 @@ private struct PaymentReceiptView: View {
                     }
                 }
                 ToolbarItemGroup(placement: .confirmationAction) {
+                    if payment.serverId != nil && payment.paymentStatus != "voided" && payment.paymentStatus != "refunded" {
+                        Menu {
+                            if payment.paymentStatus != "paid" {
+                                Button(role: .destructive) {
+                                    ledgerActionType = "void"
+                                    ledgerReason = ""
+                                    showingLedgerAlert = true
+                                } label: {
+                                    Label("ยกเลิกบิล", systemImage: "xmark.bin")
+                                }
+                                
+                                Button {
+                                    ledgerActionType = "adjust"
+                                    ledgerReason = ""
+                                    ledgerAmount = "\(payment.amount)"
+                                    showingLedgerAlert = true
+                                } label: {
+                                    Label("ปรับปรุงยอด", systemImage: "pencil.and.list.clipboard")
+                                }
+                            } else {
+                                Button(role: .destructive) {
+                                    ledgerActionType = "refund"
+                                    ledgerReason = ""
+                                    showingLedgerAlert = true
+                                } label: {
+                                    Label("คืนเงิน", systemImage: "arrow.uturn.backward")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundStyle(isProcessingLedger ? .gray : .white)
+                        }
+                        .disabled(isProcessingLedger)
+                    }
+
                     Button {
                         shareReceipt()
                     } label: {
@@ -1275,6 +1317,70 @@ private struct PaymentReceiptView: View {
         }
         .alert(saveMessage ?? "", isPresented: $showingSaveAlert) {
             Button("ตกลง", role: .cancel) { }
+        }
+        .alert(ledgerActionTitle, isPresented: $showingLedgerAlert) {
+            TextField("ระบุเหตุผล (บังคับ)", text: $ledgerReason)
+            if ledgerActionType == "adjust" {
+                TextField("ยอดเงินใหม่", text: $ledgerAmount)
+                    .keyboardType(.decimalPad)
+            }
+            Button("ยกเลิก", role: .cancel) { }
+            Button("ยืนยัน", role: .destructive) {
+                processLedgerAction()
+            }
+            .disabled(ledgerReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            if ledgerActionType == "void" { Text("คุณต้องการยกเลิกบิลนี้ใช่หรือไม่?\n(เมื่อยกเลิกแล้วจะไม่สามารถรับชำระได้อีก)") }
+            else if ledgerActionType == "refund" { Text("คุณต้องการคืนเงินบิลนี้ใช่หรือไม่?\n(สถานะจะเปลี่ยนเป็นคืนเงินเรียบร้อย)") }
+            else { Text("คุณต้องการปรับปรุงยอดเงินบิลนี้ใช่หรือไม่?") }
+        }
+    }
+    
+    private var ledgerActionTitle: String {
+        switch ledgerActionType {
+        case "void": return "ยกเลิกบิล"
+        case "refund": return "คืนเงิน (Refund)"
+        case "adjust": return "ปรับปรุงยอด"
+        default: return "จัดการบัญชี"
+        }
+    }
+    
+    private func processLedgerAction() {
+        guard !ledgerReason.isEmpty, let serverId = payment.serverId else { return }
+        isProcessingLedger = true
+        Task { @MainActor in
+            defer { isProcessingLedger = false }
+            do {
+                let msg: String
+                switch ledgerActionType {
+                case "void":
+                    msg = try await APIService.shared.voidPayment(serverId: serverId, reason: ledgerReason)
+                    payment.paymentStatus = "voided"
+                case "refund":
+                    msg = try await APIService.shared.refundPayment(serverId: serverId, reason: ledgerReason)
+                    payment.paymentStatus = "refunded"
+                case "adjust":
+                    let newAmt = Double(ledgerAmount) ?? payment.amount
+                    msg = try await APIService.shared.adjustPayment(serverId: serverId, newAmount: newAmt, reason: ledgerReason)
+                    payment.amount = newAmt
+                default:
+                    return
+                }
+                payment.isDirty = true
+                payment.lastUpdated = Date()
+                modelContext.insert(LocalSystemLog(action: "ระบบบัญชี: \(ledgerActionType)", details: "อัปเดตบิลห้อง \(payment.roomNumber) รอบ \(payment.month) แล้ว (\(msg))"))
+                try? modelContext.save()
+                
+                Task {
+                    await SyncManager.shared.pushCurrentLocalState(modelContext: modelContext, reason: "Ledger Action")
+                }
+                
+                saveMessage = "ดำเนินการสำเร็จ: \(msg)"
+                showingSaveAlert = true
+            } catch {
+                saveMessage = "ข้อผิดพลาด: \(error.localizedDescription)"
+                showingSaveAlert = true
+            }
         }
     }
 
@@ -1375,7 +1481,7 @@ private struct ReceiptExportCard: View {
 
                 Spacer()
 
-                Text(payment.paymentStatus == "paid" ? "ชำระแล้ว" : "ยังไม่ปิดบิล")
+                Text(receiptStatusLabel)
                     .font(.custom("SukhumvitSet-Bold", size: 13))
                     .foregroundStyle(.black.opacity(0.72))
                     .padding(.horizontal, 13)
@@ -1430,6 +1536,15 @@ private struct ReceiptExportCard: View {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+    
+    private var receiptStatusLabel: String {
+        switch payment.paymentStatus {
+        case "paid": return "ชำระแล้ว"
+        case "voided": return "ยกเลิก (Void)"
+        case "refunded": return "คืนเงิน (Refund)"
+        default: return "ยังไม่ปิดบิล"
+        }
     }
 
     private func infoBox(_ title: String, _ value: String) -> some View {

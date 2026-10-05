@@ -352,6 +352,74 @@ class APIService {
         throw NSError(domain: "DormiNet.LINE", code: httpResponse.statusCode,
                       userInfo: [NSLocalizedDescriptionKey: message])
     }
+    
+    // MARK: - Financial Ledger
+    
+    func voidPayment(serverId: Int, reason: String) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/payments/void") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let payload: [String: Any] = ["payment_id": serverId, "reason": reason]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        if (200..<300).contains(httpResponse.statusCode) {
+            return body?["message"] as? String ?? "Void successful"
+        }
+        throw NSError(domain: "DormiNet.Finance", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: body?["error"] as? String ?? "Failed to void payment"])
+    }
+    
+    func refundPayment(serverId: Int, reason: String) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/payments/refund") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let payload: [String: Any] = ["payment_id": serverId, "reason": reason]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        if (200..<300).contains(httpResponse.statusCode) {
+            return body?["message"] as? String ?? "Refund successful"
+        }
+        throw NSError(domain: "DormiNet.Finance", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: body?["error"] as? String ?? "Failed to refund payment"])
+    }
+    
+    func adjustPayment(serverId: Int, newAmount: Double, reason: String) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/payments/adjust") else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = authToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let payload: [String: Any] = ["payment_id": serverId, "new_amount": newAmount, "reason": reason]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        if (200..<300).contains(httpResponse.statusCode) {
+            return body?["message"] as? String ?? "Adjust successful"
+        }
+        throw NSError(domain: "DormiNet.Finance", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: body?["error"] as? String ?? "Failed to adjust payment"])
+    }
 
     // MARK: - Backup & Restore APIs
 
