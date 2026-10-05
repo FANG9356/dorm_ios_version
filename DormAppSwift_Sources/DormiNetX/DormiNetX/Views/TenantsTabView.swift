@@ -509,6 +509,10 @@ struct PremiumTenantCard: View {
                     .padding(.vertical, 5)
                     .background(Capsule().fill(statusChipFill))
                     
+                    if user.isDirty == true || user.isDeletedLocally == true {
+                        SyncStatusBadge(isDirty: user.isDirty ?? false, isDeletedLocally: user.isDeletedLocally ?? false)
+                    }
+                    
                     Image(systemName: "chevron.right")
                         .font(.custom("SukhumvitSet-SemiBold", size: 11))
                         .foregroundColor(.secondary.opacity(0.5))

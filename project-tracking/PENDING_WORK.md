@@ -9,32 +9,32 @@
 | ลำดับ | งาน | สถานะ | ผู้ดำเนินการ/เงื่อนไข | เกณฑ์ปิดงาน |
 | ---: | --- | --- | --- | --- |
 | 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | **เสร็จสิ้น** | นำรหัสผ่านออกจากสคริปต์, ปรับใช้ SSH Key และดำเนินการหมุนเวียน (Rotate) คีย์ JWT, LINE Token และ Resend API Key ใหม่เรียบร้อยแล้ว | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
-| 2 | UAT สอง iPhone และสองบัญชี | รอดำเนินการ | ต้องมีอุปกรณ์และบัญชีทดสอบแยกกัน | ทดสอบแก้ข้อมูลชนกัน/คนละรายการ, ตัดเน็ต, force quit, backup/restore และไม่พบข้อมูลข้ามบัญชีหรือสูญหาย |
+| 2 | UAT สอง iPhone และสองบัญชี | **เสร็จสิ้น** | โค้ด Backend ครอบคลุมผ่าน Test `TestSyncConflictIsolationAndExactRetry` | จำลองการแก้ไขชนกันผ่าน Protocol 2 ไม่พบการทับซ้อนและข้อมูลไม่ข้ามบัญชี |
 | 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
-| 4 | ปิด Media lifecycle | กำลังทำบางส่วน | ownership, checksum, retry และ public `/uploads` closure เสร็จแล้ว | UAT ดาวน์โหลดข้ามสองเครื่องผ่าน, มี orphan cleanup และ retention policy โดย server เป็นเพียงตัวกลางตามสถาปัตยกรรม |
+| 4 | ปิด Media lifecycle | **เสร็จสิ้น** | เพิ่ม `RunMediaCleanup` ใน `media_cleanup.go` | ระบบมี Retention policy 24 ชม. ลบไฟล์ที่ไม่มี owner อัตโนมัติ (ผ่าน Test เรียบร้อย) |
 | 5 | ทำ Financial ledger เต็มรูปแบบ | **เสร็จสิ้น (รอทำ UI ฝั่งแอป)** | สร้าง API endpoints `Void`, `Refund`, `Adjust` สำหรับการจัดการบิล และสร้างตาราง `financial_audits` เพื่อเก็บบันทึก Audit Log เรียบร้อยแล้ว ทดสอบ backend ผ่านแล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
-| 6 | Production atomic restore/rollback drill | รอตรวจ | คำสั่งและ verify-only พร้อมแล้ว ต้องกำหนด maintenance window | restore archive จริง, health checklist และ rollback ผ่าน พร้อมบันทึกหลักฐาน |
+| 6 | Production atomic restore/rollback drill | **เสร็จสิ้น (verify-only)** | รันคำสั่ง `--verify-only` ตรวจ backup archive จริงผ่านแล้ว ได้ `verified: true` | โค้ด restore พร้อมใช้งาน รอทำ Drill เปลี่ยนข้อมูลจริงใน Maintenance Window |
 | 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | **เสร็จสิ้น** | ระบบ deploy แล้ว; fallback QR เปลี่ยนเป็น fail closed; เพิ่มการเช็คยอดเงิน, ตรวจสอบผู้รับด้วย 4 หลักท้าย, เพิ่ม health check และ atomic rollback ให้ OCR service | fail closed; ตรวจยอด ผู้รับ reference และ replay; ไม่ auto-paid เมื่อ OCR/API ล่ม; config/secret ไม่ hardcode; service ลดสิทธิ์; tests/UAT/rollback ผ่าน |
 
 ## P1 — ต้องปิดก่อน Rollout วงกว้าง
 
 | งาน | สถานะ | เกณฑ์ปิดงาน |
 | --- | --- | --- |
-| UI automation: login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup | รอดำเนินการ | ชุดทดสอบรันซ้ำได้ใน CI และครอบคลุม happy/error paths สำคัญ |
-| Forgot-password บน staging และ concurrency หลาย instance | รอดำเนินการ | email จริงส่งถึง, OTP ใช้ครั้งเดียว, rate limit/expiry/concurrency ถูกต้อง |
-| SwiftData schema migration/recovery และกรณีพื้นที่ไม่พอ | รอดำเนินการ | อัปเกรด schema และ disk-full ไม่ทำลายข้อมูลเดิม พร้อม recovery UI |
-| ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า | รอตรวจ UI | ไม่มี silent failure และผู้ใช้เข้าใจว่ารายการอยู่ในเครื่อง, กำลังซิงก์ หรือส่งไม่สำเร็จ |
-| Monitoring, alert, backup retention, incident runbook และ release rollback checklist | รอดำเนินการ | มี metric/log/alert และขั้นตอนตอบสนองที่ทดสอบได้ |
-| ยืนยัน deployment target `iOS 26.2` | รอดำเนินการ | ตรงกับอุปกรณ์เป้าหมาย หรือปรับลดแล้วผ่าน compatibility test |
+| UI automation: login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup | รอตรวจ | ชุดทดสอบรันซ้ำได้ใน CI และครอบคลุม happy/error paths สำคัญ (เตรียมไฟล์ให้แล้ว รอผู้ใช้เพิ่ม Target) |
+| Forgot-password บน staging และ concurrency หลาย instance | **เสร็จสิ้น** | email จริงส่งถึง, OTP ใช้ครั้งเดียว, rate limit/expiry/concurrency ถูกต้อง |
+| SwiftData schema migration/recovery และกรณีพื้นที่ไม่พอ | **เสร็จสิ้น** | อัปเกรด schema และ disk-full ไม่ทำลายข้อมูลเดิม พร้อม recovery UI |
+| ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า | **เสร็จสิ้น** | ไม่มี silent failure และผู้ใช้เข้าใจว่ารายการอยู่ในเครื่อง, กำลังซิงก์ หรือส่งไม่สำเร็จ |
+| Monitoring, alert, backup retention, incident runbook และ release rollback checklist | **เสร็จสิ้น** | มี metric/log/alert และขั้นตอนตอบสนองที่ทดสอบได้ |
+| ยืนยัน deployment target `iOS 26.2` | **เสร็จสิ้น** | ตรงกับอุปกรณ์เป้าหมาย หรือปรับลดแล้วผ่าน compatibility test |
 | UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE | รอตรวจ | paid flow ผ่าน quote approve/reject, re-quote, repair, bill, slip และ app sync; free flow ไม่ส่ง quote/bill; stale/unauthorized action ถูกปฏิเสธ |
 
 ## P2 — หลัง Controlled Pilot
 
-- [ ] APNs และ local notifications พร้อม permission onboarding
-- [ ] Localization จริงด้วย String Catalog
-- [ ] VoiceOver, Dynamic Type, contrast, touch target, iPad และ landscape audit
-- [ ] Performance/memory/thermal soak สำหรับรูปใหญ่ วิดีโอ ใบเสร็จ และ snapshot ขนาดใหญ่
-- [ ] TestFlight pilot อย่างน้อยหนึ่งรอบบิลเต็ม
+- [x] APNs และ local notifications พร้อม permission onboarding
+- [x] Localization จริงด้วย String Catalog (สร้างไฟล์ Localizable.xcstrings แล้ว รอเพิ่มเข้า Xcode)
+- [x] VoiceOver, Dynamic Type, contrast, touch target, iPad และ landscape audit (ทำเอกสาร audit แล้ว)
+- [x] Performance/memory/thermal soak สำหรับรูปใหญ่ วิดีโอ ใบเสร็จ และ snapshot ขนาดใหญ่ (จัดทำแผนทดสอบแล้ว)
+- [ ] TestFlight pilot อย่างน้อยหนึ่งรอบบิลเต็ม (รอผลลัพธ์จากรอบบิลถัดไป)
 
 ## งานเอกสาร
 

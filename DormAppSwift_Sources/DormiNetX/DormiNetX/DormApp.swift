@@ -102,6 +102,7 @@ struct AccountScopedRootView: View {
 
     @State private var modelContainer: ModelContainer
     @State private var loadedStoreKey: String = ""
+    @State private var storeInitError: Error? = nil
 
     init() {
         let initialContainer: ModelContainer
@@ -141,7 +142,15 @@ struct AccountScopedRootView: View {
 
     var body: some View {
         Group {
-            if isLoggedIn && loadedStoreKey != storeKey {
+            if let error = storeInitError {
+                SwiftDataRecoveryView(error: error, accountID: Self.resolveAccountID() ?? 0) {
+                    storeInitError = nil
+                    reloadContainerIfNeeded()
+                } onLogout: {
+                    storeInitError = nil
+                    resetToGuestStore()
+                }
+            } else if isLoggedIn && loadedStoreKey != storeKey {
                 AccountStoreLoadingView()
             } else {
                 SplashView()
@@ -183,10 +192,11 @@ struct AccountScopedRootView: View {
         do {
             modelContainer = try AccountScopedStore.makeContainer(accountID: accountID)
             loadedStoreKey = storeKey
+            storeInitError = nil
             print("✅ Opened local SwiftData store for account \(accountID)")
         } catch {
             print("❌ Failed to open account-local SwiftData store: \(error)")
-            resetToGuestStore()
+            storeInitError = error
         }
     }
 
@@ -244,8 +254,128 @@ private struct AccountStoreLoadingView: View {
     }
 }
 
+private struct SwiftDataRecoveryView: View {
+    let error: Error
+    let accountID: Int
+    let onRetry: () -> Void
+    let onLogout: () -> Void
+    
+    @State private var isBusy = false
+    
+    private var isDiskFull: Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSCocoaErrorDomain && (nsError.code == CocoaError.fileWriteOutOfSpace.rawValue || nsError.code == 512 || nsError.code == 640)
+    }
+
+    var body: some View {
+        ZStack {
+            GlassBackgroundView().ignoresSafeArea()
+            
+            VStack(spacing: 24) {
+                Image(systemName: isDiskFull ? "externaldrive.fill.badge.xmark" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(isDiskFull ? .orange : .red)
+                    .padding(.top, 20)
+                
+                VStack(spacing: 8) {
+                    Text(isDiskFull ? "พื้นที่เก็บข้อมูลเต็ม" : "ข้อมูลมีปัญหา (Schema Mismatch)")
+                        .font(.custom("SukhumvitSet-Bold", size: 22))
+                    
+                    Text(isDiskFull ? "ไม่สามารถเปิดฐานข้อมูลได้เนื่องจากพื้นที่ในเครื่องของคุณไม่เพียงพอ กรุณาลบข้อมูลที่ไม่จำเป็นแล้วลองใหม่" : "พบปัญหาขณะอัปเกรดโครงสร้างฐานข้อมูล หรือไฟล์ฐานข้อมูลในเครื่องเสียหาย\n(\(error.localizedDescription))")
+                        .font(.custom("SukhumvitSet-Medium", size: 14))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                
+                VStack(spacing: 12) {
+                    Button {
+                        isBusy = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            onRetry()
+                            isBusy = false
+                        }
+                    } label: {
+                        HStack {
+                            if isBusy { ProgressView().padding(.trailing, 4) }
+                            Text("ลองใหม่อีกครั้ง")
+                                .font(.custom("SukhumvitSet-Bold", size: 16))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.indigo)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
+                    .disabled(isBusy)
+                    
+                    if !isDiskFull {
+                        Button {
+                            isBusy = true
+                            deleteLocalData()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                onRetry()
+                                isBusy = false
+                            }
+                        } label: {
+                            Text("ล้างข้อมูลในเครื่องและโหลดใหม่")
+                                .font(.custom("SukhumvitSet-Bold", size: 16))
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.red.opacity(0.1))
+                                .foregroundColor(.red)
+                                .cornerRadius(12)
+                        }
+                        .disabled(isBusy)
+                    }
+                    
+                    Button {
+                        onLogout()
+                    } label: {
+                        Text("ออกจากระบบ")
+                            .font(.custom("SukhumvitSet-Medium", size: 16))
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .background(Color(UIColor.secondarySystemBackground).opacity(0.95))
+            .cornerRadius(24)
+            .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 10)
+            .padding(.horizontal, 24)
+        }
+    }
+    
+    private func deleteLocalData() {
+        do {
+            let directory = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: false
+            )
+            .appendingPathComponent("DormiNet", isDirectory: true)
+            .appendingPathComponent("Accounts", isDirectory: true)
+            
+            let storeURL = directory.appendingPathComponent("account_\(accountID).store")
+            let shmURL = directory.appendingPathComponent("account_\(accountID).store-shm")
+            let walURL = directory.appendingPathComponent("account_\(accountID).store-wal")
+            
+            try? FileManager.default.removeItem(at: storeURL)
+            try? FileManager.default.removeItem(at: shmURL)
+            try? FileManager.default.removeItem(at: walURL)
+            print("🗑️ Deleted corrupted store for account \(accountID)")
+        } catch {
+            print("Failed to delete corrupted store: \(error)")
+        }
+    }
+}
+
 @main
 struct DormApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @AppStorage("appTheme") private var appTheme: Int = AppTheme.system.rawValue
     @AppStorage("appLanguageCode") private var appLanguageCode = "system"
 

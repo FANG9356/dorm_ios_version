@@ -1,2 +1,0 @@
-Panic in RunServer: pattern "/api/auth/register" (registered at /Volumes/FangB/dorm_project/backend-dorm/core/server.go:111) conflicts with pattern "/api/auth/register" (registered at /Volumes/FangB/dorm_project/backend-dorm/handlers/sync_handlers.go:22):
-/api/auth/register matches the same requests as /api/auth/register

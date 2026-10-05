@@ -132,4 +132,7 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`ALTER TABLE maintenances ADD COLUMN slip_payload TEXT DEFAULT ''`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_slip_payload ON payments(slip_payload) WHERE slip_payload != '' AND slip_payload IS NOT NULL`)
 	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenances_slip_payload ON maintenances(slip_payload) WHERE slip_payload != '' AND slip_payload IS NOT NULL`)
+
+	db.Exec(`CREATE TABLE IF NOT EXISTS line_notification_outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, line_user_id TEXT, message_type TEXT, payload TEXT, status TEXT DEFAULT 'pending', created_at TEXT, updated_at TEXT, retry_count INTEGER DEFAULT 0, next_retry_at TEXT, error_message TEXT)`)
+
 }

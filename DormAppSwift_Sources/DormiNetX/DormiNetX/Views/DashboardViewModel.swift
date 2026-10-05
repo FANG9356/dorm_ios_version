@@ -35,6 +35,10 @@ struct APIUser: Codable, Identifiable {
     var additional_appliances: String?
     var additional_appliance_fee: Double?
     var additional_details: String?
+    
+    // Sync Metadata
+    var isDirty: Bool? = false
+    var isDeletedLocally: Bool? = false
 
     init(
         id: Int,
@@ -84,6 +88,8 @@ struct APIUser: Codable, Identifiable {
         self.additional_appliances = additional_appliances
         self.additional_appliance_fee = additional_appliance_fee
         self.additional_details = additional_details
+        self.isDirty = false
+        self.isDeletedLocally = false
     }
 }
 

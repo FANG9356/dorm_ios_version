@@ -282,8 +282,8 @@ func sendEmailOTP(toEmail string, otp string, refCode string) error {
 	return nil
 }
 
-func SetupAuthResetRoutes(db *sql.DB) {
-	http.HandleFunc("/api/forgot-password", func(w http.ResponseWriter, r *http.Request) {
+func HandleForgotPassword(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -363,9 +363,11 @@ func SetupAuthResetRoutes(db *sql.DB) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": successMsg, "ref_code": refCode})
-	})
+	}
+}
 
-	http.HandleFunc("/api/verify-otp", func(w http.ResponseWriter, r *http.Request) {
+func HandleVerifyOTP(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -430,7 +432,11 @@ func SetupAuthResetRoutes(db *sql.DB) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "รหัส OTP ถูกต้อง"})
-	})
+	}
+}
 
+func SetupAuthResetRoutes(db *sql.DB) {
+	http.HandleFunc("/api/forgot-password", HandleForgotPassword(db))
+	http.HandleFunc("/api/verify-otp", HandleVerifyOTP(db))
 	http.HandleFunc("/api/reset-password", HandlePasswordReset(db))
 }

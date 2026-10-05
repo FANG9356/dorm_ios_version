@@ -73,7 +73,7 @@ class TenantsViewModel: ObservableObject {
             do {
                 let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
                 self.users = localUsers.map { user in
-                    APIUser(
+                    var apiUser = APIUser(
                         id: stableLocalUserID(for: user),
                         prefix: user.prefix,
                         first_name: user.firstName,
@@ -98,6 +98,9 @@ class TenantsViewModel: ObservableObject {
                         additional_appliance_fee: user.additionalApplianceFee,
                         additional_details: user.additionalDetails
                     )
+                    apiUser.isDirty = user.isDirty
+                    apiUser.isDeletedLocally = user.isDeletedLocally
+                    return apiUser
                 }
             } catch {
                 self.errorMessage = "ไม่สามารถโหลดข้อมูลลูกบ้านในเครื่องได้"

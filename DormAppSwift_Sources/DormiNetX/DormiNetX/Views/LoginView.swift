@@ -128,6 +128,7 @@ struct LoginView: View {
                                     .keyboardType(.emailAddress)
                                     .foregroundColor(.primary)
                                     .normalizedEmail($email)
+                                    .accessibilityIdentifier("UsernameField")
                             }
                             .padding()
                             .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white.opacity(0.6))
@@ -156,6 +157,7 @@ struct LoginView: View {
                                         .font(.custom("SukhumvitSet-Medium", size: 16))
                                         .foregroundColor(.primary)
                                         .limitedText($password, maxLength: 64, trimNewlines: true)
+                                        .accessibilityIdentifier("PasswordField")
                                 }
                                 
                                 Button(action: {
@@ -217,6 +219,7 @@ struct LoginView: View {
                             }
                             if let errorMessage = errorMessage {
                                 Text(errorMessage)
+                                    .accessibilityIdentifier("LoginErrorText")
                                     .foregroundColor(.red)
                                     .font(.custom("SukhumvitSet-Text", size: 12))
                                     .multilineTextAlignment(.center)
@@ -280,6 +283,7 @@ struct LoginView: View {
                                 .shadow(color: .indigo.opacity(0.15), radius: 10, x: 0, y: 5)
                             }
                             .buttonStyle(PressableButtonStyle())
+                            .accessibilityIdentifier("LoginButton")
                             .disabled(isLoading || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!isForgotPasswordMode && password.isEmpty) || (isSignUpMode && (name.isEmpty || confirmPassword.isEmpty)))
                         }
                         .padding(.horizontal, 30)

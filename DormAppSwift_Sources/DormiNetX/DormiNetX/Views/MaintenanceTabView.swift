@@ -244,6 +244,10 @@ private struct MaintenanceRow: View {
                         .padding(.horizontal, 11)
                         .frame(minHeight: 34)
                         .background(.ultraThinMaterial, in: Capsule())
+                        
+                        if maintenance.isDirty || maintenance.isDeletedLocally {
+                            SyncStatusBadge(isDirty: maintenance.isDirty, isDeletedLocally: maintenance.isDeletedLocally)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 12) {

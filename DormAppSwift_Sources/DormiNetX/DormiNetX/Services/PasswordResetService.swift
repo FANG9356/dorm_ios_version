@@ -27,7 +27,7 @@ struct PasswordResetService {
         guard password.count >= 8, password.utf8.count <= 72 else {
             throw Failure("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร และไม่เกิน 72 ไบต์")
         }
-        try await post("reset-password", body: [
+        _ = try await post("reset-password", body: [
             "email": normalized(email), "otp": code, "new_password": password
         ])
     }

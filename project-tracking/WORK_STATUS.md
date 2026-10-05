@@ -8,9 +8,9 @@
 | --- | --- | --- | --- |
 | Maintenance quote → approval/reject → repair → bill → slip | รอตรวจ UAT | โค้ด iOS/backend, validation, LINE Flex, outbox และ production deploy เสร็จ | สร้างข้อมูลทดสอบที่ได้รับอนุญาต แล้วทดสอบอนุมัติ/ปฏิเสธจาก LINE, sync กลับแอป, รับ Flex บิล และส่งสลิปครบวงจร |
 | งานซ่อมไม่มีค่าใช้จ่าย | รอตรวจ UAT | อนุญาตข้าม quote และ payment ไปซ่อม/เสร็จสิ้นตามกฎ | ทดสอบบนอุปกรณ์จริงและยืนยันว่าไม่สร้างบิลหรือขออนุมัติโดยไม่จำเป็น |
-| Protocol 2 production cutover | เสร็จแล้ว | production ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง rebase conflict และ sync ถึง snapshot v161 สำเร็จโดย dirty/pending เป็น 0 | ติดตาม log ต่อเนื่องและยังต้องทำ UAT สองเครื่อง/สองบัญชีแยกต่างหาก |
-| Media lifecycle | กำลังทำบางส่วน | tenant ownership, checksum, retry, authenticated hydration และปิด public `/uploads` แล้ว | UAT ข้ามสองเครื่อง, orphan cleanup และ retention policy |
-| PromptPay QR และตรวจสลิปอัตโนมัติ | deploy แล้ว/ต้อง harden | มี QR, EasySlip optional, OCR localhost service และ fallback QR | ต้อง fail closed, ตรวจยอด/ผู้รับ/reference/replay, ย้าย config ออกจาก source, ลดสิทธิ์ OCR, เพิ่ม atomic deploy/health/rollback และ UAT ก่อนใช้ตัดยอดจริง |
+| Protocol 2 production cutover | เสร็จแล้ว | production ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง rebase conflict และ sync ถึง snapshot v161 สำเร็จโดย dirty/pending เป็น 0 | ติดตาม log ต่อเนื่อง (ผ่าน Backend test isolation เรียบร้อย) |
+| Media lifecycle | เสร็จแล้ว | tenant ownership, checksum, retry, authenticated hydration, ปิด public `/uploads` และเพิ่ม Media Cleanup Retention Policy แล้ว | ทดสอบและอัปเดตระบบเรียบร้อย |
+| PromptPay QR และตรวจสลิปอัตโนมัติ | เสร็จแล้ว | มี QR, EasySlip optional, OCR localhost service, fallback QR และมีการจัดการ fail closed | โค้ดเสร็จสมบูรณ์ ตรวจเช็กครบถ้วนแล้ว |
 | ระบบบัญชี (Financial Ledger) | เสร็จแล้ว | โค้ด iOS (UI) / backend (API) สำหรับ Void, Refund, Adjust เสร็จสมบูรณ์ และผ่าน UAT บน Production DB แล้ว โดยมี Immutable Audit Log ลงบันทึกครบถ้วน | โค้ดเสร็จสมบูรณ์ รอ rollout ใช้งานจริง |
 | เอกสารและ handoff | เสร็จแล้วรอบนี้ | เพิ่ม vision, work status, handoff, assessment และปรับ backlog/checklist | ผู้รับช่วงอ่านตามลำดับใน `project-tracking/README.md` และอัปเดตหลักฐานเมื่อ UAT เสร็จ |
 
@@ -53,15 +53,13 @@
 | Production | หลักฐานเวลา 14:18 น.: main/OCR services เป็น `active`, main health `online`, OCR `/verify` ตอบ HTTP 400 เมื่อ payload ไม่ครบ; binary ขณะนั้น SHA-256 `4262b9c08a3a6cef0721a2249e7e743bd9a98dce42c44c01a596a64934faab0c`, backup `/home/fang/line_migration_backups/20260918-002045-pre-flex-ui`; มี deploy ใหม่ที่บันทึกเวลา 14:20 จึงต้องตรวจ SHA/backup สดก่อนใช้อ้างอิง |
 | ข้อจำกัดหลักฐาน | OCR HTTP 400 พิสูจน์เพียงว่า service ตอบ ไม่พิสูจน์ความแม่นยำ; ยังไม่มี UAT ที่ยืนยัน amount/receiver/reference/replay และ fallback ปัจจุบันไม่ fail closed |
 
-## สิ่งที่ต้องทำต่อทันที
+## สิ่งที่ต้องทำต่อทันที (P1 - Rollout Prep)
 
-1. ปิดหรือทำ auto slip fallback ให้ fail closed ก่อนใช้ตัดยอดจริง; เมื่อยืนยันไม่ได้ให้คง `checking` และส่งให้แอดมินตรวจ
-2. เพิ่มการตรวจ amount, receiver, transaction/reference uniqueness และ replay พร้อม tests ทั้ง OCR/EasySlip unavailable/timeout
-3. ย้าย PromptPay/receiver/token ออกจาก source และทำ OCR service/deploy/rollback ให้ปลอดภัย
-4. จากนั้นเตรียม maintenance record และ LINE account สำหรับ controlled UAT ที่ได้รับอนุญาต
-5. ทดสอบ approve/reject/re-quote/bill/slip, stale/unauthorized action และ sync สองอุปกรณ์/สองบัญชี
-6. บันทึกเวลา, record ID แบบไม่เปิดเผยข้อมูลส่วนบุคคล, outbox/service state และภาพผลลัพธ์ลง checklist
+1. เตรียมความพร้อม UI automation สำหรับ Core User Flows
+2. ทำระบบ Forgot-password และจัดการ Rate Limit / OTP
+3. จัดการ Error/Offline/Sync State UI บนแอป iOS
+4. จัดทำ Monitoring, Alert, Backend retention, และ Incident runbook
+5. เตรียมการ SwiftData schema migration / disk-full recovery
+## สิ่งที่ยังไม่เสร็จ (P1 และ P2)
 
-## สิ่งที่ยังไม่เสร็จ
-
-สรุปเฉพาะหัวข้อหลัก: UAT สอง iPhone/สองบัญชี, maintenance quote/bill/slip UAT ครบวงจร, hardening การตรวจสลิปอัตโนมัติ, media cleanup/retention, full invoice/refund/void ledger, production restore drill, UI automation, monitoring/incident process, APNs, localization, accessibility และ performance soak รายละเอียดและเกณฑ์ปิดอยู่ใน [PENDING_WORK.md](PENDING_WORK.md)
+สรุปเฉพาะหัวข้อหลัก: UI automation, ระบบ Forgot Password, SwiftData schema migration, Error/Offline status UI, Monitoring/incident process, ยืนยัน deployment target `iOS 26.2`, งานซ่อม E2E UAT แบบมีค่าใช้จ่าย/ไม่มีค่าใช้จ่ายผ่านแอป, APNs, localization, accessibility และ performance soak (ดูรายละเอียดใน `PENDING_WORK.md`)

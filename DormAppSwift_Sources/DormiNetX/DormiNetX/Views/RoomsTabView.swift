@@ -159,6 +159,10 @@ private struct RoomManagementRow: View {
                         .font(.custom("SukhumvitSet-Bold", size: 12))
                 }
                 .foregroundStyle(.secondary)
+                
+                if room.isDirty || room.isDeletedLocally {
+                    SyncStatusBadge(isDirty: room.isDirty, isDeletedLocally: room.isDeletedLocally)
+                }
             }
         }
         .contextMenu {

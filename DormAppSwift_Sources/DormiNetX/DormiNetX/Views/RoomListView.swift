@@ -17,6 +17,8 @@ struct RoomListView: View {
     @State private var isSettingsMode = false
     @State private var selectedTab: DashboardTab = .overview
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
+    @AppStorage("hasSeenNotificationOnboarding") private var hasSeenNotificationOnboarding = false
+    @State private var showNotificationOnboarding = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoggingOut = false
     @State private var showAddTenantSheet = false
@@ -227,6 +229,15 @@ struct RoomListView: View {
             ensureCurrentMonthPaymentsIfNeeded()
             scheduleAutoPullCheck()
             scheduleBookingPromotionCheck()
+            
+            if !hasSeenNotificationOnboarding {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showNotificationOnboarding = true
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showNotificationOnboarding) {
+            NotificationOnboardingView()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -997,6 +1008,7 @@ struct SidebarItem: View {
             .foregroundColor(isActive ? (colorScheme == .dark ? .white : .blue) : .primary.opacity(0.7))
             .padding(.vertical, 12)
             .padding(.horizontal, 15)
+            .accessibilityIdentifier("Tab_\(tab.identifier)")
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isActive ? (colorScheme == .dark ? Color.indigo.opacity(0.5) : Color.blue.opacity(0.2)) : Color.clear)

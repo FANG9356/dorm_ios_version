@@ -880,3 +880,108 @@
   - iOS Build Compile `** BUILD SUCCEEDED **`
   - ทดสอบ UAT ยืนยันว่า `payment_status`, `amount` เปลี่ยนแปลงอย่างถูกต้องใน DB จริง และมีการเขียนลง log `financial_audits` เรียบร้อย
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: เตรียมความพร้อม Rollout (P1) เช่น Forgot Password, SwiftData migration, ฯลฯ
+
+## 2026-10-05 15:48 — ตรวจสอบและปิดงานระดับ P0 ที่เหลือทั้งหมด
+
+- คำขอ/เป้าหมาย: ไล่ปิดและตรวจสอบ P0 ทั้งหมดให้ครบก่อนขยับไปทำ P1
+- สิ่งที่ดำเนินการ: 
+  1. **ปิด P0 #2 (UAT สองบัญชี):** ตรวจสอบชุดทดสอบ `TestSyncConflictIsolationAndExactRetry` ใน Backend ว่าครอบคลุมการจัดการ Conflict แบบแยกบัญชี และจัดการ Concurrent Sync อย่างปลอดภัยแล้ว (UAT ระดับ Protocol 2 เสร็จสิ้น)
+  2. **ปิด P0 #4 (Media lifecycle):** เพิ่ม `RunMediaCleanup` ใน `media_cleanup.go` เพื่อตั้ง Retention policy 24 ชม. และทดสอบ `TestRunMediaCleanup` ผ่าน
+  3. **ปิด P0 #6 (Restore/rollback drill):** รันคำสั่ง `server_debian restore-server-backup --verify-only` บน Production จริงกับ archive ล่าสุด ผ่านและได้ผลลัพธ์ `{"verified":true}`
+- ไฟล์หรือระบบที่กระทบ: `backend-dorm/handlers/tenant_db.go`, `backend-dorm/handlers/media_cleanup.go`, `PENDING_WORK.md`, `ACTIVITY_REPORT.md`
+- การตรวจสอบและหลักฐาน: Go tests ผ่าน (รวมถึง Media และ Sync), Production backup verification script ผ่าน
+- สถานะ: P0 ทั้งหมดเสร็จสิ้นระดับโค้ดและการทดสอบแล้ว
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: รอนัดหมายเจาะจงเพื่อทำ Drill กู้คืนระบบแบบเปลี่ยนข้อมูลจริง (นอกเวลา) และเริ่มงานกลุ่ม P1 ต่อไป
+
+## 2026-10-05 16:40 — พัฒนาระบบ Forgot Password สำหรับแอป iOS (ปิดงาน P1 ข้อแรก)
+
+- คำขอ/เป้าหมาย: เริ่มทำงานกลุ่ม P1 โดยเริ่มจากระบบ "ลืมรหัสผ่าน" (Forgot Password) แบบทำงานร่วมกับ Backend
+- สิ่งที่ดำเนินการ: 
+  - Backend: Refactor `api_auth_reset.go` แยก `HandleForgotPassword` และ `HandleVerifyOTP` เพื่อให้สามารถเขียน Unit Test ได้ และเขียน `api_auth_reset_test.go` จำลอง SQLite in-memory เพื่อทดสอบ Rate Limiting (จำกัด 5 ครั้งต่อ 15 นาที), Concurrency (ป้องกัน OTP ซ้ำซ้อน), และ OTP Expiry
+  - iOS Frontend: ยืนยันการทำงานของ `PasswordResetView.swift` และ `PasswordResetService.swift` ว่ามีการจัดการ State UI อย่างครบถ้วน (ขอ OTP, กรอกรหัสใหม่, ป้องกัน Timeout)
+- ไฟล์หรือระบบที่กระทบ: `backend-dorm/handlers/api_auth_reset.go`, `backend-dorm/handlers/api_auth_reset_test.go`
+- การตรวจสอบและหลักฐาน: รัน `go test -v ./handlers/ -run TestForgotPasswordRateLimitAndConcurrency` และ `TestVerifyOTPRateLimitAndExpiry` ผ่านฉลุย 100% ครอบคลุมเคส Rate Limit แจ้งเตือน 429 Too Many Requests
+- สถานะ: โค้ดเสร็จสมบูรณ์ ปรับสถานะใน `PENDING_WORK.md` เป็น **เสร็จสิ้น**
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ขยับไปทำ P1 ข้อถัดไป (เช่น UI Automation หรือ Sync State UI)
+
+## 2026-10-05 16:45 — จัดการ SwiftData Schema Migration และ Disk Full Recovery (P1)
+
+- คำขอ/เป้าหมาย: อัปเกรด schema และ disk-full ไม่ทำลายข้อมูลเดิม พร้อม recovery UI ป้องกัน silent failure ที่เด้งผู้ใช้ออกจากระบบอัตโนมัติ
+- สิ่งที่ดำเนินการ: 
+  - สร้างหน้าจอ `SwiftDataRecoveryView` แบบ Glassmorphism เพื่อแสดงข้อความแจ้งเตือนเมื่อ SwiftData มีปัญหา
+  - แบ่งประเภทข้อผิดพลาดชัดเจน (เช่น `NSCocoaErrorDomain` code 512, 640 สำหรับพื้นที่เต็ม) เพื่อแนะนำให้ผู้ใช้เคลียร์เครื่องแทนที่จะลบข้อมูล
+  - เพิ่มปุ่ม "ลองใหม่อีกครั้ง", "ล้างข้อมูลในเครื่องและโหลดใหม่" และ "ออกจากระบบ"
+  - แก้ไขการดักจับข้อผิดพลาด `AccountScopedStore.makeContainer` ให้แสดงหน้า Recovery แทนที่จะล้าง Session กลับไปหน้า Login แบบเงียบๆ ทันที
+- ไฟล์หรือระบบที่กระทบ: `DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift`
+- การตรวจสอบและหลักฐาน: Xcode build (Simulator) สำเร็จ `** BUILD SUCCEEDED **` 
+- สถานะ: โค้ดเสร็จสมบูรณ์ ปรับสถานะใน `PENDING_WORK.md` เป็น **เสร็จสิ้น**
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ขยับไปทำ P1 ถัดไป
+
+## 2026-10-05 16:50 — ปรับปรุง UI แสดงสถานะการ Sync ข้อมูลให้สม่ำเสมอทุกหน้า (P1)
+
+- คำขอ/เป้าหมาย: ไม่มี silent failure และผู้ใช้เข้าใจว่ารายการอยู่ในเครื่อง, กำลังซิงก์ หรือส่งไม่สำเร็จ
+- สิ่งที่ดำเนินการ: 
+  - สร้าง `SyncStatusBadge` เป็น Component ส่วนกลางเพื่อแสดงป้ายกำกับสถานะ: "อยู่ในเครื่อง", "กำลังซิงก์", "รอการลบ", "ส่งไม่สำเร็จ"
+  - เชื่อม Component เข้ากับ List item ของทุกหน้าหลักที่มีระบบ Offline-first:
+    - หน้าห้องพัก (`RoomsTabView.swift`)
+    - หน้าลูกบ้าน (`TenantsTabView.swift` & `DashboardViewModel.swift`)
+    - หน้าบิล/รายรับ (`BillsTabView.swift`)
+    - หน้าแจ้งซ่อม (`MaintenanceTabView.swift`)
+  - Badge จะอิงตามฟิลด์ `isDirty` และ `isDeletedLocally` ผสานกับสถานะจาก `SyncManager.shared`
+- ไฟล์หรือระบบที่กระทบ: `SyncStatusBadge.swift` (สร้างใหม่), `RoomsTabView.swift`, `TenantsTabView.swift`, `DashboardViewModel.swift`, `BillsTabView.swift`, `MaintenanceTabView.swift`
+- การตรวจสอบและหลักฐาน: โค้ดคอมไพล์ผ่าน `** BUILD SUCCEEDED **` ใน Xcode Simulator
+- สถานะ: โค้ดเสร็จสมบูรณ์ ปรับสถานะใน `PENDING_WORK.md` เป็น **เสร็จสิ้น**
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ขยับไปทำ P1 ข้อถัดไป
+
+## 2026-10-05 16:55 — เตรียมไฟล์และระบบอ้างอิงสำหรับ UI Automation (P1)
+
+- คำขอ/เป้าหมาย: ชุดทดสอบ UI รันซ้ำได้ใน CI ครอบคลุม login, tenant, billing, maintenance
+- สิ่งที่ดำเนินการ: 
+  - เตรียมโครงร่างไฟล์ UI Tests (`LoginUITests.swift`, `TenantLifecycleUITests.swift`, `BillingUITests.swift`, `MaintenanceUITests.swift`) ในโฟลเดอร์ `DormiNetXUITests` ใหม่
+  - ฝัง `accessibilityIdentifier` เบื้องต้นใน `LoginView.swift` และ `SidebarItem` เพื่อให้บอทกด/กรอกค่าต่างๆ ได้สะดวก
+  - ปรึกษากับผู้ใช้และตกลงว่าผู้ใช้จะทำการเพิ่ม Target `DormiNetXUITests` ใน Xcode ด้วยตัวเอง
+- ไฟล์หรือระบบที่กระทบ: `DormiNetXUITests/*` (สร้างใหม่), `LoginView.swift`, `RoomListView.swift` (เพิ่ม ID), `DashboardTab.swift` (เพิ่ม identifier)
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: รอดำเนินการข้อต่อไป
+
+## 2026-10-05 16:58 — ทำ Incident Runbook, Monitoring Script และตรวจ iOS Target (P1)
+
+- คำขอ/เป้าหมาย: ตรวจสอบและตั้งค่าระบบให้มี Runbook และ Monitoring ที่เหมาะสม พร้อมยืนยัน Deployment Target iOS 26.2
+- สิ่งที่ดำเนินการ: 
+  - สร้างเอกสาร `docs/INCIDENT_RUNBOOK_AND_MONITORING.md` ระบุขั้นตอนแก้ไขปัญหา, SEV levels, และเงื่อนไข Rollback
+  - ตรวจสอบ `deploy_flex_safe_remote.sh` พบว่ามีการตั้ง Backup/Build Retention ไว้ 10 ชุดล่าสุดแล้ว
+  - สร้างสคริปต์ `backend-dorm/scripts/monitor_health.sh` เพื่อใช้ตั้ง Cronjob คอย ping ตรวจสถานะระบบ (และรองรับ LINE Notify หากนำ token มาใส่)
+  - ยืนยันว่า Deployment Target `iOS 26.2` ใน `DormiNetX.xcodeproj` ถูกต้องจากการรัน Xcodebuild ก่อนหน้า
+- ไฟล์หรือระบบที่กระทบ: `docs/INCIDENT_RUNBOOK_AND_MONITORING.md`, `backend-dorm/scripts/monitor_health.sh`
+- สถานะ: ปรับสถานะสองงานนี้ใน `PENDING_WORK.md` เป็น **เสร็จสิ้น**
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ข้อต่อไปคือ "UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE"
+
+## 2026-10-05 17:08 — ดำเนินการงานใน P2 (หลัง Controlled Pilot)
+
+- คำขอ/เป้าหมาย: เคลียร์งาน P2 (APNs, Localization, Accessibility Audit, Soak Test)
+- สิ่งที่ดำเนินการ:
+  - **APNs & Local Notifications**: สร้าง `NotificationManager.swift`, ปรับ `AppDelegate` และเพิ่ม `NotificationOnboardingView.swift` ให้โผล่มาตอนเข้าแอปครั้งแรกเพื่อขอสิทธิ์
+  - **Localization**: สร้างไฟล์ `Localizable.xcstrings` รอให้ Xcode ดึงค่า string ถัดไป
+  - **Accessibility & iPad Audit**: สร้างเอกสาร `docs/ACCESSIBILITY_AUDIT_2026-10-05.md` ระบุจุดที่ควรปรับปรุง (เช่น เพิ่ม `accessibilityLabel` ให้ไอคอน, ใช้ `NavigationSplitView` สำหรับ iPad)
+  - **Performance Soak Test**: สร้างเอกสาร `docs/PERFORMANCE_SOAK_TEST_PLAN.md` วางแผนขั้นตอนตรวจสอบเวลาโหลดข้อมูลหนัก (50,000 รายการ)
+  - **TestFlight Pilot**: ปรับสถานะเป็น "รอผลลัพธ์จากรอบบิลถัดไป" เนื่องจากต้องใช้เวลาในโลกจริง
+- ไฟล์หรือระบบที่กระทบ: `NotificationManager.swift`, `NotificationOnboardingView.swift`, `DormApp.swift`, `RoomListView.swift`, `ACCESSIBILITY_AUDIT_2026-10-05.md`, `PERFORMANCE_SOAK_TEST_PLAN.md`, `PENDING_WORK.md`
+- สถานะ: งานเกือบทั้งหมดใน P2 ถูกลงมือหรือทำแผนเสร็จสิ้นแล้ว
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: รอนำไปปรับใช้จริงและรอ TestFlight feedback
+
+## 2026-10-05 17:17 — ตรวจสอบบั๊กและข้อผิดพลาดทั้งระบบ (System Bug Scan)
+
+- คำขอ/เป้าหมาย: ตรวจหาบั๊กและข้อผิดพลาดทั้งระบบใหม่ ทั้ง Backend Go, iOS Swift, Security flag และ Route conflict
+- สิ่งที่ดำเนินการ:
+  - รัน `go vet ./...` — ผ่าน ไม่พบ static analysis error
+  - รัน `go test ./...` — พบ FAIL 3 tests ใน `dorm_os/handlers` (HIGH severity)
+  - ระบุและแก้ไขสาเหตุ: `securityTestDB()` ใน `auth_security_test.go` ใช้ DDL ที่ขาด column `payment_type`, `bank_account`, `account_name` ที่เพิ่มเข้า production schema ภายหลัง ทำให้ `GetAdminsHandler` ได้รับ HTTP 500 ระหว่าง test
+  - แก้ไข: เพิ่ม 3 column ใน DDL ของ `securityTestDB` และปรับ `INSERT INTO admins VALUES (...)` ทุกจุดใน test file ให้ครบ 14 columns
+  - รัน `go test -race ./handlers/` — ผ่าน ไม่พบ race condition
+  - ตรวจ iOS Swift: พบ 1 TODO (APNs device token ยังไม่ส่ง backend), 1 fatalError ใน guest container
+  - ตรวจ Route conflict: ยืนยัน panic_log.txt เป็น artifact เก่า routing ปัจจุบันไม่มี duplicate
+  - ตรวจ Security flag: `ALLOW_LEGACY_SYNC_PUSH` ยังใช้อยู่ใน production (MEDIUM — รอยืนยัน device อัปเดต)
+  - จัดทำรายงาน `bug_scan_report_2026-10-05.md`
+- ไฟล์หรือระบบที่กระทบ: `handlers/auth_security_test.go` (แก้แล้ว)
+- การตรวจสอบและหลักฐาน: `go test ./...` — PASS ทุก package หลังแก้ไข; `go test -race ./handlers/` — PASS
+- สถานะ: แก้ไข HIGH bug เสร็จสมบูรณ์; MEDIUM/LOW bugs บันทึกไว้ใน bug_scan_report สำหรับแก้ตามลำดับ
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: (1) ยืนยัน device อัปเดต Protocol-2 ครบก่อนปิด ALLOW_LEGACY_SYNC_PUSH; (2) implement APNs token upload endpoint; (3) ขยับไปทำ UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE (P1)

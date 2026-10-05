@@ -326,6 +326,10 @@ private struct BillRow: View {
                             .padding(.horizontal, 9)
                             .frame(height: 24)
                             .background(statusColor.opacity(0.12), in: Capsule())
+                            
+                        if payment.isDirty || payment.isDeletedLocally {
+                            SyncStatusBadge(isDirty: payment.isDirty, isDeletedLocally: payment.isDeletedLocally)
+                        }
                     }
                 }
 

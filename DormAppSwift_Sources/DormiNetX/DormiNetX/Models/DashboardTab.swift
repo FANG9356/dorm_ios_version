@@ -19,6 +19,10 @@ enum DashboardTab: String, CaseIterable, Identifiable {
     
     var id: String { self.rawValue }
     
+    var identifier: String {
+        return String(describing: self)
+    }
+    
     var icon: String {
         switch self {
         case .overview: return "square.grid.2x2.fill"

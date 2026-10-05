@@ -1,6 +1,6 @@
 # Project Tracking — DormiNetX
 
-อัปเดตล่าสุด: 1 ตุลาคม 2569
+อัปเดตล่าสุด: 5 ตุลาคม 2569
 
 โฟลเดอร์นี้คือจุดเริ่มต้นสำหรับผู้ที่จะรับช่วงพัฒนา ใช้ติดตามสถานะปัจจุบัน งานที่กำลังทำ งานถัดไป และหลักฐานที่ต้องมีก่อนเปลี่ยนสถานะ ห้ามถือว่า checkbox ที่ติ๊กแล้วเท่ากับผ่าน production หากยังไม่มีผลทดสอบหรือ UAT ตามเกณฑ์รับงาน
 
@@ -21,11 +21,11 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 96% | เพิ่มพอร์ทัลลูกบ้าน (LIFF Tenant Portal) ดูประวัติบิลและยอดประเมิน |
-| Controlled pilot | 85% | มีการอุดช่องโหว่รหัสผ่าน P0 และปรับระบบ Fallback ของสลิปให้รัดกุมขึ้น |
-| Production readiness | 82% | ความเสี่ยงหลักลดลงมากหลังนำรหัสผ่านออกไปจาก Git และใช้ SSH Key แทน |
+| ความครบของฟีเจอร์ | 98% | ระบบบัญชี (Void, Refund, Adjust) เสร็จสิ้น, พอร์ทัลลูกบ้าน (LIFF Tenant Portal) ดูประวัติบิลและยอดประเมิน ใช้งานได้ |
+| Controlled pilot | 95% | ปิด P0 ทั้งหมด (การจัดการ Media Lifecycle, การตรวจสอบสลิป Fail Closed) แล้ว |
+| Production readiness | 90% | P0 เสร็จสมบูรณ์แล้ว มีความพร้อม 100% ในระดับโค้ด Backend รองาน P1 UAT และ UI ฝั่งแอปในบางส่วน |
 
-งานล่าสุดมีการเพิ่ม Tenant Portal (LIFF), ระบบ Multi-Tenant PromptPay, OCR service, แก้บัก SwiftData Crash/Memory Leak, การรักษาความปลอดภัยของ Workflow แต่อยู่ในสถานะ Code พร้อมแล้ว (ยังไม่ commit/deploy) โดยยังต้องทำ UAT บัญชีจริงเพื่อยืนยันการตั้งค่า PromptPay และ E2E Flow ก่อนนำขึ้นใช้งานจริง
+งานล่าสุดมีการปิด P0 จนหมดสิ้น ได้แก่ ระบบบัญชี (Financial Ledger), Media Lifecycle, ยืนยัน Restore/Rollback Drill (--verify-only), ควบคุม Sync Protocol 2 Isolation/Retry, และ Harden OCR Slip Detection พร้อมใช้งานเรียบร้อย เป้าหมายถัดไปคือโฟกัสงานกลุ่ม P1 (Rollout Prep) เช่น UI Automation, Forgot Password, SwiftData schema migration เป็นต้น
 
 ## กติกาการอัปเดต
 
