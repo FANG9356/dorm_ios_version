@@ -1006,3 +1006,36 @@
   - Xcode build Simulator `iPhone 17` สำเร็จ `** BUILD SUCCEEDED **`
 - สถานะ: แก้ไขเสร็จสิ้นในฝั่ง Code พร้อมอัปเดต Activity Report 
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: รอดำเนินการ TestFlight Pilot และ UAT งานซ่อมผ่าน LINE (P1)
+
+## 2026-10-05 19:20 — จัดเอกสารสถานะให้ตรงกับการประเมินล่าสุด
+
+- คำขอ/เป้าหมาย: ปรับเอกสารที่ยังอ้างคะแนนและ assessment เก่าให้ตรงกับสถานะวันที่ 5 ตุลาคม 2569
+- สิ่งที่ดำเนินการ: สร้าง assessment ฉบับล่าสุด แยก engineering readiness ออกจาก release confidence; ปรับ tracking README, PENDING_WORK และหัวเอกสารสถานะเก่าให้ชี้มายัง source of truth ใหม่; ทำ assessment วันที่ 20 กันยายนเป็น historical
+- ไฟล์หรือระบบที่กระทบ: `project-review/DormiNetX-Assessment-2026-10-05.md`, `project-tracking/README.md`, `project-tracking/PENDING_WORK.md`, `docs/CURRENT_STATUS_2026-09-16.md`, `project-review/DormiNetX-Assessment-2026-09-20.md`, `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มีการแก้โค้ด ฐานข้อมูล หรือ production; เป็นการแก้เอกสารใน working tree เท่านั้น
+- การตรวจสอบและหลักฐาน: ใช้ WORK_STATUS, PENDING_WORK, ACTIVITY_REPORT และหลักฐาน test/deploy ที่มีอยู่; ยืนยันว่า restore ล่าสุดเป็น `--verify-only` และ maintenance E2E/TestFlight ยังรอผลจริง
+- สถานะ deploy/UAT: ไม่มี deploy หรือ UAT ใหม่; เอกสารระบุแยกชัดระหว่างปิดระดับ implementation กับผ่าน production UAT
+- ผลลัพธ์: source of truth ใหม่คือ assessment วันที่ 5 ตุลาคม โดยระบุ Feature 97%, Controlled pilot 92%, Engineering readiness 90% และ Release confidence 86%
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ต้องทำ maintenance paid/free E2E, production restore/rollback drill จริง, เพิ่ม UI test target, ยืนยัน APNs token registration และทำ TestFlight pilot ก่อนประกาศ production-ready 100%
+
+## 2026-10-05 19:25 — Reconcile สถานะ UAT และ Restore ในเอกสาร
+
+- คำขอ/เป้าหมาย: ทำให้เอกสารไม่เรียก protocol test หรือ backup verify-only ว่าเป็น field UAT/restore drill จริง
+- สิ่งที่ดำเนินการ: ปรับ `PENDING_WORK.md` ให้แยก protocol conflict isolation ออกจาก UAT สอง iPhone, แยก restore verify-only ออกจาก production restore/rollback และแยก OCR code verification ออกจาก controlled UAT; ปรับ `WORK_STATUS.md`, `CURRENT_STATUS_2026-09-16.md` และ assessment วันที่ 20 กันยายนให้ชี้ source ล่าสุด
+- ไฟล์หรือระบบที่กระทบ: `project-tracking/PENDING_WORK.md`, `project-tracking/WORK_STATUS.md`, `docs/CURRENT_STATUS_2026-09-16.md`, `project-review/DormiNetX-Assessment-2026-09-20.md`, `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี
+- การตรวจสอบและหลักฐาน: ตรวจข้อความสถานะหลังแก้และยืนยันว่า assessment วันที่ 5 ตุลาคมเป็น source of truth; ไม่มี deploy หรือ UAT ใหม่ในรอบนี้
+- สถานะ deploy/UAT: เอกสารเท่านั้น; field UAT และ production restore จริงยังคงเป็นงานค้างตามจริง
+- ผลลัพธ์: เอกสารแยก implementation readiness, automated verification และ production evidence ได้ชัดเจนขึ้น
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ห้ามขยับ release confidence จนกว่าจะมีหลักฐาน maintenance E2E, restore/rollback จริง, APNs verification และ TestFlight pilot
+
+## 2026-10-05 19:00 — ประเมินโปรเจค DormiNetX รอบล่าสุด
+
+- คำขอ/เป้าหมาย: ประเมินความพร้อมของโปรเจคใหม่หลังปิด P0 และเริ่มดำเนินงาน P1/P2
+- สิ่งที่ดำเนินการ: อ่าน `project-tracking/README.md`, `WORK_STATUS.md`, `PENDING_WORK.md`, `HANDOFF.md`, แบบประเมินวันที่ 20 กันยายน, หลักฐานใน `ACTIVITY_REPORT.md` และตรวจสถานะ branch แบบ read-only
+- ไฟล์หรือระบบที่กระทบ: ไม่มีการแก้โค้ดหรือ production; เพิ่มรายการนี้ใน `project-tracking/ACTIVITY_REPORT.md` ตามกฎ append-only
+- การเปลี่ยนข้อมูล/production: ไม่มี
+- การตรวจสอบและหลักฐาน: พบหลักฐาน backend tests/race/vet ผ่าน, secret/SSH hardening, Financial Ledger API/UI และ audit log, media cleanup, OCR fail-closed, SwiftData recovery, sync status UI, APNs/local notification groundwork และ protocol-2 hardening; restore production ยังผ่านเฉพาะ `--verify-only`; maintenance quote/bill/slip E2E และ TestFlight ยังรอผลจริง
+- สถานะ deploy/UAT: P0 ปิดในระดับโค้ด/automated verification ตาม tracking แต่ยังไม่ถือว่า production UAT ครบทุกด้าน; controlled pilot เหมาะสมเมื่อมีผู้ดูแลและ rollback พร้อม
+- ผลลัพธ์: ประเมินปัจจุบันเป็น Feature 97%, Architecture 8.8/10, Security/Data 8.5/10, Controlled pilot 9.2/10 และ Production readiness 8.6/10 (engineering readiness ประมาณ 90% แต่ release confidence ต่ำกว่าเพราะหลักฐานภาคสนามยังไม่ครบ)
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ทำ maintenance paid/free E2E, production restore/rollback drill ที่เปลี่ยนข้อมูลจริงใน maintenance window, เพิ่ม UI automation target ใน Xcode, ทำ TestFlight อย่างน้อยหนึ่งรอบบิล และยืนยัน APNs token registration/deploy production

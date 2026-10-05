@@ -1,5 +1,7 @@
 # สถานะการทำงานปัจจุบัน
 
+> คะแนนและคำตัดสินล่าสุดอยู่ใน [DormiNetX-Assessment-2026-10-05.md](../project-review/DormiNetX-Assessment-2026-10-05.md): Feature 97%, Controlled pilot 92%, Engineering readiness 90% และ Release confidence 86% ณ 5 ตุลาคม 2569
+
 อัปเดตล่าสุด: 5 ตุลาคม 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ

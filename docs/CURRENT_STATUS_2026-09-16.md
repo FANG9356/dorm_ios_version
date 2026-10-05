@@ -1,8 +1,19 @@
 # สถานะปัจจุบันของ DormiNetX
 
+> **สถานะอ้างอิงล่าสุด 5 ตุลาคม 2569:** ให้ใช้ [แบบประเมิน 5 ตุลาคม](../project-review/DormiNetX-Assessment-2026-10-05.md), [WORK_STATUS.md](../project-tracking/WORK_STATUS.md) และ [PENDING_WORK.md](../project-tracking/PENDING_WORK.md) แทนคะแนนในเอกสารฉบับนี้ ซึ่งเป็นสถานะยาวจากวันที่ 16–17 กันยายน
+
+| มิติ | สถานะล่าสุด |
+| --- | ---: |
+| ความครบของฟีเจอร์ | 97% |
+| Controlled pilot | 92% |
+| Engineering readiness | 90% |
+| Release confidence | 86% |
+
+P0 ปิดในระดับโค้ดและ automated verification แล้ว แต่ยังต้องทำ maintenance E2E, production restore/rollback drill ที่เปลี่ยนข้อมูลจริง, UI automation target, APNs verification และ TestFlight pilot ก่อนประกาศ production-ready 100%
+
 วันที่อัปเดต: 17 กันยายน 2569
 
-เอกสารนี้เป็นสรุปสถานะฉบับยาว เอกสารวันที่ 9–15 กันยายนยังเก็บไว้เป็นประวัติการพัฒนา สำหรับการรับช่วงงานให้เริ่มที่ [Project Tracking](../project-tracking/README.md) และใช้ [แบบประเมิน 17 กันยายน](../project-review/DormiNetX-Assessment-2026-09-17.md) เป็นคะแนนล่าสุด
+เอกสารนี้เป็นสรุปสถานะฉบับยาว เอกสารวันที่ 9–17 กันยายนยังเก็บไว้เป็นประวัติการพัฒนา สำหรับการรับช่วงงานให้เริ่มที่ [Project Tracking](../project-tracking/README.md) และใช้ [แบบประเมิน 5 ตุลาคม](../project-review/DormiNetX-Assessment-2026-10-05.md) เป็นคะแนนล่าสุด
 
 ## สรุปความพร้อม
 

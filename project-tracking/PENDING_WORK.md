@@ -1,20 +1,20 @@
 # รายการงานรอแก้ไข DormiNetX
 
-อัปเดตล่าสุด: 1 ตุลาคม 2569
+อัปเดตล่าสุด: 5 ตุลาคม 2569
 
-สถานะอ้างอิงปัจจุบันหลังเพิ่มระบบตรวจสลิปอัตโนมัติ: ความครบของฟีเจอร์ 94%, Controlled pilot ประมาณ 82% และ Production readiness ประมาณ 70% ตาม [แบบประเมิน 18 กันยายน](../project-review/DormiNetX-Assessment-2026-09-18.md) คะแนน readiness ลดลงเพราะพบ P0 ใหม่ ไม่ใช่เพราะฟีเจอร์เดิมถอยหลัง
+สถานะอ้างอิงปัจจุบัน: ความครบของฟีเจอร์ 97%, Controlled pilot ประมาณ 92%, Engineering readiness ประมาณ 90% และ Release confidence ประมาณ 86% ตาม [แบบประเมิน 5 ตุลาคม](../project-review/DormiNetX-Assessment-2026-10-05.md) โดย P0 ปิดในระดับโค้ดและ automated verification แล้ว แต่ restore จริงและ field UAT ยังไม่ครบ
 
-## P0 — ต้องปิดก่อน Production เต็มรูปแบบ
+## P0 — ปิดระดับโค้ด/automated verification; เหลือ field validation
 
 | ลำดับ | งาน | สถานะ | ผู้ดำเนินการ/เงื่อนไข | เกณฑ์ปิดงาน |
 | ---: | --- | --- | --- | --- |
 | 1 | หมุนและ revoke JWT, LINE, Resend/email และ secret ที่เคยอยู่ใน Git history | **เสร็จสิ้น** | นำรหัสผ่านออกจากสคริปต์, ปรับใช้ SSH Key และดำเนินการหมุนเวียน (Rotate) คีย์ JWT, LINE Token และ Resend API Key ใหม่เรียบร้อยแล้ว | secret เก่าใช้ไม่ได้, session ถูกตัดตามแผน, login/LINE/email ผ่านหลังเปลี่ยน และมีหลักฐานวันเวลา |
-| 2 | UAT สอง iPhone และสองบัญชี | **เสร็จสิ้น** | โค้ด Backend ครอบคลุมผ่าน Test `TestSyncConflictIsolationAndExactRetry` | จำลองการแก้ไขชนกันผ่าน Protocol 2 ไม่พบการทับซ้อนและข้อมูลไม่ข้ามบัญชี |
+| 2 | Protocol conflict isolation สองบัญชี | **เสร็จสิ้นระดับ protocol; field UAT รอตรวจ** | Backend test `TestSyncConflictIsolationAndExactRetry` ครอบคลุม conflict/concurrent retry; ยังไม่มีหลักฐาน UAT สอง iPhone เต็มชุด | protocol test ผ่าน และต้องมี field UAT สองเครื่อง/สองบัญชีก่อน rollout กว้าง |
 | 3 | ยืนยัน Sync Protocol 2 หลังปิด legacy push | เสร็จแล้ว | Production ปิด `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง sync/rebase ถึง snapshot v161 สำเร็จ | หลักฐานบนอุปกรณ์: รายการ LINE เข้า SwiftData, dirty 0, pending 0 และไม่มี protocol rejection ในเหตุการณ์ที่ตรวจ |
 | 4 | ปิด Media lifecycle | **เสร็จสิ้น** | เพิ่ม `RunMediaCleanup` ใน `media_cleanup.go` | ระบบมี Retention policy 24 ชม. ลบไฟล์ที่ไม่มี owner อัตโนมัติ (ผ่าน Test เรียบร้อย) |
 | 5 | ทำ Financial ledger เต็มรูปแบบ | **เสร็จสิ้น (รอทำ UI ฝั่งแอป)** | สร้าง API endpoints `Void`, `Refund`, `Adjust` สำหรับการจัดการบิล และสร้างตาราง `financial_audits` เพื่อเก็บบันทึก Audit Log เรียบร้อยแล้ว ทดสอบ backend ผ่านแล้ว | Invoice migration, refund, void, credit adjustment และ immutable actor/reason audit ผ่าน tests และ UAT |
-| 6 | Production atomic restore/rollback drill | **เสร็จสิ้น (verify-only)** | รันคำสั่ง `--verify-only` ตรวจ backup archive จริงผ่านแล้ว ได้ `verified: true` | โค้ด restore พร้อมใช้งาน รอทำ Drill เปลี่ยนข้อมูลจริงใน Maintenance Window |
-| 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | **เสร็จสิ้น** | ระบบ deploy แล้ว; fallback QR เปลี่ยนเป็น fail closed; เพิ่มการเช็คยอดเงิน, ตรวจสอบผู้รับด้วย 4 หลักท้าย, เพิ่ม health check และ atomic rollback ให้ OCR service | fail closed; ตรวจยอด ผู้รับ reference และ replay; ไม่ auto-paid เมื่อ OCR/API ล่ม; config/secret ไม่ hardcode; service ลดสิทธิ์; tests/UAT/rollback ผ่าน |
+| 6 | Production atomic restore/rollback | **เสร็จสิ้นระดับ verify-only; production drill รอตรวจ** | รันคำสั่ง `--verify-only` ตรวจ backup archive จริงผ่านแล้ว ได้ `verified: true` | ต้อง restore/health-check/rollback โดยเปลี่ยนข้อมูลจริงใน Maintenance Window |
+| 7 | Harden การตรวจสลิปอัตโนมัติและ OCR ก่อนตัดยอดจริง | **เสร็จสิ้นระดับ code/verification; controlled UAT รอตรวจ** | ระบบ deploy แล้ว; fallback QR เป็น fail closed; มีการเช็คยอด ผู้รับ health check และ OCR rollback handling | ต้องมี controlled UAT ยืนยัน amount/receiver/reference/replay และไม่ auto-paid เมื่อ OCR/API ล่ม |
 
 ## P1 — ต้องปิดก่อน Rollout วงกว้าง
 

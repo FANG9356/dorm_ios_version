@@ -13,7 +13,7 @@
 5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
 6. [DEVELOPMENT_OPERATIONS_RUNBOOK.md](../docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md) — วิธีเข้า server, ตรวจระบบ, deploy backend และ build/install แอปสำหรับ Terminal ใหม่
 7. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-8. [DormiNetX-Assessment-2026-09-20.md](../project-review/DormiNetX-Assessment-2026-09-20.md) — แบบประเมินความพร้อมล่าสุด
+8. [DormiNetX-Assessment-2026-10-05.md](../project-review/DormiNetX-Assessment-2026-10-05.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 
@@ -21,11 +21,12 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 98% | ระบบบัญชี (Void, Refund, Adjust) เสร็จสิ้น, พอร์ทัลลูกบ้าน (LIFF Tenant Portal) ดูประวัติบิลและยอดประเมิน ใช้งานได้ |
-| Controlled pilot | 95% | ปิด P0 ทั้งหมด (การจัดการ Media Lifecycle, การตรวจสอบสลิป Fail Closed) แล้ว |
-| Production readiness | 90% | P0 เสร็จสมบูรณ์แล้ว มีความพร้อม 100% ในระดับโค้ด Backend รองาน P1 UAT และ UI ฝั่งแอปในบางส่วน |
+| ความครบของฟีเจอร์ | 97% | ระบบบัญชี, LIFF Tenant Portal, OCR fail-closed, งานซ่อม และระบบแจ้งเตือนมี implementation แล้ว |
+| Controlled pilot | 92% | P0 ระดับโค้ด/automated verification ปิดแล้ว เหลือ field UAT และ TestFlight ตามเกณฑ์ |
+| Engineering readiness | 90% | Backend และโครงสร้าง release พร้อมในระดับ implementation แต่ยังไม่ใช่ production UAT ครบ |
+| Release confidence | 86% | หักจาก maintenance E2E, restore จริง, UI automation target, APNs และ TestFlight ที่ยังรอหลักฐาน |
 
-งานล่าสุดมีการปิด P0 จนหมดสิ้น ได้แก่ ระบบบัญชี (Financial Ledger), Media Lifecycle, ยืนยัน Restore/Rollback Drill (--verify-only), ควบคุม Sync Protocol 2 Isolation/Retry, และ Harden OCR Slip Detection พร้อมใช้งานเรียบร้อย เป้าหมายถัดไปคือโฟกัสงานกลุ่ม P1 (Rollout Prep) เช่น UI Automation, Forgot Password, SwiftData schema migration เป็นต้น
+งานล่าสุดปิด P0 ในระดับโค้ดและ automated verification ได้แก่ Financial Ledger, Media Lifecycle, Sync Protocol 2, OCR fail-closed และ backup verify-only; ยังต้องแยกให้ชัดว่า restore แบบ verify-only ยังไม่ใช่ restore/rollback drill ที่เปลี่ยนข้อมูลจริง เป้าหมายถัดไปคือ maintenance E2E, UI Automation, APNs verification และ TestFlight pilot
 
 ## กติกาการอัปเดต
 
