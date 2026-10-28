@@ -10,7 +10,7 @@ struct PasswordResetView: View {
     @State private var confirmation = ""
     @State private var isBusy = false
     @State private var errorMessage: String?
-    @State private var requestMessage = "หากอีเมลนี้อยู่ในระบบ คุณจะได้รับรหัสยืนยันทางอีเมล"
+    @State private var requestMessage = String(localized: "หากอีเมลนี้อยู่ในระบบ คุณจะได้รับรหัสยืนยันทางอีเมล")
     @State private var nextRequestAt = Date().addingTimeInterval(60)
 
     var body: some View {
@@ -33,7 +33,11 @@ struct PasswordResetView: View {
                         Button {
                             Task { await resend() }
                         } label: {
-                            Label(remaining > 0 ? "ขอรหัสใหม่ใน \(remaining) วินาที" : "ขอรหัสใหม่", systemImage: "arrow.clockwise")
+                            if remaining > 0 {
+                                Label("ขอรหัสใหม่ใน \(remaining) วินาที", systemImage: "arrow.clockwise")
+                            } else {
+                                Label("ขอรหัสใหม่", systemImage: "arrow.clockwise")
+                            }
                         }
                         .disabled(isBusy || remaining > 0)
                     }
@@ -43,7 +47,7 @@ struct PasswordResetView: View {
                             .foregroundStyle(.primary)
                             .padding(.top, 4)
                     }
-                    Text(requestMessage)
+                    Text(LocalizedStringKey(requestMessage))
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                         .foregroundStyle(.secondary)
                 }
@@ -55,7 +59,7 @@ struct PasswordResetView: View {
                 }
                 if let errorMessage {
                     Section {
-                        Label(errorMessage, systemImage: "exclamationmark.circle")
+                        Label(LocalizedStringKey(errorMessage), systemImage: "exclamationmark.circle")
                             .foregroundStyle(.red)
                     }
                 }
@@ -66,7 +70,7 @@ struct PasswordResetView: View {
                         HStack {
                             Spacer()
                             if isBusy { ProgressView() }
-                            Text(isBusy ? "กำลังดำเนินการ" : "บันทึกรหัสผ่านใหม่")
+                            Text(isBusy ? LocalizedStringKey("กำลังดำเนินการ") : LocalizedStringKey("บันทึกรหัสผ่านใหม่"))
                             Spacer()
                         }
                     }
@@ -98,14 +102,14 @@ struct PasswordResetView: View {
                 self.refCode = ref
             }
             nextRequestAt = Date().addingTimeInterval(60)
-            requestMessage = "ส่งคำขอรหัสใหม่แล้ว หากมีบัญชีนี้ในระบบ กรุณาตรวจสอบอีเมล"
+            requestMessage = String(localized: "ส่งคำขอรหัสใหม่แล้ว หากมีบัญชีนี้ในระบบ กรุณาตรวจสอบอีเมล")
         } catch { errorMessage = error.localizedDescription }
     }
 
     private func reset() async {
         guard !isBusy else { return }
         guard password == confirmation else {
-            errorMessage = "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน"
+            errorMessage = String(localized: "รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน")
             return
         }
         isBusy = true

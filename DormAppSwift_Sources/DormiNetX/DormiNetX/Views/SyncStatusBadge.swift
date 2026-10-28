@@ -11,7 +11,7 @@ struct SyncStatusBadge: View {
             HStack(spacing: 4) {
                 Image(systemName: iconName)
                     .font(.system(size: 10, weight: .bold))
-                Text(statusText)
+                Text(LocalizedStringKey(statusText))
                     .font(.custom("SukhumvitSet-SemiBold", size: 10))
             }
             .padding(.horizontal, 6)

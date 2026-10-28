@@ -178,7 +178,7 @@ class DashboardViewModel: ObservableObject {
             let maintenances = try modelContext.fetch(FetchDescriptor<Maintenance>())
             updateLocalData(users: users, rooms: rooms, payments: payments, maintenances: maintenances)
         } catch {
-            errorMessage = "ไม่สามารถโหลดข้อมูลจากเครื่องได้"
+            errorMessage = String(localized: "ไม่สามารถโหลดข้อมูลจากเครื่องได้")
             isLoading = false
         }
     }
@@ -194,7 +194,7 @@ class DashboardViewModel: ObservableObject {
         let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
         let currentMonth = monthKey(for: Date())
         let currentPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == currentMonth }
-        let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
+        let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
         let pending = currentPayments.filter { $0.paymentStatus != "paid" }
 
         stats = APIDashboardStats(
@@ -256,7 +256,7 @@ class DashboardViewModel: ObservableObject {
         }
         return grouped.keys.sorted().suffix(6).map { month in
             let monthPayments = grouped[month] ?? []
-            return FinancialStat(month: month, name: AppDate.thaiShortMonth(month), income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
+            return FinancialStat(month: month, name: AppDate.thaiShortMonth(month), income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
         }
     }
 
@@ -389,7 +389,7 @@ class DashboardViewModel: ObservableObject {
             
         } catch {
             print("Dashboard Fetch Error: \(error)")
-            self.errorMessage = "ไม่สามารถโหลดข้อมูลได้"
+            self.errorMessage = String(localized: "ไม่สามารถโหลดข้อมูลได้")
         }
         
         self.isLoading = false

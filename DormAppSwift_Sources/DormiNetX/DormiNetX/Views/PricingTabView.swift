@@ -167,7 +167,7 @@ struct PricingTabView: View {
             sectionHeader("ประเภทห้อง")
             if roomTypes.isEmpty || visibleRoomTypes.isEmpty {
                 GlassCard {
-                    Text(roomTypes.isEmpty ? "ยังไม่มีประเภทห้อง" : "ไม่พบประเภทห้องที่ค้นหา")
+                    Text(roomTypes.isEmpty ? LocalizedStringKey("ยังไม่มีประเภทห้อง") : LocalizedStringKey("ไม่พบประเภทห้องที่ค้นหา"))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 28)
@@ -222,12 +222,12 @@ struct PricingTabView: View {
                         Image(systemName: "door.left.hand.open")
                             .font(.custom("SukhumvitSet-Medium", size: 30))
                             .foregroundStyle(.secondary)
-                        Text(rooms.isEmpty ? "ยังไม่มีห้องพัก" : "ไม่พบห้องพักที่ค้นหา")
+                        Text(rooms.isEmpty ? LocalizedStringKey("ยังไม่มีห้องพัก") : LocalizedStringKey("ไม่พบห้องพักที่ค้นหา"))
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                             .foregroundStyle(.secondary)
                         Text(rooms.isEmpty
-                             ? (roomTypes.isEmpty ? "สร้างประเภทห้องก่อน แล้วค่อยเพิ่มเลขห้อง" : "กดปุ่ม + เพื่อเพิ่มเลขห้องและเลือกประเภท")
-                             : "ลองเปลี่ยนคำค้นหาใหม่")
+                             ? (roomTypes.isEmpty ? LocalizedStringKey("สร้างประเภทห้องก่อน แล้วค่อยเพิ่มเลขห้อง") : LocalizedStringKey("กดปุ่ม + เพื่อเพิ่มเลขห้องและเลือกประเภท"))
+                             : LocalizedStringKey("ลองเปลี่ยนคำค้นหาใหม่"))
                             .font(.custom("SukhumvitSet-Text", size: 12))
                             .foregroundStyle(.secondary)
                     }
@@ -262,7 +262,7 @@ struct PricingTabView: View {
     }
 
     private func sectionHeader(_ title: String) -> some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(.custom("SukhumvitSet-Bold", size: 17))
             .foregroundStyle(.primary)
     }
@@ -351,12 +351,12 @@ private struct PricingRoomRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ห้อง \(room.roomNumber)")
                         .font(.custom("SukhumvitSet-Bold", size: 15))
-                    Text(room.roomType)
+                    Text(LocalizedStringKey(room.roomType))
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(tenant == nil ? "ว่าง" : "มีผู้พัก")
+                Text(tenant == nil ? LocalizedStringKey("ว่าง") : LocalizedStringKey("มีผู้พัก"))
                     .font(.custom("SukhumvitSet-Bold", size: 12))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 12)
@@ -455,10 +455,10 @@ private struct PricingAddActionSheet: View {
                     .background(Circle().fill(.primary.opacity(colorScheme == .dark ? 0.08 : 0.045)))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.custom("SukhumvitSet-Bold", size: 15))
                     .foregroundStyle(.primary)
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.custom("SukhumvitSet-Text", size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -549,11 +549,11 @@ private struct RoomTypeEditor: View {
 
     private func labeledTextField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Bold", size: 13))
                 .foregroundStyle(.secondary)
 
-            TextField(placeholder, text: text)
+            TextField(LocalizedStringKey(placeholder), text: text)
                 .font(.custom("SukhumvitSet-Medium", size: 16))
                 .frame(minHeight: 44)
         }
@@ -564,10 +564,10 @@ private struct RoomTypeEditor: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.custom("SukhumvitSet-Bold", size: 13))
                         .foregroundStyle(.primary)
-                    Text(note)
+                    Text(LocalizedStringKey(note))
                         .font(.custom("SukhumvitSet-Text", size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
@@ -658,7 +658,7 @@ private struct PricingRoomEditor: View {
 
     private func priceLine(_ title: String, value: Double) -> some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
             Spacer()
             Text(value.formatted(.number.precision(.fractionLength(0))) + " ฿")
                 .fontWeight(.semibold)

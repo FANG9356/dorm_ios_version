@@ -462,9 +462,9 @@ struct RoomListView: View {
     }
 
     private func paymentMethodLabel(for user: DormUser) -> String {
-        let method = user.paymentMethod == "installment" ? "ผ่อนชำระ" : (user.paymentMethod == "full_payment" ? "ชำระเต็มจำนวน" : "รอระบุ")
-        let channel = user.paymentChannel == "cash" ? "เงินสด" : (user.paymentChannel == "bank_transfer" ? "โอนผ่านธนาคาร" : "ยังไม่ได้ระบุช่องทาง")
-        return "\(method) • \(channel)"
+        let method = user.paymentMethod == "installment" ? String(localized: "ผ่อนชำระ") : (user.paymentMethod == "full_payment" ? String(localized: "ชำระเต็มจำนวน") : String(localized: "รอระบุ"))
+        let channel = user.paymentChannel == "cash" ? String(localized: "เงินสด") : (user.paymentChannel == "bank_transfer" ? String(localized: "โอนผ่านธนาคาร") : String(localized: "ยังไม่ได้ระบุช่องทาง"))
+        return String(localized: "\(method) • \(channel)")
     }
 
     private func roomType(for user: DormUser) -> RoomType? {
@@ -650,7 +650,7 @@ struct SyncAnimationOverlay: View {
                 }
                 .frame(width: 140, height: 110)
                 
-                Text(statusText)
+                Text(LocalizedStringKey(statusText))
                     .font(.custom("SukhumvitSet-Bold", size: 16))
                     .foregroundColor(.indigo)
                     .opacity(statusOpacity)
@@ -738,7 +738,7 @@ struct GlassSummaryCard: View {
                     Text(value)
                         .font(.custom("SukhumvitSet-Bold", size: 22))
                         .foregroundColor(.primary)
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundColor(.secondary)
                 }
@@ -846,7 +846,7 @@ struct SidebarMenu: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(displayName)
+                            Text(LocalizedStringKey(displayName))
                                 .font(.custom("SukhumvitSet-Bold", size: 14))
                                 .foregroundColor(.primary)
                                 .lineLimit(1)

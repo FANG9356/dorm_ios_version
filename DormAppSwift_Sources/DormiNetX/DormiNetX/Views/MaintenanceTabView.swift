@@ -234,7 +234,7 @@ private struct MaintenanceRow: View {
                         }
                         Spacer()
                         HStack(spacing: 7) {
-                            Text(status)
+                            Text(LocalizedStringKey(status))
                                 .font(.custom("SukhumvitSet-Medium", size: 12))
                                 .lineLimit(1)
                             Image(systemName: "chevron.right")
@@ -255,7 +255,7 @@ private struct MaintenanceRow: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(.red)
-                                Text(status == "ปฏิเสธค่าใช้จ่าย" ? "ลูกบ้านปฏิเสธใบเสนอราคา" : "ยกเลิกรายการ")
+                                Text(status == "ปฏิเสธค่าใช้จ่าย" ? LocalizedStringKey("ลูกบ้านปฏิเสธใบเสนอราคา") : LocalizedStringKey("ยกเลิกรายการ"))
                                     .font(.custom("SukhumvitSet-Medium", size: 14))
                                     .foregroundStyle(.red)
                             }
@@ -783,7 +783,7 @@ private struct MaintenanceEditor: View {
                     .foregroundStyle(.primary.opacity(0.7))
                     .frame(width: 36, height: 36)
                     .background(Color.primary.opacity(0.06), in: Circle())
-                Text(paymentMethodTitle)
+                Text(LocalizedStringKey(paymentMethodTitle))
                     .font(.custom("SukhumvitSet-Medium", size: 15))
                     .foregroundColor(.primary)
                 Spacer()
@@ -846,7 +846,7 @@ private struct MaintenanceEditorCard<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label(title, systemImage: systemImage)
+            Label(LocalizedStringKey(title), systemImage: systemImage)
                 .font(.custom("SukhumvitSet-Bold", size: 16))
                 .foregroundStyle(.primary)
                 .symbolRenderingMode(.hierarchical)
@@ -871,11 +871,11 @@ private struct MaintenanceEvidenceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Medium", size: 15))
 
             if paths.isEmpty {
-                Label(emptyText, systemImage: "photo")
+                Label(LocalizedStringKey(emptyText), systemImage: "photo")
                     .font(.custom("SukhumvitSet-Text", size: 14))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
@@ -966,7 +966,7 @@ private struct MaintenanceImageViewer: View {
                         }
                     }
             }
-            .navigationTitle(item.title)
+            .navigationTitle(LocalizedStringKey(item.title))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbarBackground(.black, for: .navigationBar)

@@ -141,7 +141,7 @@ private struct RoomManagementRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ห้อง \(room.roomNumber)")
                         .font(.custom("SukhumvitSet-Bold", size: 15))
-                    Text(room.roomType.isEmpty ? "ยังไม่ระบุประเภท" : room.roomType)
+                    Text(room.roomType.isEmpty ? LocalizedStringKey("ยังไม่ระบุประเภท") : LocalizedStringKey(room.roomType))
                         .font(.custom("SukhumvitSet-Text", size: 11))
                         .foregroundStyle(.secondary)
                     if let tenant {
@@ -155,7 +155,7 @@ private struct RoomManagementRow: View {
                     Circle()
                         .fill(tenant == nil ? Color.green : Color.orange)
                         .frame(width: 7, height: 7)
-                    Text(tenant == nil ? "ว่าง" : "มีผู้พัก")
+                    Text(tenant == nil ? LocalizedStringKey("ว่าง") : LocalizedStringKey("มีผู้พัก"))
                         .font(.custom("SukhumvitSet-Bold", size: 12))
                 }
                 .foregroundStyle(.secondary)
@@ -202,7 +202,7 @@ private struct MoveTenantRoomSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
+                if let errorMessage { Text(LocalizedStringKey(errorMessage)).foregroundStyle(.red) }
                 Section("ลูกบ้าน") {
                     Text("\(tenant.firstName) \(tenant.lastName)")
                     Text("ห้องปัจจุบัน \(tenant.roomNumber)")

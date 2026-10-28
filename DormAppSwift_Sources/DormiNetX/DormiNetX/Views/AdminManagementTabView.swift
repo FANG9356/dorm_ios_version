@@ -129,7 +129,7 @@ struct AdminManagementTabView: View {
         .alert("เกิดข้อผิดพลาด", isPresented: $showErrorAlert) {
             Button("ตกลง", role: .cancel) { }
         } message: {
-            Text(errorMessage)
+            Text(LocalizedStringKey(errorMessage))
         }
         .onAppear {
             Task {
@@ -162,7 +162,7 @@ struct AdminManagementTabView: View {
                 admins = fetchedAdmins
             }
         } catch {
-            errorMessage = "ไม่สามารถดึงข้อมูลได้: \(error.localizedDescription)"
+            errorMessage = String(localized: "ไม่สามารถดึงข้อมูลได้: \(error.localizedDescription)")
             showErrorAlert = true
         }
         isLoading = false
@@ -175,11 +175,11 @@ struct AdminManagementTabView: View {
                 if success {
                     await loadAdmins(showLoadingSpinner: true)
                 } else {
-                    errorMessage = "ลบข้อมูลไม่สำเร็จ"
+                    errorMessage = String(localized: "ลบข้อมูลไม่สำเร็จ")
                     showErrorAlert = true
                 }
             } catch {
-                errorMessage = "เกิดข้อผิดพลาดในการลบ: \(error.localizedDescription)"
+                errorMessage = String(localized: "เกิดข้อผิดพลาดในการลบ: \(error.localizedDescription)")
                 showErrorAlert = true
             }
         }
@@ -347,7 +347,7 @@ struct AddAdminSheet: View {
             onSuccess()
             isPresented = false
         } catch {
-            errorMessage = "เกิดข้อผิดพลาด: \(error.localizedDescription)"
+            errorMessage = String(localized: "เกิดข้อผิดพลาด: \(error.localizedDescription)")
         }
         
         isLoading = false
@@ -442,7 +442,7 @@ struct EditAdminSheet: View {
                 
                 if let errorMessage = errorMessage {
                     Section {
-                        Text(errorMessage)
+                        Text(LocalizedStringKey(errorMessage))
                             .foregroundColor(.red)
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                     }
@@ -503,10 +503,10 @@ struct EditAdminSheet: View {
                 onSuccess()
                 dismiss()
             } else {
-                errorMessage = "การแก้ไขข้อมูลล้มเหลว"
+                errorMessage = String(localized: "การแก้ไขข้อมูลล้มเหลว")
             }
         } catch {
-            errorMessage = "เกิดข้อผิดพลาด: \(error.localizedDescription)"
+            errorMessage = String(localized: "เกิดข้อผิดพลาด: \(error.localizedDescription)")
         }
         
         isLoading = false

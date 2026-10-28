@@ -14,7 +14,7 @@ struct TransfersTabView: View {
 
     private var rooms: [Room] { allRooms.filter { !$0.isDeletedLocally } }
     private var paymentsWithEvidence: [Payment] {
-        payments.filter { !$0.isDeletedLocally && (!$0.slipPath.isEmpty || !$0.slipPathArray.isEmpty) }
+        payments.filter { !$0.isDeletedLocally && (!$0.slipPath.isEmpty || !($0.slipPathArray ?? []).isEmpty) }
     }
 
     private var visiblePayments: [Payment] {
@@ -22,7 +22,7 @@ struct TransfersTabView: View {
         guard !query.isEmpty else { return paymentsWithEvidence }
         return paymentsWithEvidence.filter { payment in
             let user = userFor(payment)
-            let status = payment.paymentStatus == "paid" ? "ตรวจแล้ว อนุมัติ" : "รอตรวจ"
+            let status = payment.paymentStatus == "paid" ? String(localized: "ตรวจแล้ว อนุมัติ") : String(localized: "รอตรวจ")
             let searchable = [
                 payment.roomNumber,
                 user.map { "\($0.prefix)\($0.firstName) \($0.lastName)" } ?? "",
@@ -149,7 +149,7 @@ struct TransfersTabView: View {
     private func reject(_ payment: Payment) {
         do {
             guard try PaymentLedger.recordedTotal(for: payment.id, in: modelContext) == 0 else {
-                ledgerErrorMessage = "รายการนี้รับเงินและออกใบเสร็จแล้ว ต้องใช้ขั้นตอนคืนเงินหรือปรับยอดแทนการปฏิเสธสลิป"
+                ledgerErrorMessage = String(localized: "รายการนี้รับเงินและออกใบเสร็จแล้ว ต้องใช้ขั้นตอนคืนเงินหรือปรับยอดแทนการปฏิเสธสลิป")
                 return
             }
         } catch {
@@ -248,7 +248,7 @@ private struct TransferEvidenceRow: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text(evidenceLabel)
+                    Text(LocalizedStringKey(evidenceLabel))
                         .font(.custom("SukhumvitSet-Text", size: 10))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -267,12 +267,12 @@ private struct TransferEvidenceRow: View {
     }
 
     private var evidenceLabel: String {
-        if !slipImages.isEmpty { return "มีรูปสลิปแนบ \(slipImages.count) รูป" }
+        if !slipImages.isEmpty { return String(localized: "มีรูปสลิปแนบ \(slipImages.count) รูป") }
         if !payment.slipPath.isEmpty { return payment.slipPath }
-        return "\(payment.slipPathArray.count) ไฟล์"
+        return String(localized: "\((payment.slipPathArray ?? []).count) ไฟล์")
     }
 
-    private func evidenceAction(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func evidenceAction(_ title: LocalizedStringKey, icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
                 .font(.custom("SukhumvitSet-Bold", size: 11))
@@ -286,7 +286,7 @@ private struct TransferEvidenceRow: View {
     }
 
     private var slipImages: [UIImage] {
-        var paths = payment.slipPathArray
+        var paths = (payment.slipPathArray ?? [])
         if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
             paths.insert(payment.slipPath, at: 0)
         }

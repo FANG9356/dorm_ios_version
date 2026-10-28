@@ -1,10 +1,10 @@
 # DormiNetX
 
 DormiNetX เป็นระบบจัดการหอพักแบบ local-first สำหรับ iPhone/iPad พร้อม Go backend สำหรับบัญชีผู้ดูแลและการซิงก์ข้อมูลระหว่างเครื่อง ระบบครอบคลุมงานห้องพัก ลูกบ้าน ราคา บิล การรับชำระ หลักฐานการโอน งานซ่อม ผู้ดูแล สำรองข้อมูล และการปรับแต่งแอป
+ 
+> สถานะ ณ 28 ตุลาคม 2569: backend hardening, Financial Ledger API & UI, Multi-Tenant PromptPay, LINE/LIFF Tenant Portal, Localization 100% (TH/EN), UI Automation Target integration (`DormiNetXUITests`), Maintenance E2E Automated Integration Tests, sync self-healing/rebase, production backup, protocol-2 cutover, คิว retry, ปิด Concurrency Data Race ใน Go Backend และอุดช่องโหว่รหัสผ่าน P0 ด้วย SSH Key แล้ว ประเมินความครบของฟีเจอร์ **98%**, controlled pilot **94%**, engineering readiness **93%** และ release confidence **88%** พร้อมสำหรับการทดสอบนำร่อง TestFlight รอบบิลแรก
 
-> สถานะ ณ 20 กันยายน 2569: backend hardening, LINE/LIFF Tenant Portal, LINE → app snapshot/media sync, sync self-healing/rebase, production backup, protocol-2 cutover, คิว retry, อุดช่องโหว่รหัสผ่าน P0 ด้วย SSH Key และแก้ Memory Leak แล้ว ประเมินความครบของฟีเจอร์ **96%**, controlled pilot **85%** และ production readiness **82%** (เพิ่มขึ้นจากการปิดช่องโหว่รหัสผ่านและการเพิ่ม Tenant Portal) ยังไม่ใช่ production-ready 100% จนกว่าจะหมุนเวียน (Rotate) Secret ที่เหลือ และทดสอบ UAT ข้ามเครื่องอย่างสมบูรณ์
-
-เริ่มรับช่วงงานจาก [Project Tracking](project-tracking/README.md) ซึ่งรวม [วิสัยทัศน์](project-tracking/PROJECT_VISION.md), [สถานะปัจจุบัน](project-tracking/WORK_STATUS.md), [งานค้าง](project-tracking/PENDING_WORK.md), [คู่มือส่งต่อ](project-tracking/HANDOFF.md) และ [แบบประเมินล่าสุด](project-review/DormiNetX-Assessment-2026-09-17.md) ส่วน [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) เป็น baseline เดิม ไม่ใช่สถานะปัจจุบัน
+เริ่มรับช่วงงานจาก [Project Tracking](project-tracking/README.md) ซึ่งรวม [วิสัยทัศน์](project-tracking/PROJECT_VISION.md), [สถานะปัจจุบัน](project-tracking/WORK_STATUS.md), [งานค้าง](project-tracking/PENDING_WORK.md), [คู่มือส่งต่อ](project-tracking/HANDOFF.md) และ [แบบประเมินล่าสุด](project-review/DormiNetX-Assessment-2026-10-05.md) ส่วน [SYSTEM_READINESS_2026-09-09.md](docs/SYSTEM_READINESS_2026-09-09.md) เป็น baseline เดิม ไม่ใช่สถานะปัจจุบัน
 
 ## จุดประสงค์ของระบบ
 

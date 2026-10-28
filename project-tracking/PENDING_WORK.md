@@ -20,18 +20,18 @@
 
 | งาน | สถานะ | เกณฑ์ปิดงาน |
 | --- | --- | --- |
-| UI automation: login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup | รอตรวจ | ชุดทดสอบรันซ้ำได้ใน CI และครอบคลุม happy/error paths สำคัญ (เตรียมไฟล์ให้แล้ว รอผู้ใช้เพิ่ม Target) |
+| UI automation: login, tenant lifecycle, billing, partial/full payment, receipt, room move, maintenance และ backup | **ผูก Target ใน Xcode แล้ว (Build-for-testing ผ่าน)** | ผูก Target `DormiNetXUITests` ใน `project.pbxproj` และ Scheme เรียบร้อย คอมไพล์ test bundle ผ่านแล้ว; เตรียมต่อกับ CI / Device Runner |
 | Forgot-password บน staging และ concurrency หลาย instance | **เสร็จสิ้น** | email จริงส่งถึง, OTP ใช้ครั้งเดียว, rate limit/expiry/concurrency ถูกต้อง |
 | SwiftData schema migration/recovery และกรณีพื้นที่ไม่พอ | **เสร็จสิ้น** | อัปเกรด schema และ disk-full ไม่ทำลายข้อมูลเดิม พร้อม recovery UI |
 | ทำ error/offline/sync state ให้สม่ำเสมอทุกหน้า | **เสร็จสิ้น** | ไม่มี silent failure และผู้ใช้เข้าใจว่ารายการอยู่ในเครื่อง, กำลังซิงก์ หรือส่งไม่สำเร็จ |
 | Monitoring, alert, backup retention, incident runbook และ release rollback checklist | **เสร็จสิ้น** | มี metric/log/alert และขั้นตอนตอบสนองที่ทดสอบได้ |
 | ยืนยัน deployment target `iOS 26.2` | **เสร็จสิ้น** | ตรงกับอุปกรณ์เป้าหมาย หรือปรับลดแล้วผ่าน compatibility test |
-| UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE | รอตรวจ | paid flow ผ่าน quote approve/reject, re-quote, repair, bill, slip และ app sync; free flow ไม่ส่ง quote/bill; stale/unauthorized action ถูกปฏิเสธ |
+| UAT งานซ่อมแบบมี/ไม่มีค่าใช้จ่ายผ่าน LINE | **Automated E2E ผ่าน 100% (รอ Field UAT บนเครื่องจริง)** | Automated E2E ใน `maintenance_e2e_integration_test.go` ครอบคลุมครบ 6 ด้าน (Paid Flow, Quote Rejection, Free Flow, Security Authorization, Idempotency, Slip Replay Protection); เหลือทดสอบ Field UAT จริง |
 
 ## P2 — หลัง Controlled Pilot
 
 - [x] APNs และ local notifications พร้อม permission onboarding
-- [x] Localization จริงด้วย String Catalog (สร้างไฟล์ Localizable.xcstrings แล้ว รอเพิ่มเข้า Xcode)
+- [x] Localization จริงด้วย String Catalog (ครอบตัวแปร UI ด้วย LocalizedStringKey และสคริปต์ดึงคำแปลอังกฤษอัตโนมัติ 100% แล้ว)
 - [x] VoiceOver, Dynamic Type, contrast, touch target, iPad และ landscape audit (ทำเอกสาร audit แล้ว)
 - [x] Performance/memory/thermal soak สำหรับรูปใหญ่ วิดีโอ ใบเสร็จ และ snapshot ขนาดใหญ่ (จัดทำแผนทดสอบแล้ว)
 - [ ] TestFlight pilot อย่างน้อยหนึ่งรอบบิลเต็ม (รอผลลัพธ์จากรอบบิลถัดไป)

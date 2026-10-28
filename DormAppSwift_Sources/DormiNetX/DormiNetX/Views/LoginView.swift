@@ -66,7 +66,7 @@ struct LoginView: View {
                                 .blur(radius: isSignUpMode || isForgotPasswordMode ? 5 : 0)
 
                             HStack(spacing: 8) {
-                                Text(isForgotPasswordMode ? "รีเซ็ตรหัสผ่าน" : "สร้างบัญชี")
+                                Text(isForgotPasswordMode ? LocalizedStringKey("รีเซ็ตรหัสผ่าน") : LocalizedStringKey("สร้างบัญชี"))
                                 if !isForgotPasswordMode {
                                     Image(systemName: "sparkles")
                                         .font(.custom("SukhumvitSet-Bold", size: 28))
@@ -218,7 +218,7 @@ struct LoginView: View {
                                 ))
                             }
                             if let errorMessage = errorMessage {
-                                Text(errorMessage)
+                                Text(LocalizedStringKey(errorMessage))
                                     .accessibilityIdentifier("LoginErrorText")
                                     .foregroundColor(.red)
                                     .font(.custom("SukhumvitSet-Text", size: 12))
@@ -261,7 +261,7 @@ struct LoginView: View {
                                         ProgressView()
                                             .progressViewStyle(CircularProgressViewStyle(tint: colorScheme == .dark ? .white : .indigo))
                                     } else {
-                                        Text(isForgotPasswordMode ? "ส่งคำขอรีเซ็ตรหัสผ่าน" : (isSignUpMode ? "สมัครบัญชี" : "เข้าสู่ระบบ"))
+                                        Text(isForgotPasswordMode ? LocalizedStringKey("ส่งคำขอรีเซ็ตรหัสผ่าน") : (isSignUpMode ? LocalizedStringKey("สมัครบัญชี") : LocalizedStringKey("เข้าสู่ระบบ")))
                                             .font(.custom("SukhumvitSet-Bold", size: 17))
                                             .id(isForgotPasswordMode ? "forgot" : (isSignUpMode ? "signup" : "login"))
                                             .transition(.asymmetric(
@@ -300,7 +300,7 @@ struct LoginView: View {
                                 }
                             }
                         }) {
-                            Text(isForgotPasswordMode ? "กลับไปเข้าสู่ระบบ" : (isSignUpMode ? "มีบัญชีอยู่แล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครบัญชี"))
+                            Text(isForgotPasswordMode ? LocalizedStringKey("กลับไปเข้าสู่ระบบ") : (isSignUpMode ? LocalizedStringKey("มีบัญชีอยู่แล้ว? เข้าสู่ระบบ") : LocalizedStringKey("ยังไม่มีบัญชี? สมัครบัญชี")))
                                 .font(.custom("SukhumvitSet-Text", size: 15))
                                 .foregroundColor(.indigo)
                                 .id(isSignUpMode)
@@ -826,7 +826,7 @@ struct LoginView: View {
             }
         } else {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                passcodeError = "รหัสยืนยัน 6 หลักไม่ถูกต้อง"
+                passcodeError = String(localized: "รหัสยืนยัน 6 หลักไม่ถูกต้อง")
                 passcodeInput = ""
             }
         }

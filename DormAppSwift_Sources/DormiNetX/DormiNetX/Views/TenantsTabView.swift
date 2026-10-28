@@ -310,7 +310,7 @@ struct LoupeFilterTabs: View {
                         let count = getCount(for: tabData.0)
                         
                         HStack(spacing: 4) {
-                            Text(LocalizedStringKey(tabData.1))
+                            Text(tabData.1)
                                 .font(.custom("SukhumvitSet-Bold", size: 14))
                                 .lineLimit(1)
                             Text("\(count)")
@@ -486,7 +486,7 @@ struct PremiumTenantCard: View {
                     }
 
                     if user.status == "จอง" {
-                        Text(bookingSummary)
+                        Text(LocalizedStringKey(bookingSummary))
                             .font(.custom("SukhumvitSet-Text", size: 11))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
@@ -707,6 +707,7 @@ struct TenantDetailSheet: View {
                 }
             }
             .background(Color("AppBackground").ignoresSafeArea())
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("รายละเอียดลูกบ้าน")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -942,14 +943,10 @@ struct TenantFormSheet: View {
                 }
                 
                 Section(header: Text("ข้อมูลสัญญา")) {
-                    DatePicker(status == "จอง" ? "วันที่คาดว่าจะเข้าอยู่" : "วันเข้าอยู่", selection: $moveInDate, displayedComponents: .date)
-                        .environment(\.locale, Locale(identifier: "th_TH"))
-                        .environment(\.calendar, Calendar(identifier: .buddhist))
+                    DatePicker(status == "จอง" ? LocalizedStringKey("วันที่คาดว่าจะเข้าอยู่") : LocalizedStringKey("วันเข้าอยู่"), selection: $moveInDate, displayedComponents: .date)
 
                     if status == "จอง" {
                         DatePicker("หมดเขตจอง", selection: $bookingEndDate, displayedComponents: .date)
-                            .environment(\.locale, Locale(identifier: "th_TH"))
-                            .environment(\.calendar, Calendar(identifier: .buddhist))
                     }
                     
                     if status != "จอง" {
@@ -957,8 +954,6 @@ struct TenantFormSheet: View {
                         
                         if !indefiniteContract {
                             DatePicker("วันหมดสัญญา", selection: $contractEndDate, displayedComponents: .date)
-                                .environment(\.locale, Locale(identifier: "th_TH"))
-                                .environment(\.calendar, Calendar(identifier: .buddhist))
                         }
 
                         LabeledContent("เงินมัดจำ") {
@@ -1042,7 +1037,7 @@ struct TenantFormSheet: View {
                             if isSubmitting {
                                 ProgressView()
                             } else {
-                                Text(isEditing ? "บันทึกการแก้ไข" : "เพิ่มลูกบ้าน")
+                                Text(isEditing ? LocalizedStringKey("บันทึกการแก้ไข") : LocalizedStringKey("เพิ่มลูกบ้าน"))
                                     .font(.custom("SukhumvitSet-Bold", size: 16))
                             }
                             Spacer()
@@ -1052,9 +1047,7 @@ struct TenantFormSheet: View {
                 }
             }
             .scrollDismissesKeyboard(.interactively)
-            .environment(\.locale, Locale(identifier: "th_TH"))
-            .environment(\.calendar, Calendar(identifier: .buddhist))
-            .navigationTitle(isEditing ? "แก้ไขลูกบ้าน" : "เพิ่มลูกบ้านใหม่")
+            .navigationTitle(isEditing ? LocalizedStringKey("แก้ไขลูกบ้าน") : LocalizedStringKey("เพิ่มลูกบ้านใหม่"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -1187,7 +1180,7 @@ struct TenantFormSheet: View {
 
     private func summaryLine(_ title: String, amount: Double, emphasized: Bool = false) -> some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom(emphasized ? "SukhumvitSet-Bold" : "SukhumvitSet-Text", size: emphasized ? 14 : 13))
                 .foregroundStyle(emphasized ? .primary : .secondary)
             Spacer()
@@ -1357,7 +1350,7 @@ struct TenantFormSheet: View {
                             .font(.custom("SukhumvitSet-Bold", size: 17))
                     }
 
-                    Text(bookingSlipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
+                    Text(bookingSlipPaths.isEmpty ? LocalizedStringKey("เพิ่มรูปสลิป") : LocalizedStringKey("เพิ่มรูปสลิปอีก"))
                         .font(.custom("SukhumvitSet-Bold", size: 15))
 
                     Spacer()
@@ -1640,7 +1633,7 @@ struct TenantFormSheet: View {
             payment.amount = installmentAmount
             payment.method = "ผ่อนชำระ งวด \(phase)/\(months) • \(channelText)"
             payment.slipPath = phase == 1 ? (user.bookingSlips.first ?? payment.slipPath) : payment.slipPath
-            payment.slipPathArray = phase == 1 ? user.bookingSlips : payment.slipPathArray
+            payment.slipPathArray = phase == 1 ? user.bookingSlips : (payment.slipPathArray ?? [])
             payment.paymentPlan = "installment"
             payment.installmentPhase = phase
             payment.paymentStatus = phase == 1 ? firstInstallmentStatus(for: user, amount: installmentAmount) : "pending"
@@ -1773,7 +1766,7 @@ struct DetailSection<Content: View>: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Bold", size: 15))
                 .foregroundColor(.primary)
             
@@ -1820,10 +1813,10 @@ struct DetailRow: View {
                 .background(Circle().fill(iconFillColor))
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
+                Text(LocalizedStringKey(label))
                     .font(.custom("SukhumvitSet-Text", size: 12))
                     .foregroundColor(.secondary)
-                Text(value)
+                Text(LocalizedStringKey(value))
                     .font(.custom("SukhumvitSet-Bold", size: 14))
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1862,10 +1855,10 @@ private struct PaymentMethodOptionRow: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Bold", size: 14))
                     .foregroundStyle(.primary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.custom("SukhumvitSet-Text", size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -1936,11 +1929,11 @@ struct FormFieldRow: View {
     
     var body: some View {
         HStack {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.custom("SukhumvitSet-Medium", size: 15))
                 .foregroundColor(.primary)
                 .frame(width: 105, alignment: .leading)
-            TextField(placeholder, text: $text)
+            TextField(LocalizedStringKey(placeholder), text: $text)
                 .font(.custom("SukhumvitSet-Text", size: 15))
                 .keyboardType(keyboard)
         }

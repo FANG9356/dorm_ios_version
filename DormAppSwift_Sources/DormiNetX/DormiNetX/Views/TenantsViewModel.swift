@@ -103,7 +103,7 @@ class TenantsViewModel: ObservableObject {
                     return apiUser
                 }
             } catch {
-                self.errorMessage = "ไม่สามารถโหลดข้อมูลลูกบ้านในเครื่องได้"
+                self.errorMessage = String(localized: "ไม่สามารถโหลดข้อมูลลูกบ้านในเครื่องได้")
             }
             isLoading = false
             return
@@ -114,7 +114,7 @@ class TenantsViewModel: ObservableObject {
             self.users = decoded
         } catch {
             print("TenantsViewModel fetch error: \(error)")
-            self.errorMessage = "ไม่สามารถโหลดข้อมูลลูกบ้านได้"
+            self.errorMessage = String(localized: "ไม่สามารถโหลดข้อมูลลูกบ้านได้")
         }
         isLoading = false
     }

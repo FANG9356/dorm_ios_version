@@ -4,7 +4,7 @@ import SwiftUI
 struct ManagementSearchField: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var text: String
-    let placeholder: String
+    let placeholder: LocalizedStringKey
 
     var body: some View {
         HStack(spacing: 8) {

@@ -110,10 +110,10 @@ fileprivate struct InfoRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Bold", size: 16))
                     .foregroundColor(.primary)
-                Text(subtitle)
+                Text(LocalizedStringKey(subtitle))
                     .font(.custom("SukhumvitSet-Text", size: 14))
                     .foregroundColor(.secondary)
             }

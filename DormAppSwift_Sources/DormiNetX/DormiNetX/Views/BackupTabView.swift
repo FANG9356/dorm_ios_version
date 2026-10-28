@@ -433,10 +433,10 @@ private struct BackupSectionHeader: View {
                     .font(.custom("SukhumvitSet-Bold", size: 18))
                     .foregroundStyle(.secondary)
                     .frame(width: 28, height: 28)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Bold", size: 17))
             }
-            Text(subtitle)
+            Text(LocalizedStringKey(subtitle))
                 .font(.custom("SukhumvitSet-Text", size: 12))
                 .foregroundStyle(.secondary)
         }
@@ -483,7 +483,7 @@ private struct BackupMetricView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("\(value)")
                     .font(.custom("SukhumvitSet-Bold", size: 18))
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Text", size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -512,7 +512,7 @@ private struct BackupActionButton: View {
                         .font(.custom("SukhumvitSet-Bold", size: 15))
                         .foregroundStyle(tint)
                 }
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Bold", size: 13))
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -598,7 +598,7 @@ private struct LocalBackupRow: View {
     private func rowButtonLabel(_ title: String, icon: String, tint: Color) -> some View {
         HStack(spacing: 5) {
             Image(systemName: icon)
-            Text(title)
+            Text(LocalizedStringKey(title))
         }
         .font(.custom("SukhumvitSet-Bold", size: 11))
         .foregroundStyle(tint)

@@ -276,13 +276,13 @@ class SyncManager: ObservableObject {
             isSyncing = false
             operation = .idle
             if case .completed = state {
-                message = "บันทึกขึ้น cloud แล้ว"
+                message = String(localized: "บันทึกขึ้น cloud แล้ว")
             }
         }
         
         do {
             state = .preparing
-            message = "กำลังบันทึกขึ้น cloud"
+            message = String(localized: "กำลังบันทึกขึ้น cloud")
 
             let startingAccount = accountID
             repeat {
@@ -294,7 +294,7 @@ class SyncManager: ObservableObject {
                     // rebase the dirty records instead of leaving the user on a
                     // conflict screen where the new LINE record never appears.
                     state = .downloading
-                    message = "กำลังรวมข้อมูลใหม่จาก LINE กับข้อมูลในเครื่อง"
+                    message = String(localized: "กำลังรวมข้อมูลใหม่จาก LINE กับข้อมูลในเครื่อง")
                     print("ℹ️ Sync conflict detected; rebasing pending local records")
                     try await fetchAndApplyLatestSnapshot(
                         modelContext: modelContext,
@@ -333,7 +333,7 @@ class SyncManager: ObservableObject {
             }
 
             state = .downloading
-            message = "กำลังดึงข้อมูลล่าสุด"
+            message = String(localized: "กำลังดึงข้อมูลล่าสุด")
             try await fetchAndApplyLatestSnapshot(modelContext: modelContext, onlyIfRecent: false, silentWhenUnchanged: false)
             lastSyncTime = Date()
             state = .completed
@@ -346,7 +346,7 @@ class SyncManager: ObservableObject {
         isSyncing = false
         operation = .idle
         if case .completed = state, message.isEmpty {
-            message = "ดึงข้อมูลล่าสุดแล้ว"
+            message = String(localized: "ดึงข้อมูลล่าสุดแล้ว")
         }
         // A save can occur while a pull is awaiting the network. The save
         // marks the checkpoint pending, but its immediate push returns because
@@ -412,7 +412,7 @@ class SyncManager: ObservableObject {
             checkpoint.version = version
             lastSyncTime = Date()
             state = .completed
-            message = "ใช้ข้อมูลล่าสุดแล้ว และเก็บข้อมูลเดิมเป็นไฟล์สำรองไว้แล้ว"
+            message = String(localized: "ใช้ข้อมูลล่าสุดแล้ว และเก็บข้อมูลเดิมเป็นไฟล์สำรองไว้แล้ว")
         } catch {
             state = .failed(error.localizedDescription)
             message = error.localizedDescription
@@ -453,7 +453,7 @@ class SyncManager: ObservableObject {
         checkpoint.markChanged()
         lastSyncTime = Date()
         state = .completed
-        message = "กู้คืนข้อมูลในเครื่องเรียบร้อยแล้ว"
+        message = String(localized: "กู้คืนข้อมูลในเครื่องเรียบร้อยแล้ว")
     }
 
     private func hasDirtyLocalChanges() -> Bool {
@@ -463,33 +463,33 @@ class SyncManager: ObservableObject {
     @MainActor
     private func hasDirtyRecords(_ context: ModelContext) -> Bool {
         do {
-            let pRoomDirty = #Predicate<Room> { $0.isDirty }
+            let pRoomDirty = #Predicate<Room> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pRoomDirty)) > 0 { return true }
-            let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally }
+            let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally == true }
             if try context.fetchCount(FetchDescriptor(predicate: pRoomDeleted)) > 0 { return true }
             
-            let pUserDirty = #Predicate<DormUser> { $0.isDirty }
+            let pUserDirty = #Predicate<DormUser> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pUserDirty)) > 0 { return true }
-            let pUserDeleted = #Predicate<DormUser> { $0.isDeletedLocally }
+            let pUserDeleted = #Predicate<DormUser> { $0.isDeletedLocally == true }
             if try context.fetchCount(FetchDescriptor(predicate: pUserDeleted)) > 0 { return true }
             
-            let pPaymentDirty = #Predicate<Payment> { $0.isDirty }
+            let pPaymentDirty = #Predicate<Payment> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pPaymentDirty)) > 0 { return true }
-            let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally }
+            let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally == true }
             if try context.fetchCount(FetchDescriptor(predicate: pPaymentDeleted)) > 0 { return true }
             
-            let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty }
+            let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pTransaction)) > 0 { return true }
             
-            let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty }
+            let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pReceipt)) > 0 { return true }
             
-            let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty }
+            let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDirty)) > 0 { return true }
-            let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally }
+            let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally == true }
             if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDeleted)) > 0 { return true }
             
-            let pRoomType = #Predicate<RoomType> { $0.isDirty }
+            let pRoomType = #Predicate<RoomType> { $0.isDirty == true }
             if try context.fetchCount(FetchDescriptor(predicate: pRoomType)) > 0 { return true }
             
             return false
@@ -555,7 +555,7 @@ class SyncManager: ObservableObject {
                 TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, bookingEndDate: $0.bookingEndDate, paymentMethod: $0.paymentMethod, paymentChannel: $0.paymentChannel, installmentMonths: $0.installmentMonths, installmentAmount: $0.installmentAmount, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
             },
             payments: try modelContext.fetch(FetchDescriptor<Payment>(predicate: #Predicate { $0.isDeletedLocally == false })).map {
-                PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: $0.slipPathArray, paidAmount: $0.paidAmount, lastUpdated: $0.lastUpdated, depositFee: $0.depositFee)
+                PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: ($0.slipPathArray ?? []), paidAmount: ($0.paidAmount ?? 0.0), lastUpdated: $0.lastUpdated, depositFee: $0.depositFee)
             },
             paymentTransactions: try modelContext.fetch(FetchDescriptor<PaymentTransaction>()).map {
                 PaymentTransactionSnapshot(id: $0.id, paymentID: $0.paymentID, amount: $0.amount, occurredAt: $0.occurredAt, method: $0.method, kind: $0.kind, note: $0.note, slipPaths: $0.slipPaths, source: $0.source, lastUpdated: $0.lastUpdated)
@@ -645,7 +645,7 @@ class SyncManager: ObservableObject {
         let content = try contentSignature(snapshot)
         let payload = upload.payload
         state = .uploading
-        message = "กำลังบันทึกขึ้น cloud"
+        message = String(localized: "กำลังบันทึกขึ้น cloud")
         let responseData = try await api.pushSyncSnapshot(payload: payload, deviceID: snapshot.deviceID, baseVersion: upload.baseVersion)
         guard accountID == sentCheckpoint.accountID, api.authToken == token else { throw SyncError.sessionChanged }
         let response = try JSONDecoder().decode(SyncPushResponse.self, from: responseData)
@@ -673,7 +673,7 @@ class SyncManager: ObservableObject {
               content == (try contentSignature(buildSnapshot(modelContext: modelContext))) else { throw SyncError.localChanges }
         let response = try decoder().decode(SyncLatestResponse.self, from: data)
         guard response.hasSnapshot, let snapshot = response.payload else {
-            if !silentWhenUnchanged { message = "ยังไม่มีข้อมูลบน cloud" }
+            if !silentWhenUnchanged { message = String(localized: "ยังไม่มีข้อมูลบน cloud") }
             return
         }
 
@@ -707,7 +707,7 @@ class SyncManager: ObservableObject {
         let remoteContent = try contentSignature(verifiedSnapshot)
         let localContent = try contentSignature(buildSnapshot(modelContext: modelContext))
         if version == currentVersion && remoteContent == localContent {
-            if !silentWhenUnchanged { message = "ข้อมูลเป็นล่าสุดแล้ว" }
+            if !silentWhenUnchanged { message = String(localized: "ข้อมูลเป็นล่าสุดแล้ว") }
             return
         }
         if onlyIfRecent && version == currentVersion { return }
@@ -737,25 +737,29 @@ class SyncManager: ObservableObject {
         let local = try buildSnapshot(modelContext: modelContext)
         var merged = remote
 
-        let pRoom = #Predicate<Room> { $0.isDirty == true || $0.isDeletedLocally == true }
-        let dirtyRooms = try modelContext.fetch(FetchDescriptor(predicate: pRoom))
+        let pRoomDirty = #Predicate<Room> { $0.isDirty == true }
+        let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally == true }
+        let dirtyRooms = (try modelContext.fetch(FetchDescriptor(predicate: pRoomDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pRoomDeleted)))
         
-        let pTenant = #Predicate<DormUser> { $0.isDirty == true || $0.isDeletedLocally == true }
-        let dirtyTenants = try modelContext.fetch(FetchDescriptor(predicate: pTenant))
+        let pTenantDirty = #Predicate<DormUser> { $0.isDirty == true }
+        let pTenantDeleted = #Predicate<DormUser> { $0.isDeletedLocally == true }
+        let dirtyTenants = (try modelContext.fetch(FetchDescriptor(predicate: pTenantDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pTenantDeleted)))
         
-        let pPayment = #Predicate<Payment> { $0.isDirty == true || $0.isDeletedLocally == true }
-        let dirtyPayments = try modelContext.fetch(FetchDescriptor(predicate: pPayment))
+        let pPaymentDirty = #Predicate<Payment> { $0.isDirty == true }
+        let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally == true }
+        let dirtyPayments = (try modelContext.fetch(FetchDescriptor(predicate: pPaymentDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pPaymentDeleted)))
         
-        let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty }
+        let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty == true }
         let dirtyTransactions = try modelContext.fetch(FetchDescriptor(predicate: pTransaction))
         
-        let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty }
+        let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty == true }
         let dirtyReceipts = try modelContext.fetch(FetchDescriptor(predicate: pReceipt))
         
-        let pMaintenance = #Predicate<Maintenance> { $0.isDirty == true || $0.isDeletedLocally == true }
-        let dirtyMaintenance = try modelContext.fetch(FetchDescriptor(predicate: pMaintenance))
+        let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty == true }
+        let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally == true }
+        let dirtyMaintenance = (try modelContext.fetch(FetchDescriptor(predicate: pMaintenanceDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pMaintenanceDeleted)))
         
-        let pRoomType = #Predicate<RoomType> { $0.isDirty }
+        let pRoomType = #Predicate<RoomType> { $0.isDirty == true }
         let dirtyRoomTypes = try modelContext.fetch(FetchDescriptor(predicate: pRoomType))
 
         let remoteMaintenance = Dictionary(uniqueKeysWithValues: remote.maintenance.map { ($0.id, $0) })
@@ -800,7 +804,7 @@ class SyncManager: ObservableObject {
         try validateSnapshot(merged)
         let mergedPayload = try encoded(merged)
         state = .uploading
-        message = "กำลังรวมข้อมูลในเครื่องกับ cloud"
+        message = String(localized: "กำลังรวมข้อมูลในเครื่องกับ cloud")
         let responseData = try await api.pushSyncSnapshot(
             payload: mergedPayload,
             deviceID: merged.deviceID,
@@ -820,7 +824,7 @@ class SyncManager: ObservableObject {
         await downloadMissingRemoteMedia(from: merged)
         checkpoint.version = response.version
         try outbox.remove(accountID: accountID)
-        message = "รวมข้อมูลในเครื่องกับ cloud แล้ว"
+        message = String(localized: "รวมข้อมูลในเครื่องกับ cloud แล้ว")
     }
 
     private func mergeSnapshots<T: Identifiable>(
@@ -877,8 +881,8 @@ class SyncManager: ObservableObject {
     private func mediaCandidates(from snapshot: SyncEnvelope) -> [String] {
         var paths = snapshot.tenants.flatMap { $0.bookingSlips }
         for payment in snapshot.payments {
-            paths.append(contentsOf: payment.slipPathArray)
-            if !payment.slipPath.isEmpty && !payment.slipPathArray.contains(payment.slipPath) {
+            paths.append(contentsOf: (payment.slipPathArray ?? []))
+            if !payment.slipPath.isEmpty && !(payment.slipPathArray ?? []).contains(payment.slipPath) {
                 paths.append(payment.slipPath)
             }
         }

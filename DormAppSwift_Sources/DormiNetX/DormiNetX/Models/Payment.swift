@@ -28,8 +28,8 @@ final class Payment: Identifiable {
     var installmentPhase: Int = 0
     var dueDate: String = ""
     var paymentStatus: String = ""
-    var slipPathArray: [String] = []
-    var paidAmount: Double = 0.0
+    var slipPathArray: [String]?
+    var paidAmount: Double? = 0.0
     
     // Sync Metadata
     var lastUpdated: Date = Date()

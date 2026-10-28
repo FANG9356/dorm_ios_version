@@ -14,16 +14,29 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"net/url"
 
 	"dorm_os/utils"
 )
 
-var lineChannelAccessToken string
-var lineChannelSecret string
+var (
+	lineConfigMu           sync.RWMutex
+	lineChannelAccessToken string
+	lineChannelSecret      string
+)
 
 func getLineToken() string {
+	lineConfigMu.RLock()
+	token := lineChannelAccessToken
+	lineConfigMu.RUnlock()
+	if token != "" {
+		return token
+	}
+
+	lineConfigMu.Lock()
+	defer lineConfigMu.Unlock()
 	if lineChannelAccessToken == "" {
 		lineChannelAccessToken = os.Getenv("LINE_CHANNEL_ACCESS_TOKEN")
 	}
@@ -31,6 +44,15 @@ func getLineToken() string {
 }
 
 func getLineSecret() string {
+	lineConfigMu.RLock()
+	secret := lineChannelSecret
+	lineConfigMu.RUnlock()
+	if secret != "" {
+		return secret
+	}
+
+	lineConfigMu.Lock()
+	defer lineConfigMu.Unlock()
 	if lineChannelSecret == "" {
 		lineChannelSecret = os.Getenv("LINE_CHANNEL_SECRET")
 	}

@@ -8,13 +8,15 @@
 
 | งาน | สถานะ | สิ่งที่เสร็จแล้ว | สิ่งที่ต้องทำเพื่อปิด |
 | --- | --- | --- | --- |
-| Maintenance quote → approval/reject → repair → bill → slip | รอตรวจ UAT | โค้ด iOS/backend, validation, LINE Flex, outbox และ production deploy เสร็จ | สร้างข้อมูลทดสอบที่ได้รับอนุญาต แล้วทดสอบอนุมัติ/ปฏิเสธจาก LINE, sync กลับแอป, รับ Flex บิล และส่งสลิปครบวงจร |
-| งานซ่อมไม่มีค่าใช้จ่าย | รอตรวจ UAT | อนุญาตข้าม quote และ payment ไปซ่อม/เสร็จสิ้นตามกฎ | ทดสอบบนอุปกรณ์จริงและยืนยันว่าไม่สร้างบิลหรือขออนุมัติโดยไม่จำเป็น |
+| Maintenance quote → approval/reject → repair → bill → slip | **Automated E2E ผ่าน 100% (รอ Field UAT บนอุปกรณ์จริง)** | โค้ด iOS/backend, validation, LINE Flex, outbox และชุดทดสอบ `TestMaintenanceE2E` (6/6 tests ครอบคลุมทั้ง Paid flow, Rejection, Security, Replay, Stale action) ผ่าน 100% | สร้างข้อมูลทดสอบที่ได้รับอนุญาต แล้วทดสอบอนุมัติ/ปฏิเสธจาก LINE, sync กลับแอป, รับ Flex บิล และส่งสลิปครบวงจรบนอุปกรณ์จริง |
+| งานซ่อมไม่มีค่าใช้จ่าย | **Automated E2E ผ่าน 100% (รอ Field UAT บนอุปกรณ์จริง)** | อนุญาตข้าม quote และ payment ไปซ่อม/เสร็จสิ้นตามกฎ ทดสอบใน `TestMaintenanceE2E_FreeFlow_SkipsQuoteAndPayment` ผ่าน 100% | ทดสอบบนอุปกรณ์จริงและยืนยันว่าไม่สร้างบิลหรือขออนุมัติโดยไม่จำเป็น |
+| UI Automation Target (Xcode) | **เสร็จแล้ว (Build-for-testing ผ่าน)** | ผูก Target `DormiNetXUITests` เข้ากับ `project.pbxproj` และ Scheme เรียบร้อย คอมไพล์ test bundle ผ่านฉลุย | เชื่อมต่อกับ CI/CD Runner หรือ Local Test Runner เพื่อรัน UI Automation Suites |
 | Protocol 2 production cutover | เสร็จแล้ว | production ตั้ง `ALLOW_LEGACY_SYNC_PUSH=false`; iPhone จริง rebase conflict และ sync ถึง snapshot v161 สำเร็จโดย dirty/pending เป็น 0 | ติดตาม log ต่อเนื่อง (ผ่าน Backend test isolation เรียบร้อย) |
 | Media lifecycle | เสร็จแล้ว | tenant ownership, checksum, retry, authenticated hydration, ปิด public `/uploads` และเพิ่ม Media Cleanup Retention Policy แล้ว | ทดสอบและอัปเดตระบบเรียบร้อย |
 | PromptPay QR และตรวจสลิปอัตโนมัติ | เสร็จแล้ว | มี QR, EasySlip optional, OCR localhost service, fallback QR และมีการจัดการ fail closed | โค้ดเสร็จสมบูรณ์ ตรวจเช็กครบถ้วนแล้ว |
 | ระบบบัญชี (Financial Ledger) | เสร็จแล้ว | โค้ด iOS (UI) / backend (API) สำหรับ Void, Refund, Adjust เสร็จสมบูรณ์ และผ่าน UAT บน Production DB แล้ว โดยมี Immutable Audit Log ลงบันทึกครบถ้วน | โค้ดเสร็จสมบูรณ์ รอ rollout ใช้งานจริง |
 | เอกสารและ handoff | เสร็จแล้วรอบนี้ | เพิ่ม vision, work status, handoff, assessment และปรับ backlog/checklist | ผู้รับช่วงอ่านตามลำดับใน `project-tracking/README.md` และอัปเดตหลักฐานเมื่อ UAT เสร็จ |
+| ระบบแปลภาษา 100% | เสร็จแล้ว | ครอบตัวแปร UI ด้วย `String(localized:)` และอัปเดต `Localizable.xcstrings` พร้อมสคริปต์ `auto_translate` สำเร็จ | รอ TestFlight หรืออุปกรณ์จริง |
 
 ## ทำเสร็จแล้วล่าสุด
 

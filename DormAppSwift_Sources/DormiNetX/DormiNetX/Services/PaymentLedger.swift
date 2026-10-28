@@ -11,7 +11,7 @@ enum PaymentLedger {
         in context: ModelContext,
         source: String
     ) throws -> PaymentTransaction? {
-        let target = PaymentAmounts.sum([payment.paidAmount])
+        let target = PaymentAmounts.sum([(payment.paidAmount ?? 0.0)])
         guard target.isFinite, target >= 0 else {
             throw LedgerError.invalidAmount
         }
@@ -61,7 +61,7 @@ enum PaymentLedger {
     static func migrateLegacyBalances(in context: ModelContext) throws -> Int {
         let payments = try context.fetch(FetchDescriptor<Payment>())
         var inserted = 0
-        for payment in payments where !payment.isDeletedLocally && payment.paidAmount > 0 {
+        for payment in payments where !payment.isDeletedLocally && (payment.paidAmount ?? 0.0) > 0 {
             if try recordUnrecordedBalance(for: payment, in: context, source: "legacy-balance-migration") != nil {
                 inserted += 1
             }
@@ -88,7 +88,7 @@ enum PaymentLedger {
     }
 
     private static func evidencePaths(for payment: Payment) -> [String] {
-        var paths = payment.slipPathArray.filter { !$0.isEmpty }
+        var paths = (payment.slipPathArray ?? []).filter { !$0.isEmpty }
         if !payment.slipPath.isEmpty, !paths.contains(payment.slipPath) {
             paths.append(payment.slipPath)
         }

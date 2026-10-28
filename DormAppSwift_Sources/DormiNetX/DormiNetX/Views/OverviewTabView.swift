@@ -261,6 +261,6 @@ struct OverviewTabView: View {
 
     private func moneyText(_ amount: Double) -> String {
         let formatted = amount.formatted(.number.precision(.fractionLength(0)))
-        return "\(formatted) บาท"
+        return "\(formatted) \(String(localized: "บาท"))"
     }
 }

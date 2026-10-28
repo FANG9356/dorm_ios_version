@@ -37,7 +37,7 @@ struct SecurityTokenTabView: View {
                                 Text("ขอรหัสก่อนเข้าแอป")
                                     .font(.custom("SukhumvitSet-Bold", size: 16))
                                     .foregroundColor(.primary)
-                                Text(securityTokenEnabled ? "เปิดใช้งานอยู่" : "ปิดการใช้งานอยู่")
+                                Text(securityTokenEnabled ? LocalizedStringKey("เปิดใช้งานอยู่") : LocalizedStringKey("ปิดการใช้งานอยู่"))
                                     .font(.custom("SukhumvitSet-Medium", size: 13))
                                     .foregroundColor(securityTokenEnabled ? .green : .secondary)
                             }
@@ -187,7 +187,7 @@ struct SecurityTokenTabView: View {
                                             isCustomInputFocused = false
                                             withAnimation(.easeInOut(duration: 0.2)) { showCustomInput = false }
                                         } else {
-                                            errorMessage = "กรุณากรอกตัวเลขให้ครบ 6 หลัก"
+                                            errorMessage = String(localized: "กรุณากรอกตัวเลขให้ครบ 6 หลัก")
                                             showErrorAlert = true
                                         }
                                     }
@@ -226,7 +226,7 @@ struct SecurityTokenTabView: View {
         .alert("เกิดข้อผิดพลาด", isPresented: $showErrorAlert) {
             Button("ตกลง", role: .cancel) { }
         } message: {
-            Text(errorMessage)
+            Text(LocalizedStringKey(errorMessage))
         }
     }
 

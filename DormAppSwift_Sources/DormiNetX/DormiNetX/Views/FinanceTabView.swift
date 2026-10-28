@@ -181,9 +181,9 @@ struct FinanceTabView: View {
 
     private var summaryGrid: some View {
         let monthPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == monthKey }
-        let received = monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + $1.paidAmount }
+        let received = monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
         let pending = monthPayments.filter { $0.paymentStatus == "pending" }.reduce(0) { $0 + $1.amount }
-        let partial = monthPayments.filter { $0.paymentStatus == "partial" }.reduce(0) { $0 + $1.paidAmount }
+        let partial = monthPayments.filter { $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
 
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             FinanceSummaryCard(title: "รับแล้ว", amount: received, color: .green, icon: "checkmark.circle.fill")
@@ -594,7 +594,7 @@ private struct FinanceFilterPanel: View {
                     Text("รอบบิล")
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                     Spacer()
-                    Text(monthLabel)
+                    Text(LocalizedStringKey(monthLabel))
                         .font(.custom("SukhumvitSet-Medium", size: 14))
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.custom("SukhumvitSet-SemiBold", size: 11))
@@ -619,7 +619,7 @@ private struct FinanceFilterPanel: View {
                             selectedStatus = status
                         }
                     } label: {
-                        Text(status)
+                        Text(LocalizedStringKey(status))
                             .font(.custom("SukhumvitSet-Bold", size: 13))
                             .foregroundStyle(selectedStatus == status ? Color.primary : Color.secondary)
                             .lineLimit(1)
@@ -657,7 +657,7 @@ private struct FinanceFilterPanel: View {
             .overlay {
                 GeometryReader { geometry in
                     if isDraggingStatus, let hoveredStatus {
-                        Text(hoveredStatus)
+                        Text(LocalizedStringKey(hoveredStatus))
                             .font(.custom("SukhumvitSet-Bold", size: 12))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
@@ -793,7 +793,7 @@ private struct FinanceMonthPicker: View {
             HStack(spacing: 0) {
                 Picker("เดือน", selection: $month) {
                     ForEach(Array(monthNames.enumerated()), id: \.offset) { index, name in
-                        Text(name).tag(index + 1)
+                        Text(LocalizedStringKey(name)).tag(index + 1)
                     }
                 }
                 .pickerStyle(.wheel)
@@ -854,7 +854,7 @@ private struct BillingUserCard: View {
 
                         Spacer()
 
-                        Text(statusText)
+                        Text(LocalizedStringKey(statusText))
                             .font(.custom("SukhumvitSet-Bold", size: 10))
                             .foregroundStyle(statusColor)
                             .padding(.horizontal, 9)
@@ -1051,7 +1051,7 @@ private struct BillingCycleRow: View {
                         .background((payment == nil ? Color.primary.opacity(0.06) : Color.green.opacity(0.14)), in: Circle())
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(cycle.label)
+                        Text(LocalizedStringKey(cycle.label))
                             .font(.custom("SukhumvitSet-Bold", size: 16))
                             .foregroundStyle(cycle.isFuture && payment == nil ? .secondary : .primary)
                         if let payment, payment.paymentPlan == "installment" {
@@ -1067,7 +1067,7 @@ private struct BillingCycleRow: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 4) {
-                        Text(statusText)
+                        Text(LocalizedStringKey(statusText))
                             .font(.custom("SukhumvitSet-Bold", size: 10))
                             .foregroundStyle(statusColor)
                         if let payment {
@@ -1127,7 +1127,7 @@ private struct BillingCycleRow: View {
             Button(action: onIssueBill) {
                 HStack(spacing: 8) {
                     Image(systemName: cycle.isFuture ? "doc.badge.plus" : "doc.text.fill")
-                    Text(cycle.isFuture ? "เตรียมบิลล่วงหน้า" : "ออกบิล / รับชำระ")
+                    Text(cycle.isFuture ? LocalizedStringKey("เตรียมบิลล่วงหน้า") : LocalizedStringKey("ออกบิล / รับชำระ"))
                     Spacer()
                     Image(systemName: "chevron.right")
                 }
@@ -1161,14 +1161,14 @@ private struct BillingCycleRow: View {
 
     private var slipPaths: [String] {
         guard let payment else { return [] }
-        var paths = payment.slipPathArray
+        var paths = (payment.slipPathArray ?? [])
         if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
             paths.insert(payment.slipPath, at: 0)
         }
         return paths
     }
 
-    private func compactAction(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+    private func compactAction(_ title: LocalizedStringKey, icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: icon)
                 .font(.custom("SukhumvitSet-Bold", size: 11))
@@ -1315,10 +1315,10 @@ private struct PaymentReceiptView: View {
             ActivityShareSheet(items: [payload.image])
                 .presentationDetents([.medium, .large])
         }
-        .alert(saveMessage ?? "", isPresented: $showingSaveAlert) {
+        .alert(LocalizedStringKey(saveMessage ?? ""), isPresented: $showingSaveAlert) {
             Button("ตกลง", role: .cancel) { }
         }
-        .alert(ledgerActionTitle, isPresented: $showingLedgerAlert) {
+        .alert(LocalizedStringKey(ledgerActionTitle), isPresented: $showingLedgerAlert) {
             TextField("ระบุเหตุผล (บังคับ)", text: $ledgerReason)
             if ledgerActionType == "adjust" {
                 TextField("ยอดเงินใหม่", text: $ledgerAmount)
@@ -1481,7 +1481,7 @@ private struct ReceiptExportCard: View {
 
                 Spacer()
 
-                Text(receiptStatusLabel)
+                Text(LocalizedStringKey(receiptStatusLabel))
                     .font(.custom("SukhumvitSet-Bold", size: 13))
                     .foregroundStyle(.black.opacity(0.72))
                     .padding(.horizontal, 13)
@@ -1515,8 +1515,8 @@ private struct ReceiptExportCard: View {
                 receiptLine("ค่าปรับล่าช้า", currency(payment.lateFee))
                 divider
                 receiptLine("ยอดรวม", currency(payment.amount), isTotal: true)
-                receiptLine("รับชำระแล้ว", currency(payment.paidAmount), isTotal: true)
-                receiptLine("ยอดคงเหลือ", currency(max(payment.amount - payment.paidAmount, 0)), isTotal: true)
+                receiptLine("รับชำระแล้ว", currency((payment.paidAmount ?? 0.0)), isTotal: true)
+                receiptLine("ยอดคงเหลือ", currency(max(payment.amount - (payment.paidAmount ?? 0.0), 0)), isTotal: true)
             }
             .padding(.vertical, 6)
 
@@ -1549,7 +1549,7 @@ private struct ReceiptExportCard: View {
 
     private func infoBox(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Medium", size: 11))
                 .foregroundStyle(.gray)
             Text(value)
@@ -1576,7 +1576,7 @@ private struct ReceiptExportCard: View {
 
     private func receiptLine(_ title: String, _ value: String, isTotal: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom(isTotal ? "SukhumvitSet-Bold" : "SukhumvitSet-Text", size: isTotal ? 15 : 13))
                 .foregroundStyle(isTotal ? Color.black : Color.gray)
             Spacer(minLength: 18)
@@ -1636,7 +1636,7 @@ private struct FinanceSummaryCard: View {
                     Image(systemName: icon)
                         .foregroundStyle(color)
                     Spacer()
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.custom("SukhumvitSet-Medium", size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -1644,7 +1644,7 @@ private struct FinanceSummaryCard: View {
                 Text(isCount ? String(Int(amount)) : amount.formatted(.number.precision(.fractionLength(0))))
                     .font(.custom("SukhumvitSet-Bold", size: 21))
                     .foregroundStyle(.primary)
-                Text(isCount ? "รายการ" : "บาท")
+                Text(isCount ? LocalizedStringKey("รายการ") : LocalizedStringKey("บาท"))
                     .font(.custom("SukhumvitSet-Text", size: 10))
                     .foregroundStyle(.secondary)
             }
@@ -1695,7 +1695,7 @@ private struct PaymentRow: View {
                     VStack(alignment: .trailing, spacing: 5) {
                         Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
                             .font(.custom("SukhumvitSet-Bold", size: 15))
-                        Text(status)
+                        Text(LocalizedStringKey(status))
                             .font(.custom("SukhumvitSet-Medium", size: 10))
                             .foregroundStyle(statusColor)
                         if payment.paymentPlan == "installment", payment.installmentPhase > 0 {
@@ -1825,7 +1825,7 @@ struct PaymentEditor: View {
         _commonFee = State(initialValue: payment.map { PaymentAmounts.input($0.commonFee) } ?? "")
         _lateFee = State(initialValue: payment.map { PaymentAmounts.input($0.lateFee) } ?? "")
         _applianceFee = State(initialValue: payment.map { PaymentAmounts.input($0.applianceFee) } ?? "")
-        _paidAmount = State(initialValue: payment.map { PaymentAmounts.input($0.paidAmount) } ?? "")
+        _paidAmount = State(initialValue: payment.map { PaymentAmounts.input(($0.paidAmount ?? 0.0)) } ?? "")
         _method = State(initialValue: payment?.method ?? "")
         let initialSlipPaths = Self.normalizedSlipPaths(from: payment)
         _slipPath = State(initialValue: initialSlipPaths.first ?? "")
@@ -1881,7 +1881,6 @@ struct PaymentEditor: View {
 
                         DatePicker("รอบบิล", selection: $billDate, displayedComponents: [.date])
                             .datePickerStyle(.compact)
-                            .environment(\.locale, Locale(identifier: "th_TH"))
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                             .onChange(of: billDate) { _, newValue in
                                 month = Self.monthKey(from: newValue)
@@ -1893,7 +1892,6 @@ struct PaymentEditor: View {
 
                         DatePicker("วันครบกำหนด", selection: $dueDateValue, displayedComponents: [.date])
                             .datePickerStyle(.compact)
-                            .environment(\.locale, Locale(identifier: "th_TH"))
                             .font(.custom("SukhumvitSet-Medium", size: 14))
                             .onChange(of: dueDateValue) { _, newValue in
                                 dueDate = Self.dateKey(from: newValue)
@@ -2073,7 +2071,7 @@ struct PaymentEditor: View {
                             Circle()
                                 .fill(statusColor(for: value))
                                 .frame(width: 7, height: 7)
-                            Text(title)
+                            Text(LocalizedStringKey(title))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.75)
                         }
@@ -2097,7 +2095,7 @@ struct PaymentEditor: View {
             Image(systemName: "info.circle")
                 .font(.custom("SukhumvitSet-SemiBold", size: 13))
                 .foregroundStyle(.secondary)
-            Text(statusDescription)
+            Text(LocalizedStringKey(statusDescription))
                 .font(.custom("SukhumvitSet-Text", size: 12))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -2187,10 +2185,10 @@ struct PaymentEditor: View {
 
     private func formSectionHeader(_ title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Bold", size: 14))
                 .foregroundStyle(.primary)
-            Text(subtitle)
+            Text(LocalizedStringKey(subtitle))
                 .font(.custom("SukhumvitSet-Text", size: 11))
                 .foregroundStyle(.secondary)
         }
@@ -2267,7 +2265,7 @@ struct PaymentEditor: View {
                             .font(.custom("SukhumvitSet-Bold", size: 17))
                     }
 
-                    Text(slipPaths.isEmpty ? "เพิ่มรูปสลิป" : "เพิ่มรูปสลิปอีก")
+                    Text(slipPaths.isEmpty ? LocalizedStringKey("เพิ่มรูปสลิป") : LocalizedStringKey("เพิ่มรูปสลิปอีก"))
                         .font(.custom("SukhumvitSet-Bold", size: 15))
 
                     Spacer()
@@ -2331,11 +2329,11 @@ struct PaymentEditor: View {
 
     private func labeledTextField(_ title: String, placeholder: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Medium", size: 12))
                 .foregroundStyle(.secondary)
 
-            TextField(placeholder, text: text)
+            TextField(LocalizedStringKey(placeholder), text: text)
                 .font(.custom("SukhumvitSet-Text", size: 16))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 14)
@@ -2350,7 +2348,7 @@ struct PaymentEditor: View {
 
     private func compactMoneyField(_ title: String, text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Medium", size: 11))
                 .foregroundStyle(.secondary)
 
@@ -2394,7 +2392,7 @@ struct PaymentEditor: View {
         Button {
             method = value
         } label: {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Bold", size: 12))
                 .foregroundStyle(method == value ? Color.white : Color.primary.opacity(0.7))
                 .frame(maxWidth: .infinity)
@@ -2551,7 +2549,7 @@ struct PaymentEditor: View {
 
     private static func normalizedSlipPaths(from payment: Payment?) -> [String] {
         guard let payment else { return [] }
-        var paths = payment.slipPathArray
+        var paths = (payment.slipPathArray ?? [])
         if !payment.slipPath.isEmpty && !paths.contains(payment.slipPath) {
             paths.insert(payment.slipPath, at: 0)
         }
@@ -2595,13 +2593,13 @@ private struct PaymentEditorContextCard: View {
                         .font(.custom("SukhumvitSet-Bold", size: 18))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
-                    Label(roomType, systemImage: "door.left.hand.open")
+                    Label(LocalizedStringKey(roomType), systemImage: "door.left.hand.open")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                     Label("รอบบิล \(AppDate.thaiMonth(month))", systemImage: "calendar")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
-                    Label(planText, systemImage: "doc.text")
+                    Label(LocalizedStringKey(planText), systemImage: "doc.text")
                         .font(.custom("SukhumvitSet-Text", size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -2615,7 +2613,7 @@ private struct PaymentEditorContextCard: View {
             }
 
             HStack(spacing: 8) {
-                Label(status, systemImage: "circle.fill")
+                Label(LocalizedStringKey(status), systemImage: "circle.fill")
                     .font(.custom("SukhumvitSet-Bold", size: 12))
                     .foregroundStyle(statusColor)
                     .padding(.horizontal, 10)
@@ -2643,7 +2641,7 @@ private struct PaymentEditorContextCard: View {
 
     private func contextPill(title: String, value: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(.custom("SukhumvitSet-Text", size: 11))
                 .foregroundStyle(.secondary)
             Text(value)

@@ -1,6 +1,6 @@
 # Project Tracking — DormiNetX
 
-อัปเดตล่าสุด: 5 ตุลาคม 2569
+อัปเดตล่าสุด: 28 ตุลาคม 2569
 
 โฟลเดอร์นี้คือจุดเริ่มต้นสำหรับผู้ที่จะรับช่วงพัฒนา ใช้ติดตามสถานะปัจจุบัน งานที่กำลังทำ งานถัดไป และหลักฐานที่ต้องมีก่อนเปลี่ยนสถานะ ห้ามถือว่า checkbox ที่ติ๊กแล้วเท่ากับผ่าน production หากยังไม่มีผลทดสอบหรือ UAT ตามเกณฑ์รับงาน
 
@@ -21,12 +21,12 @@
 
 | มิติ | คะแนนล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 97% | ระบบบัญชี, LIFF Tenant Portal, OCR fail-closed, งานซ่อม และระบบแจ้งเตือนมี implementation แล้ว |
-| Controlled pilot | 92% | P0 ระดับโค้ด/automated verification ปิดแล้ว เหลือ field UAT และ TestFlight ตามเกณฑ์ |
-| Engineering readiness | 90% | Backend และโครงสร้าง release พร้อมในระดับ implementation แต่ยังไม่ใช่ production UAT ครบ |
-| Release confidence | 86% | หักจาก maintenance E2E, restore จริง, UI automation target, APNs และ TestFlight ที่ยังรอหลักฐาน |
+| ความครบของฟีเจอร์ | 98% | ระบบบัญชี, LIFF Tenant Portal, OCR fail-closed, แปลภาษา 100%, งานซ่อม E2E, และ UI Automation Target ผูกสมบูรณ์ |
+| Controlled pilot | 94% | P0 ระดับโค้ด/automated verification ปิดหมดแล้ว พร้อมเปิดทดสอบ Pilot / TestFlight รอบบิลแรก |
+| Engineering readiness | 93% | Unit tests, Integration tests, Race detector (0 race), Code vet 100%, Build-for-testing ผ่านฉลุย |
+| Release confidence | 88% | หักจาก field validation บนอุปกรณ์จริง, production restore drill ใน maintenance window และ TestFlight pilot |
 
-งานล่าสุดปิด P0 ในระดับโค้ดและ automated verification ได้แก่ Financial Ledger, Media Lifecycle, Sync Protocol 2, OCR fail-closed และ backup verify-only; ยังต้องแยกให้ชัดว่า restore แบบ verify-only ยังไม่ใช่ restore/rollback drill ที่เปลี่ยนข้อมูลจริง เป้าหมายถัดไปคือ maintenance E2E, UI Automation, APNs verification และ TestFlight pilot
+งานล่าสุดปิด P0 ในระดับโค้ดและ automated verification ได้แก่ Financial Ledger, Media Lifecycle, Sync Protocol 2, OCR fail-closed, backup verify-only, UI Automation target integration (`DormiNetXUITests`), Maintenance E2E automated test suite (`maintenance_e2e_integration_test.go`), และการแก้ Data Race ใน Go Backend (`line_bot.go`) เป้าหมายถัดไปคือ field validation กับอุปกรณ์จริง, disaster recovery drill และ TestFlight pilot 1 รอบบิล
 
 ## กติกาการอัปเดต
 

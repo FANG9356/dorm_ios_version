@@ -130,7 +130,7 @@ struct BillsTabView: View {
                 Image(systemName: icon)
                     .font(.custom("SukhumvitSet-Medium", size: 38))
                     .foregroundStyle(.secondary)
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.custom("SukhumvitSet-Medium", size: 14))
                     .foregroundStyle(.secondary)
             }
@@ -146,9 +146,9 @@ struct BillsTabView: View {
             ?? users.first { $0.roomNumber == payment.roomNumber }
         let status: String
         switch payment.paymentStatus {
-        case "paid": status = "ชำระแล้ว"
-        case "partial": status = "ชำระบางส่วน ผ่อนชำระ"
-        default: status = "รอชำระ"
+        case "paid": status = String(localized: "ชำระแล้ว")
+        case "partial": status = String(localized: "ชำระบางส่วน ผ่อนชำระ")
+        default: status = String(localized: "รอชำระ")
         }
         let searchable = [
             payment.roomNumber,
@@ -239,10 +239,10 @@ private struct BillSectionView: View {
                     .background(.ultraThinMaterial, in: Circle())
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(.custom("SukhumvitSet-Bold", size: 17))
                         .foregroundStyle(.primary)
-                    Text(subtitle)
+                    Text(LocalizedStringKey(subtitle))
                         .font(.custom("SukhumvitSet-Text", size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -302,7 +302,7 @@ private struct BillRow: View {
                             .font(.custom("SukhumvitSet-Bold", size: 15))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        Text(detailText)
+                        Text(LocalizedStringKey(detailText))
                             .font(.custom("SukhumvitSet-Text", size: 11))
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
@@ -320,7 +320,7 @@ private struct BillRow: View {
                         Text(payment.amount.formatted(.number.precision(.fractionLength(0))) + " ฿")
                             .font(.custom("SukhumvitSet-Bold", size: 16))
                             .foregroundStyle(.primary)
-                        Text(statusText)
+                        Text(LocalizedStringKey(statusText))
                             .font(.custom("SukhumvitSet-Bold", size: 10))
                             .foregroundStyle(statusColor)
                             .padding(.horizontal, 9)
