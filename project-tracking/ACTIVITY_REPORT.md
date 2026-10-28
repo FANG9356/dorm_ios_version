@@ -1325,6 +1325,29 @@
 - ไฟล์หรือระบบที่กระทบ: `backend-dorm/handlers/api_liff.go`, `project-tracking/ACTIVITY_REPORT.md`
 - การเปลี่ยนข้อมูล/production: Deploy ไบนารีที่มี Diagnostic Logging (ไม่มีการแก้ไขข้อมูลในฐานข้อมูล)
 - การตรวจสอบและหลักฐาน: Endpoint `/api/liff/status` บันทึก log การตรวจสอบ token อย่างถูกต้อง, Service `dormitory.service` ทำงานแบบ active ปกติ
-- สถานะ deploy/UAT: Deploy ไบนารีสำเร็จ พร้อมสำหรับการทดสอบ Flow เริ่มต้น
+## 2026-10-28 23:15 — วินิจฉัยและแก้ไขปัญหาแอพเด้งออกหลังสมัครสมาชิกใหม่ (SwiftData Predicate Crash & Missing admin_id)
+
+- คำขอ/เป้าหมาย: ตรวจสอบและแก้ไขสาเหตุที่แอป DormiNetX บน iPhone เกิดการแครช/เด้งออกจากแอปทันทีหลังจากกดสมัครสมาชิกบัญชีใหม่
+- สิ่งที่ดำเนินการและสาเหตุที่พบ:
+  1. ดึง Crash Log จริงจากเครื่อง iPhone 11 (`00008030-001C65A134C0A02E`) ไฟล์ `DormiNetX-2026-10-28-222726.ips` มาวิเคราะห์:
+     - พบ Stack trace ชี้ชัดว่าเกิด `EXC_BREAKPOINT (SIGTRAP: Trace/BPT trap: 5 / brk 1)` ใน `SwiftData.framework` ขณะประมวลผล `SyncManager.buildSnapshot(modelContext:)`
+     - จุดที่ Trap เกิดจาก CoreData's `PredicateToNSPredicateConverter` ของ Apple ไม่สามารถแปลง `#Predicate<Room> { $0.isDeletedLocally == false }` ที่เทียบค่า boolean literal ได้ ส่งผลให้แอปแครชทันที
+  2. ตรวจสอบ Endpoint `/api/auth/register` ใน `backend-dorm/handlers/sync_handlers.go`:
+     - พบว่า Response ส่งคืนเฉพาะ `status`, `email`, `name`, `role`, `token` แต่ **ไม่ได้ส่ง `"admin_id"` กลับมา** ทำให้ในฝั่ง iOS ตัวแปร `adminID` ใน `UserDefaults` มีค่าเป็น 0
+  3. ตรวจสอบ `DormApp.swift` และ `SplashView.swift`:
+     - พบ `ModelConfiguration("account_\(accountID)", schema: schema, ...)` มีการใส่ชื่อ Configuration ซึ่งทำให้ CoreData แบ่งพาร์ทิชัน Schema โดยไม่มี Entity mapping
+     - พบว่าเมื่อมีการสลับหน้าหลังสมัครสมาชิกเสร็จ `SplashView` จะถูกทำลายและสร้างใหม่ ทำให้เกิดอนิเมชัน Splash 7 วินาทีเล่นซ้ำ
+- การแก้ไขที่ดำเนินการ:
+  1. **Backend (`sync_handlers.go`):** เพิ่ม `"admin_id": int(adminID)` ใน Response ของ `/api/auth/register` ให้ครบถ้วนเหมือน `/api/auth/login`
+  2. **iOS (`APIService.swift`):** เพิ่ม Fallback ถอดรหัส `accountID` จาก JWT Token ทันทีเมื่อได้รับ Token ใน `register` และ `login` เพื่อให้ `UserDefaults.standard.set(id, forKey: "adminID")` ถูกตั้งค่าพร้อมก่อนเปลี่ยนสถานะ `isLoggedIn = true`
+  3. **iOS (`SyncManager.swift`):** เปลี่ยนการคิวรีใน `buildSnapshot`, `hasDirtyRecords`, และ `rebasePendingLocalChanges` จากการใช้ `#Predicate` บูลีนที่เปราะบาง ไปเป็นการดึงข้อมูลและกรองในหน่วยความจำ (`.filter { !$0.isDeletedLocally }` และ `contains(where: ...)`) ป้องกันบั๊กตัวแปลง Predicate ของ SwiftData 100%
+  4. **iOS (`DormApp.swift`):** ปรับปรุง `ModelConfiguration` ให้แมป Schema รวมทั้งหมดอย่างถูกต้อง และแก้ไข `fallbackContainer` ให้ใช้ `makeGuestContainer()`
+  5. **iOS (`SplashView.swift`):** เพิ่ม `hasCompletedLaunchSplash` จำสถานะการเล่น Splash Screen เพื่อให้เล่นเฉพาะตอนเปิดแอปครั้งแรกของเซสชันเท่านั้น และไม่เล่นซ้ำเมื่อสลับบัญชีหรือสมัครสมาชิก
+- การทดสอบและ Deploy:
+  - ฝั่ง Go Backend: รัน `go test ./...`, `go test -race ./handlers`, `go vet ./...` ผ่าน 100%
+  - Deploy Go Backend ขึ้น Production: ผ่าน Safe Deploy (`NEW_SHA=e5b82e4ee8a85c11438b55b53867f8f0505693df1fa0705fb0bdf6b9ba845605`, สำรองที่ `/home/fang/dorminet_workspace/backups/20261028-090740-pre-flex-ui`)
+  - ตรวจสอบ Service: `dormitory.service` และ `dormitory-ocr.service` สถานะ active, endpoint `https://dorminet.studio/api/system/ping` ตอบ `{"status":"online"}`
+  - ฝั่ง iOS: คอมไพล์และ Sign ด้วย Xcode (`** BUILD SUCCEEDED **`)
+  - ติดตั้งแอพเวอร์ชันแก้ไขลงในเครื่อง iPhone 11 (`00008030-001C65A134C0A02E`) เรียบร้อยผ่าน `xcrun devicectl device install app`
 
 

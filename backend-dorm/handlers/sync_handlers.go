@@ -311,11 +311,12 @@ func SetupSyncRoutes(db *sql.DB) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"email":  req.Email,
-			"name":   req.Name,
-			"role":   roleToInsert,
-			"token":  tokenString,
+			"status":   "success",
+			"email":    req.Email,
+			"name":     req.Name,
+			"role":     roleToInsert,
+			"admin_id": int(adminID),
+			"token":    tokenString,
 		})
 	})
 

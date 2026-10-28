@@ -106,6 +106,9 @@ class APIService {
             self.currentEmail = email
             if let token = json["token"] as? String {
                 try CredentialStore.shared.setToken(token)
+                if let id = self.localSessionAccountID(token: token) {
+                    UserDefaults.standard.set(id, forKey: "adminID")
+                }
             }
             let name = json["name"] as? String
             
@@ -147,6 +150,9 @@ class APIService {
                 self.currentEmail = email
                 if let token = json["token"] as? String {
                     try CredentialStore.shared.setToken(token)
+                    if let id = self.localSessionAccountID(token: token) {
+                        UserDefaults.standard.set(id, forKey: "adminID")
+                    }
                 }
                 if let role = json["role"] as? String {
                     self.userRole = role

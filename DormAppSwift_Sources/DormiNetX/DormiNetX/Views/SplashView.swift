@@ -80,7 +80,8 @@ private struct SplashPalette {
 struct SplashView: View {
     @AppStorage("appTheme") private var appTheme: Int = AppTheme.system.rawValue
     @Environment(\.colorScheme) private var colorScheme
-    @State private var isActive = false
+    private static var hasCompletedLaunchSplash = false
+    @State private var isActive: Bool
     
     // ตึกใหญ่ฝั่งซ้าย (8 จุด)
     let scatteredOffsets: [CGSize] = [
@@ -106,7 +107,6 @@ struct SplashView: View {
     @State private var dotOpacities2: [Double] = Array(repeating: 0.0, count: 3)
     
     // เส้นเดียวที่วาดต่อเนื่องครอบทั้งสองตึก
-    // เส้นเดียวที่วาดต่อเนื่องครอบทั้งสองตึก
     @State private var outlineProgress: CGFloat = 0.0
     
     // ข้อความ DormiNet (วาดเส้นเดียว)
@@ -116,6 +116,7 @@ struct SplashView: View {
     init() {
         _dotOffsets = State(initialValue: scatteredOffsets)
         _dotOffsets2 = State(initialValue: scatteredOffsets2)
+        _isActive = State(initialValue: Self.hasCompletedLaunchSplash)
     }
 
     private var resolvedColorScheme: ColorScheme {
@@ -247,6 +248,7 @@ struct SplashView: View {
                     
                     // เฟส 4: สลับเข้าสู่แอพหลัก
                     DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
+                        Self.hasCompletedLaunchSplash = true
                         isActive = true
                     }
                 }

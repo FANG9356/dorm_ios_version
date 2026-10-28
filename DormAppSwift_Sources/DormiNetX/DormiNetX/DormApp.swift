@@ -29,7 +29,6 @@ enum AccountScopedStore {
         let storeURL = directory.appendingPathComponent("account_\(accountID).store")
 
         let configuration = ModelConfiguration(
-            "account_\(accountID)",
             schema: schema,
             url: storeURL,
             allowsSave: true,
@@ -139,7 +138,7 @@ struct AccountScopedRootView: View {
 
     private static func fallbackContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: Room.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            return try AccountScopedStore.makeGuestContainer()
         } catch {
             fatalError("Critical SwiftData failure: \(error)")
         }

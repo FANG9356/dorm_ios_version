@@ -463,34 +463,26 @@ class SyncManager: ObservableObject {
     @MainActor
     private func hasDirtyRecords(_ context: ModelContext) -> Bool {
         do {
-            let pRoomDirty = #Predicate<Room> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pRoomDirty)) > 0 { return true }
-            let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pRoomDeleted)) > 0 { return true }
+            let rooms = try context.fetch(FetchDescriptor<Room>())
+            if rooms.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
             
-            let pUserDirty = #Predicate<DormUser> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pUserDirty)) > 0 { return true }
-            let pUserDeleted = #Predicate<DormUser> { $0.isDeletedLocally == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pUserDeleted)) > 0 { return true }
+            let users = try context.fetch(FetchDescriptor<DormUser>())
+            if users.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
             
-            let pPaymentDirty = #Predicate<Payment> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pPaymentDirty)) > 0 { return true }
-            let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pPaymentDeleted)) > 0 { return true }
+            let payments = try context.fetch(FetchDescriptor<Payment>())
+            if payments.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
             
-            let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pTransaction)) > 0 { return true }
+            let txs = try context.fetch(FetchDescriptor<PaymentTransaction>())
+            if txs.contains(where: { $0.isDirty }) { return true }
             
-            let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pReceipt)) > 0 { return true }
+            let receipts = try context.fetch(FetchDescriptor<FinancialReceipt>())
+            if receipts.contains(where: { $0.isDirty }) { return true }
             
-            let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDirty)) > 0 { return true }
-            let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pMaintenanceDeleted)) > 0 { return true }
+            let maints = try context.fetch(FetchDescriptor<Maintenance>())
+            if maints.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
             
-            let pRoomType = #Predicate<RoomType> { $0.isDirty == true }
-            if try context.fetchCount(FetchDescriptor(predicate: pRoomType)) > 0 { return true }
+            let types = try context.fetch(FetchDescriptor<RoomType>())
+            if types.contains(where: { $0.isDirty }) { return true }
             
             return false
         } catch { 
@@ -548,13 +540,13 @@ class SyncManager: ObservableObject {
             version: version,
             createdAt: Date(),
             deviceID: deviceID(),
-            rooms: try modelContext.fetch(FetchDescriptor<Room>(predicate: #Predicate { $0.isDeletedLocally == false })).map {
+            rooms: try modelContext.fetch(FetchDescriptor<Room>()).filter { !$0.isDeletedLocally }.map {
                 RoomSnapshot(id: $0.id, serverId: $0.serverId, roomNumber: $0.roomNumber, roomType: $0.roomType, lastUpdated: $0.lastUpdated)
             },
-            tenants: try modelContext.fetch(FetchDescriptor<DormUser>(predicate: #Predicate { $0.isDeletedLocally == false })).map {
+            tenants: try modelContext.fetch(FetchDescriptor<DormUser>()).filter { !$0.isDeletedLocally }.map {
                 TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, bookingEndDate: $0.bookingEndDate, paymentMethod: $0.paymentMethod, paymentChannel: $0.paymentChannel, installmentMonths: $0.installmentMonths, installmentAmount: $0.installmentAmount, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
             },
-            payments: try modelContext.fetch(FetchDescriptor<Payment>(predicate: #Predicate { $0.isDeletedLocally == false })).map {
+            payments: try modelContext.fetch(FetchDescriptor<Payment>()).filter { !$0.isDeletedLocally }.map {
                 PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: ($0.slipPathArray ?? []), paidAmount: ($0.paidAmount ?? 0.0), lastUpdated: $0.lastUpdated, depositFee: $0.depositFee)
             },
             paymentTransactions: try modelContext.fetch(FetchDescriptor<PaymentTransaction>()).map {
@@ -563,7 +555,7 @@ class SyncManager: ObservableObject {
             financialReceipts: try modelContext.fetch(FetchDescriptor<FinancialReceipt>()).map {
                 FinancialReceiptSnapshot(id: $0.id, transactionID: $0.transactionID, paymentID: $0.paymentID, receiptNumber: $0.receiptNumber, userID: $0.userID, roomNumber: $0.roomNumber, billingMonth: $0.billingMonth, invoiceAmount: $0.invoiceAmount, receivedAmount: $0.receivedAmount, balanceAfter: $0.balanceAfter, method: $0.method, slipPaths: $0.slipPaths, issuedAt: $0.issuedAt, lastUpdated: $0.lastUpdated)
             },
-            maintenance: try modelContext.fetch(FetchDescriptor<Maintenance>(predicate: #Predicate { $0.isDeletedLocally == false })).map {
+            maintenance: try modelContext.fetch(FetchDescriptor<Maintenance>()).filter { !$0.isDeletedLocally }.map {
                 MaintenanceSnapshot(id: $0.id, serverId: $0.serverId, roomNumber: $0.roomNumber, issue: $0.issue, status: $0.status, cost: $0.cost, reportedAt: $0.reportedAt, resolvedAt: $0.resolvedAt, paymentMethod: $0.paymentMethod, slipPath: $0.slipPath, issueImage: $0.issueImage, quoteApprovedAt: $0.quoteApprovedAt, lastUpdated: $0.lastUpdated)
             },
             roomTypes: try modelContext.fetch(FetchDescriptor<RoomType>()).map {
@@ -737,30 +729,13 @@ class SyncManager: ObservableObject {
         let local = try buildSnapshot(modelContext: modelContext)
         var merged = remote
 
-        let pRoomDirty = #Predicate<Room> { $0.isDirty == true }
-        let pRoomDeleted = #Predicate<Room> { $0.isDeletedLocally == true }
-        let dirtyRooms = (try modelContext.fetch(FetchDescriptor(predicate: pRoomDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pRoomDeleted)))
-        
-        let pTenantDirty = #Predicate<DormUser> { $0.isDirty == true }
-        let pTenantDeleted = #Predicate<DormUser> { $0.isDeletedLocally == true }
-        let dirtyTenants = (try modelContext.fetch(FetchDescriptor(predicate: pTenantDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pTenantDeleted)))
-        
-        let pPaymentDirty = #Predicate<Payment> { $0.isDirty == true }
-        let pPaymentDeleted = #Predicate<Payment> { $0.isDeletedLocally == true }
-        let dirtyPayments = (try modelContext.fetch(FetchDescriptor(predicate: pPaymentDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pPaymentDeleted)))
-        
-        let pTransaction = #Predicate<PaymentTransaction> { $0.isDirty == true }
-        let dirtyTransactions = try modelContext.fetch(FetchDescriptor(predicate: pTransaction))
-        
-        let pReceipt = #Predicate<FinancialReceipt> { $0.isDirty == true }
-        let dirtyReceipts = try modelContext.fetch(FetchDescriptor(predicate: pReceipt))
-        
-        let pMaintenanceDirty = #Predicate<Maintenance> { $0.isDirty == true }
-        let pMaintenanceDeleted = #Predicate<Maintenance> { $0.isDeletedLocally == true }
-        let dirtyMaintenance = (try modelContext.fetch(FetchDescriptor(predicate: pMaintenanceDirty))) + (try modelContext.fetch(FetchDescriptor(predicate: pMaintenanceDeleted)))
-        
-        let pRoomType = #Predicate<RoomType> { $0.isDirty == true }
-        let dirtyRoomTypes = try modelContext.fetch(FetchDescriptor(predicate: pRoomType))
+        let dirtyRooms = (try modelContext.fetch(FetchDescriptor<Room>())).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyTenants = (try modelContext.fetch(FetchDescriptor<DormUser>())).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyPayments = (try modelContext.fetch(FetchDescriptor<Payment>())).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyTransactions = (try modelContext.fetch(FetchDescriptor<PaymentTransaction>())).filter { $0.isDirty }
+        let dirtyReceipts = (try modelContext.fetch(FetchDescriptor<FinancialReceipt>())).filter { $0.isDirty }
+        let dirtyMaintenance = (try modelContext.fetch(FetchDescriptor<Maintenance>())).filter { $0.isDirty || $0.isDeletedLocally }
+        let dirtyRoomTypes = (try modelContext.fetch(FetchDescriptor<RoomType>())).filter { $0.isDirty }
 
         let remoteMaintenance = Dictionary(uniqueKeysWithValues: remote.maintenance.map { ($0.id, $0) })
         let mergeableDirtyMaintenance = dirtyMaintenance.filter { item in
