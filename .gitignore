@@ -35,4 +35,7 @@ backend-dorm/*.deb
 **/xcuserdata/
 **/*.xcuserstate
 DerivedData/
+build/
+**/build/
 *.xcloc/
+*.xcloc

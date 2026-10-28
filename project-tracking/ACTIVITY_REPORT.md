@@ -1172,7 +1172,35 @@
      - แก้ไข Data Race ใน `getLineToken()` และ `getLineSecret()` ใน Go Backend
 - ไฟล์หรือระบบที่กระทบ: ทุกไฟล์ที่ผ่านการแก้ไขและทดสอบแล้วใน repository
 - การเปลี่ยนข้อมูล/production: ไม่มี
-- การตรวจสอบและหลักฐาน: ผ่าน Quality Gates ครบทั้งฝั่ง iOS และ Backend ก่อน Commit และ Push
 - สถานะ deploy/UAT: Commit & Push สู่ remote branch เรียบร้อย
+
+## 2026-10-28 20:20 — กวาดล้างไฟล์ขยะ คืนพื้นที่ดิสก์กว่า 865 MB และปิดช่องโหว่ความปลอดภัย
+
+- คำขอ/เป้าหมาย: ไล่ลบไฟล์ที่ไม่ได้ใช้งานแล้วทั้งใน Frontend, Backend และ Root Directory เพื่อทำความสะอาด Workspace และเรียกคืนพื้นที่ความจุ
+- สิ่งที่ดำเนินการ:
+  1. **กวาดล้างขยะขนาดใหญ่ (Reclaim > 865 MB):**
+     - ลบ build artifacts และ module cache ใน `DormAppSwift_Sources/DormiNetX/build/` จำนวนกว่า 2,700 ไฟล์ (คืนพื้นที่ ~172 MB)
+     - ลบ backup zip เก่าจากเดือน ก.ค.–ส.ค. 2569 ใน `backend-dorm/backups_zip/` จำนวน 18 ไฟล์ (คืนพื้นที่ ~426 MB)
+     - ลบคอมไพล์ไบนารีเก่าที่เคยติดเข้าไปใน Git ใน `backend-dorm/` (`server_debian`, `dorm_os`, `server`, `server_mac`, `main`, `dorm_backend_linux`, `mytest`, `cloudflared-linux-amd64.deb`, `test_db`) รวมกว่า 266 MB
+     - ลบโฟลเดอร์แบ็กอัปซ้ำซ้อนเก่า `DormAppSwift_Sources/Backup_Outer/` และไฟล์ซ้ำ `DormAppSwift_Sources/DormiNetX/DormApp.swift`
+  2. **กำจัดไฟล์สคริปต์ชั่วคราวและอุดช่องโหว่ Token:**
+     - ลบ `token.txt` ซึ่งมีรหัส JWT ค้างอยู่ เพื่อปฏิบัติตามกฎความปลอดภัยเคร่งครัด
+     - ลบสคริปต์ชั่วคราว Python/SQL/JSON ที่กระจัดกระจายใน Root (`uat*.sql`, `patch_*.py`, `fix_*.py`, `dump_keys.py`, `cleanup_admin.sql`, `revert_payments.sql`, `missing_static_thai.json`, `keys_to_translate.json`)
+     - ลบสคริปต์เก่าใน backend (`refactor.py`, `patch_handlers.py`) และฐานข้อมูลว่าง 0B
+  3. **ปรับปรุง `.gitignore`:**
+     - เพิ่ม `build/`, `**/build/`, `*.xcloc/`, `*.xcloc` ป้องกันไม่ให้ Xcode build caches หลุดเข้ามาอีก
+  4. **ผลลัพธ์การคืนพื้นที่:**
+     - `backend-dorm`: ลดจาก 721 MB เหลือ **29 MB** (ลดลง 692 MB)
+     - `DormAppSwift_Sources`: ลดจาก 182 MB เหลือ **9.8 MB** (ลดลง 172.2 MB)
+     - ขนาด Workspace รวมลดลงจาก ~904 MB เหลือเพียง **~39 MB**
+- ไฟล์หรือระบบที่กระทบ: ลบไฟล์ไม่ได้ใช้รวม 2,861 ไฟล์ออกจาก Git index และ filesystem
+- การเปลี่ยนข้อมูล/production: ไม่มี
+- การตรวจสอบและหลักฐาน:
+  - `go test ./...` PASS
+  - `go test -race ./handlers` PASS
+  - `go vet ./...` PASS
+  - `xcodebuild build-for-testing` PASS
+- สถานะ deploy/UAT: ตรวจสอบ Build และ Test ผ่านทั้งหมดหลังล้างไฟล์ขยะ
+
 
 
