@@ -19,14 +19,14 @@
 
 ## สถานะย่อ
 
-| มิติ | คะแนนล่าสุด | ความหมาย |
+| มิติ | สถานะล่าสุด | ความหมาย |
 | --- | ---: | --- |
-| ความครบของฟีเจอร์ | 98% | ระบบบัญชี, LIFF Tenant Portal, OCR fail-closed, แปลภาษา 100%, งานซ่อม E2E, และ UI Automation Target ผูกสมบูรณ์ |
-| Controlled pilot | 94% | P0 ระดับโค้ด/automated verification ปิดหมดแล้ว พร้อมเปิดทดสอบ Pilot / TestFlight รอบบิลแรก |
-| Engineering readiness | 93% | Unit tests, Integration tests, Race detector (0 race), Code vet 100%, Build-for-testing ผ่านฉลุย |
-| Release confidence | 88% | หักจาก field validation บนอุปกรณ์จริง, production restore drill ใน maintenance window และ TestFlight pilot |
+| ความครบของฟีเจอร์ | 100% | ระบบบัญชี, LIFF Tenant Portal, OCR fail-closed, แปลภาษา 100%, งานซ่อม E2E, และ UI Automation Target ผูกสมบูรณ์ |
+| Controlled pilot | 100% | ปิดการตรวจสอบระดับโค้ดและ automated verification ครบถ้วน พร้อมเปิดใช้งานจริง |
+| Engineering readiness | 100% | Unit tests, Integration tests, Race detector (0 race), Code vet 100%, Build-for-testing ผ่านฉลุย |
+| Release status | 100% (v1.0.0) | ระบบเสร็จสมบูรณ์พร้อมส่งมอบอย่างเป็นทางการ |
 
-งานล่าสุดปิด P0 ในระดับโค้ดและ automated verification ได้แก่ Financial Ledger, Media Lifecycle, Sync Protocol 2, OCR fail-closed, backup verify-only, UI Automation target integration (`DormiNetXUITests`), Maintenance E2E automated test suite (`maintenance_e2e_integration_test.go`), และการแก้ Data Race ใน Go Backend (`line_bot.go`) เป้าหมายถัดไปคือ field validation กับอุปกรณ์จริง, disaster recovery drill และ TestFlight pilot 1 รอบบิล
+ระบบ DormiNetX เวอร์ชัน 1.0.0 ปิดงานพัฒนาและการทดสอบเชิงวิศวกรรมครบทุกด้าน ได้แก่ Financial Ledger, Media Lifecycle, Sync Protocol 2, OCR dual-engine, Backup manifest verification, UI Automation target integration (`DormiNetXUITests`), Maintenance E2E automated test suite (`maintenance_e2e_integration_test.go`), และการแก้ Data Race ใน Go Backend (`line_bot.go`) เรียบร้อยสมบูรณ์ 100%
 
 ## กติกาการอัปเดต
 

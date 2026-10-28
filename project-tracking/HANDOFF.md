@@ -1,10 +1,10 @@
 # คู่มือส่งต่องาน DormiNetX
 
-อัปเดตล่าสุด: 18 กันยายน 2569
+อัปเดตล่าสุด: 28 ตุลาคม 2569
 
 ## อ่านก่อนแก้โค้ด
 
-- โปรเจกต์ iOS ที่ใช้งานจริงคือ `DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj`; `Backup_Outer` เป็นสำเนาเก่า
+- โปรเจกต์ iOS ที่ใช้งานจริงคือ `DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj`
 - backend อยู่ที่ `backend-dorm` ใช้ Go + SQLite
 - ระบบเป็น local-first: แอปบันทึก local ก่อน แล้ว sync snapshot แยกตามบัญชีไป backend
 - LINE เป็น resident-facing channel; action จาก LINE ที่เปลี่ยนข้อมูลต้องตรวจ tenant/ผู้พักปัจจุบันและ publish snapshot กลับเข้าแอป
@@ -17,12 +17,14 @@
 | UI และกฎ workflow งานซ่อม | `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/MaintenanceTabView.swift` |
 | iOS workflow tests | `DormAppSwift_Sources/DormiNetX/DormiNetXTests/MaintenanceWorkflowTests.swift` |
 | iOS sync/data safety tests | `DormAppSwift_Sources/DormiNetX/DormiNetXTests/CoreDataSafetyTests.swift` |
+| iOS UI Automation Target | `DormAppSwift_Sources/DormiNetX/DormiNetXUITests/` |
+| iOS Localization Catalog | `DormAppSwift_Sources/DormiNetX/DormiNetX/Resources/Localizable.xcstrings` |
 | Maintenance API/materialization | `backend-dorm/handlers/api_maintenances.go` |
+| Maintenance E2E Integration Tests | `backend-dorm/handlers/maintenance_e2e_integration_test.go` |
 | LINE webhook/actions/Flex | `backend-dorm/handlers/line_bot.go` |
 | LINE notification outbox | `backend-dorm/handlers/line_notification_outbox.go` |
 | LINE → app snapshot | `backend-dorm/handlers/line_snapshot.go` |
-| Workflow backend tests | `backend-dorm/handlers/maintenance_workflow_test.go` |
-| LINE/outbox/snapshot tests | `backend-dorm/handlers/line_bot_maintenance_test.go`, `line_notification_outbox_test.go`, `line_snapshot_test.go` |
+| Financial Ledger API | `backend-dorm/handlers/api_financial_ledger.go` |
 | Safe deploy | `backend-dorm/scripts/deploy_flex_safe_remote.sh` |
 | Restore | `docs/SERVER_RESTORE_RUNBOOK_2026-09-16.md` |
 | Server/deploy/iOS build สำหรับ Terminal ใหม่ | `docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md` |

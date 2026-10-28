@@ -39,3 +39,9 @@ build/
 **/build/
 *.xcloc/
 *.xcloc
+
+# AI / Agent rules and configs (kept locally on drive, not in git)
+.agents/
+AGENTS.md
+auto_translate.py
+
