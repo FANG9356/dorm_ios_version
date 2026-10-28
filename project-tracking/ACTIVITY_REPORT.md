@@ -1313,3 +1313,18 @@
   - New Binary SHA-256: `3da3f8172d0dc12454062a86df097ea960ce56f1c0fff35dcf0063984a06790b`
 - สถานะ deploy/UAT: Deploy และ Clean Reset สำเร็จ 100% พร้อมสำหรับการทดสอบติดตั้งและตั้งค่าเริ่มต้นผ่าน iOS App
 
+## 2026-10-28 22:12 — เพิ่ม Diagnostic Logging สำหรับ LIFF Auth และวิเคราะห์สาเหตุ Token เซสชันเก่าค้างใน LINE
+
+- คำขอ/เป้าหมาย: ตรวจสอบและแก้ไขสาเหตุที่หน้าจอ LINE LIFF (ผูกบัญชีลูกบ้าน) แสดงข้อความผิดพลาด "การยืนยันตัวตนกับ LINE ล้มเหลว" หลังการรีเซ็ตระบบ
+- สิ่งที่ดำเนินการ:
+  1. วิเคราะห์ flow การทำงานของ LIFF Authentication (`verifiedLineUserID`) ใน `backend-dorm/handlers/api_liff.go`
+  2. เพิ่ม Diagnostic Logging อย่างละเอียดสำหรับ endpoint `/api/liff/status`, `/api/liff/link` และฟังก์ชัน `verifiedLineUserID` เพื่อจับคู่ `client_id`, `expires_in`, `scope` และ response body จาก LINE Verify API
+  3. ทดสอบ Unit Test ใน `handlers` ผ่าน 100%
+  4. ทำการ build และ hot-deploy ไบนารีใหม่ขึ้น Production และทดสอบการทำงานของ Diagnostic Logging
+  5. วิเคราะห์พบว่าเกิดจาก In-App Browser Cache ใน LINE ยังคงถือ Access Token เก่าก่อนการรีเซ็ต ให้คำแนะนำผู้ใช้ในการปิดหน้าต่าง (กด X) แล้วเปิดใหม่เพื่อให้ LINE ออก Token ใหม่ และชี้แจงลำดับ Flow ที่ต้อง Setup หอพักผ่าน iOS App ก่อนจึงจะสามารถผูกบัญชีได้
+- ไฟล์หรือระบบที่กระทบ: `backend-dorm/handlers/api_liff.go`, `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: Deploy ไบนารีที่มี Diagnostic Logging (ไม่มีการแก้ไขข้อมูลในฐานข้อมูล)
+- การตรวจสอบและหลักฐาน: Endpoint `/api/liff/status` บันทึก log การตรวจสอบ token อย่างถูกต้อง, Service `dormitory.service` ทำงานแบบ active ปกติ
+- สถานะ deploy/UAT: Deploy ไบนารีสำเร็จ พร้อมสำหรับการทดสอบ Flow เริ่มต้น
+
+

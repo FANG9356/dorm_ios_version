@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"math"
 	"net"
 	"net/http"
@@ -207,6 +209,7 @@ func handleLiffStatus(master *sql.DB, verifyToken liffTokenVerifier, openTenantD
 		}
 		lineUserID, err := verifyToken(strings.TrimSpace(request.AccessToken))
 		if err != nil {
+			log.Printf("[LIFF Status Error] verifyToken failed: %v", err)
 			http.Error(w, `{"error":"การยืนยันตัวตนกับ LINE ล้มเหลว"}`, http.StatusUnauthorized)
 			return
 		}
@@ -409,6 +412,7 @@ func HandleLiffLink(master *sql.DB) http.HandlerFunc {
 
 		lineUserID, err := verifiedLineUserID(request.AccessToken)
 		if err != nil {
+			log.Printf("[LIFF Link Error] verifiedLineUserID failed: %v", err)
 			http.Error(w, `{"error":"การยืนยันตัวตนกับ LINE ล้มเหลว"}`, http.StatusUnauthorized)
 			return
 		}
@@ -535,43 +539,56 @@ func verifiedLineUserID(accessToken string) (string, error) {
 	verifyURL := "https://api.line.me/oauth2/v2.1/verify?access_token=" + url.QueryEscape(accessToken)
 	response, err := client.Get(verifyURL)
 	if err != nil {
+		log.Printf("[LIFF Verify Error] GET verifyURL failed: %v", err)
 		return "", err
 	}
 	if response.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(response.Body)
 		response.Body.Close()
-		return "", fmt.Errorf("LINE verify status %d", response.StatusCode)
+		log.Printf("[LIFF Verify Error] status=%d body=%s", response.StatusCode, string(body))
+		return "", fmt.Errorf("LINE verify status %d: %s", response.StatusCode, string(body))
 	}
 	var verification struct {
 		ClientID  string `json:"client_id"`
 		ExpiresIn int64  `json:"expires_in"`
+		Scope     string `json:"scope"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&verification); err != nil {
 		response.Body.Close()
+		log.Printf("[LIFF Verify Error] json decode error: %v", err)
 		return "", fmt.Errorf("decode LINE verification: %w", err)
 	}
 	response.Body.Close()
 	expectedClientID := strings.TrimSpace(os.Getenv("LINE_LIFF_CHANNEL_ID"))
+	log.Printf("[LIFF Verify Info] got client_id=%q (expected=%q), expires_in=%d, scope=%q", verification.ClientID, expectedClientID, verification.ExpiresIn, verification.Scope)
 	if expectedClientID == "" || verification.ClientID != expectedClientID || verification.ExpiresIn <= 0 {
-		return "", fmt.Errorf("LINE access token is not valid for this LIFF channel")
+		log.Printf("[LIFF Verify Error] mismatch or expired: got client_id=%q, expected=%q, expires_in=%d", verification.ClientID, expectedClientID, verification.ExpiresIn)
+		return "", fmt.Errorf("LINE access token is not valid for this LIFF channel (got %q, expected %q)", verification.ClientID, expectedClientID)
 	}
 	request, err := http.NewRequest(http.MethodGet, "https://api.line.me/v2/profile", nil)
 	if err != nil {
+		log.Printf("[LIFF Verify Error] NewRequest profile error: %v", err)
 		return "", err
 	}
 	request.Header.Set("Authorization", "Bearer "+accessToken)
 	response, err = client.Do(request)
 	if err != nil {
+		log.Printf("[LIFF Verify Error] Do profile error: %v", err)
 		return "", err
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("LINE profile status %d", response.StatusCode)
+		body, _ := io.ReadAll(response.Body)
+		log.Printf("[LIFF Verify Error] profile status=%d body=%s", response.StatusCode, string(body))
+		return "", fmt.Errorf("LINE profile status %d: %s", response.StatusCode, string(body))
 	}
 	var profile struct {
 		UserID string `json:"userId"`
 	}
 	if json.NewDecoder(response.Body).Decode(&profile) != nil || profile.UserID == "" {
+		log.Printf("[LIFF Verify Error] profile decode empty userId")
 		return "", fmt.Errorf("LINE profile has no user id")
 	}
+	log.Printf("[LIFF Verify Success] userId: %s", profile.UserID)
 	return profile.UserID, nil
 }
