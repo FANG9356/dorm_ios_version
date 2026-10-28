@@ -1286,3 +1286,30 @@
 - ไฟล์หรือระบบที่กระทบ: `README.md`, `project-tracking/WORK_STATUS.md`, `project-tracking/PENDING_WORK.md`, `project-tracking/README.md`, `project-tracking/ACTIVITY_REPORT.md`
 - การเปลี่ยนข้อมูล/production: ไม่มี
 - สถานะ deploy/UAT: เอกสารทั้งหมดสะท้อนสถานะความสมบูรณ์ 100% อย่างเป็นทางการ
+
+## 2026-10-28 21:55 — รีเซ็ตระบบฐานข้อมูลและไฟล์ทดสอบทั้งหมดสู่ Clean State เริ่มต้น (v1.0.0 Fresh Install)
+
+- คำขอ/เป้าหมาย: ดำเนินการรีเซ็ตระบบหลังบ้าน (Backend และ Database) ทั้งหมดให้เป็นระบบใหม่เอี่ยม (Clean Fresh Install) โดยล้างข้อมูลเก่าที่ใช้ระหว่างการพัฒนาและทดสอบออกทั้งหมด เพื่อเตรียมพร้อมสำหรับการทดสอบระบบจริงตั้งแต่ขั้นตอน Onboarding/Setup แรกเริ่ม โดยฝั่งผู้ใช้จะทำการถอนการติดตั้งแอปเดิมและ Build แอป iOS ใหม่ลงเครื่อง
+- สิ่งที่ดำเนินการ:
+  1. ดำเนินการ Pre-flight check ฝั่ง Local: ตรวจสอบและผ่าน Automated Tests ทั้งหมด (`go test ./...`, `go test -race ./handlers`, `go vet ./...`) 100%
+  2. แพ็กเกจซอร์สโค้ด Go Backend ล่าสุด (ตัด .env, .db, uploads ออก) และอัปโหลดไปยัง `/home/fang/dorminet_workspace/dorminet-flex-source.tar.gz` บนเซิร์ฟเวอร์
+  3. สร้างจุดสำรองข้อมูลความปลอดภัยก่อนรีเซ็ต (Safe Pre-Reset Backup) บนเซิร์ฟเวอร์ไว้ที่ `/home/fang/dorminet_workspace/backups/20261028-075156-pre-clean-reset` ครอบคลุมทั้ง binary, master DB, tenant DBs และ uploads
+  4. ทำการ Compile ไบนารีใหม่ `server_debian` บนเซิร์ฟเวอร์ Linux ได้ SHA-256: `3da3f8172d0dc12454062a86df097ea960ce56f1c0fff35dcf0063984a06790b`
+  5. ดำเนินการ Clean live databases บน Production:
+     - ล้างฐานข้อมูลผู้ดูแลระบบและ Master tables ใน `dormitory.db` (เริ่มต้นใหม่ที่ 0 admins)
+     - ล้าง Tenant databases ทั้งหมดใน `/opt/dormitory/dorm_data/` (ไม่มีห้อง/ผู้เช่าเดิมตกค้าง)
+     - ล้างไฟล์ภาพและสลิปใน `/opt/dormitory/uploads/`
+  6. รีสตาร์ต `dormitory.service` และทดสอบ Health / Setup endpoints
+  7. ล้างและสำรองฐานข้อมูลทดสอบในเครื่อง Local Mac (`backend-dorm/dormitory.db*`) ไปยังโฟลเดอร์สำรองข้อมูล
+- ไฟล์หรือระบบที่กระทบ:
+  - Production Server (`/opt/dormitory/`): `server_debian`, `dormitory.db`, `dorm_data/`, `uploads/`
+  - Local Mac: `backend-dorm/dormitory.db*`, `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: รีเซ็ต Production Database และ Storage ทั้งหมดกลับสู่ค่าเริ่มต้น (0 admins, 0 tenants, 0 uploads)
+- การตรวจสอบและหลักฐาน:
+  - System Ping: `curl https://dorminet.studio/api/system/ping` ตอบ `{"status":"online"}` (HTTP 200)
+  - Setup Status: `curl https://dorminet.studio/api/setup/status` ตอบ `{"needsSetup":true}` (HTTP 200 ยืนยันว่าระบบอยู่ในสถานะรอ Initial Setup Wizard)
+  - Filesystem Check: `/opt/dormitory/dorm_data/` ว่างเปล่า (total 8 = . และ ..), `/opt/dormitory/uploads/` ว่างเปล่า
+  - Backup Path: `/home/fang/dorminet_workspace/backups/20261028-075156-pre-clean-reset`
+  - New Binary SHA-256: `3da3f8172d0dc12454062a86df097ea960ce56f1c0fff35dcf0063984a06790b`
+- สถานะ deploy/UAT: Deploy และ Clean Reset สำเร็จ 100% พร้อมสำหรับการทดสอบติดตั้งและตั้งค่าเริ่มต้นผ่าน iOS App
+
