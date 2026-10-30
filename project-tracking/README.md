@@ -13,7 +13,8 @@
 5. [HANDOFF.md](HANDOFF.md) — โครงสร้างระบบ ไฟล์สำคัญ คำสั่งทดสอบ/ดีพลอย และข้อควรระวัง
 6. [DEVELOPMENT_OPERATIONS_RUNBOOK.md](../docs/DEVELOPMENT_OPERATIONS_RUNBOOK.md) — วิธีเข้า server, ตรวจระบบ, deploy backend และ build/install แอปสำหรับ Terminal ใหม่
 7. [UI_LINE_AUDIT_CHECKLIST.md](UI_LINE_AUDIT_CHECKLIST.md) — checklist UAT สำหรับ iOS, LIFF และ LINE
-8. [DormiNetX-Assessment-2026-10-05.md](../project-review/DormiNetX-Assessment-2026-10-05.md) — แบบประเมินความพร้อมล่าสุด
+8. [TECHNOLOGY_STACK_AND_DECISIONS.md](../docs/TECHNOLOGY_STACK_AND_DECISIONS.md) — รายละเอียดเทคโนโลยี เหตุผลที่เลือกใช้ ตัวอย่างโค้ด และผลลัพธ์หลังนำมาใช้งาน
+9. [DormiNetX-Assessment-2026-10-05.md](../project-review/DormiNetX-Assessment-2026-10-05.md) — แบบประเมินความพร้อมล่าสุด
 
 เอกสารสถานะฉบับยาวอยู่ที่ [CURRENT_STATUS_2026-09-16.md](../docs/CURRENT_STATUS_2026-09-16.md) และหลักฐาน hardening/deployment อยู่ที่ [PRODUCTION_HARDENING_2026-09-10.md](../docs/PRODUCTION_HARDENING_2026-09-10.md)
 

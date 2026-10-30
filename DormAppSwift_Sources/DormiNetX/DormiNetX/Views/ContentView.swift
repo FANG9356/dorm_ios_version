@@ -18,10 +18,12 @@ struct ContentView: View {
             
             if isLoggedIn && !isGuestContainer {
                 RoomListView()
+                    .id("room-list-\(context.container.configurations.first?.url.lastPathComponent ?? "default")")
                     // ใช้แค่การเฟดเพียวๆ ไม่ต้องมีการย่อขยาย จะได้สมูทที่สุด
                     .transition(.opacity)
             } else {
                 LoginView()
+                    .id("login-view")
                     .transition(.opacity)
             }
         }

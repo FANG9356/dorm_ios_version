@@ -256,9 +256,15 @@ class SyncManager: ObservableObject {
     @Published var message: String = ""
 
     private let recentRemoteAutoPullWindow: TimeInterval = 120
+
+    private func isGuestContext(_ context: ModelContext) -> Bool {
+        context.container.configurations.first?.url.absoluteString == "file:///dev/null" ||
+        context.container.configurations.first?.isStoredInMemoryOnly == true
+    }
     
     @MainActor
     func syncWithGoBackend(modelContext: ModelContext) async {
+        guard !isGuestContext(modelContext) else { return }
         if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
             await autoPushLocalChanges(modelContext: modelContext)
         } else {
@@ -358,7 +364,7 @@ class SyncManager: ObservableObject {
     }
 
     func autoPullRecentRemoteIfNeeded(modelContext: ModelContext) async {
-        guard !isSyncing else { return }
+        guard !isSyncing, !isGuestContext(modelContext) else { return }
         if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
             await autoPushLocalChanges(modelContext: modelContext)
             return
@@ -462,6 +468,7 @@ class SyncManager: ObservableObject {
 
     @MainActor
     private func hasDirtyRecords(_ context: ModelContext) -> Bool {
+        guard !isGuestContext(context) else { return false }
         do {
             let rooms = try context.fetch(FetchDescriptor<Room>())
             if rooms.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
@@ -531,6 +538,7 @@ class SyncManager: ObservableObject {
     }
 
     private func buildSnapshot(modelContext: ModelContext) throws -> SyncEnvelope {
+        guard !isGuestContext(modelContext) else { throw SyncError.sessionChanged }
         let accountID = self.accountID
         let version = checkpoint.version + 1
 

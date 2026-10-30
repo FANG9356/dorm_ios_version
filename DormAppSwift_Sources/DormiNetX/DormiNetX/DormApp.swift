@@ -166,6 +166,7 @@ struct AccountScopedRootView: View {
                 AccountStoreLoadingView()
             } else {
                 SplashView()
+                    .id(loadedStoreKey)
             }
         }
             .modelContainer(modelContainer)

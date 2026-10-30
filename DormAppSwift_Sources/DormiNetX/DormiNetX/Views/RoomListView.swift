@@ -21,6 +21,7 @@ struct RoomListView: View {
     @State private var showNotificationOnboarding = false
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoggingOut = false
+    @State private var autoPullTask: Task<Void, Never>?
     @State private var showAddTenantSheet = false
     @State private var showAddRoomType = false
     @State private var showAddRoom = false
@@ -251,9 +252,17 @@ struct RoomListView: View {
             }
         }
         .onReceive(pollingTimer) { _ in
-            guard scenePhase == .active, !syncManager.isSyncing else { return }
+            guard scenePhase == .active, !isLoggingOut, isLoggedIn, !syncManager.isSyncing else { return }
             Task {
                 await syncManager.syncWithGoBackend(modelContext: modelContext)
+            }
+        }
+        .onDisappear {
+            autoPullTask?.cancel()
+        }
+        .onChange(of: isLoggingOut) { _, loggingOut in
+            if loggingOut {
+                autoPullTask?.cancel()
             }
         }
     }
@@ -295,14 +304,17 @@ struct RoomListView: View {
     }
 
     private func scheduleAutoPullCheck() {
+        guard !isLoggingOut, isLoggedIn else { return }
         if let lastAutoPullCheck, Date().timeIntervalSince(lastAutoPullCheck) < 20 {
             return
         }
         lastAutoPullCheck = Date()
-        Task {
+        autoPullTask?.cancel()
+        autoPullTask = Task {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
-            guard !syncManager.isSyncing else { return }
+            guard !Task.isCancelled, !isLoggingOut, isLoggedIn, !syncManager.isSyncing else { return }
             await syncManager.autoPullRecentRemoteIfNeeded(modelContext: modelContext)
+            guard !Task.isCancelled, !isLoggingOut, isLoggedIn else { return }
             await MainActor.run {
                 scheduleBookingPromotionCheck(force: true)
             }
@@ -917,15 +929,15 @@ struct SidebarMenu: View {
                                 isLoggingOut = true
                             }
                             
-                            APIService.shared.authToken = nil
-                            APIService.shared.currentEmail = nil
-                            APIService.shared.userRole = nil
-                            
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                                 // ปรับเวลาให้เท่ากับของ ContentView (0.8 วิ) จะได้ละลายสลับหน้าแบบพอดีกัน
                                 withAnimation(.easeInOut(duration: 0.8)) {
                                     isLoggedIn = false
                                 }
+                                
+                                APIService.shared.authToken = nil
+                                APIService.shared.currentEmail = nil
+                                APIService.shared.userRole = nil
                                 
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                     isLoggingOut = false
