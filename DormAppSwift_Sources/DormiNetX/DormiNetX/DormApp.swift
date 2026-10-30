@@ -162,11 +162,8 @@ struct AccountScopedRootView: View {
                     storeInitError = nil
                     resetToGuestStore()
                 }
-            } else if isLoggedIn && loadedStoreKey != storeKey {
-                AccountStoreLoadingView()
             } else {
                 SplashView()
-                    .id(loadedStoreKey)
             }
         }
             .modelContainer(modelContainer)

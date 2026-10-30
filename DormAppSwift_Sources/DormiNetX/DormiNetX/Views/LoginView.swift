@@ -651,7 +651,7 @@ struct LoginView: View {
                         
                         // Switch to Dashboard after the login UI has faded out
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            withAnimation(.easeInOut(duration: 0.6)) {
+                            withAnimation(.easeInOut(duration: 0.8)) {
                                 isLoggedIn = true
                                 saveAccount()
                             }
@@ -785,7 +785,7 @@ struct LoginView: View {
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.6)) {
+            withAnimation(.easeInOut(duration: 0.8)) {
                 isLoggedIn = true
                 if shouldSaveAccount {
                     saveAccount()
