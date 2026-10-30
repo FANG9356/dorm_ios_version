@@ -1738,7 +1738,7 @@
      - ยืนยันว่าไฟล์ปัจจุบันทุกไฟล์ (334 ไฟล์) ไม่มีไฟล์ `.env` หรือ API Key หลงเหลืออยู่เลย (การตั้งค่า `.gitignore` ทำงานถูกต้อง)
   2. สแกนประวัติการคอมมิตทั้งหมดใน Git History (115 คอมมิต):
      - พบว่าในคอมมิตแรก `b751851` (First commit เมื่อ 19 ส.ค. 2569) มีการคอมมิตไฟล์ `backend-dorm/.env` และ `wails_app/.env` เข้าไปใน Git โดยตรง
-     - ภายในไฟล์ `backend-dorm/.env` ของคอมมิตดังกล่าว มี `RESEND_API_KEY` (ขึ้นต้นด้วย `REMOVED_SECRET...`), `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, และ `JWT_SECRET`
+     - ภายในไฟล์ `backend-dorm/.env` ของคอมมิตดังกล่าว มี `RESEND_API_KEY`, `LINE_CHANNEL_SECRET`, `LINE_CHANNEL_ACCESS_TOKEN`, และ `JWT_SECRET`
      - แม้ต่อมาในคอมมิต `f373a86` (15 ก.ย. 2569) จะมีการลบไฟล์ `.env` ออกจากการติดตามของ Git (`git rm`) แล้วก็ตาม แต่ในระบบ Git ประวัติของคอมมิตเก่า `b751851` ยังคงถูกบันทึกไว้อย่างถาวร
   3. วิเคราะห์สาเหตุการแจ้งเตือนจาก Resend:
      - เมื่อผู้ใช้เปลี่ยนสถานะคลังโค้ดจาก Private เป็น Public ระบบ **GitHub Secret Scanning** จะทำการสแกนประวัติการคอมมิตย้อนหลังทุกคอมมิตโดยอัตโนมัติ
