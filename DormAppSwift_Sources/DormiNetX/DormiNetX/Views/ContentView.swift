@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
+    @AppStorage("adminID") var adminID: Int = 0
     
     var body: some View {
         ZStack {
@@ -11,6 +12,7 @@ struct ContentView: View {
             
             if isLoggedIn {
                 RoomListView()
+                    .id("room-list-\(adminID)")
                     // ใช้แค่การเฟดเพียวๆ ไม่ต้องมีการย่อขยาย จะได้สมูทที่สุด
                     .transition(.opacity)
             } else {

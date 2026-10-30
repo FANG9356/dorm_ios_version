@@ -938,6 +938,7 @@ struct SidebarMenu: View {
                                 APIService.shared.authToken = nil
                                 APIService.shared.currentEmail = nil
                                 APIService.shared.userRole = nil
+                                UserDefaults.standard.removeObject(forKey: "adminID")
                                 
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                     isLoggingOut = false

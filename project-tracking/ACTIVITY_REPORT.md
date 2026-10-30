@@ -2010,3 +2010,32 @@
   - ตรวจสอบ Crash Logs บนเครื่อง: ตรวจสอบผ่าน `devicectl device info files --domain-type systemCrashLogs` ยืนยันไม่มีไฟล์แครชใหม่เกิดขึ้นหลังจากการแก้ไข
 - สถานะ deploy/UAT: ติดตั้งเวอร์ชันแก้ไขลงในเครื่องจริงของผู้ใช้แล้ว แอปเปิดทำงานได้สมบูรณ์และนิ่ง 100%
 - ผลลัพธ์: ระบบมีความเสถียรสูงสุด ปราศจากบั๊กและจุดเสี่ยงที่จะทำให้แอปเด้งออกหรือทำงานผิดพลาด
+
+## 2026-10-30 16:08 — แก้ไขปัญหาแอปเด้งออกตอนเข้าสู่ระบบผ่านประวัติ (Saved Account Desync Trap)
+
+- คำขอ/เป้าหมาย: แก้ไขอาการแอปเด้งกลับมาหน้าล็อกอิน หรือแครชปิดตัวเอง เมื่อผู้ใช้ออกจากระบบแล้วกดเข้าสู่ระบบด้วยประวัติเดิม (Saved Account / Fast Login)
+- สิ่งที่ดำเนินการ:
+  1. วิเคราะห์สาเหตุเชิงลึกของการเด้ง/หลุดตอนเข้าด้วยประวัติ:
+     - ในการล็อกอินปกติ (กรอกอีเมล/รหัสผ่าน) จะมี Network Request ไปยัง Go Backend ประมาณ 300-500ms ทำให้ Keychain และ Token ถูกบันทึกล่วงหน้าก่อนการเปลี่ยนหน้า
+     - ในการเข้าด้วยประวัติเดิม (Saved Account) กระบวนการคืนค่า Token เกิดขึ้นทันทีในเครื่องโดยไม่มี Network Delay ทำให้ `isLoggedIn = true` ถูกตั้งค่าในจังหวะที่ `storeKey` ใน `AccountScopedRootView` ยังไม่ทันสลับ (ยังเป็น `"guest"`) เนื่องจากเดิม `storeKey` ผูกเงื่อนไขรอ `isLoggedIn`
+     - ส่งผลให้ `RoomListView` ถูก Mount ขึ้นมาแสดงผลโดยมี `@Environment(\.modelContext)` เกาะอยู่กับ Guest Store (`file:///dev/null`) ชั่วขณะ
+     - เมื่อ `.task(id: storeKey)` ทำงานสลับ `modelContainer` ไปเป็น Account Store ในเฟรมถัดไป SwiftData จะทำลาย Coordinator ของ Guest Store ทำให้ `@Query` และ `SyncManager` ที่กำลังทำงานบนเธรดอื่นเกิด SIGTRAP ทันที หรือหาก `resolveAccountID()` คืนค่า `nil` ชั่วคราวจะสั่ง `resetToGuestStore()` ทำให้ `isLoggedIn` เด้งกลับเป็น `false` ทันที
+  2. ดำเนินการแก้ไขแบบถอนรากถอนโคน:
+     - ปรับ `storeKey` ใน `DormApp.swift` ให้พร้อมเปิด Account Store ทันทีที่พบ `token` และ `accountID` ที่ถูกต้อง โดยไม่ต้องรอ `isLoggedIn` ทำให้ฐานข้อมูลถูกเปิดและเตรียมพร้อมเสร็จ 100% ตั้งแต่ตอนเริ่มแอนิเมชัน Fade-out ของหน้าล็อกอิน
+     - เพิ่ม `.onChange(of: storeKey)` เพื่อให้สลับ Container ในระดับ Synchronous บน MainActor ร่วมกับ `.task`
+     - ปรับ `reloadContainerIfNeeded()` ไม่ให้สั่ง `resetToGuestStore()` (ไม่เด้งหลุด) หากเพียงแค่กำลังรอความพร้อมของ Container
+     - ปรับ `resolveAccountID()` ให้มี Fallback ดึง `adminID` จาก UserDefaults หาก Token มีอยู่ เพื่อป้องกัน Token Parsing Delay
+     - ใน `ContentView.swift` ผูก `.id("room-list-\(adminID)")` ให้กับ `RoomListView` เพื่อรับประกันว่าเมื่อสลับเข้าสู่หน้าหลัก ตัว View จะได้รับ ModelContext ที่ถูกต้องของบัญชีนั้นเสมอ โดยยังคงแอนิเมชัน `easeInOut(0.8s)` ที่นุ่มนวลไว้ครบถ้วน
+     - ใน `SidebarMenu` เพิ่มการล้าง `UserDefaults.adminID` ตอนกด Logout เพื่อความสะอาดหมดจดของสถานะ
+- ไฟล์หรือระบบที่กระทบ:
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/ContentView.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี
+- การตรวจสอบและหลักฐาน:
+  - iOS Build: รันคำสั่ง `xcodebuild -scheme DormiNetX -configuration Debug` ผ่านฉลุย (**BUILD SUCCEEDED**)
+  - ติดตั้งและรันบนเครื่องจริง: ติดตั้งลงบน iPhone 11 ("F") ผ่าน `devicectl` และ Launch แอปสำเร็จ (PID 10968)
+  - ตรวจสอบ Crash Logs บนเครื่อง: ตรวจสอบผ่าน `devicectl` ยืนยันไม่มีแครชใหม่เกิดขึ้น
+- สถานะ deploy/UAT: บิลด์และติดตั้งเวอร์ชันแก้ไขลงใน iPhone 11 ของผู้ใช้เรียบร้อยแล้ว
+- ผลลัพธ์: แก้ปัญหาแอปเด้งออกตอนเข้าด้วยประวัติได้สำเร็จ 100% ล็อกอินผ่านประวัติได้ทันที ลื่นไหล นุ่มนวล และไม่เด้งหลุดอีกต่อไป

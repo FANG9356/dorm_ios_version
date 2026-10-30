@@ -145,12 +145,12 @@ struct AccountScopedRootView: View {
     }
 
     private var storeKey: String {
-        guard isLoggedIn else {
+        guard isLoggedIn || (credentials.token != nil && Self.resolveAccountID() != nil),
+              let accountID = Self.resolveAccountID(),
+              let token = credentials.token, !token.isEmpty else {
             return "guest"
         }
-
-        let resolvedID = Self.resolveAccountID() ?? (adminID > 0 ? adminID : 0)
-        return "account-\(resolvedID)-\(credentials.token ?? "")"
+        return "account-\(accountID)-\(token)"
     }
 
     var body: some View {
@@ -171,6 +171,9 @@ struct AccountScopedRootView: View {
             .task(id: storeKey) {
                 reloadContainerIfNeeded()
             }
+            .onChange(of: storeKey) { _, _ in
+                reloadContainerIfNeeded()
+            }
             .alert("ข้อมูลความปลอดภัย", isPresented: Binding(
                 get: { credentials.errorMessage != nil },
                 set: { if !$0 { credentials.errorMessage = nil } }
@@ -184,7 +187,7 @@ struct AccountScopedRootView: View {
             return
         }
 
-        guard isLoggedIn else {
+        guard let accountID = Self.resolveAccountID(), credentials.token != nil else {
             do {
                 modelContainer = try AccountScopedStore.makeGuestContainer()
                 loadedStoreKey = "guest"
@@ -193,12 +196,6 @@ struct AccountScopedRootView: View {
                 print("❌ Failed to create guest SwiftData container: \(error)")
                 storeInitError = error
             }
-            return
-        }
-
-        guard let accountID = Self.resolveAccountID() else {
-            print("⚠️ Logged in but no adminID is available; returning to login")
-            resetToGuestStore()
             return
         }
 
@@ -228,12 +225,18 @@ struct AccountScopedRootView: View {
         }
     }
 
-    /// Resolve the local store from the saved session, never from a stale account preference.
+    /// Resolve the local store from the saved session, with fallback to persisted adminID if token is present.
     private static func resolveAccountID() -> Int? {
-        guard let token = CredentialStore.shared.token,
-              let accountID = APIService.shared.localSessionAccountID(token: token) else { return nil }
-        UserDefaults.standard.set(accountID, forKey: "adminID")
-        return accountID
+        if let token = CredentialStore.shared.token,
+           let accountID = APIService.shared.localSessionAccountID(token: token) {
+            UserDefaults.standard.set(accountID, forKey: "adminID")
+            return accountID
+        }
+        let storedID = UserDefaults.standard.integer(forKey: "adminID")
+        if storedID > 0 && CredentialStore.shared.token != nil {
+            return storedID
+        }
+        return nil
     }
 }
 
