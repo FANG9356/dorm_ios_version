@@ -29,6 +29,12 @@ func TestLiffHandlerServesEndpointAndAssets(t *testing.T) {
 		if strings.Contains(recorder.Body.String(), `id="room"`) {
 			t.Fatalf("GET %s still exposes a room selector", path)
 		}
+		if strings.Contains(recorder.Body.String(), `maxlength="5"`) {
+			t.Fatalf("GET %s still restricts dorm code to 5 digits", path)
+		}
+		if !strings.Contains(recorder.Body.String(), `maxlength="6"`) {
+			t.Fatalf("GET %s missing 6-digit maxlength", path)
+		}
 		if recorder.Header().Get("Content-Security-Policy") == "" {
 			t.Fatalf("GET %s missing CSP", path)
 		}

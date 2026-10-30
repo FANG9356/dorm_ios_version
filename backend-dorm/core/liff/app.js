@@ -322,8 +322,8 @@
     }
 
     const normalizedDormCode = (dormCode.value || "").trim();
-    if (!normalizedDormCode || normalizedDormCode.length !== 5) {
-      showNotice("กรุณากรอกรหัสหอพัก 5 หลักให้ถูกต้อง");
+    if (!normalizedDormCode || (normalizedDormCode.length !== 5 && normalizedDormCode.length !== 6)) {
+      showNotice("กรุณากรอกรหัสหอพัก 6 หลักให้ถูกต้อง");
       return;
     }
 
