@@ -149,7 +149,8 @@ struct AccountScopedRootView: View {
             return "guest"
         }
 
-        return "account-\(adminID)-\(credentials.token ?? "")"
+        let resolvedID = Self.resolveAccountID() ?? (adminID > 0 ? adminID : 0)
+        return "account-\(resolvedID)-\(credentials.token ?? "")"
     }
 
     var body: some View {

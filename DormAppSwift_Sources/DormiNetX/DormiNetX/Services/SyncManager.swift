@@ -257,14 +257,13 @@ class SyncManager: ObservableObject {
 
     private let recentRemoteAutoPullWindow: TimeInterval = 120
 
-    private func isGuestContext(_ context: ModelContext) -> Bool {
-        context.container.configurations.first?.url.absoluteString == "file:///dev/null" ||
-        context.container.configurations.first?.isStoredInMemoryOnly == true
+    private var isGuestOrLoggedOut: Bool {
+        accountID <= 0 || (api.authToken ?? "").isEmpty
     }
     
     @MainActor
     func syncWithGoBackend(modelContext: ModelContext) async {
-        guard !isGuestContext(modelContext) else { return }
+        guard !isGuestOrLoggedOut else { return }
         if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
             await autoPushLocalChanges(modelContext: modelContext)
         } else {
@@ -291,7 +290,13 @@ class SyncManager: ObservableObject {
             message = String(localized: "กำลังบันทึกขึ้น cloud")
 
             let startingAccount = accountID
+            var attempts = 0
             repeat {
+                attempts += 1
+                if attempts > 5 {
+                    print("⚠️ Auto-push reached maximum rebase attempts (5); stopping loop")
+                    throw SyncError.conflict
+                }
                 do {
                     try await pushCurrentSnapshot(modelContext: modelContext)
                 } catch SyncError.conflict {
@@ -364,7 +369,7 @@ class SyncManager: ObservableObject {
     }
 
     func autoPullRecentRemoteIfNeeded(modelContext: ModelContext) async {
-        guard !isSyncing, !isGuestContext(modelContext) else { return }
+        guard !isSyncing, !isGuestOrLoggedOut else { return }
         if hasDirtyLocalChanges() || hasDirtyRecords(modelContext) {
             await autoPushLocalChanges(modelContext: modelContext)
             return
@@ -468,7 +473,7 @@ class SyncManager: ObservableObject {
 
     @MainActor
     private func hasDirtyRecords(_ context: ModelContext) -> Bool {
-        guard !isGuestContext(context) else { return false }
+        guard !isGuestOrLoggedOut else { return false }
         do {
             let rooms = try context.fetch(FetchDescriptor<Room>())
             if rooms.contains(where: { $0.isDirty || $0.isDeletedLocally }) { return true }
@@ -538,7 +543,7 @@ class SyncManager: ObservableObject {
     }
 
     private func buildSnapshot(modelContext: ModelContext) throws -> SyncEnvelope {
-        guard !isGuestContext(modelContext) else { throw SyncError.sessionChanged }
+        guard !isGuestOrLoggedOut else { throw SyncError.sessionChanged }
         let accountID = self.accountID
         let version = checkpoint.version + 1
 
@@ -745,7 +750,7 @@ class SyncManager: ObservableObject {
         let dirtyMaintenance = (try modelContext.fetch(FetchDescriptor<Maintenance>())).filter { $0.isDirty || $0.isDeletedLocally }
         let dirtyRoomTypes = (try modelContext.fetch(FetchDescriptor<RoomType>())).filter { $0.isDirty }
 
-        let remoteMaintenance = Dictionary(uniqueKeysWithValues: remote.maintenance.map { ($0.id, $0) })
+        let remoteMaintenance = Dictionary(remote.maintenance.map { ($0.id, $0) }, uniquingKeysWith: { _, new in new })
         let mergeableDirtyMaintenance = dirtyMaintenance.filter { item in
             guard !item.isDeletedLocally, let remoteItem = remoteMaintenance[item.id] else { return true }
             let hasCost = item.cost > 0 || ["รออนุมัติค่าใช้จ่าย", "ปฏิเสธค่าใช้จ่าย", "รอตรวจสอบชำระเงิน"].contains(item.status)

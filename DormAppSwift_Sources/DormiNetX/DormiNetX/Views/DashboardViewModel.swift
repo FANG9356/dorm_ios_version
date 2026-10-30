@@ -334,11 +334,8 @@ class DashboardViewModel: ObservableObject {
                 guard let monthKey = BillingCycle.normalizedMonthKey(String(moveIn.prefix(7))) else { continue }
                 
                 let dep = u.deposit ?? 0
-                if monthlyMoveIn[monthKey] == nil {
-                    monthlyMoveIn[monthKey] = (0, 0)
-                }
-                monthlyMoveIn[monthKey]!.0 += 1
-                monthlyMoveIn[monthKey]!.1 += dep
+                monthlyMoveIn[monthKey, default: (0, 0)].0 += 1
+                monthlyMoveIn[monthKey, default: (0, 0)].1 += dep
                 
                 if monthKey == currentMonthString {
                     currentDeposit += dep
@@ -349,7 +346,7 @@ class DashboardViewModel: ObservableObject {
             // Sort Move-In Stats
             let sortedMoveInKeys = monthlyMoveIn.keys.sorted().suffix(6)
             self.moveInStats = sortedMoveInKeys.map { key in
-                MoveInStat(name: AppDate.thaiShortMonth(key), monthKey: key, newResidents: monthlyMoveIn[key]!.0)
+                MoveInStat(name: AppDate.thaiShortMonth(key), monthKey: key, newResidents: monthlyMoveIn[key]?.0 ?? 0)
             }
             
             // Financial Trends
@@ -372,19 +369,17 @@ class DashboardViewModel: ObservableObject {
                         if let pd = p.payment_date, pd.count >= 7 {
                             dateKey = BillingCycle.normalizedMonthKey(String(pd.prefix(7))) ?? dateKey
                         }
-                        if payStats[dateKey] == nil { payStats[dateKey] = (0, 0) }
-                        payStats[dateKey]!.0 += amt
+                        payStats[dateKey, default: (0, 0)].0 += amt
                     } else {
                         let mKey = BillingCycle.normalizedMonthKey(p.month ?? "") ?? "Unknown"
-                        if payStats[mKey] == nil { payStats[mKey] = (0, 0) }
-                        payStats[mKey]!.1 += amt
+                        payStats[mKey, default: (0, 0)].1 += amt
                     }
                 }
             }
             
             let sortedPayKeys = payStats.keys.sorted().suffix(6)
             self.financialStats = sortedPayKeys.map { key in
-                FinancialStat(month: key, name: AppDate.thaiShortMonth(key), income: payStats[key]!.0, pending: payStats[key]!.1)
+                FinancialStat(month: key, name: AppDate.thaiShortMonth(key), income: payStats[key]?.0 ?? 0, pending: payStats[key]?.1 ?? 0)
             }
             
         } catch {

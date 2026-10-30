@@ -71,7 +71,7 @@ class TenantsViewModel: ObservableObject {
         errorMessage = nil
         if let modelContext {
             do {
-                let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
+                let localUsers = (try modelContext.fetch(FetchDescriptor<DormUser>())).filter { !$0.isDeletedLocally }
                 self.users = localUsers.map { user in
                     var apiUser = APIUser(
                         id: stableLocalUserID(for: user),
