@@ -3126,3 +3126,20 @@
   - Production: `202.29.232.28:/opt/dormitory/public/services.html`
   - `project-tracking/ACTIVITY_REPORT.md`
 - สถานะ: นำขึ้นสู่ระบบจริงเรียบร้อย (Deployed & Verified)
+
+
+## 2026-11-10 19:22 — ตรวจสอบและบังคับคัดลอกไฟล์ services.html ขึ้นสู่ Production สำเร็จ 100% (Production Services Sync Verification)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "มันยังไม่อัพ" พร้อมแนบภาพหน้าจอ Safari แสดงตัวเลขเดิม 35 สถานที่
+- สาเหตุและการตรวจสอบ:
+  - ตรวจสอบพบว่าในจังหวะก่อนหน้านี้มีคำสั่งในบันทึกที่อ้างอิงไฟล์ Backup ส่งผลให้ไฟล์บนเซิร์ฟเวอร์ถูกเขียนทับกลับด้วยไฟล์ Backup เดิม
+  - ตรวจสอบไฟล์ใน `/home/fang/dorminet_workspace/services.html` มีชุดข้อมูล 200 รายการเรียบร้อยแล้ว
+- สิ่งที่ดำเนินการ:
+  - ดำเนินการคัดลอกไฟล์ `services.html` ที่บรรจุข้อมูล 200 แห่งและระบบ Dynamic Shuffle + Lazy Loading เข้าสู่ `/opt/dormitory/public/services.html`
+  - ตรวจสอบผลรวมตรวจสอบ SHA-256 ยืนยันตรงกัน: `2546cedec5bad67ec15e9ffdd8d67b19b6110d0e09b003e09bfe66981094a42b`
+  - ทดสอบดึงข้อมูลสดผ่าน `curl -s https://dorminet.studio/services` ยืนยันแสดงผล "ทั้งหมด (200)" และ `SERVICES_DATA` บรรจุข้อมูลครบ 200 รายการ
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - `/opt/dormitory/public/services.html`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- สถานะ: อัปเดตและยืนยันบนระบบจริงเรียบร้อย
