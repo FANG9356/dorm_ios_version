@@ -3272,3 +3272,48 @@
   - Production: `202.29.232.28:/opt/dormitory/public/services.html`
   - `project-tracking/ACTIVITY_REPORT.md`
 - สถานะ: นำขึ้นสู่ระบบจริงเรียบร้อย (Deployed & Verified)
+
+
+## 2026-11-10 20:00 — แก้ไขข้อผิดพลาด "ส่งไม่สำเร็จและ Server Error" และปรับปรุงระบบ Sync/Outbox Multi-Admin
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "มันบอก ส่งไม่สำเร็จและ server eror อีกแล้วตอนบิวด์ใหม่แล้วเข้าใหม่" พร้อมพบว่าห้อง 105 ขึ้นป้ายแดง "ส่งไม่สำเร็จ" และขึ้นแจ้งเตือน "Server Error"
+- การวิเคราะห์สาเหตุเชิงลึก (Root Cause Analysis):
+  1. Stale Outbox Lock (account_2.json): ในเครื่องมีการบันทึกไฟล์ SyncOutbox ภายใต้ account_2.json ซึ่งมี baseVersion: 12 ตกค้างอยู่ เมื่อแอปเปิดขึ้นมา autoPushLocalChanges จะโหลด payload เก่านี้ขึ้นมาส่งด้วย base_version: 12 เสมอ ในขณะที่เซิร์ฟเวอร์อยู่ที่เวอร์ชัน 58 จึงตอบกลับด้วย HTTP 409 Conflict ทุกครั้ง
+  2. การวนซ้ำของ Sync Conflict: เมื่อ pushCurrentSnapshot พบ HTTP 409 Conflict ตัวจัดการเดิมไม่ได้ลบ payload ออกจาก SyncOutbox ทำให้ลูปพยายามผลักดันข้อมูลเดิมซ้ำ และเมื่อครบ 5 ครั้งจึงแจ้งเตือนความล้มเหลว
+  3. ข้อความ Error ที่ไม่ชัดเจน ("Server Error"): ใน APIService.swift ฟังก์ชัน performGetRequest และ performEmptyResponseRequest ตั้งค่าข้อความแจ้งเตือนตายตัวเป็น "Server Error" หาก HTTP Status ไม่ใช่ 200 แทนที่จะดึงข้อความสาเหตุที่แท้จริงจาก JSON ของเซิร์ฟเวอร์
+  4. ข้อจำกัด idx_payments_unique บนเซิร์ฟเวอร์: ดัชนี idx_payments_unique ใน SQLite เดิมไม่ได้จำกัดเงื่อนไข WHERE user_id > 0 ทำให้หากมีบิลที่ user_id <= 0 (เช่น ห้องว่างหรือยังไม่ผูกผู้พัก) ในเดือนเดียวกัน จะเกิดข้อผิดพลาด UNIQUE constraint failed: index 'idx_payments_unique' ระหว่างการ Materialize Snapshot
+  5. Multi-Admin Account Mapping: ในกรณีแอดมินย่อย ("แพรวา", admin_id = 2) บัญชีหอพักจริงบนเซิร์ฟเวอร์คือ account_id = 1 การที่ระบบไคลเอนต์และเอาต์บ็อกซ์แยกโฟลเดอร์ตาม ID แอดมินทำให้เกิดความไม่สอดคล้อง
+- สิ่งที่ดำเนินการแก้ไข:
+  1. ปรับปรุง APIService.swift:
+     - เพิ่มฟังก์ชัน extractErrorMessage(from:statusCode:) ถอดข้อความแจ้งเตือนที่แท้จริงจาก JSON (error, message) หรือ HTTP Status เพื่อแสดงผลที่ชัดเจนแก่ผู้ใช้งาน แทนคำว่า "Server Error" ทั่วไป
+     - ปรับให้ performGetRequest และ performEmptyResponseRequest ใช้ extractErrorMessage
+  2. ปรับปรุง SyncOutbox.swift และ SyncManager.swift:
+     - เพิ่มฟังก์ชัน removeAll() ใน SyncOutbox.swift เพื่อล้างคิวค้างข้ามบัญชี
+     - ใน pushCurrentSnapshot: ตรวจสอบว่าหาก pending.baseVersion < metadata.version ของเซิร์ฟเวอร์ ให้ทิ้ง outbox ที่ล้าสมัยทันที (try? outbox.remove(accountID:)) และโยน SyncError.conflict เพื่อให้ระบบ rebase ข้อมูลใหม่ล่าสุดทันทีโดยไม่ติดค้าง
+     - ตรวจสอบ metadata.accountID จากเซิร์ฟเวอร์ หากพบว่าบัญชีจริงบนเซิร์ฟเวอร์ไม่ตรงกับ local accountID ให้ปรับค่าและเคลียร์ outbox ทันที
+     - ใน catch SyncError.conflict: เรียก outbox.remove(accountID:) ทันทีเพื่อไม่ให้ payload เก่าหลงเหลือ
+     - ใน applySnapshot: เรียก outbox.remove(accountID:) และรีเซ็ต checkpoint.pending = false เมื่อข้อมูลถูกปรับเป็นปัจจุบันแล้ว
+     - ปรับระบบผสานข้อมูลการชำระเงิน (rebasePendingLocalChanges): จัดคีย์ slot ให้ปลอดภัยทั้งกรณีมี userId (u:userId:month:phase) และไม่มี userId (r:roomNumber:month:phase)
+  3. ปรับปรุง Backend Go (line_snapshot.go & tenant_db.go):
+     - ปรับ DDL ดัชนี idx_payments_unique ให้เพิ่มเงื่อนไข WHERE user_id > 0 ป้องกันการชนกันของบิลที่ไม่มี user_id
+     - ปรับ normalizePaymentSnapshots ให้คัดกรองข้อมูลซ้ำตาม slot ทั้งกรณี user_id และ room_number
+     - ปรับการลบข้อมูลซ้ำก่อนบันทึกใน materializeLineSnapshotIntoWithNotifier ให้ครอบคลุมทั้ง user_id และ room_number
+  4. การทดสอบและการนำขึ้นสู่ระบบจริง (Verification & Deployment):
+     - รัน go test ./... — ผ่าน 100%
+     - รัน go test -race -count=1 ./handlers — ผ่าน 0 Data Race
+     - รัน go vet ./... — ผ่าน 0 ข้อผิดพลาด
+     - ทำการ Safe Deploy Backend ขึ้นสู่เซิร์ฟเวอร์โปรดักชัน (202.29.232.28) สำเร็จ:
+       - SHA-256: a80fe6fc20cbece5ea77289e15d37fe5619f402325dd16dc1b415d54f4b01b2e
+       - สำรองฐานข้อมูลและไบนารีไว้ที่ /home/fang/dorminet_workspace/backups/20261110-045607-pre-flex-ui
+       - เซอร์วิส dormitory.service และ dormitory-ocr.service ทำงานปกติ ({"status":"online"})
+     - บิลด์แอป iOS สำหรับเครื่องจริง iPhone 11 ("F", 00008030-001C65A134C0A02E) สำเร็จ (** BUILD SUCCEEDED **)
+     - ติดตั้งแอปลงเครื่องจริงผ่าน xcrun devicectl device install app เรียบร้อยสมบูรณ์
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncManager.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncOutbox.swift
+  - backend-dorm/handlers/line_snapshot.go
+  - backend-dorm/handlers/tenant_db.go
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: เสร็จสิ้นและนำขึ้นระบบจริงเรียบร้อย (Deployed & Verified)

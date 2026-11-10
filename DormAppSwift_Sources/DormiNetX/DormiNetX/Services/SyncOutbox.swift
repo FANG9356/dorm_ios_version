@@ -32,4 +32,16 @@ struct SyncOutbox {
         let url = try fileURL(accountID: accountID)
         if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
     }
+
+    func removeAll() throws {
+        let base = try directory ?? FileManager.default.url(for: .applicationSupportDirectory,
+                                                            in: .userDomainMask, appropriateFor: nil, create: true)
+            .appendingPathComponent("DormiNet/SyncOutbox", isDirectory: true)
+        if FileManager.default.fileExists(atPath: base.path) {
+            let files = try FileManager.default.contentsOfDirectory(at: base, includingPropertiesForKeys: nil)
+            for file in files {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
+    }
 }

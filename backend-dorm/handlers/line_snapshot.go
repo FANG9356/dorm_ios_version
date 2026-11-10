@@ -191,6 +191,8 @@ func InitializeLineIntegration(db *sql.DB) {
 
 func ensureLineTenantSchema(db *sql.DB) {
 	InitializeTenantDatabase(db)
+	db.Exec(`DROP INDEX IF EXISTS idx_payments_unique`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0')) WHERE user_id > 0`)
 	db.Exec(`ALTER TABLE users ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN external_id TEXT DEFAULT ''`)
 	db.Exec(`ALTER TABLE payments ADD COLUMN deposit_fee REAL DEFAULT 0`)
@@ -439,9 +441,14 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		if strings.TrimSpace(payment.ID) != "" {
 			activePaymentIDs[payment.ID] = true
 		}
-		if payment.UserID > 0 && strings.TrimSpace(payment.Month) != "" {
-			_, err = tx.Exec(`DELETE FROM payments WHERE user_id = ? AND month = ? AND COALESCE(installment_phase, 0) = ? AND external_id != ?`,
-				payment.UserID, payment.Month, payment.InstallmentPhase, payment.ID)
+		if strings.TrimSpace(payment.Month) != "" {
+			if payment.UserID > 0 {
+				_, err = tx.Exec(`DELETE FROM payments WHERE user_id = ? AND month = ? AND COALESCE(installment_phase, 0) = ? AND external_id != ?`,
+					payment.UserID, payment.Month, payment.InstallmentPhase, payment.ID)
+			} else if strings.TrimSpace(payment.RoomNumber) != "" {
+				_, err = tx.Exec(`DELETE FROM payments WHERE room_number = ? AND month = ? AND COALESCE(installment_phase, 0) = ? AND external_id != ?`,
+					payment.RoomNumber, payment.Month, payment.InstallmentPhase, payment.ID)
+			}
 			if err != nil {
 				return fmt.Errorf("cleanup duplicate payment: %w", err)
 			}
@@ -983,11 +990,20 @@ func normalizePaymentSnapshots(items []linePaymentSnapshot) []linePaymentSnapsho
 	bySlot := make(map[string]int, len(result))
 	deduped := make([]linePaymentSnapshot, 0, len(result))
 	for _, item := range result {
-		if item.UserID <= 0 || strings.TrimSpace(item.Month) == "" {
+		month := strings.TrimSpace(item.Month)
+		if month == "" {
 			deduped = append(deduped, item)
 			continue
 		}
-		slotKey := fmt.Sprintf("%d:%s:%d", item.UserID, strings.TrimSpace(item.Month), item.InstallmentPhase)
+		var slotKey string
+		if item.UserID > 0 {
+			slotKey = fmt.Sprintf("u:%d:%s:%d", item.UserID, month, item.InstallmentPhase)
+		} else if strings.TrimSpace(item.RoomNumber) != "" {
+			slotKey = fmt.Sprintf("r:%s:%s:%d", strings.TrimSpace(item.RoomNumber), month, item.InstallmentPhase)
+		} else {
+			deduped = append(deduped, item)
+			continue
+		}
 		if index, exists := bySlot[slotKey]; exists {
 			if item.LastUpdated > deduped[index].LastUpdated {
 				deduped[index] = item

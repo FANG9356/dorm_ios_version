@@ -362,7 +362,7 @@ class APIService {
         if httpResponse.statusCode == 409 { throw SyncError.conflict }
         if httpResponse.statusCode == 428 { throw SyncError.updateRequired }
         if httpResponse.statusCode != 200 {
-            let errorMsg = String(data: data, encoding: .utf8) ?? "Server Error"
+            let errorMsg = Self.extractErrorMessage(from: data, statusCode: httpResponse.statusCode)
             throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
         return data
@@ -534,7 +534,8 @@ class APIService {
         }
         
         if httpResponse.statusCode != 200 {
-            throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Server Error"])
+            let errorMsg = Self.extractErrorMessage(from: data, statusCode: httpResponse.statusCode)
+            throw NSError(domain: "", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
         
         return data
@@ -549,10 +550,25 @@ class APIService {
         }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
-            let message = String(data: data, encoding: .utf8) ?? "Server Error"
-            throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: message])
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let message = Self.extractErrorMessage(from: data, statusCode: statusCode)
+            throw NSError(domain: "", code: statusCode, userInfo: [NSLocalizedDescriptionKey: message])
         }
         return data
+    }
+
+    static func extractErrorMessage(from data: Data, statusCode: Int) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let error = json["error"] as? String, !error.isEmpty { return error }
+            if let message = json["message"] as? String, !message.isEmpty { return message }
+        }
+        if let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !str.isEmpty {
+            if str.hasPrefix("<") {
+                return "เกิดข้อผิดพลาดในการเชื่อมต่อ (HTTP \(statusCode))"
+            }
+            return str
+        }
+        return HTTPURLResponse.localizedString(forStatusCode: statusCode)
     }
     
     func deleteAdmin(id: Int) async throws -> Bool {

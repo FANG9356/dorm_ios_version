@@ -83,7 +83,8 @@ func InitializeTenantDatabase(db *sql.DB) {
 	db.Exec(`CREATE TABLE IF NOT EXISTS rooms (room_id INTEGER PRIMARY KEY AUTOINCREMENT, room_number TEXT UNIQUE, room_type TEXT)`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS payments (payment_id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, room_number TEXT, rent_fee REAL, water_fee REAL, electric_fee REAL, common_fee REAL, late_fee REAL, amount REAL, month TEXT, payment_date TEXT, method TEXT, slip_path TEXT, water_meter_prev REAL DEFAULT 0, water_meter_curr REAL DEFAULT 0, electric_meter_prev REAL DEFAULT 0, electric_meter_curr REAL DEFAULT 0)`)
-	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0'))`)
+	db.Exec(`DROP INDEX IF EXISTS idx_payments_unique`)
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0')) WHERE user_id > 0`)
 
 	db.Exec(`CREATE TABLE IF NOT EXISTS system_logs (log_id INTEGER PRIMARY KEY AUTOINCREMENT, action_type TEXT, details TEXT, timestamp TEXT)`)
 	db.Exec(`CREATE TABLE IF NOT EXISTS financial_audits (id INTEGER PRIMARY KEY AUTOINCREMENT, payment_id INTEGER, maintenance_id INTEGER, action_type TEXT, actor TEXT, reason TEXT, previous_amount REAL, new_amount REAL, previous_status TEXT, new_status TEXT, created_at TEXT)`)
