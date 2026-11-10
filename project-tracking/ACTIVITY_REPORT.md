@@ -2978,3 +2978,21 @@
   - `project-tracking/ACTIVITY_REPORT.md`
 - สถานะ: ดำเนินการเสร็จสมบูรณ์ 100%, รูปภาพจริงของร้านและสถานที่ทั้ง 35 แห่งแสดงผลบน Production เรียบร้อย
 
+
+## 2026-11-10 18:10 — ลบป้าย "ข้อมูลสถานที่จริง" (badge-verified) ออกจาก Header ของหน้าบริการชุมชน (services.html)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานส่งภาพป้ายสัญลักษณ์รูปโล่สีฟ้า "ข้อมูลสถานที่จริง" และแจ้งว่า: "เอาอันนี้ออก"
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบตำแหน่งขององค์ประกอบดังกล่าว พบว่าอยู่ในแท็ก `<header class="site-header">` คลาส `.badge-verified` ในไฟล์ `backend-dorm/public/services.html`
+  2. ลบแท็ก `<div class="badge-verified">` พร้อมไอคอนรูปโล่และข้อความ "ข้อมูลสถานที่จริง" ออกจาก Navbar
+  3. ลบ CSS ของ `.badge-verified` และ `.badge-verified svg` เพื่อความสะอาดของโค้ดสไตล์
+  4. ทำการ Deploy ไฟล์ `backend-dorm/public/services.html` ขึ้นสู่ Production Server (`/opt/dormitory/public/services.html`)
+  5. ตรวจสอบ Checksum SHA-256 ระหว่าง Local และ Production พบว่าตรงกันสมบูรณ์ (`494362e4a586bf4e9993b9f14799cfe0e26fd74d57bcb61dbaf48f2ca3d4ad23`) และทดสอบการเรียกใช้งานผ่าน https://dorminet.studio/services พบว่าป้ายถูกนำออกเรียบร้อยแล้ว
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - `backend-dorm/public/services.html`
+  - Production `/opt/dormitory/public/services.html` (Host: 202.29.232.28)
+  - `project-tracking/ACTIVITY_REPORT.md`
+- สถานะ: ดำเนินการเสร็จสมบูรณ์ 100%, นำขึ้น Production และตรวจสอบเรียบร้อยแล้ว
+
+
