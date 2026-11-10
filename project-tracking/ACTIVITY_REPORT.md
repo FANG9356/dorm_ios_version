@@ -2935,3 +2935,26 @@
   - `project-tracking/ACTIVITY_REPORT.md`
 - สถานะ: ตรวจสอบและยืนยันความถูกต้องเรียบร้อยตรงตามเงื่อนไขที่กำหนด 100%
 
+
+
+## 2026-11-10 17:35 — สรุปภาพรวมผลการดำเนินงานและการแก้ไขระบบทั้งหมดตามคำขอ
+
+- คำขอ/เป้าหมาย:
+  - สรุปผลการแก้ไขทั้งหมดที่ได้ดำเนินการตามคำขอของผู้ใช้งาน
+- สิ่งที่ดำเนินการและผลลัพธ์ที่สรุป:
+  1. ระบบบิลรายเดือนใน LINE Bot แนบ PromptPay QR Code อัตโนมัติเมื่อถึงรอบบิล (Carousel 2 ใบเมื่อถึงรอบ, บิลเดี่ยวเมื่อยังไม่ถึงรอบหรือชำระแล้ว)
+  2. แก้ไขปัญหาปุ่มฟันเฟืองสำหรับบัญชีสิทธิ์ลูกในแอป iOS ให้เปิดหน้าต่างแก้ไขข้อมูลตนเองได้
+  3. ปรับปรุงหน้าต่างเพิ่มและแก้ไขผู้ดูแลระบบ (AddAdminSheet & EditAdminSheet) ให้รองรับการกำหนดระดับสิทธิ์ (Role / Permission: admin, services, dorm) และแยกแยะอีเมลเข้าสู่ระบบออกจากอีเมลหอพักหลัก
+  4. แก้ไขปัญหาการ Sync ระหว่าง 2 เครื่องที่เกิด "Server Error" และ "ส่งไม่สำเร็จ" โดยทำ Payment Deduplication และแก้ Account ID ใน Snapshot
+  5. ปรับปรุงหน้าบริการชุมชนและแผนที่รอบหอพัก (services.html) ขยายพื้นที่ครอบคลุมทั่วเมืองอุบลราชธานีและฝั่งวารินชำราบ แสดงรายชื่อร้านทั้งหมดแบบไม่จำกัด 8 ร้าน และรองรับการนำทางด้วยตำแหน่งปัจจุบันไปยังชื่อร้านโดยตรง
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - backend-dorm/handlers/line_bot.go
+  - backend-dorm/handlers/line_snapshot.go
+  - backend-dorm/handlers/sync_push.go
+  - backend-dorm/public/services.html
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/AdminManagementTabView.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift
+  - project-tracking/ACTIVITY_REPORT.md
+  - project-tracking/WORK_STATUS.md
+- สถานะ: ดำเนินการเสร็จสมบูรณ์ 100%, ผ่านการทดสอบ Build/Test ทั้งหมด และนำขึ้น Git และ Production เรียบร้อยแล้ว
