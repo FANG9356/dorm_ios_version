@@ -39,9 +39,10 @@ type Admin struct {
 var jwtSecretKey []byte
 
 type sessionTokenClaims struct {
-	AdminID  int    `json:"admin_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	AdminID   int    `json:"admin_id"`
+	AccountID int    `json:"account_id,omitempty"`
+	Username  string `json:"username"`
+	Role      string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -50,11 +51,16 @@ func issueSessionToken(db *sql.DB, adminID int, username, role string, lifetime 
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err
 	}
+	accountID, _, _ := resolveAdminAccount(db, adminID)
+	if accountID <= 0 {
+		accountID = adminID
+	}
 	now := time.Now()
 	claims := sessionTokenClaims{
-		AdminID:  adminID,
-		Username: username,
-		Role:     role,
+		AdminID:   adminID,
+		AccountID: accountID,
+		Username:  username,
+		Role:      role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(lifetime)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -320,9 +326,15 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		accountID, _, _ := resolveAdminAccount(db, admin.ID)
+		if accountID <= 0 {
+			accountID = admin.ID
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"id":            admin.ID,
+			"account_id":    accountID,
 			"token":         tokenString,
 			"username":      admin.Username,
 			"role":          admin.Role,

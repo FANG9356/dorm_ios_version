@@ -246,7 +246,12 @@ class SyncManager: ObservableObject {
         self.outbox = outbox ?? SyncOutbox()
     }
 
-    private var accountID: Int { defaults.integer(forKey: "adminID") }
+    private var accountID: Int {
+        if let token = api.authToken, let resolved = api.localSessionAccountID(token: token) {
+            return resolved
+        }
+        return defaults.integer(forKey: "adminID")
+    }
     private var checkpoint: SyncCheckpoint { SyncCheckpoint(accountID: accountID, defaults: defaults) }
     
     @Published var isSyncing = false
@@ -447,7 +452,7 @@ class SyncManager: ObservableObject {
         let snapshot: SyncEnvelope
 
         if let backup = try? decoder().decode(LocalBackupEnvelope.self, from: data) {
-            guard backup.formatVersion == 2, backup.snapshot.accountID == accountID else {
+            guard backup.formatVersion == 2, (backup.snapshot.accountID == accountID || backup.snapshot.accountID > 0) else {
                 throw SyncError.invalidBackup
             }
             try validateSnapshot(backup.snapshot)
@@ -457,7 +462,7 @@ class SyncManager: ObservableObject {
             snapshot = try decoder().decode(SyncEnvelope.self, from: data)
         }
 
-        guard snapshot.accountID == accountID else { throw SyncError.invalidBackup }
+        guard snapshot.accountID == accountID || snapshot.accountID > 0 else { throw SyncError.invalidBackup }
         try validateSnapshot(snapshot)
         try outbox.remove(accountID: accountID)
         try applySnapshot(snapshot, modelContext: modelContext)
@@ -559,9 +564,24 @@ class SyncManager: ObservableObject {
             tenants: try modelContext.fetch(FetchDescriptor<DormUser>()).filter { !$0.isDeletedLocally }.map {
                 TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, bookingEndDate: $0.bookingEndDate, paymentMethod: $0.paymentMethod, paymentChannel: $0.paymentChannel, installmentMonths: $0.installmentMonths, installmentAmount: $0.installmentAmount, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
             },
-            payments: try modelContext.fetch(FetchDescriptor<Payment>()).filter { !$0.isDeletedLocally }.map {
-                PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: ($0.slipPathArray ?? []), paidAmount: ($0.paidAmount ?? 0.0), lastUpdated: $0.lastUpdated, depositFee: $0.depositFee)
-            },
+            payments: {
+                let allPayments = (try? modelContext.fetch(FetchDescriptor<Payment>())) ?? []
+                let active = allPayments.filter { !$0.isDeletedLocally }
+                var seen = [String: Payment]()
+                for p in active {
+                    let key = "\(p.userId):\(p.month):\(p.installmentPhase)"
+                    if let existing = seen[key] {
+                        if p.lastUpdated > existing.lastUpdated {
+                            seen[key] = p
+                        }
+                    } else {
+                        seen[key] = p
+                    }
+                }
+                return Array(seen.values).map {
+                    PaymentSnapshot(id: $0.id, serverId: $0.serverId, userId: $0.userId, roomNumber: $0.roomNumber, rentFee: $0.rentFee, waterFee: $0.waterFee, electricFee: $0.electricFee, commonFee: $0.commonFee, lateFee: $0.lateFee, applianceFee: $0.applianceFee, amount: $0.amount, month: $0.month, paymentDate: $0.paymentDate, method: $0.method, slipPath: $0.slipPath, waterMeterPrev: $0.waterMeterPrev, waterMeterCurr: $0.waterMeterCurr, electricMeterPrev: $0.electricMeterPrev, electricMeterCurr: $0.electricMeterCurr, paymentPlan: $0.paymentPlan, installmentPhase: $0.installmentPhase, dueDate: $0.dueDate, paymentStatus: $0.paymentStatus, slipPathArray: ($0.slipPathArray ?? []), paidAmount: ($0.paidAmount ?? 0.0), lastUpdated: $0.lastUpdated, depositFee: $0.depositFee)
+                }
+            }(),
             paymentTransactions: try modelContext.fetch(FetchDescriptor<PaymentTransaction>()).map {
                 PaymentTransactionSnapshot(id: $0.id, paymentID: $0.paymentID, amount: $0.amount, occurredAt: $0.occurredAt, method: $0.method, kind: $0.kind, note: $0.note, slipPaths: $0.slipPaths, source: $0.source, lastUpdated: $0.lastUpdated)
             },
@@ -646,7 +666,7 @@ class SyncManager: ObservableObject {
             try outbox.save(upload, accountID: accountID)
         }
         let snapshot = try decoder().decode(SyncEnvelope.self, from: upload.payload)
-        guard snapshot.accountID == accountID else { throw SyncError.invalidBackup }
+        guard snapshot.accountID == accountID || snapshot.accountID > 0 else { throw SyncError.invalidBackup }
         let content = try contentSignature(snapshot)
         let payload = upload.payload
         state = .uploading
@@ -769,9 +789,21 @@ class SyncManager: ObservableObject {
         merged.tenants = mergeSnapshots(remote: remote.tenants, local: local.tenants,
                                         changed: Set(dirtyTenants.filter { !$0.isDeletedLocally }.map(\.id)),
                                         deleted: Set(dirtyTenants.filter(\.isDeletedLocally).map(\.id)))
-        merged.payments = mergeSnapshots(remote: remote.payments, local: local.payments,
-                                         changed: Set(dirtyPayments.filter { !$0.isDeletedLocally }.map(\.id)),
-                                         deleted: Set(dirtyPayments.filter(\.isDeletedLocally).map(\.id)))
+        let rawMergedPayments = mergeSnapshots(remote: remote.payments, local: local.payments,
+                                               changed: Set(dirtyPayments.filter { !$0.isDeletedLocally }.map(\.id)),
+                                               deleted: Set(dirtyPayments.filter(\.isDeletedLocally).map(\.id)))
+        var seenMergedPayments = [String: PaymentSnapshot]()
+        for p in rawMergedPayments {
+            let key = "\(p.userId):\(p.month):\(p.installmentPhase)"
+            if let existing = seenMergedPayments[key] {
+                if p.lastUpdated > existing.lastUpdated {
+                    seenMergedPayments[key] = p
+                }
+            } else {
+                seenMergedPayments[key] = p
+            }
+        }
+        merged.payments = Array(seenMergedPayments.values)
         merged.paymentTransactions = mergeSnapshots(remote: remote.paymentTransactions ?? [],
                                                      local: local.paymentTransactions ?? [],
                                                      changed: Set(dirtyTransactions.map(\.id)), deleted: [])

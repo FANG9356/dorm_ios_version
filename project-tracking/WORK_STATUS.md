@@ -1,8 +1,8 @@
 # สถานะการทำงานปัจจุบัน
 
-> สถานะระบบล่าสุด ณ 28 ตุลาคม 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
+> สถานะระบบล่าสุด ณ 10 พฤศจิกายน 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
 
-อัปเดตล่าสุด: 28 ตุลาคม 2569 (Asia/Bangkok)
+อัปเดตล่าสุด: 10 พฤศจิกายน 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ
 
@@ -20,6 +20,12 @@
 
 ## ทำเสร็จแล้วล่าสุด
 
+- แก้ไขปัญหา Sync ล้มเหลว "Server Error" และ "ส่งไม่สำเร็จ" ในการใช้งานสองเครื่องพร้อมกัน:
+  - แก้ไขการชนกันของคีย์บิลชำระเงินในฐานข้อมูล SQLite (`UNIQUE constraint failed: index 'idx_payments_unique'`) โดยเพิ่ม `normalizePaymentSnapshots` ทำ Deduplication รายการบิลตาม slot `(user_id, month, installment_phase)` และทำความสะอาดบิลที่ชนกันก่อน Upsert
+  - ปรับระบบ Multi-Admin Sync โดยออก Claim `account_id` ใน JWT Token และปรับ `APIService.swift` / `SyncManager.swift` ให้ใช้ Master Account ID ของหอพักเป็นหลัก
+  - ปรับ `sync_push.go` ให้ Normalize Account ID ภายใน Snapshot Payload เป็น Master Account ID เสมอ และปรับ `line_snapshot.go` ให้คง `user_id` เดิมของผู้เช่าไว้เสมอ
+  - รัน Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`)
+  - ทดสอบ End-to-End บน Production อัปเดตห้อง 105 เป็นชื่อ "นางสาวพลเกาะแก้ว" สถานะ "กำลังพักอาศัย" สำเร็จ (Snapshot version 57)
 - ปรับงานซ่อมเป็น workflow 6 ขั้น: `รอดำเนินการ` → `กำลังติดต่อช่าง` → `รออนุมัติค่าใช้จ่าย` → `กำลังซ่อม` → `รอตรวจสอบชำระเงิน` → `เสร็จสิ้น`
 - งานมีค่าใช้จ่ายต้องผ่านการอนุมัติจาก LINE ของลูกบ้านที่ผูกกับห้องปัจจุบัน แอดมินข้ามไม่ได้ และยอดที่เสนอถูกล็อกจนกว่าจะย้อนกลับไปออกใบเสนอราคาใหม่
 - เมื่องานมีค่าใช้จ่ายเข้าสถานะรอชำระ ระบบส่ง Flex บิลพร้อม action อัปโหลดสลิป; งานฟรีข้ามขั้นอนุมัติและชำระได้
@@ -54,7 +60,7 @@
 | Backend | `go test ./...`, `go test -race ./handlers` และ `go vet ./...` ผ่าน |
 | LINE maintenance payload | automated tests ครอบคลุม status, quote, approve/reject, bill, JSON/date, outbox persistence/retry และป้องกัน `alignItems: baseline` ที่ LINE ปฏิเสธ |
 | iOS maintenance/sync | `MaintenanceWorkflowTests` 4/4 + `CoreDataSafetyTests` 19/19 รวม 23/23 ผ่าน รวม conflict rebase และ paid repair เริ่มได้หลังมี approval marker เท่านั้น |
-| Production | หลักฐานเวลา 14:18 น.: main/OCR services เป็น `active`, main health `online`, OCR `/verify` ตอบ HTTP 400 เมื่อ payload ไม่ครบ; binary ขณะนั้น SHA-256 `4262b9c08a3a6cef0721a2249e7e743bd9a98dce42c44c01a596a64934faab0c`, backup `/home/fang/line_migration_backups/20260918-002045-pre-flex-ui`; มี deploy ใหม่ที่บันทึกเวลา 14:20 จึงต้องตรวจ SHA/backup สดก่อนใช้อ้างอิง |
+| Production | หลักฐานเวลา 16:25 น. (10 พ.ย. 2569): main/OCR services เป็น `active`, main health `online`; binary ล่าสุด SHA-256 `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`, backup `/home/fang/dorminet_workspace/backups/20261110-012424-pre-flex-ui`; ทดสอบ push snapshot v57 สำเร็จ 200 OK |
 | ข้อจำกัดหลักฐาน | OCR HTTP 400 พิสูจน์เพียงว่า service ตอบ ไม่พิสูจน์ความแม่นยำ; ยังไม่มี UAT ที่ยืนยัน amount/receiver/reference/replay และ fallback ปัจจุบันไม่ fail closed |
 
 ## สรุปการส่งมอบงาน (Delivery Summary: 100% Complete)

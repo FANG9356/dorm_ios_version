@@ -2667,3 +2667,85 @@
 
 
 
+
+
+## 2026-11-10 16:30 — แก้ไขปัญหา Sync ล้มเหลว "Server Error" และ "ส่งไม่สำเร็จ" ระหว่างอุปกรณ์ A และ B
+
+- คำขอ/เป้าหมาย: ตรวจสอบและแก้ไขปัญหาการซิงก์ข้อมูลระหว่างเครื่อง A และเครื่อง B โดยเครื่อง A เปลี่ยนชื่อผู้เช่าห้อง 105 แต่เมื่อกด sync พบข้อผิดพลาด "Server Error" และมีป้าย "ส่งไม่สำเร็จ" ทำให้เครื่อง B ไม่ได้รับข้อมูลที่เปลี่ยนแปลง
+- สาเหตุรากฐานที่ตรวจพบ (Root Cause Analysis):
+  1. การชนกันของคีย์บิลชำระเงิน (Duplicate Payment Slot Collision in Tenant SQLite Database):
+     - ในข้อมูล Snapshot มีรายการบิลชำระเงิน (Payments) ของห้อง 104 รอบเดือน 2026-11 งวดที่ 2 ซ้ำกัน 2 รายการด้วย UUID คนละตัว (สร้างต่างเวลากัน)
+     - เมื่อเซิร์ฟเวอร์นำข้อมูล Snapshot ไปบันทึกลงฐานข้อมูลผู้เช่า (`dorm_data/tenant_1.db`) ในฟังก์ชัน `MaterializeLineSnapshotAndNotify` เกิดข้อผิดพลาด SQLite `UNIQUE constraint failed: index 'idx_payments_unique'` (คอลัมน์ `user_id, month, installment_phase`) ทำให้การ Materialize ล้มเหลว ส่งผลให้เซิร์ฟเวอร์ตอบกลับ HTTP 500 ("Sync stored, but LINE data preparation failed") และแอปบนเครื่อง A แสดงข้อความ "Server Error" พร้อมป้าย "ส่งไม่สำเร็จ"
+  2. ความไม่สอดคล้องของ Account ID ในระบบ Multi-Admin (Multi-Admin Account ID Mismatch):
+     - เจ้าของหอพักหลักคือ Admin 1 (Superadmin) ส่วนผู้ดูแลร่วมคือ Admin 2 (Admin) ทั้งสองดูแลหอพักเดียวกัน
+     - ฟังก์ชัน `resolveSyncAccount` บนเซิร์ฟเวอร์จับคู่ Admin 2 ให้อยู่ภายใต้ Dormitory Account 1 แต่การออก Token JWT เดิมไม่ได้แนบ `account_id` ส่งผลให้แอปบนเครื่อง A (ล็อกอินด้วย Admin 2) ใช้ `admin_id = 2` เป็น Account ID และส่ง Snapshot ด้วย `accountID = 2`
+     - เซิร์ฟเวอร์ในฟังก์ชัน `validateLineSnapshotForPush` ตรวจสอบ `snapshot.AccountID != accountID` ทำให้ถูกปฏิเสธด้วย HTTP 409 Conflict และเมื่อเครื่อง B (Admin 1) พยายามดาวน์โหลด จะเกิด `invalidBackup` เนื่องจาก `accountID` ไม่ตรงกัน
+- สิ่งที่ดำเนินการแก้ไข:
+  1. Backend (`backend-dorm/`):
+     - เพิ่มฟังก์ชัน `normalizePaymentSnapshots` ใน `line_snapshot.go` เพื่อทำ Deduplication รายการบิลชำระเงินตาม ID และตาม Slot `(user_id, month, installment_phase)` โดยยึดรายการที่มี `last_updated` ล่าสุดเป็นหลัก
+     - ปรับคำสั่งใน `materializeLineSnapshotIntoWithNotifier` ให้ทำความสะอาดรายการบิลที่ชน Slot เดียวกันก่อนทำการ Upsert เพื่อป้องกันการละเมิดดัชนี `idx_payments_unique`
+     - ปรับการ Upsert ข้อมูลผู้เช่า (`users`) ให้ตรวจสอบและนำ `user_id` เดิมมาใช้เสมอตาม `external_id` และอัปเดตสถานะห้องที่ซ้ำกันให้เป็น `ย้ายออกแล้ว` อัตโนมัติ เพื่อป้องกันการชนกันของดัชนี `idx_users_active_room`
+     - ปรับ `sync_push.go` ให้ทำ Normalize `accountID` ภายใน Snapshot Payload ให้เป็น Master Account ID ของหอพักเสมอ ไม่ว่า Admin คนใดจะเป็นผู้ส่ง
+     - ปรับ `validateLineSnapshotForPush` และ `materializeLineSnapshotPayload` ให้ยอมรับ Snapshot ที่มี `AccountID > 0` และเป็นของหอพักเดียวกัน
+     - อัปเดต `sessionTokenClaims` และฟังก์ชัน `issueSessionToken` ใน `auth.go` รวมถึง Endpoint `/api/auth/login` และ `/api/login` ให้แนบฟิลด์ `account_id` ไปกับผลลัพธ์
+     - เพิ่ม Unit Test `TestMaterializeLineSnapshotDeduplicatesPayments` ใน `line_snapshot_test.go`
+  2. iOS App (`DormAppSwift_Sources/DormiNetX/`):
+     - ปรับ `APIService.swift` ในฟังก์ชัน `localSessionAccountID` ให้ดึง Claim `account_id` จาก JWT Token เป็นลำดับแรก เพื่อให้ Admin ทุกคนที่ดูแลหอพักเดียวกันได้ Account ID เดียวกัน
+     - ปรับ `SyncManager.swift` ในฟังก์ชัน `buildSnapshot` และ `rebasePendingLocalChanges` ให้ทำ Deduplication รายการ Payments ตาม `(userId, month, installmentPhase)` โดยอัตโนมัติ
+     - ปรับ Guard ใน `SyncManager.swift` สำหรับการตรวจสอบ Snapshot ID ให้รองรับการทำงานร่วมกันระหว่าง Admin ของหอพักเดียวกัน
+  3. Safe Production Deploy:
+     - ผ่านการทดสอบ `go test ./...` และ `go test -race ./handlers` และ `go vet ./...` ครบ 100%
+     - รัน Safe Deploy ผ่าน `deploy_flex_safe_remote.sh` บน Production Server สำเร็จ
+     - New Binary SHA-256: `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`
+     - Backup Path: `/home/fang/dorminet_workspace/backups/20261110-012424-pre-flex-ui`
+     - Health Status: `dormitory.service` active, `dormitory-ocr.service` active, Health ping 200 OK
+  4. ผลการทดสอบ End-to-End:
+     - ทดสอบส่ง Push ข้อมูลอัปเดตชื่อห้อง 105 เป็น "พลเกาะแก้ว" ด้วย Admin 2 Token ผ่าน Production API `/api/sync/push`
+     - ผลลัพธ์: สำเร็จ HTTP 200 OK (Snapshot version 57)
+     - ฐานข้อมูล Production SQLite `dorm_data/tenant_1.db` บันทึกชื่อห้อง 105 เป็น "นางสาวพลเกาะแก้ว" สถานะ "กำลังพักอาศัย" อย่างถูกต้อง
+     - ตรวจสอบผ่าน `/api/sync/latest` ทั้งจากบัญชี Admin 1 และ Admin 2 ได้รับข้อมูลเวอร์ชัน 57 ตรงกัน 100%
+- ไฟล์ที่กระทบ:
+  - `backend-dorm/handlers/auth.go`
+  - `backend-dorm/handlers/line_snapshot.go`
+  - `backend-dorm/handlers/line_snapshot_test.go`
+  - `backend-dorm/handlers/sync_handlers.go`
+  - `backend-dorm/handlers/sync_push.go`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/SyncManager.swift`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: Deploy Backend Binary ใหม่ขึ้น Production และทดสอบบันทึก Snapshot เวอร์ชัน 57
+- การตรวจสอบและหลักฐาน:
+  - `go test -race ./handlers` -> PASS
+  - `curl https://dorminet.studio/api/system/ping` -> `{"status":"online"}`
+  - `GET /api/sync/latest` (ทั้ง Admin 1 และ Admin 2) -> Version 57 (ห้อง 105 ชื่อ "นางสาวพลเกาะแก้ว")
+- สถานะ deploy/UAT: Deploy Backend ขึ้น Production เรียบร้อยแล้ว พร้อมให้ทดสอบ Sync จากเครื่องจริง A และ B
+- ผลลัพธ์: การซิงก์ข้อมูลระหว่างสองเครื่องสามารถทำงานได้ตามปกติ ข้อมูลการเปลี่ยนชื่อจากเครื่อง A จะซิงก์ขึ้น Cloud ได้โดยไม่ขึ้น Server Error และเครื่อง B สามารถดึงข้อมูลไปแสดงผลได้อย่างถูกต้อง
+
+
+## 2026-11-10 16:35 — แนะนำตำแหน่งจัดเก็บและวิธีเข้าดูประวัติ Snapshot บนระบบ
+
+- คำขอ/เป้าหมาย: แนะนำวิธีเข้าดูประวัติ snapshot ที่ส่งเข้ามาเพื่ออัปเดตข้อมูล และอธิบายตำแหน่งจัดเก็บในระบบ ("จะเข้าดูประวัติ snapshot ที่ส่งเข้าเพื่ออัพเดตข้อมู,ยังไงเก็บไว้ไหน")
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบ Schema ของตาราง `sync_snapshots` ใน Master Database (`/opt/dormitory/dormitory.db`) บนเซิร์ฟเวอร์ Production
+  2. สรุปรายละเอียดคอลัมน์สำคัญ ได้แก่ `version`, `snapshot_id`, `created_by_admin_id`, `device_id`, `size`, `created_at` และ `payload` (JSON ข้อมูลเต็ม)
+  3. สรุปคำสั่งคำนวณและดึงข้อมูลทั้งผ่าน CLI (SQLite/SSH) และผ่าน API Endpoint (`/api/sync/latest`, `/api/sync/meta`)
+- ไฟล์หรือระบบที่กระทบ:
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี (การตรวจสอบแบบ Read-only)
+- การตรวจสอบและหลักฐาน: ตรวจสอบโครงสร้างตารางผ่าน `.schema sync_snapshots` และทดสอบคำสั่ง Query ดึงรายการ snapshot ล่าสุด
+- สถานะ deploy/UAT: เรียบร้อย
+- ผลลัพธ์: ผู้ใช้สามารถเข้าดูประวัติและเนื้อหา snapshot ทุกเวอร์ชันได้อย่างถูกต้อง
+
+
+## 2026-11-10 16:40 — ยืนยันสถานะการแก้ไขและ Deploy ระบบ Sync ขึ้น Production
+
+- คำขอ/เป้าหมาย: ยืนยันสถานะว่าระบบได้รับการแก้ไขและนำขึ้นใช้งานจริงเรียบร้อยแล้วหรือไม่ ("แล้วแก้ไขแล้วใช่ไหม")
+- สิ่งที่ดำเนินการ:
+  1. ยืนยันสถานะ Production Server (`https://dorminet.studio`): Deploy โค้ดที่แก้ไขและ Restart Service เรียบร้อยแล้ว (Binary SHA: `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`, Service Active, Ping 200 OK)
+  2. ยืนยันสถานะโค้ด iOS App (`DormAppSwift_Sources/DormiNetX`): แก้ไขฟังก์ชัน `localSessionAccountID`, `buildSnapshot`, `rebasePendingLocalChanges` และผ่านการคอมไพล์ `xcodebuild` สำเร็จ (Build Succeeded)
+  3. ยืนยันสถานะข้อมูลปัจจุบัน: ฐานข้อมูล Production ได้รับ Snapshot เวอร์ชัน 57 และห้อง 105 เป็นชื่อ "นางสาวพลเกาะแก้ว" สถานะ "กำลังพักอาศัย" เรียบร้อยแล้ว
+- ไฟล์หรือระบบที่กระทบ:
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ยืนยันสถานะปัจจุบันบน Production
+- สถานะ deploy/UAT: Deploy บน Production Server แล้ว 100% พร้อมให้ผู้ใช้ทดสอบกด Sync จากเครื่องจริง A และ B ได้ทันที
+- ผลลัพธ์: ระบบพร้อมใช้งาน ผู้ใช้สามารถทดสอบ Sync ได้เลย

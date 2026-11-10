@@ -47,6 +47,7 @@
 
 ## ปิดแล้วในรอบนี้
 
+- [x] แก้ปัญหา Sync ล้มเหลว "Server Error" และ "ส่งไม่สำเร็จ" ในการใช้งานสองเครื่อง: แก้ไขการชนกันของดัชนีบิลชำระเงินในฐานข้อมูล SQLite (`idx_payments_unique`) โดยเพิ่ม `normalizePaymentSnapshots` ทำ Deduplication รายการบิลตาม slot `(user_id, month, installment_phase)` และทำความสะอาดบิลที่ชนก่อน Upsert, ปรับระบบ Multi-Admin Sync ให้ใช้ Master Account ID ของหอพักเป็นหลักผ่าน Claim `account_id` ใน JWT Token, ปรับ `APIService.swift` และ `SyncManager.swift` ให้จัดการบิลซ้ำและรับ Snapshot ได้ถูกต้อง, Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`) และผ่านการทดสอบ End-to-End บน Production อัปเดตห้อง 105 เป็น "นางสาวพลเกาะแก้ว" ที่ Snapshot เวอร์ชัน 57 เรียบร้อย
 - [x] แก้ sync conflict ที่ทำให้รายการจาก LINE ไม่เข้าแอปเมื่อมี local dirty record: ดึง remote snapshot, rebase ข้อมูลในเครื่องแล้ว push ซ้ำอัตโนมัติ; เพิ่ม sync ตอนเปิด dashboard/หน้าแจ้งซ่อม และพิสูจน์บน iPhone จริงถึง snapshot v161 โดยข้อมูลเดิมไม่หาย
 - [x] รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ใน backend materialization เป็น terminal branch ป้องกัน snapshot รับสำเร็จแต่ side-effect ตอบ HTTP 500; targeted iOS maintenance/sync tests ผ่าน 23/23 และ backend test/race/vet ผ่าน
 - [x] แก้ Flex ปฏิเสธใบเสนอราคาเป็นโทนขาว–เทาแบบกระชับ deploy SHA-256 `0cb92224751a1456eedfcb3962b72df694c5219ea399cd59a663753671f55721`

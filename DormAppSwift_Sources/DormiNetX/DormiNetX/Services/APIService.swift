@@ -62,8 +62,11 @@ class APIService {
     // This is an expiry/scope check for local session restoration, not signature verification.
     func localSessionAccountID(token: String, now: Date = Date()) -> Int? {
         guard let payload = jwtPayload(from: token), let expiry = payload["exp"] as? Double,
-              expiry.isFinite, expiry > now.timeIntervalSince1970,
-              let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
+              expiry.isFinite, expiry > now.timeIntervalSince1970 else { return nil }
+        if let account = jwtIntClaim("account_id", from: token), account > 0 {
+            return account
+        }
+        guard let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
         return account
     }
 
@@ -118,7 +121,9 @@ class APIService {
             } else {
                 self.userRole = "admin" // Default fallback
             }
-            if let adminId = json["admin_id"] as? Int {
+            if let accountId = json["account_id"] as? Int, accountId > 0 {
+                UserDefaults.standard.set(accountId, forKey: "adminID")
+            } else if let adminId = json["admin_id"] as? Int {
                 UserDefaults.standard.set(adminId, forKey: "adminID")
             }
             return (true, name)
@@ -157,7 +162,9 @@ class APIService {
                 if let role = json["role"] as? String {
                     self.userRole = role
                 }
-                if let adminId = json["admin_id"] as? Int {
+                if let accountId = json["account_id"] as? Int, accountId > 0 {
+                    UserDefaults.standard.set(accountId, forKey: "adminID")
+                } else if let adminId = json["admin_id"] as? Int {
                     UserDefaults.standard.set(adminId, forKey: "adminID")
                 }
                 let returnedName = json["name"] as? String

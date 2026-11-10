@@ -273,4 +273,59 @@ func TestValidateMaintenanceSnapshotRejectsStaleBackwardTransition(t *testing.T)
 	}
 }
 
+func TestMaterializeLineSnapshotDeduplicatesPayments(t *testing.T) {
+	master, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	InitializeLineIntegration(master)
+
+	tenantDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tenantDB.Close()
+
+	snapshot := lineSyncEnvelope{
+		SnapshotID: "snapshot-dedup-test",
+		AccountID:  1,
+		Tenants: []lineTenantSnapshot{{
+			ID: "tenant-104", ServerID: intPointer(104), FirstName: "ภคพล", LastName: "สุขมี",
+			RoomNumber: "104", Status: "กำลังพักอาศัย", Phone: "0961950943",
+		}},
+		Payments: []linePaymentSnapshot{
+			{
+				ID: "payment-older", UserID: 104, RoomNumber: "104", Month: "2026-11",
+				InstallmentPhase: 2, RentFee: 3000, Amount: 3000, PaymentStatus: "pending",
+				LastUpdated: "2026-11-02T03:43:32Z",
+			},
+			{
+				ID: "payment-newer", UserID: 104, RoomNumber: "104", Month: "2026-11",
+				InstallmentPhase: 2, RentFee: 3000, Amount: 3000, PaymentStatus: "pending",
+				LastUpdated: "2026-11-10T08:06:51Z",
+			},
+		},
+	}
+	if err := materializeLineSnapshotInto(master, tenantDB, 1, snapshot); err != nil {
+		t.Fatalf("materialize with duplicate payment slot failed: %v", err)
+	}
+
+	var count int
+	if err := tenantDB.QueryRow(`SELECT COUNT(*) FROM payments WHERE user_id = 104 AND month = '2026-11'`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 payment record after deduplication, got %d", count)
+	}
+
+	var storedID string
+	if err := tenantDB.QueryRow(`SELECT external_id FROM payments WHERE user_id = 104 AND month = '2026-11'`).Scan(&storedID); err != nil {
+		t.Fatal(err)
+	}
+	if storedID != "payment-newer" {
+		t.Fatalf("expected newer payment to win, got %q", storedID)
+	}
+}
+
 func intPointer(value int) *int { return &value }

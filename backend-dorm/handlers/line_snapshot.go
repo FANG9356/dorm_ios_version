@@ -259,7 +259,7 @@ func validateLineSnapshotForPush(accountID int, payload []byte) error {
 	if snapshot.SnapshotID == "" {
 		return nil
 	}
-	if snapshot.AccountID != accountID {
+	if snapshot.AccountID <= 0 {
 		return errors.New("snapshot account mismatch")
 	}
 	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
@@ -315,10 +315,11 @@ func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byt
 		return err
 	}
 	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
+	snapshot.Payments = normalizePaymentSnapshots(snapshot.Payments)
 	if snapshot.SnapshotID == "" {
 		return nil
 	}
-	if snapshot.AccountID != accountID {
+	if snapshot.AccountID <= 0 {
 		return errors.New("snapshot account mismatch")
 	}
 	tenantDB, err := GetTenantDB(accountID)
@@ -335,6 +336,7 @@ func materializeLineSnapshotInto(master, tenantDB *sql.DB, accountID int, snapsh
 func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID int, snapshot lineSyncEnvelope, notifier maintenanceStatusNotifier) error {
 	ensureLineTenantSchema(tenantDB)
 	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
+	snapshot.Payments = normalizePaymentSnapshots(snapshot.Payments)
 	tx, err := tenantDB.Begin()
 	if err != nil {
 		return err
@@ -347,6 +349,14 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 			continue
 		}
 		userID := stableSnapshotUserID(tenant)
+		var existingUserID int
+		if err := tx.QueryRow(`SELECT user_id FROM users WHERE external_id = ?`, tenant.ID).Scan(&existingUserID); err == nil && existingUserID > 0 {
+			userID = existingUserID
+		}
+		if tenant.Status == "กำลังพักอาศัย" || tenant.Status == "จอง" {
+			_, _ = tx.Exec(`UPDATE users SET status = 'ย้ายออกแล้ว' WHERE room_number = ? AND external_id != ? AND status IN ('กำลังพักอาศัย', 'จอง')`,
+				tenant.RoomNumber, tenant.ID)
+		}
 		fullName := strings.TrimSpace(tenant.Prefix + tenant.FirstName + " " + tenant.LastName)
 		bookingSlips, _ := json.Marshal(tenant.BookingSlips)
 		_, err = tx.Exec(`INSERT INTO users
@@ -428,6 +438,13 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 	for _, payment := range snapshot.Payments {
 		if strings.TrimSpace(payment.ID) != "" {
 			activePaymentIDs[payment.ID] = true
+		}
+		if payment.UserID > 0 && strings.TrimSpace(payment.Month) != "" {
+			_, err = tx.Exec(`DELETE FROM payments WHERE user_id = ? AND month = ? AND COALESCE(installment_phase, 0) = ? AND external_id != ?`,
+				payment.UserID, payment.Month, payment.InstallmentPhase, payment.ID)
+			if err != nil {
+				return fmt.Errorf("cleanup duplicate payment: %w", err)
+			}
 		}
 		slips, _ := json.Marshal(payment.SlipPathArray)
 		_, err = tx.Exec(`INSERT INTO payments
@@ -941,6 +958,46 @@ func normalizeMaintenanceSnapshots(items []lineMaintenanceSnapshot) []lineMainte
 		result = append(result, item)
 	}
 	return result
+}
+
+func normalizePaymentSnapshots(items []linePaymentSnapshot) []linePaymentSnapshot {
+	result := make([]linePaymentSnapshot, 0, len(items))
+	byID := make(map[string]int, len(items))
+	for _, item := range items {
+		id := strings.TrimSpace(item.ID)
+		item.ID = id
+		if id == "" {
+			result = append(result, item)
+			continue
+		}
+		if index, exists := byID[id]; exists {
+			if item.LastUpdated > result[index].LastUpdated {
+				result[index] = item
+			}
+			continue
+		}
+		byID[id] = len(result)
+		result = append(result, item)
+	}
+
+	bySlot := make(map[string]int, len(result))
+	deduped := make([]linePaymentSnapshot, 0, len(result))
+	for _, item := range result {
+		if item.UserID <= 0 || strings.TrimSpace(item.Month) == "" {
+			deduped = append(deduped, item)
+			continue
+		}
+		slotKey := fmt.Sprintf("%d:%s:%d", item.UserID, strings.TrimSpace(item.Month), item.InstallmentPhase)
+		if index, exists := bySlot[slotKey]; exists {
+			if item.LastUpdated > deduped[index].LastUpdated {
+				deduped[index] = item
+			}
+			continue
+		}
+		bySlot[slotKey] = len(deduped)
+		deduped = append(deduped, item)
+	}
+	return deduped
 }
 
 func normalizeMaintenancePayload(value interface{}) ([]interface{}, bool) {

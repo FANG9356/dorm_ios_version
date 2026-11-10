@@ -29,16 +29,14 @@ type SyncSnapshotRequest struct {
 	ClientUpdatedAt string          `json:"client_updated_at,omitempty"`
 }
 
-func resolveSyncAccount(db *sql.DB, r *http.Request) (int, int, string, error) {
-	adminIDValue := r.Context().Value("admin_id")
-	adminID, ok := adminIDValue.(int)
-	if !ok || adminID <= 0 {
-		return 0, 0, "", fmt.Errorf("missing admin id")
+func resolveAdminAccount(db *sql.DB, adminID int) (int, string, error) {
+	if adminID <= 0 {
+		return 0, "", fmt.Errorf("missing admin id")
 	}
 
 	var email string
 	if err := db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", adminID).Scan(&email); err != nil {
-		return 0, 0, "", err
+		return 0, "", err
 	}
 
 	email = strings.ToLower(strings.TrimSpace(email))
@@ -49,6 +47,21 @@ func resolveSyncAccount(db *sql.DB, r *http.Request) (int, int, string, error) {
 		if err == nil && ownerID > 0 {
 			accountID = ownerID
 		}
+	}
+
+	return accountID, email, nil
+}
+
+func resolveSyncAccount(db *sql.DB, r *http.Request) (int, int, string, error) {
+	adminIDValue := r.Context().Value("admin_id")
+	adminID, ok := adminIDValue.(int)
+	if !ok || adminID <= 0 {
+		return 0, 0, "", fmt.Errorf("missing admin id")
+	}
+
+	accountID, email, err := resolveAdminAccount(db, adminID)
+	if err != nil {
+		return 0, 0, "", err
 	}
 
 	return adminID, accountID, email, nil
@@ -366,14 +379,20 @@ func SetupSyncRoutes(db *sql.DB) {
 			return
 		}
 
+		accountID, _, _ := resolveAdminAccount(db, adminID)
+		if accountID <= 0 {
+			accountID = adminID
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":   "success",
-			"email":    req.Email,
-			"name":     username,
-			"role":     role,
-			"admin_id": adminID,
-			"token":    tokenString,
+			"status":     "success",
+			"email":      req.Email,
+			"name":       username,
+			"role":       role,
+			"admin_id":   adminID,
+			"account_id": accountID,
+			"token":      tokenString,
 		})
 	})
 

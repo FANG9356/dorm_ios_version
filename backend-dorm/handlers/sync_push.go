@@ -62,6 +62,15 @@ func HandleSyncPush(db *sql.DB) http.HandlerFunc {
 			http.Error(w, "Snapshot account does not match session", http.StatusBadRequest)
 			return
 		}
+		if envelope.AccountID != accountID {
+			var rawMap map[string]interface{}
+			if err := json.Unmarshal(payload, &rawMap); err == nil {
+				rawMap["accountID"] = accountID
+				if normalizedPayload, err := json.Marshal(rawMap); err == nil {
+					payload = normalizedPayload
+				}
+			}
+		}
 		// Reject workflow-invalid snapshots before the immutable snapshot is
 		// inserted. Otherwise a stale local maintenance record can become the
 		// latest snapshot even though tenant materialization rejects it, leaving
