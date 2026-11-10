@@ -208,7 +208,7 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 			if invoice.Status == "pending" || invoice.Status == "partial" {
 				db.Exec("UPDATE users SET bot_state = 'slip' WHERE line_user_id = ?", lineUserID)
 			}
-			replyToLineWithFlexMessage(replyToken, lineInvoiceAltText(invoice), buildLineInvoiceBubble(invoice))
+			replyToLineWithFlexMessage(replyToken, lineInvoiceAltText(invoice), buildLineInvoiceFlexMessage(master, accountID, invoice))
 		} else if err == sql.ErrNoRows {
 			replyToLineWithFlexMessage(replyToken, "สถานะการเงิน", buildNoOutstandingBalanceFlexMessage(roomNumber))
 		} else {
@@ -244,7 +244,7 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 					},
 					{
 						"type": "text",
-						"text": "รวมร้านอาหาร ร้านสะดวกซื้อ 24 ชม. ซักรีด การเดินทาง และบริการสำคัญใกล้หอพักสำหรับลูกบ้าน",
+						"text": "รวมร้านอาหาร ร้านสะดวกซื้อ บริการซักรีด การเดินทาง และสถานที่สำคัญใกล้หอพักสำหรับผู้พักอาศัย",
 						"wrap": true,
 						"color": "#666666",
 						"size": "xs",
@@ -1235,12 +1235,219 @@ func lineInvoiceFooter(status string) string {
 	}
 }
 
-func PushInvoiceFlexMessage(lineUserID string, invoice lineInvoiceFlexData) {
+func parseInvoicePeriodYearMonth(period string) (year, month int, ok bool) {
+	period = strings.TrimSpace(period)
+	if period == "" {
+		return 0, 0, false
+	}
+	if _, err := fmt.Sscanf(period, "%d-%d", &year, &month); err != nil || month < 1 || month > 12 {
+		return 0, 0, false
+	}
+	if year > 2400 {
+		year -= 543
+	}
+	return year, month, true
+}
+
+func isInvoiceDueForPayment(invoice lineInvoiceFlexData, now time.Time) bool {
+	balance := invoiceBalance(invoice)
+	if balance <= 0 || invoice.Status == "paid" {
+		return false
+	}
+
+	year, month, valid := parseInvoicePeriodYearMonth(invoice.Period)
+	if valid {
+		currYear, currMonth := now.Year(), int(now.Month())
+		// ถ้ารอบบิลเป็นเดือนในอนาคต (ยังไม่ถึงรอบ) ไม่ต้องแสดง QR Code
+		if year > currYear || (year == currYear && month > currMonth) {
+			return false
+		}
+		// รอบบิลของเดือนปัจจุบัน หรือย้อนหลังที่ยังมียอดค้างชำระ
+		return true
+	}
+
+	// ถ้าไม่มี period ชัดเจน ให้ดูจาก due_date ถ้ามี
+	if strings.TrimSpace(invoice.DueDate) != "" {
+		var dYear, dMonth, dDay int
+		if _, err := fmt.Sscanf(strings.TrimSpace(invoice.DueDate), "%d-%d-%d", &dYear, &dMonth, &dDay); err == nil {
+			if dYear > 2400 {
+				dYear -= 543
+			}
+			currYear, currMonth := now.Year(), int(now.Month())
+			if dYear > currYear || (dYear == currYear && dMonth > currMonth) {
+				return false
+			}
+			return true
+		}
+	}
+
+	return invoice.Status == "pending" || invoice.Status == "partial"
+}
+
+func formatPromptPayDisplay(id string) string {
+	digits := strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(id), "-", ""), " ", "")
+	if len(digits) == 10 {
+		return fmt.Sprintf("%s-%s-%s", digits[:3], digits[3:6], digits[6:])
+	}
+	if len(digits) == 13 {
+		return fmt.Sprintf("%s-%s-%s-%s-%s", digits[:1], digits[1:5], digits[5:10], digits[10:12], digits[12:])
+	}
+	return id
+}
+
+func buildLineInvoicePaymentBubble(invoice lineInvoiceFlexData, qrURL, promptPayID, accountName, paymentType, bankAccount string) map[string]interface{} {
+	balanceStr := formatLineMoney(invoiceBalance(invoice))
+
+	bodyContents := []interface{}{
+		map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingStart": "20px", "paddingEnd": "20px", "paddingBottom": "10px", "paddingTop": "10px",
+			"contents": []interface{}{
+				map[string]interface{}{
+					"type":        "image",
+					"url":         qrURL,
+					"size":        "full",
+					"aspectRatio": "1:1",
+					"aspectMode":  "cover",
+				},
+			},
+		},
+		map[string]interface{}{"type": "text", "text": "สแกน QR Code เพื่อชำระเงิน", "size": "sm", "color": "#111827", "align": "center", "weight": "bold", "margin": "md"},
+		map[string]interface{}{"type": "text", "text": "รองรับการสแกนผ่านทุกแอปธนาคาร", "size": "xs", "color": "#6B7280", "align": "center", "wrap": true},
+	}
+
+	accountDetails := []interface{}{}
+	if strings.TrimSpace(accountName) != "" {
+		accountDetails = append(accountDetails, map[string]interface{}{
+			"type": "box", "layout": "baseline", "spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ชื่อบัญชี", "size": "xs", "color": "#9CA3AF", "flex": 2},
+				map[string]interface{}{"type": "text", "text": strings.TrimSpace(accountName), "size": "xs", "color": "#374151", "weight": "bold", "flex": 4, "wrap": true},
+			},
+		})
+	}
+	if strings.TrimSpace(promptPayID) != "" {
+		accountDetails = append(accountDetails, map[string]interface{}{
+			"type": "box", "layout": "baseline", "spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "พร้อมเพย์", "size": "xs", "color": "#9CA3AF", "flex": 2},
+				map[string]interface{}{"type": "text", "text": formatPromptPayDisplay(promptPayID), "size": "xs", "color": "#374151", "weight": "bold", "flex": 4, "wrap": true},
+			},
+		})
+	}
+	if strings.TrimSpace(bankAccount) != "" {
+		accountDetails = append(accountDetails, map[string]interface{}{
+			"type": "box", "layout": "baseline", "spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "เลขที่บัญชี", "size": "xs", "color": "#9CA3AF", "flex": 2},
+				map[string]interface{}{"type": "text", "text": strings.TrimSpace(bankAccount), "size": "xs", "color": "#374151", "weight": "bold", "flex": 4, "wrap": true},
+			},
+		})
+	}
+
+	if len(accountDetails) > 0 {
+		bodyContents = append(bodyContents,
+			map[string]interface{}{"type": "separator", "margin": "md", "color": "#E5E7EB"},
+			map[string]interface{}{
+				"type": "box", "layout": "vertical", "margin": "md", "spacing": "xs",
+				"contents": accountDetails,
+			},
+		)
+	}
+
+	subTitle := ""
+	if invoice.Room != "" {
+		subTitle = "ห้อง " + invoice.Room
+	}
+	if invoice.Period != "" {
+		if subTitle != "" {
+			subTitle += " • "
+		}
+		subTitle += formatLinePeriod(invoice.Period)
+	}
+
+	headerContents := []interface{}{
+		map[string]interface{}{"type": "text", "text": "ช่องทางชำระเงิน", "weight": "bold", "size": "lg", "color": "#111827", "align": "center"},
+		map[string]interface{}{"type": "text", "text": "ยอดที่ต้องชำระ " + balanceStr, "size": "sm", "color": "#374151", "margin": "xs", "weight": "bold", "align": "center"},
+	}
+	if subTitle != "" {
+		headerContents = append(headerContents, map[string]interface{}{
+			"type": "text", "text": subTitle, "size": "xs", "color": "#6B7280", "margin": "xs", "align": "center",
+		})
+	}
+
+	return map[string]interface{}{
+		"type": "bubble", "size": "mega",
+		"header": map[string]interface{}{
+			"type": "box", "layout": "vertical", "paddingBottom": "none",
+			"contents": headerContents,
+		},
+		"body": map[string]interface{}{
+			"type": "box", "layout": "vertical", "spacing": "sm",
+			"contents": bodyContents,
+		},
+		"footer": map[string]interface{}{
+			"type": "box", "layout": "vertical",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ส่งสลิปในแชทนี้หลังชำระเงินเรียบร้อยแล้วนะคะ", "size": "xs", "color": "#6B7280", "align": "center", "wrap": true},
+			},
+		},
+	}
+}
+
+func buildLineInvoiceFlexMessage(master *sql.DB, accountID int, invoice lineInvoiceFlexData) map[string]interface{} {
+	bubble1 := buildLineInvoiceBubble(invoice)
+
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		loc = time.FixedZone("Asia/Bangkok", 7*3600)
+	}
+	now := time.Now().In(loc)
+
+	if !isInvoiceDueForPayment(invoice, now) {
+		return bubble1
+	}
+
+	var promptPayID, accountName, paymentType, bankAccount string
+	if master != nil && accountID > 0 {
+		_ = master.QueryRow(`SELECT COALESCE(promptpay_id, ''), COALESCE(account_name, ''),
+			COALESCE(payment_type, 'promptpay'), COALESCE(bank_account, '')
+			FROM admins WHERE id = ? AND role = 'superadmin'`, accountID).Scan(
+			&promptPayID, &accountName, &paymentType, &bankAccount,
+		)
+	}
+	if master != nil && promptPayID == "" {
+		_ = master.QueryRow(`SELECT COALESCE(promptpay_id, ''), COALESCE(account_name, ''),
+			COALESCE(payment_type, 'promptpay'), COALESCE(bank_account, '')
+			FROM admins WHERE role = 'superadmin' AND promptpay_id != '' ORDER BY id ASC LIMIT 1`).Scan(
+			&promptPayID, &accountName, &paymentType, &bankAccount,
+		)
+	}
+
+	balance := invoiceBalance(invoice)
+	if promptPayID == "" || balance <= 0 {
+		return bubble1
+	}
+
+	payload := utils.GeneratePromptPayPayload(promptPayID, balance)
+	if payload == "" {
+		return bubble1
+	}
+	qrURL := "https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=" + url.QueryEscape(payload)
+
+	bubble2 := buildLineInvoicePaymentBubble(invoice, qrURL, promptPayID, accountName, paymentType, bankAccount)
+
+	return map[string]interface{}{
+		"type": "carousel",
+		"contents": []interface{}{bubble1, bubble2},
+	}
+}
+
+func PushInvoiceFlexMessage(master *sql.DB, accountID int, lineUserID string, invoice lineInvoiceFlexData) {
 	if getLineToken() == "" || lineUserID == "" {
 		return
 	}
 	message := map[string]interface{}{
-		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceBubble(invoice),
+		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceFlexMessage(master, accountID, invoice),
 	}
 	_ = pushLinePayload(lineUserID, message)
 }
@@ -1254,6 +1461,11 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 		if r.Method != "POST" {
 			http.Error(w, `{"error": "Method not allowed"}`, http.StatusMethodNotAllowed)
 			return
+		}
+		adminID, _ := r.Context().Value("admin_id").(int)
+		accountID, _, _ := resolveAdminAccount(db, adminID)
+		if accountID <= 0 {
+			accountID = 1
 		}
 		tenantDB := getTenantDB(r, db)
 
@@ -1290,7 +1502,7 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 				if difference := invoice.Total - knownTotal; math.Abs(difference) >= 0.01 {
 					invoice.Other = difference
 				}
-				PushInvoiceFlexMessage(lineUserID, invoice)
+				PushInvoiceFlexMessage(db, accountID, lineUserID, invoice)
 				count++
 			}
 		}

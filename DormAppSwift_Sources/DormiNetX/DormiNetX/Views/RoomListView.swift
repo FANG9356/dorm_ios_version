@@ -969,13 +969,39 @@ struct SidebarMenu: View {
                 Task {
                     do {
                         let admins = try await APIService.shared.fetchAdmins()
-                        if let me = admins.first(where: { $0.id == adminID }) {
-                            currentEditingAdmin = me
+                        let sessionID = APIService.shared.currentSessionAdminID
+                        let normalizedUserEmail = userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                        let normalizedUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+                        let me = admins.first { admin in
+                            if let sessionID = sessionID, sessionID > 0, admin.id == sessionID {
+                                return true
+                            }
+                            if !normalizedUserName.isEmpty && admin.username.lowercased() == normalizedUserName {
+                                return true
+                            }
+                            if !normalizedUserEmail.isEmpty {
+                                if let backup = admin.backup_email?.lowercased(), backup == normalizedUserEmail {
+                                    return true
+                                }
+                                if admin.email.lowercased() == normalizedUserEmail {
+                                    return true
+                                }
+                            }
+                            return admin.id == adminID
+                        }
+
+                        if let target = me {
+                            await MainActor.run {
+                                currentEditingAdmin = target
+                            }
                         }
                     } catch {
                         print("Failed to fetch admin data: \(error)")
                     }
-                    showingEditProfile = false
+                    await MainActor.run {
+                        showingEditProfile = false
+                    }
                 }
             }
         }

@@ -49,6 +49,11 @@ class APIService {
         }
     }
 
+    var currentSessionAdminID: Int? {
+        guard let token = authToken else { return nil }
+        return jwtIntClaim("admin_id", from: token)
+    }
+
     private func jwtStringClaim(_ key: String, from token: String) -> String? {
         jwtPayload(from: token)?[key] as? String
     }

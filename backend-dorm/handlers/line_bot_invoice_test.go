@@ -68,3 +68,114 @@ func TestLineInvoiceDateFormattingAcceptsGregorianAndBuddhistStorage(t *testing.
 		t.Fatalf("formatted date = %q", got)
 	}
 }
+
+func TestLineInvoiceFlexMessageIncludesQRWhenDue(t *testing.T) {
+	masterDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer masterDB.Close()
+	masterDB.Exec(`CREATE TABLE admins (
+		id INTEGER PRIMARY KEY,
+		username TEXT,
+		role TEXT,
+		promptpay_id TEXT,
+		account_name TEXT,
+		payment_type TEXT,
+		bank_account TEXT
+	);
+	INSERT INTO admins (id, username, role, promptpay_id, account_name, payment_type, bank_account)
+	VALUES (1, 'FangA', 'superadmin', '0961950943', 'ภคพล สุขมี', 'promptpay', '1234567890');`)
+
+	// Test invoice for current month (2026-11) with unpaid balance
+	invoice := lineInvoiceFlexData{
+		InvoiceNo: "INV-00105",
+		Room:      "105",
+		Name:      "นางสาวพลเกาะแก้ว",
+		Period:    "2026-11",
+		Status:    "pending",
+		Total:     3500,
+		Paid:      0,
+		Rent:      3500,
+	}
+
+	flex := buildLineInvoiceFlexMessage(masterDB, 1, invoice)
+	if flex["type"] != "carousel" {
+		t.Fatalf("expected carousel for due invoice, got %v", flex["type"])
+	}
+	contents, ok := flex["contents"].([]interface{})
+	if !ok || len(contents) != 2 {
+		t.Fatalf("expected 2 bubbles in carousel, got %d", len(contents))
+	}
+
+	encoded, err := json.Marshal(flex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := string(encoded)
+
+	for _, expected := range []string{
+		"ช่องทางชำระเงิน", "สแกน QR Code เพื่อชำระเงิน", "096-195-0943", "ภคพล สุขมี", "api.qrserver.com",
+	} {
+		if !strings.Contains(message, expected) {
+			t.Fatalf("Flex carousel missing %q: %s", expected, message)
+		}
+	}
+
+	// Test with Buddhist year format (2569-11)
+	invoiceBuddhist := invoice
+	invoiceBuddhist.Period = "2569-11"
+	flexBuddhist := buildLineInvoiceFlexMessage(masterDB, 1, invoiceBuddhist)
+	if flexBuddhist["type"] != "carousel" {
+		t.Fatalf("expected carousel for buddhist due invoice, got %v", flexBuddhist["type"])
+	}
+}
+
+func TestLineInvoiceFlexMessageExcludesQRWhenNotDue(t *testing.T) {
+	masterDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer masterDB.Close()
+	masterDB.Exec(`CREATE TABLE admins (
+		id INTEGER PRIMARY KEY,
+		username TEXT,
+		role TEXT,
+		promptpay_id TEXT,
+		account_name TEXT,
+		payment_type TEXT,
+		bank_account TEXT
+	);
+	INSERT INTO admins (id, username, role, promptpay_id, account_name, payment_type, bank_account)
+	VALUES (1, 'FangA', 'superadmin', '0961950943', 'ภคพล สุขมี', 'promptpay', '1234567890');`)
+
+	// 1. Future billing cycle (e.g. year 2099)
+	futureInvoice := lineInvoiceFlexData{
+		InvoiceNo: "INV-00105",
+		Room:      "105",
+		Name:      "นางสาวพลเกาะแก้ว",
+		Period:    "2099-12",
+		Status:    "pending",
+		Total:     3500,
+		Paid:      0,
+	}
+	flexFuture := buildLineInvoiceFlexMessage(masterDB, 1, futureInvoice)
+	if flexFuture["type"] != "bubble" {
+		t.Fatalf("expected single bubble for future billing cycle, got %v", flexFuture["type"])
+	}
+
+	// 2. Already paid bill
+	paidInvoice := lineInvoiceFlexData{
+		InvoiceNo: "INV-00105",
+		Room:      "105",
+		Name:      "นางสาวพลเกาะแก้ว",
+		Period:    "2026-11",
+		Status:    "paid",
+		Total:     3500,
+		Paid:      3500,
+	}
+	flexPaid := buildLineInvoiceFlexMessage(masterDB, 1, paidInvoice)
+	if flexPaid["type"] != "bubble" {
+		t.Fatalf("expected single bubble for paid bill, got %v", flexPaid["type"])
+	}
+}

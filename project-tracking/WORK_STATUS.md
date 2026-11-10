@@ -20,6 +20,14 @@
 
 ## ทำเสร็จแล้วล่าสุด
 
+- ระบบบิลรายเดือนผ่าน LINE Bot แนบ PromptPay QR Code สแกนจ่ายอัตโนมัติเมื่อถึงรอบบิล:
+  - เพิ่มการตรวจสอบรอบบิล (`isInvoiceDueForPayment`): บิลรอบปัจจุบันหรือย้อนหลังที่ยังค้างชำระ จะสร้าง Flex Message รูปแบบ Carousel 2 ใบ (การ์ดที่ 1: รายละเอียดบิล, การ์ดที่ 2: ช่องทางชำระเงิน พร้อม PromptPay QR Code ยอดตรงตามบิล และชื่อบัญชีเจ้าของหอพัก) เหมือนกับระบบแจ้งซ่อม
+  - หากเป็นรอบบิลในอนาคตที่ยังไม่ถึงเวลาชำระ ("ยังไม่ถึงรอบ") หรือชำระครบแล้ว ระบบจะไม่ส่ง QR Code (ส่งเป็นการ์ดบิลใบเดียวตามปกติ)
+  - รองรับทั้งการพิมพ์ "การเงิน" ผ่าน LINE และการกด "ส่งบิลผ่าน LINE" จากแอปพลิเคชัน
+  - มี Unit Tests รับรองทั้งกรณี Due และ Not Due ใน `line_bot_invoice_test.go`
+  - Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `c219dc849b7acd5557368f8bc4a5d1614093145bf9913652084ce8b7430bf3a9`)
+- แก้ไขปุ่มฟันเฟืองในแอป iOS สำหรับบัญชีสิทธิ์ลูก:
+  - ปรับปรุงการระบุตัวตนใน `SidebarMenu` ให้ดึง `currentSessionAdminID` จาก JWT Claim `admin_id` และค้นหาจาก `userName` / `backup_email` ทำให้เปิดหน้า `EditAdminSheet` เพื่อแก้ไขข้อมูลส่วนตัวของสิทธิ์ลูกได้สำเร็จ
 - แก้ไขปัญหา Sync ล้มเหลว "Server Error" และ "ส่งไม่สำเร็จ" ในการใช้งานสองเครื่องพร้อมกัน:
   - แก้ไขการชนกันของคีย์บิลชำระเงินในฐานข้อมูล SQLite (`UNIQUE constraint failed: index 'idx_payments_unique'`) โดยเพิ่ม `normalizePaymentSnapshots` ทำ Deduplication รายการบิลตาม slot `(user_id, month, installment_phase)` และทำความสะอาดบิลที่ชนกันก่อน Upsert
   - ปรับระบบ Multi-Admin Sync โดยออก Claim `account_id` ใน JWT Token และปรับ `APIService.swift` / `SyncManager.swift` ให้ใช้ Master Account ID ของหอพักเป็นหลัก

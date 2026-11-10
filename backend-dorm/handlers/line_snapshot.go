@@ -1159,7 +1159,7 @@ func HandleSendLineInvoice(master *sql.DB) http.HandlerFunc {
 		if difference := invoice.Total - knownTotal; math.Abs(difference) >= 0.01 {
 			invoice.Other = difference
 		}
-		if err := sendLineInvoice(lineUserID, invoice); err != nil {
+		if err := sendLineInvoice(master, accountID, lineUserID, invoice); err != nil {
 			master.Exec(`INSERT INTO line_delivery_logs(account_id, tenant_id, payment_id, status, detail, created_at)
 				VALUES (?, ?, ?, 'failed', ?, ?)`, accountID, tenantID, request.PaymentID, err.Error(), time.Now().UTC().Format(time.RFC3339))
 			http.Error(w, `{"error":"LINE ไม่รับข้อความ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่"}`, http.StatusBadGateway)
@@ -1171,12 +1171,12 @@ func HandleSendLineInvoice(master *sql.DB) http.HandlerFunc {
 	}
 }
 
-func sendLineInvoice(lineUserID string, invoice lineInvoiceFlexData) error {
+func sendLineInvoice(master *sql.DB, accountID int, lineUserID string, invoice lineInvoiceFlexData) error {
 	if getLineToken() == "" {
 		return errors.New("LINE token is not configured")
 	}
 	message := map[string]interface{}{
-		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceBubble(invoice),
+		"type": "flex", "altText": lineInvoiceAltText(invoice), "contents": buildLineInvoiceFlexMessage(master, accountID, invoice),
 	}
 	return pushLinePayload(lineUserID, message)
 }

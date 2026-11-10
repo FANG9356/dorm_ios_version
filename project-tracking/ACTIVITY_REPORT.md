@@ -2774,3 +2774,115 @@
 - สถานะ deploy/UAT: เรียบร้อย
 - ผลลัพธ์: โค้ดทั้งหมดและเอกสารที่เกี่ยวข้องถูกบันทึกและนำขึ้น GitHub remote main เรียบร้อยสมบูรณ์
 
+
+## 2026-11-10 16:55 — ตรวจสอบและวิเคราะห์สาเหตุปุ่มฟันเฟืองของบัญชีสิทธิ์ลูกกดแก้ไขข้อมูลตัวเองไม่ได้
+
+- คำขอ/เป้าหมาย: ตรวจสอบและอธิบายว่าทำไมบัญชีอีเมลที่เป็นสิทธิ์ลูกถึงไม่สามารถกดปุ่มฟันเฟืองเพื่อแก้ไขข้อมูลตัวเองได้ ("แล้วก็ทำไมอีเมลล์ที่เป็นสิทธิ์ลูกถึงไม่สามารถกดฟันเฟืองเพื่อแก้ไขข้อมูลตัวเองได้")
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบโค้ดปุ่มฟันเฟืองใน `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift` (บรรทัดที่ 872-981):
+     - พบว่าปุ่มฟันเฟืองแยกเงื่อนไขตาม `userRole`
+     - หากเป็น `superadmin` จะสลับเป็น `isSettingsMode` (เปิดโหมดตั้งค่า เพื่อเข้าถึงแท็บจัดการผู้ดูแลระบบ)
+     - หากไม่ใช่ `superadmin` (สิทธิ์ลูก `admin`/`services`) จะตั้งค่า `showingEditProfile = true` เพื่อดึงข้อมูลผ่าน `APIService.shared.fetchAdmins()` และเปิด `EditAdminSheet`
+  2. วิเคราะห์หาสาเหตุที่กดแล้วไม่ทำงาน (Root Cause):
+     - การชนกันของตัวแปร `adminID` ใน `AppStorage`: ในระบบหอพักรวม ตัวแปร `adminID` ถูกนำไปผูกกับ Account ID เจ้าของหอพัก (`account_id = 1`) สำหรับซิงก์ข้อมูลห้องพัก
+     - เมื่อสิทธิ์ลูก (Admin ID = 2) กดฟันเฟือง โค้ดค้นหาตนเองด้วย `admins.first(where: { $0.id == adminID })` ซึ่ง `adminID` เป็น 1 หรือ 0 ทำให้หาตัวตนของสิทธิ์ลูกไม่พบ (`nil`) Modal Sheet จึงไม่เปิดขึ้นมาเลย (มีเพียงฟันเฟืองหมุน) หรือหากพบ ก็จะเป็นข้อมูลของ Superadmin ซึ่ง Backend ไม่อนุญาตให้แก้ไข (`403 Forbidden`)
+     - โครงสร้างบัญชีของสิทธิ์ลูกใช้ `email` เป็นอีเมลหอพักหลัก และเก็บอีเมลจริงใน `backup_email` แต่โค้ดค้นหาไม่ได้นำ `username` หรือ `backup_email` หรือ claims `admin_id` ใน JWT มาช่วยระบุตัวตน
+  3. สรุปแนวทางแก้ไขเพื่อเตรียมปรับปรุงโค้ดให้สิทธิ์ลูกสามารถแก้ไขโปรไฟล์ของตนเองได้ถูกต้อง
+- ไฟล์หรือระบบที่กระทบ:
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี (การตรวจสอบและวิเคราะห์โค้ด)
+- การตรวจสอบและหลักฐาน:
+  - ตรวจสอบโค้ดใน `RoomListView.swift`, `APIService.swift`, `AdminManagementTabView.swift`, และ `backend-dorm/handlers/auth.go`
+  - ตรวจสอบข้อมูลสิทธิ์แอดมินในตาราง `admins` บน Master Database
+- สถานะ deploy/UAT: วิเคราะห์เสร็จสมบูรณ์ พร้อมรายงานผลและแนวทางแก้ไขแก่ผู้ใช้
+- ผลลัพธ์: ทราบสาเหตุที่แน่ชัดของการที่บัญชีสิทธิ์ลูกกดฟันเฟืองแล้วไม่สามารถแก้ไขข้อมูลตัวเองได้
+
+
+
+## 2026-11-10 16:55 — ตรวจสอบและวิเคราะห์สาเหตุปุ่มฟันเฟืองของบัญชีสิทธิ์ลูกกดแก้ไขข้อมูลตัวเองไม่ได้
+
+- คำขอ/เป้าหมาย: ตรวจสอบและอธิบายว่าทำไมบัญชีอีเมลที่เป็นสิทธิ์ลูกถึงไม่สามารถกดปุ่มฟันเฟืองเพื่อแก้ไขข้อมูลตัวเองได้ ("แล้วก็ทำไมอีเมลล์ที่เป็นสิทธิ์ลูกถึงไม่สามารถกดฟันเฟืองเพื่อแก้ไขข้อมูลตัวเองได้")
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบโค้ดปุ่มฟันเฟืองใน `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift` (บรรทัดที่ 872-981):
+     - พบว่าปุ่มฟันเฟืองแยกเงื่อนไขตาม `userRole`
+     - หากเป็น `superadmin` จะสลับเป็น `isSettingsMode` (เปิดโหมดตั้งค่า เพื่อเข้าถึงแท็บจัดการผู้ดูแลระบบ)
+     - หากไม่ใช่ `superadmin` (สิทธิ์ลูก `admin`/`services`) จะตั้งค่า `showingEditProfile = true` เพื่อดึงข้อมูลผ่าน `APIService.shared.fetchAdmins()` และเปิด `EditAdminSheet`
+  2. วิเคราะห์หาสาเหตุที่กดแล้วไม่ทำงาน (Root Cause):
+     - การชนกันของตัวแปร `adminID` ใน `AppStorage`: ในระบบหอพักรวม ตัวแปร `adminID` ถูกนำไปผูกกับ Account ID เจ้าของหอพัก (`account_id = 1`) สำหรับซิงก์ข้อมูลห้องพัก
+     - เมื่อสิทธิ์ลูก (Admin ID = 2) กดฟันเฟือง โค้ดค้นหาตนเองด้วย `admins.first(where: { $0.id == adminID })` ซึ่ง `adminID` เป็น 1 หรือ 0 ทำให้หาตัวตนของสิทธิ์ลูกไม่พบ (`nil`) Modal Sheet จึงไม่เปิดขึ้นมาเลย (มีเพียงฟันเฟืองหมุน) หรือหากพบ ก็จะเป็นข้อมูลของ Superadmin ซึ่ง Backend ไม่อนุญาตให้แก้ไข (`403 Forbidden`)
+     - โครงสร้างบัญชีของสิทธิ์ลูกใช้ `email` เป็นอีเมลหอพักหลัก และเก็บอีเมลจริงใน `backup_email` แต่โค้ดค้นหาไม่ได้นำ `username` หรือ `backup_email` หรือ claims `admin_id` ใน JWT มาช่วยระบุตัวตน
+  3. สรุปแนวทางแก้ไขเพื่อเตรียมปรับปรุงโค้ดให้สิทธิ์ลูกสามารถแก้ไขโปรไฟล์ของตนเองได้ถูกต้อง
+- ไฟล์หรือระบบที่กระทบ:
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี (การตรวจสอบและวิเคราะห์โค้ด)
+- การตรวจสอบและหลักฐาน:
+  - ตรวจสอบโค้ดใน `RoomListView.swift`, `APIService.swift`, `AdminManagementTabView.swift`, และ `backend-dorm/handlers/auth.go`
+  - ตรวจสอบข้อมูลสิทธิ์แอดมินในฐานข้อมูล master.db
+- สถานะ deploy/UAT: วิเคราะห์เสร็จสมบูรณ์
+- ผลลัพธ์: ทราบสาเหตุที่แน่ชัดของการที่บัญชีสิทธิ์ลูกกดฟันเฟืองแล้วไม่สามารถแก้ไขข้อมูลตัวเองได้
+
+## 2026-11-10 17:00 — ปรับปรุงหน้าเว็บแนะนำบริการรอบหอพัก (/services) ให้เป็นทางการและตัดคำเลียนแบบ AI
+
+- คำขอ/เป้าหมาย: แก้ไขหน้าเว็บ https://dorminet.studio/services และปุ่มบริการรอบหอพักให้ดูเป็นทางการ ไม่ใช้อักขระพิเศษพร่ำเพรื่อ (เช่น & และ •) และตัดข้อความเลียนแบบ AI ออก (Anti-AI-Slop)
+- สิ่งที่ดำเนินการ:
+  1. ปรับปรุงไฟล์ `backend-dorm/public/services.html`:
+     - แก้ไขปุ่ม Zone Selector: จาก `รอบหอ & หนองบัว (8)` เป็น `รอบหอพักและหนองบัว (8)`, `ในเมืองอุบลราชธานี (15)`, และ `วารินชำราบ (12)`
+     - แก้ไขปุ่ม Category Filters: ตัดสัญลักษณ์ `&` และคำพูดตลาดออก เปลี่ยนเป็น `ร้านอาหารและเครื่องดื่ม`, `คาเฟ่และร้านกาแฟ`, `ห้างสรรพสินค้าและตลาด`, `การเดินทางและสถานที่สำคัญ`, `บริการจำเป็นและร้านสะดวกซื้อ`
+     - แก้ไข Hero Section: ตัดข้อความการตลาด AI เช่น `(ไม่จำกัดจำนวน)` และ `&` ออก ปรับเป็น `ข้อมูลสถานที่และบริการชุมชน` และ `บริการและสถานที่สำคัญ เมืองอุบลราชธานีและวารินชำราบ`
+     - แก้ไข Card Badges ทุกใบ: เปลี่ยน `รอบหอพัก & หนองบัว` เป็น `รอบหอพักและหนองบัว`
+     - แก้ไข Header และ Footer: ใช้ภาษาทางการ เช่น `คู่มือบริการสำหรับผู้พักอาศัย`, `ข้อมูลสถานที่จริง`, และ `คู่มือแนะนำสถานที่และบริการสำหรับผู้พักอาศัย`
+  2. ปรับปรุงข้อความตอบกลับใน LINE Bot (`backend-dorm/handlers/line_bot.go`):
+     - ปรับข้อความ Flex Message ให้เป็นทางการ: `รวมร้านอาหาร ร้านสะดวกซื้อ บริการซักรีด การเดินทาง และสถานที่สำคัญใกล้หอพักสำหรับผู้พักอาศัย`
+  3. ทดสอบความถูกต้อง:
+     - รัน `go test ./...` ผ่าน 100%
+     - รัน `go test -race ./handlers` ผ่าน 100% ปราศจาก Data Race (0 race)
+     - รัน `go vet ./...` ผ่าน 100%
+- ไฟล์หรือระบบที่กระทบ:
+  - `backend-dorm/public/services.html`
+  - `backend-dorm/handlers/line_bot.go`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: สำรองไฟล์เดิมไว้ที่ `/home/fang/dorminet_workspace/backups/services_html_backup_20261110_020040.html` และอัปโหลดไฟล์ `services.html` ฉบับแก้ไขขึ้นสู่ Production `/opt/dormitory/public/services.html`
+- การตรวจสอบและหลักฐาน:
+  - ผ่านชุดทดสอบ Go test, race detector (0 race), go vet และตรวจสอบ Markdown/HTML diff ผ่าน
+  - ยืนยันการตอบสนองจริงบน Production Server ผ่าน `curl https://dorminet.studio/services` พบปุ่มและเนื้อหาเป็นภาษาทางการ ไร้อักขระพิเศษ 100%
+- สถานะ deploy/UAT: Deploy ขึ้น Production Server และตรวจสอบผลการแสดงผลจริงเรียบร้อย 100%
+- ผลลัพธ์: หน้าเว็บ https://dorminet.studio/services และปุ่มบริการรอบหอพักดูเป็นทางการ สละสลวย ไร้อักขระพิเศษ และตรงตามมาตรฐาน Anti-AI-Slop เรียบร้อยแล้ว
+
+
+## 2026-11-10 17:05 — เพิ่ม QR Code สแกนจ่ายในบิลรายเดือนผ่าน LINE Bot เมื่อถึงรอบบิล และแก้ไขปุ่มฟันเฟืองสำหรับสิทธิ์ลูก
+
+- คำขอ/เป้าหมาย:
+  1. เมื่อลูกบ้านกดปุ่ม "การเงิน" แล้วมีบิลรายเดือนออกมา ถ้าถึงยอดเดือนนั้นให้มี QR Code แสกนมาด้วยเหมือนระบบแจ้งซ่อม แต่ถ้ายังไม่ถึงรอบก็ไม่ต้อง ("แล้วก็จุดที่อยากให้แก้ไขซึ่งน่าจะเป็นข้อใหญ่เลยคือ เวลาที่ลูกบ้านกดปุ่ม การเงิน แล้วจะมีบิลรายเดือนนั้นออกมา ถ้าถึงยอดเดือนนั้นควรจะต้องให้ qr code แสกนมาด้วยเหมือน ระบบแจ้งซ่อม แต่ถ้ายังไม่ถึงรอบก็ไม่ต้อง")
+  2. แก้ไขปุ่มฟันเฟืองในแอป iOS ให้บัญชีสิทธิ์ลูกสามารถเปิดหน้าต่างแก้ไขข้อมูลตนเองได้
+- สิ่งที่ดำเนินการ:
+  1. Backend LINE Bot (`backend-dorm/handlers/line_bot.go` และ `line_snapshot.go`):
+     - เพิ่มฟังก์ชัน `parseInvoicePeriodYearMonth` เพื่อแปลงและตรวจสอบปีเดือนของรอบบิล ทั้งรูปแบบ ค.ศ. (`2026-11`) และ พ.ศ. (`2569-11`)
+     - เพิ่มฟังก์ชัน `isInvoiceDueForPayment`: ตรวจสอบว่าบิลถึงรอบบิลที่ต้องชำระหรือยัง (ถ้าเป็นรอบบิลปัจจุบันหรือย้อนหลังและมียอดค้างชำระ ถือว่าถึงยอดแล้ว แต่ถ้าเป็นรอบบิลอนาคต ถือว่ายังไม่ถึงรอบ)
+     - เพิ่มฟังก์ชัน `buildLineInvoicePaymentBubble`: สร้างการ์ดช่องทางชำระเงินพร้อมรูปภาพ PromptPay QR Code ที่สร้างด้วย EMVCo payload ตรวจสอบความถูกต้อง พร้อมแสดงยอดที่ต้องชำระ, ชื่อบัญชี, เลขพร้อมเพย์, เลขบัญชี และคำแนะนำการส่งสลิป
+     - เพิ่มฟังก์ชัน `buildLineInvoiceFlexMessage`: หากถึงยอดเดือนนั้น จะส่งเป็น Carousel 2 ใบ (การ์ด 1: รายละเอียดบิล, การ์ด 2: QR Code สแกนจ่าย) เหมือนกับระบบแจ้งซ่อม แต่ถ้ายังไม่ถึงรอบหรือชำระแล้ว จะส่งเป็นการ์ดบิลใบเดียวตามปกติ
+     - เชื่อมโยงคำสั่งข้อความ "การเงิน" และ API ส่งบิล `HandleSendLineInvoice` / `PushInvoiceFlexMessage` ให้ใช้รูปแบบใหม่
+  2. Backend Unit Tests (`backend-dorm/handlers/line_bot_invoice_test.go`):
+     - เพิ่ม `TestLineInvoiceFlexMessageIncludesQRWhenDue`: ตรวจสอบว่าเมื่อถึงรอบบิลจะส่ง Carousel พร้อม QR Code สแกนจ่าย
+     - เพิ่ม `TestLineInvoiceFlexMessageExcludesQRWhenNotDue`: ตรวจสอบว่ารอบบิลอนาคตหรือบิลที่ชำระแล้วจะไม่ส่ง QR Code
+  3. iOS App (`DormAppSwift_Sources/`):
+     - `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift`: เพิ่ม `currentSessionAdminID` ดึง `admin_id` จาก Session JWT
+     - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift`: ปรับปรุงลอจิกใน `onChange(of: showingEditProfile)` ให้ระบุตัวตนสิทธิ์ลูกผ่าน `sessionID`, `userName`, หรือ `backup_email` ทำให้เปิด `EditAdminSheet` ของตนเองได้สำเร็จ
+  4. Build & Production Deployment:
+     - Go Tests: `go test ./...` (PASS), `go test -race ./handlers` (PASS), `go vet ./...` (PASS)
+     - iOS Build: `xcodebuild` Build Succeeded
+     - Production Safe Deploy: รัน `deploy_flex_safe_remote.sh` อัปเดต Binary สำเร็จ (SHA: `c219dc849b7acd5557368f8bc4a5d1614093145bf9913652084ce8b7430bf3a9`), Systemd Service Active, Ping Online
+- ไฟล์หรือระบบที่กระทบ:
+  - `backend-dorm/handlers/line_bot.go`
+  - `backend-dorm/handlers/line_bot_invoice_test.go`
+  - `backend-dorm/handlers/line_snapshot.go`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: Deploy Backend Binary ใหม่ขึ้น Production Server
+- การตรวจสอบและหลักฐาน:
+  - Unit Tests: `go test -v ./handlers -run TestLineInvoiceFlexMessage` -> PASS (2/2)
+  - `deploy_flex_safe_remote.sh` -> `DEPLOY_SUCCESS`, `NEW_SHA=c219dc849b7acd5557368f8bc4a5d1614093145bf9913652084ce8b7430bf3a9`
+  - Health check: `https://dorminet.studio/api/system/ping` -> `{"status":"online"}`
+- สถานะ deploy/UAT: Deploy Backend ขึ้น Production แล้ว 100% พร้อมให้ทดสอบพิมพ์ "การเงิน" ใน LINE และทดสอบปุ่มฟันเฟืองใน iOS App
+- ผลลัพธ์: ลูกบ้านพิมพ์ "การเงิน" จะได้รับบิลพร้อม QR Code สแกนจ่ายในรูปแบบ Carousel ทันทีเมื่อถึงรอบบิล และหากยังไม่ถึงรอบจะไม่แสดง QR Code ส่วนบัญชีสิทธิ์ลูกสามารถกดฟันเฟืองเพื่อแก้ไขข้อมูลตนเองได้ถูกต้อง
+
