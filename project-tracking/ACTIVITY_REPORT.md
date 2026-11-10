@@ -2958,3 +2958,23 @@
   - project-tracking/ACTIVITY_REPORT.md
   - project-tracking/WORK_STATUS.md
 - สถานะ: ดำเนินการเสร็จสมบูรณ์ 100%, ผ่านการทดสอบ Build/Test ทั้งหมด และนำขึ้น Git และ Production เรียบร้อยแล้ว
+
+
+## 2026-11-10 18:00 — ปรับปรุงรูปภาพร้านค้าและสถานที่จริงทั้ง 35 แห่งในหน้าบริการรอบหอพัก (services.html)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้งความต้องการ: "อยากให้ใช้รูปจริงๆของร้านมาใส่น่ะเอามาจากรูปแนะนำภาพของร้านจริงก็ได้ แทนที่จะเอารูปจากเน็ตมาใส่" โดยเน้นย้ำภาพของ "สเต็ก นิวยอร์ก (Steak New York Ubon)" และร้านค้าอื่นๆ ให้เป็นรูปของร้านจริง
+- สิ่งที่ดำเนินการ:
+  1. ค้นหาและตรวจสอบภาพถ่ายจริงของร้านค้า สถานที่สำคัญ เมนูแนะนำ และหน้าร้านจริงทั้งหมด 35 แห่ง (โซนรอบหอพักและหนองบัว 8 แห่ง, โซนในเมืองอุบลราชธานี 15 แห่ง, โซนวารินชำราบ 12 แห่ง) จากแหล่งข้อมูลร้านค้าโดยตรง (Wongnai, Official Sites, Wikimedia Fastly CDN)
+  2. เปลี่ยนรูปภาพ "สเต็ก นิวยอร์ก (Steak New York Ubon)" เป็นภาพจานสเต็กซิกเนเจอร์พร้อมธงโลโก้ร้าน "สเต็ก นิวยอร์ก" จริง
+  3. ทดสอบตรวจสอบสถานะ HTTP ของ URL ภาพทั้ง 35 ลิงก์ พบว่าตอบกลับ 200 OK ทุกรายการ ไม่มีปัญหา Hotlinking หรือ Rate Limit
+  4. ทำการแทนที่ URL ภาพเดิมที่เป็น Unsplash ในไฟล์ `backend-dorm/public/services.html` ทั้งหมด 35 การ์ด (เหลือการใช้ภาพ Unsplash เป็น 0)
+  5. สำรองไฟล์เดิมบนเซิร์ฟเวอร์ Production ไปยัง `/home/fang/dorminet_workspace/backups/services.html.bak_20261110_175645` ตามระเบียบ Runbook
+  6. Deploy ไฟล์ `backend-dorm/public/services.html` ขึ้นสู่ Production Server (`/opt/dormitory/public/services.html`)
+  7. ตรวจสอบ Checksum SHA-256 ระหว่าง Local และ Production พบว่าตรงกัน (`42240c87b1f6fe75eb8d5817cc40fad9f4f8c538621a38c638fc20efd7d17c66`) และทดสอบการเรียกใช้งานผ่าน https://dorminet.studio/services สำเร็จเรียบร้อย
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - `backend-dorm/public/services.html`
+  - Production `/opt/dormitory/public/services.html` (Host: 202.29.232.28)
+  - `project-tracking/ACTIVITY_REPORT.md`
+- สถานะ: ดำเนินการเสร็จสมบูรณ์ 100%, รูปภาพจริงของร้านและสถานที่ทั้ง 35 แห่งแสดงผลบน Production เรียบร้อย
+
