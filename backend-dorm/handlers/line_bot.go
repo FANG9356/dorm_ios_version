@@ -227,6 +227,51 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 		return
 	}
 
+	if text == "บริการ" || text == "บริการรอบหอพัก" || text == "บริการแนะนำ" || text == "ร้านค้า" || text == "รอบหอพัก" {
+		replyToLineWithFlexMessage(replyToken, "บริการและร้านค้ารอบหอพัก", map[string]interface{}{
+			"type": "bubble",
+			"size": "kilo",
+			"body": map[string]interface{}{
+				"type": "box",
+				"layout": "vertical",
+				"contents": []map[string]interface{}{
+					{
+						"type": "text",
+						"text": "บริการและร้านค้ารอบหอพัก",
+						"weight": "bold",
+						"color": "#111827",
+						"size": "md",
+					},
+					{
+						"type": "text",
+						"text": "รวมร้านอาหาร ร้านสะดวกซื้อ 24 ชม. ซักรีด การเดินทาง และบริการสำคัญใกล้หอพักสำหรับลูกบ้าน",
+						"wrap": true,
+						"color": "#666666",
+						"size": "xs",
+						"margin": "md",
+					},
+				},
+			},
+			"footer": map[string]interface{}{
+				"type": "box",
+				"layout": "vertical",
+				"contents": []map[string]interface{}{
+					{
+						"type": "button",
+						"style": "primary",
+						"color": "#111827",
+						"action": map[string]interface{}{
+							"type": "uri",
+							"label": "เปิดดูบริการรอบหอพัก",
+							"uri": "https://dorminet.studio/services",
+						},
+					},
+				},
+			},
+		})
+		return
+	}
+
 	if text == "ประวัติ" || text == "ประวัติการชำระ" || text == "ใบเสร็จ" {
 		replyToLineWithFlexMessage(replyToken, "ข้อมูลของฉันและประวัติการชำระ", map[string]interface{}{
 			"type": "bubble",

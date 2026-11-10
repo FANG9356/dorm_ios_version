@@ -2,9 +2,21 @@ package core
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestServicesHtmlExists(t *testing.T) {
+	servicesPath := filepath.Join("..", "public", "services.html")
+	info, err := os.Stat(servicesPath)
+	if err != nil {
+		t.Fatalf("services.html not found: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatal("services.html is empty")
+	}
+}
 
 func TestInitializeDatabaseEnforcesOnePasswordResetPerEmail(t *testing.T) {
 	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "master.db")+"?_busy_timeout=5000")

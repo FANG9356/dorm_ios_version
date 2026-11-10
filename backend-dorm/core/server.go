@@ -479,6 +479,15 @@ func setupStaticHandler() {
 	http.HandleFunc("/terms", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, filepath.Join(".", "public", "terms.html"))
 	})
+	http.HandleFunc("/services", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "services.html"))
+	})
+	http.HandleFunc("/services.html", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "services.html"))
+	})
+	http.HandleFunc("/dorm-services", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, filepath.Join(".", "public", "services.html"))
+	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.NotFound(w, r)
