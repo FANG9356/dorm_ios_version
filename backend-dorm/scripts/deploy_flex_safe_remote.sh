@@ -88,6 +88,7 @@ fi
 
 echo "Setting up OCR Bot and Public Web Pages..."
 sudo cp -r "$build_dir/backend-dorm/public" /opt/dormitory/
+sudo chown -R fang:fang /opt/dormitory/public
 sudo DEBIAN_FRONTEND=noninteractive apt-get update >/dev/null
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tesseract-ocr tesseract-ocr-tha python3-pip python3-venv >/dev/null || true
 sudo mkdir -p /opt/dormitory/ocr-bot

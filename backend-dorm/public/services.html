@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Pure White & Clean Minimalist Apple Palette */
             --bg-page: #f8fafc;
             --bg-card: #ffffff;
             --bg-muted: #f1f5f9;
@@ -22,40 +23,17 @@
             --text-light: #94a3b8;
             --brand-primary: #0f172a;
             --brand-blue: #0284c7;
-            --brand-blue-soft: rgba(2, 132, 199, 0.08);
+            --brand-blue-soft: #e0f2fe;
             --brand-accent: #2563eb;
             --success-color: #16a34a;
-            --success-soft: rgba(22, 163, 74, 0.1);
+            --success-soft: #dcfce7;
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
-            --shadow-float: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+            --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.03);
+            --shadow-float: 0 12px 28px -4px rgba(15, 23, 42, 0.1);
             --radius-sm: 8px;
             --radius-md: 12px;
-            --radius-lg: 18px;
+            --radius-lg: 20px;
             --radius-full: 9999px;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-page: #0b0f17;
-                --bg-card: #151c28;
-                --bg-muted: #1e293b;
-                --bg-subtle: #0f172a;
-                --border-color: #222f44;
-                --border-hover: #334155;
-                --text-heading: #f8fafc;
-                --text-body: #cbd5e1;
-                --text-muted: #94a3b8;
-                --text-light: #64748b;
-                --brand-primary: #f8fafc;
-                --brand-blue: #38bdf8;
-                --brand-blue-soft: rgba(56, 189, 248, 0.12);
-                --brand-accent: #38bdf8;
-                --success-color: #34d399;
-                --success-soft: rgba(52, 211, 153, 0.15);
-                --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
-                --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
-            }
         }
 
         * {
@@ -73,7 +51,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding-bottom: env(safe-area-inset-bottom, 32px);
+            padding-bottom: env(safe-area-inset-bottom, 36px);
         }
 
         .container {
@@ -83,21 +61,16 @@
             padding: 0 16px;
         }
 
-        /* Top Navigation Header (Matching LINE LIFF aesthetic) */
+        /* Top Sticky Navigation Bar (Clean White Apple Header) */
         .site-header {
             position: sticky;
             top: 0;
             z-index: 40;
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .site-header {
-                background: rgba(11, 15, 23, 0.88);
-            }
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
         }
 
         .nav-inner {
@@ -135,25 +108,25 @@
         .badge-verified {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
             font-size: 11px;
             font-weight: 600;
-            padding: 4px 10px;
+            padding: 5px 12px;
             border-radius: var(--radius-full);
             background: var(--brand-blue-soft);
             color: var(--brand-blue);
-            border: 1px solid rgba(2, 132, 199, 0.2);
+            border: 1px solid rgba(2, 132, 199, 0.18);
         }
 
         .badge-verified svg {
-            width: 12px;
-            height: 12px;
+            width: 13px;
+            height: 13px;
             stroke-width: 2.2;
         }
 
         /* Hero Header Section */
         .hero {
-            padding: 24px 0 18px;
+            padding: 24px 0 16px;
             text-align: center;
         }
 
@@ -165,10 +138,11 @@
             font-weight: 600;
             padding: 6px 14px;
             border-radius: var(--radius-full);
-            background: var(--bg-muted);
+            background: #ffffff;
             color: var(--text-heading);
             margin-bottom: 12px;
             border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
         }
 
         .hero-chip svg {
@@ -201,7 +175,7 @@
             line-height: 1.5;
         }
 
-        /* Search & Live Filtering */
+        /* Search Box */
         .search-wrapper {
             margin: 16px 0 14px;
             position: relative;
@@ -229,7 +203,7 @@
             font-size: 14px;
             font-family: inherit;
             color: var(--text-heading);
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             outline: none;
@@ -239,7 +213,7 @@
 
         .search-input:focus {
             border-color: var(--brand-blue);
-            box-shadow: 0 0 0 3px var(--brand-blue-soft);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
         }
 
         .search-clear {
@@ -248,14 +222,19 @@
             display: none;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             border-radius: var(--radius-full);
             background: var(--bg-muted);
             border: none;
             color: var(--text-muted);
             cursor: pointer;
             padding: 0;
+            transition: background 0.15s ease;
+        }
+
+        .search-clear:hover {
+            background: var(--border-hover);
         }
 
         .search-clear svg {
@@ -264,7 +243,7 @@
             stroke-width: 2.2;
         }
 
-        /* Horizontal Category Filter Pills */
+        /* Category Filter Pills (Clean White Theme) */
         .filter-container {
             position: relative;
             margin-bottom: 20px;
@@ -287,11 +266,11 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 7px 14px;
+            padding: 8px 15px;
             font-size: 13px;
             font-weight: 500;
             color: var(--text-body);
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-full);
             white-space: nowrap;
@@ -303,6 +282,7 @@
 
         .filter-pill:hover {
             border-color: var(--border-hover);
+            background: var(--bg-muted);
             color: var(--text-heading);
         }
 
@@ -311,14 +291,7 @@
             color: #ffffff;
             border-color: #0f172a;
             font-weight: 600;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            .filter-pill.active {
-                background: #f8fafc;
-                color: #0f172a;
-                border-color: #f8fafc;
-            }
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
         }
 
         .pill-count {
@@ -334,18 +307,11 @@
         }
 
         .filter-pill.active .pill-count {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.22);
             color: #ffffff;
         }
 
-        @media (prefers-color-scheme: dark) {
-            .filter-pill.active .pill-count {
-                background: rgba(15, 23, 42, 0.15);
-                color: #0f172a;
-            }
-        }
-
-        /* Result Counter */
+        /* Result Metadata */
         .results-meta {
             display: flex;
             align-items: center;
@@ -360,20 +326,20 @@
         .services-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 18px;
+            gap: 20px;
             margin-bottom: 32px;
         }
 
         @media (min-width: 680px) {
             .services-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
+                gap: 22px;
             }
         }
 
-        /* Service Card (Apple-grade cards) */
+        /* Service Card (Pure White & Clean Apple Aesthetic) */
         .service-card {
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             overflow: hidden;
@@ -384,7 +350,7 @@
         }
 
         .service-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             border-color: var(--border-hover);
             box-shadow: var(--shadow-float);
         }
@@ -392,7 +358,7 @@
         /* Media Thumbnail */
         .card-media {
             position: relative;
-            height: 180px;
+            height: 190px;
             width: 100%;
             background: var(--bg-muted);
             overflow: hidden;
@@ -409,35 +375,37 @@
             transform: scale(1.03);
         }
 
+        /* Frosted White Badges on Image */
         .card-badge-status {
             position: absolute;
             top: 12px;
             left: 12px;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
+            gap: 6px;
+            padding: 5px 11px;
             border-radius: var(--radius-full);
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            color: #ffffff;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-heading);
             font-size: 11px;
             font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .status-dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background-color: #22c55e;
-            box-shadow: 0 0 6px #22c55e;
+            background-color: var(--success-color);
+            box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
         }
 
         .status-dot.blue {
-            background-color: #38bdf8;
-            box-shadow: 0 0 6px #38bdf8;
+            background-color: var(--brand-blue);
+            box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
         }
 
         .card-badge-distance {
@@ -447,37 +415,39 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 4px 10px;
+            padding: 5px 11px;
             border-radius: var(--radius-full);
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            color: #ffffff;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: var(--text-heading);
             font-size: 11px;
             font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .card-badge-distance svg {
-            width: 12px;
-            height: 12px;
+            width: 13px;
+            height: 13px;
             stroke-width: 2.2;
-            color: #38bdf8;
+            color: var(--brand-blue);
         }
 
-        /* Card Body */
+        /* Card Content */
         .card-content {
             padding: 18px;
             display: flex;
             flex-direction: column;
             flex: 1;
+            background: #ffffff;
         }
 
         .card-category-label {
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             color: var(--brand-blue);
             margin-bottom: 4px;
         }
@@ -491,7 +461,7 @@
         }
 
         .card-title {
-            font-size: 17px;
+            font-size: 18px;
             font-weight: 700;
             color: var(--text-heading);
             letter-spacing: -0.01em;
@@ -561,10 +531,10 @@
 
         .highlight-desc {
             color: var(--text-body);
-            line-height: 1.4;
+            line-height: 1.45;
         }
 
-        /* Card Action Buttons (Direct Phone + Map Navigation) */
+        /* Card Action Buttons */
         .card-actions {
             margin-top: auto;
             display: flex;
@@ -593,7 +563,7 @@
             stroke-width: 2.2;
         }
 
-        /* Call button (Secondary, clean neutral) */
+        /* Call button (Clean Light Neutral) */
         .btn-call {
             background: var(--bg-muted);
             color: var(--text-heading);
@@ -601,15 +571,16 @@
         }
 
         .btn-call:hover {
-            background: var(--border-color);
+            background: var(--border-hover);
             border-color: var(--border-hover);
         }
 
-        /* Map direction button (Primary deep navy matching LIFF submit button) */
+        /* Map direction button (Primary Jet Black matching LINE LIFF) */
         .btn-map {
             background: #0f172a;
             color: #ffffff;
             border: 1px solid #0f172a;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
         }
 
         .btn-map:hover {
@@ -617,25 +588,12 @@
             border-color: #1e293b;
         }
 
-        @media (prefers-color-scheme: dark) {
-            .btn-map {
-                background: var(--brand-accent);
-                color: #0b0f17;
-                border-color: var(--brand-accent);
-                font-weight: 700;
-            }
-
-            .btn-map:hover {
-                background: #7dd3fc;
-            }
-        }
-
-        /* Emergency Box (Matches system security/safe guidelines) */
+        /* Emergency & Dorm Contact Section (Clean White Box) */
         .emergency-section {
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            padding: 20px;
+            padding: 22px;
             margin-top: 10px;
             box-shadow: var(--shadow-card);
         }
@@ -648,8 +606,8 @@
         }
 
         .emergency-header svg {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             color: #ef4444;
             stroke-width: 2.2;
         }
@@ -715,7 +673,7 @@
             display: none;
             text-align: center;
             padding: 48px 16px;
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px dashed var(--border-color);
             border-radius: var(--radius-lg);
             margin: 20px 0;
@@ -781,7 +739,7 @@
 </head>
 <body>
 
-    <!-- Sticky Navigation Bar (Matching LINE LIFF) -->
+    <!-- Sticky Navigation Bar (Clean White Apple Header) -->
     <header class="site-header">
         <div class="container nav-inner">
             <div class="nav-brand">
@@ -826,7 +784,7 @@
             </div>
         </div>
 
-        <!-- Horizontal Category Filters -->
+        <!-- Horizontal Category Filters (Clean White Theme) -->
         <div class="filter-container">
             <div class="filter-scroll" id="filter-buttons">
                 <button class="filter-pill active" data-category="all">
@@ -1162,7 +1120,7 @@
 
         </div>
 
-        <!-- Emergency & Dorm Contact Section -->
+        <!-- Emergency & Dorm Contact Section (Clean White) -->
         <section class="emergency-section">
             <div class="emergency-header">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
