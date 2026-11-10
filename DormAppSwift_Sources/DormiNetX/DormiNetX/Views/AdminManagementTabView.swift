@@ -192,7 +192,25 @@ struct AdminRow: View {
     let onEdit: () -> Void
     let onImageUpdate: () -> Void
     
+    @AppStorage("userRole") var currentUserRole: String = "admin"
     @State private var showDeleteConfirm = false
+    
+    private var roleTitle: String {
+        switch admin.role {
+        case "superadmin": return "เจ้าของหอพัก"
+        case "admin": return "ผู้ดูแลระบบ"
+        case "services": return "ช่างและบริการ"
+        case "dorm": return "พนักงานหอพัก"
+        default: return admin.role
+        }
+    }
+    
+    private var displayEmail: String {
+        if admin.role != "superadmin", let backup = admin.backup_email, !backup.isEmpty {
+            return backup
+        }
+        return admin.email
+    }
     
     var body: some View {
         GlassCard {
@@ -200,14 +218,24 @@ struct AdminRow: View {
                 ProfileImageView(admin: admin, size: 50, onImageUpdate: onImageUpdate)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(admin.username)
-                        .font(.custom("SukhumvitSet-Bold", size: 18))
-                        .foregroundColor(.primary)
+                    HStack(spacing: 6) {
+                        Text(admin.username)
+                            .font(.custom("SukhumvitSet-Bold", size: 18))
+                            .foregroundColor(.primary)
+                        
+                        Text(roleTitle)
+                            .font(.custom("SukhumvitSet-Bold", size: 11))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(admin.role == "superadmin" ? Color.indigo.opacity(0.15) : Color.blue.opacity(0.12))
+                            .foregroundColor(admin.role == "superadmin" ? .indigo : .blue)
+                            .clipShape(Capsule())
+                    }
                     
                     HStack {
                         Image(systemName: "envelope.fill")
                             .font(.custom("SukhumvitSet-Medium", size: 10))
-                        Text(admin.email)
+                        Text(displayEmail)
                             .font(.custom("SukhumvitSet-Text", size: 13))
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -221,24 +249,25 @@ struct AdminRow: View {
                 
                 Spacer()
                 
-                // Actions (No longer showing Super Admin badge)
-                Button(action: {
-                    showDeleteConfirm = true
-                }) {
-                    Image(systemName: "trash.fill")
-                        .foregroundColor(.red.opacity(0.8))
-                        .padding(10)
-                        .background(Color.red.opacity(0.1))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(PressableButtonStyle())
-                .alert("ยืนยันการลบ", isPresented: $showDeleteConfirm) {
-                    Button("ยกเลิก", role: .cancel) { }
-                    Button("ลบข้อมูล", role: .destructive) {
-                        onDelete()
+                if currentUserRole == "superadmin" && admin.role != "superadmin" {
+                    Button(action: {
+                        showDeleteConfirm = true
+                    }) {
+                        Image(systemName: "trash.fill")
+                            .foregroundColor(.red.opacity(0.8))
+                            .padding(10)
+                            .background(Color.red.opacity(0.1))
+                            .clipShape(Circle())
                     }
-                } message: {
-                    Text("คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี \(admin.username)?")
+                    .buttonStyle(PressableButtonStyle())
+                    .alert("ยืนยันการลบ", isPresented: $showDeleteConfirm) {
+                        Button("ยกเลิก", role: .cancel) { }
+                        Button("ลบข้อมูล", role: .destructive) {
+                            onDelete()
+                        }
+                    } message: {
+                        Text("คุณแน่ใจหรือไม่ว่าต้องการลบบัญชี \(admin.username)?")
+                    }
                 }
             }
         }
@@ -253,6 +282,7 @@ struct AddAdminSheet: View {
     @State private var primaryEmail = ""
     @State private var backupEmail = ""
     @State private var password = ""
+    @State private var role = "admin"
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
     
@@ -267,7 +297,7 @@ struct AddAdminSheet: View {
                         .autocapitalization(.none)
                         .limitedText($name, maxLength: 60, trimNewlines: true)
                     
-                    TextField("อีเมลหลัก", text: $primaryEmail)
+                    TextField("อีเมลหลัก (หอพัก)", text: $primaryEmail)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -275,7 +305,7 @@ struct AddAdminSheet: View {
                         .disabled(true)
                         .foregroundColor(.secondary)
                     
-                    TextField("อีเมลสำหรับผู้ดูแล", text: $backupEmail)
+                    TextField("อีเมลสำหรับผู้ดูแล (ใช้เข้าสู่ระบบ)", text: $backupEmail)
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
@@ -285,8 +315,12 @@ struct AddAdminSheet: View {
                         .font(.custom("SukhumvitSet-Text", size: 16))
                         .limitedText($password, maxLength: 64, trimNewlines: true)
                         
-                    LabeledContent("สิทธิ์การใช้งาน", value: "ผู้ดูแลทั่วไป")
-                        .font(.custom("SukhumvitSet-Text", size: 16))
+                    Picker("สิทธิ์การใช้งาน", selection: $role) {
+                        Text("ผู้ดูแลระบบทั่วไป").tag("admin")
+                        Text("ช่างและบริการ").tag("services")
+                        Text("พนักงานหอพัก").tag("dorm")
+                    }
+                    .font(.custom("SukhumvitSet-Text", size: 16))
                 }
                 
                 if let error = errorMessage {
@@ -342,7 +376,8 @@ struct AddAdminSheet: View {
             try await APIService.shared.createStaff(
                 username: name,
                 recoveryEmail: backupEmail,
-                temporaryPassword: password
+                temporaryPassword: password,
+                role: role
             )
             onSuccess()
             isPresented = false
@@ -359,9 +394,11 @@ struct EditAdminSheet: View {
     let admin: Admin
     var onSuccess: () -> Void
     
+    @AppStorage("userRole") var currentUserRole: String = "admin"
     @State private var username = ""
     @State private var email = ""
     @State private var backupEmail = ""
+    @State private var role = "admin"
     @State private var promptPayID = ""
     @State private var paymentType = "promptpay"
     @State private var bankAccount = ""
@@ -370,6 +407,16 @@ struct EditAdminSheet: View {
     @State private var newPassword = ""
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
+    
+    private func roleDisplayName(_ r: String) -> String {
+        switch r {
+        case "superadmin": return "เจ้าของหอพัก (Superadmin)"
+        case "admin": return "ผู้ดูแลระบบทั่วไป"
+        case "services": return "ช่างและบริการ"
+        case "dorm": return "พนักงานหอพัก"
+        default: return r
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -390,20 +437,44 @@ struct EditAdminSheet: View {
                         .disableAutocorrection(true)
                         .limitedText($username, maxLength: 60, trimNewlines: true)
                     
-                    TextField("อีเมลหลัก", text: $email)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .normalizedEmail($email)
-                        .disabled(true)
-                        .foregroundColor(.secondary)
-                    
-                    TextField("อีเมลสำรอง (ไม่บังคับ)", text: $backupEmail)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .foregroundColor(.secondary)
-                        .normalizedEmail($backupEmail)
+                    if admin.role == "superadmin" {
+                        TextField("อีเมลหลัก (เข้าสู่ระบบ)", text: $email)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .normalizedEmail($email)
+                            .disabled(true)
+                            .foregroundColor(.secondary)
+                        
+                        TextField("อีเมลสำรอง (ไม่บังคับ)", text: $backupEmail)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .normalizedEmail($backupEmail)
+                    } else {
+                        TextField("อีเมลส่วนตัว (ใช้เข้าสู่ระบบ)", text: $backupEmail)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .normalizedEmail($backupEmail)
+                        
+                        LabeledContent("อีเมลหอพักหลัก", value: email)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section(header: Text("สิทธิ์การใช้งาน")) {
+                    if admin.role == "superadmin" {
+                        LabeledContent("ระดับสิทธิ์", value: "เจ้าของหอพัก (Superadmin)")
+                    } else if currentUserRole == "superadmin" {
+                        Picker("ระดับสิทธิ์", selection: $role) {
+                            Text("ผู้ดูแลระบบทั่วไป").tag("admin")
+                            Text("ช่างและบริการ").tag("services")
+                            Text("พนักงานหอพัก").tag("dorm")
+                        }
+                    } else {
+                        LabeledContent("ระดับสิทธิ์", value: roleDisplayName(admin.role))
+                    }
                 }
                 
                 if admin.role == "superadmin" {
@@ -475,6 +546,7 @@ struct EditAdminSheet: View {
                 username = admin.username
                 email = admin.email
                 backupEmail = admin.backup_email ?? ""
+                role = admin.role
                 promptPayID = admin.promptpay_id ?? ""
                 paymentType = admin.payment_type ?? "promptpay"
                 bankAccount = admin.bank_account ?? ""
@@ -491,13 +563,29 @@ struct EditAdminSheet: View {
         errorMessage = nil
         
         do {
-            let success = try await APIService.shared.updateAdmin(id: admin.id, username: username, email: email, backupEmail: backupEmail, promptPayID: promptPayID, paymentType: paymentType, bankAccount: bankAccount, accountName: accountName, oldPassword: oldPassword.isEmpty ? nil : oldPassword, newPassword: newPassword.isEmpty ? nil : newPassword)
+            let roleToSend: String? = (currentUserRole == "superadmin" && admin.role != "superadmin") ? role : nil
+            let success = try await APIService.shared.updateAdmin(
+                id: admin.id,
+                username: username,
+                email: email,
+                backupEmail: backupEmail,
+                role: roleToSend,
+                promptPayID: promptPayID,
+                paymentType: paymentType,
+                bankAccount: bankAccount,
+                accountName: accountName,
+                oldPassword: oldPassword.isEmpty ? nil : oldPassword,
+                newPassword: newPassword.isEmpty ? nil : newPassword
+            )
             if success {
-                let currentAdminID = UserDefaults.standard.integer(forKey: "adminID")
-                if admin.id == currentAdminID && !newPassword.isEmpty {
-                    // Log out automatically if they changed their own password
-                    try? CredentialStore.shared.setToken(nil)
-                    NotificationCenter.default.post(name: Notification.Name("LogoutNotification"), object: nil)
+                let sessionAdminID = APIService.shared.currentSessionAdminID ?? UserDefaults.standard.integer(forKey: "adminID")
+                if admin.id == sessionAdminID {
+                    UserDefaults.standard.set(username, forKey: "userName")
+                    if !newPassword.isEmpty {
+                        // Log out automatically if they changed their own password
+                        try? CredentialStore.shared.setToken(nil)
+                        NotificationCenter.default.post(name: Notification.Name("LogoutNotification"), object: nil)
+                    }
                 }
                 
                 onSuccess()

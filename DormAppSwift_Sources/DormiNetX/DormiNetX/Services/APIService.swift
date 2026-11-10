@@ -569,7 +569,7 @@ class APIService {
         return false
     }
     
-    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", promptPayID: String = "", paymentType: String = "promptpay", bankAccount: String = "", accountName: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
+    func updateAdmin(id: Int, username: String, email: String, backupEmail: String = "", role: String? = nil, promptPayID: String = "", paymentType: String = "promptpay", bankAccount: String = "", accountName: String = "", oldPassword: String? = nil, newPassword: String?) async throws -> Bool {
         guard let url = URL(string: "\(baseURL)/admins/\(id)") else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
@@ -587,6 +587,9 @@ class APIService {
             "bank_account": bankAccount,
             "account_name": accountName
         ]
+        if let role = role, !role.isEmpty {
+            body["role"] = role
+        }
         if let newPassword = newPassword, !newPassword.isEmpty {
             body["new_password"] = newPassword
             if let oldPassword = oldPassword, !oldPassword.isEmpty {
