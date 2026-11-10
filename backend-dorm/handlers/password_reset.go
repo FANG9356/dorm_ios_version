@@ -91,7 +91,21 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error":"รหัสยืนยันถูกใช้ไปแล้วหรือหมดอายุ"}`, http.StatusUnauthorized)
 			return
 		}
-		result, err = tx.Exec("UPDATE admins SET password = ?, must_change_password = 0 WHERE email = ?", string(hash), req.Email)
+
+		// Identify the specific admin account associated with this email
+		var adminID int
+		// Try matching backup_email (staff account recovery) first
+		err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(backup_email) = LOWER(?) LIMIT 1", req.Email).Scan(&adminID)
+		if err != nil {
+			// Fallback: match by primary email (ordered by superadmin first, then id)
+			err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(email) = LOWER(?) ORDER BY id ASC LIMIT 1", req.Email).Scan(&adminID)
+		}
+		if err != nil {
+			http.Error(w, `{"error":"ไม่พบบัญชีที่ต้องการเปลี่ยนรหัสผ่าน"}`, http.StatusUnauthorized)
+			return
+		}
+
+		result, err = tx.Exec("UPDATE admins SET password = ?, must_change_password = 0 WHERE id = ?", string(hash), adminID)
 		if err != nil {
 			http.Error(w, `{"error":"บันทึกรหัสผ่านไม่สำเร็จ"}`, http.StatusInternalServerError)
 			return
@@ -104,7 +118,7 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 		// Password reset is an account-recovery boundary. Revoke every
 		// previously issued session in the same transaction so a token copied
 		// from another device cannot remain valid after the password changes.
-		if _, err = tx.Exec("DELETE FROM sessions WHERE admin_id IN (SELECT id FROM admins WHERE email = ?)", req.Email); err != nil {
+		if _, err = tx.Exec("DELETE FROM sessions WHERE admin_id = ?", adminID); err != nil {
 			http.Error(w, `{"error":"บันทึกรหัสผ่านไม่สำเร็จ"}`, http.StatusInternalServerError)
 			return
 		}

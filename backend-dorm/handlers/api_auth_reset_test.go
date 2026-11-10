@@ -190,3 +190,32 @@ func TestVerifyOTPRateLimitAndExpiry(t *testing.T) {
 		t.Errorf("Expected expiry error message, got %v", res["error"])
 	}
 }
+
+func TestForgotPasswordWithStaffBackupEmail(t *testing.T) {
+	db := setupTestDBForReset(t)
+	defer db.Close()
+
+	// Insert staff with owner's email and unique backup_email
+	_, err := db.Exec("INSERT INTO admins (username, role, email, backup_email) VALUES (?, ?, ?, ?)", "staffpraewa", "admin", "owner@dorminet.studio", "praewa@dorminet.studio")
+	if err != nil {
+		t.Fatalf("Failed to insert staff admin: %v", err)
+	}
+
+	handler := HandleForgotPassword(db)
+
+	reqBody := `{"email": "praewa@dorminet.studio"}`
+	req := httptest.NewRequest("POST", "/api/forgot-password", bytes.NewBufferString(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 OK, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM password_resets WHERE email = ?", "praewa@dorminet.studio").Scan(&count)
+	if err != nil || count != 1 {
+		t.Fatalf("Expected 1 password_resets record for backup_email, got count=%d, err=%v", count, err)
+	}
+}

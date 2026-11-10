@@ -138,3 +138,53 @@ func TestPasswordResetRollsBackOTPIfUpdateFails(t *testing.T) {
 		t.Fatal("OTP lost after rolled back password update")
 	}
 }
+
+func TestPasswordResetWithStaffBackupEmail(t *testing.T) {
+	db, _ := resetFixture(t, time.Now().Add(time.Hour))
+	
+	// Add backup_email column to match production schema
+	if _, err := db.Exec("ALTER TABLE admins ADD COLUMN backup_email TEXT DEFAULT ''"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert staff with owner's email and unique backup_email
+	staffBackupEmail := "staff_praewa@example.test"
+	if _, err := db.Exec("INSERT INTO admins (id, email, backup_email, password, must_change_password) VALUES (2, 'owner@example.test', ?, 'old-hash', 1)", staffBackupEmail); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO password_resets VALUES (2, ?, '999888', ?)", staffBackupEmail, time.Now().Add(time.Hour).UTC().Format(time.RFC3339)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO sessions VALUES (2, 2, 'staff-session')"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reset using staff's backup email
+	if status := resetRequest(t, db, staffBackupEmail, "999888", "StaffNewPass1!"); status != 200 {
+		t.Fatalf("reset with backup_email failed with status: %d", status)
+	}
+
+	// Verify only staff's password was updated
+	var staffPassword string
+	if err := db.QueryRow("SELECT password FROM admins WHERE id = 2").Scan(&staffPassword); err != nil {
+		t.Fatal(err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(staffPassword), []byte("StaffNewPass1!")); err != nil {
+		t.Fatalf("staff password not updated: %v", err)
+	}
+
+	// Verify owner password was NOT changed
+	var ownerPassword string
+	if err := db.QueryRow("SELECT password FROM admins WHERE id = 1").Scan(&ownerPassword); err != nil {
+		t.Fatal(err)
+	}
+	if ownerPassword != "old-hash" {
+		t.Fatalf("owner password was unexpectedly changed: %s", ownerPassword)
+	}
+
+	// Verify staff session was revoked
+	var sessionCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sessions WHERE admin_id = 2").Scan(&sessionCount); err != nil || sessionCount != 0 {
+		t.Fatalf("staff session was not revoked: %d", sessionCount)
+	}
+}

@@ -2443,3 +2443,36 @@
 - สถานะ deploy/UAT: ปรับปรุงหน้าเว็บเสร็จสมบูรณ์ เตรียมพร้อมส่งมอบและแนะนำการกรอกรหัสหอพักที่ถูกต้อง
 - ผลลัพธ์: ได้หน้าเว็บแนะนำบริการรอบหอพักที่สวยงาม สอดคล้องกับธีมแอปและระบบ LINE อย่างไร้รอยต่อ พร้อมทั้งชี้แจงสาเหตุของรหัสหอพักให้ผู้ใช้แก้ไขได้ทันที
 
+## 2026-11-10 12:12 — แก้ไขระบบส่ง Email OTP สำหรับรีเซ็ตรหัสผ่านให้รองรับ Staff Recovery Email (backup_email)
+
+- คำขอ/เป้าหมาย: ตรวจสอบและแก้ไขปัญหาระบบไม่ส่งรหัสยืนยัน OTP ไปยังอีเมล เมื่อผู้ใช้ทำรายการขอรีเซ็ตรหัสผ่าน (Forgot Password)
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบสถานะการเชื่อมต่อ Resend Email API บน Production Server:
+     - ทดสอบส่งคำขอผ่าน Resend Transactional Email API พบว่า API Key ทำงานได้ปกติสมบูรณ์ ตอบกลับ `HTTP/2 200` พร้อม Email ID ยืนยันว่าบริการส่งอีเมลภายนอกไม่ได้ขัดข้อง
+  2. สืบหา Root Cause จากตารางฐานข้อมูลและซอร์สโค้ด:
+     - ตรวจสอบ `auth_rate_limits` บนเซิร์ฟเวอร์ พบว่ามีรายการขอ OTP มาจากอีเมล `enoshimaj991@gmail.com`
+     - ตรวจสอบตาราง `admins` พบว่าบัญชีเจ้าหน้าที่ `แพรวา` ถูกสร้างขึ้นโดยผูกกับหอพักของ Superadmin ทำให้คอลัมน์ `email` เป็นอีเมลของ Superadmin (`phakhaphonsukmee@gmail.com`) ส่วนอีเมลส่วนตัวของเจ้าหน้าที่ถูกจัดเก็บอยู่ในคอลัมน์ `backup_email` (`enoshimaj991@gmail.com`)
+     - ในฟังก์ชันเดิม `HandleForgotPassword` คิวรีเพียง `SELECT id FROM admins WHERE email = ?` จึงค้นหาไม่พบบัญชี และระบบเลือกตอบกลับข้อความสำเร็จหลอก (เพื่อป้องกัน User Enumeration) โดยไม่ได้สร้าง OTP และไม่ได้สั่งส่งอีเมลจริง
+     - ในฟังก์ชันเดิม `HandlePasswordReset` คำสั่งอัปเดตรหัสผ่านอิงเฉพาะ `WHERE email = ?` หากผู้ใช้กรอกอีเมล Superadmin จะกระทบเจ้าหน้าที่ทุกคน และหากกรอก `backup_email` จะอัปเดตไม่สำเร็จ
+  3. ปรับปรุงโค้ด Backend:
+     - `backend-dorm/handlers/api_auth_reset.go`: ปรับ `HandleForgotPassword` ให้ตรวจสอบทั้ง `backup_email` (สำหรับบัญชี Staff/เจ้าหน้าที่) และ `email` (สำหรับ Superadmin/เจ้าของหอพัก)
+     - `backend-dorm/handlers/password_reset.go`: ปรับ `HandlePasswordReset` ให้ค้นหา Admin ID เฉพาะของบัญชีนั้นๆ แล้วอัปเดตรหัสผ่านและเพิกถอน Session เฉพาะ `WHERE id = adminID` อย่างปลอดภัย ไม่กระทบบัญชีอื่นที่ใช้อีเมลกลุ่มเดียวกัน
+  4. เพิ่มชุดทดสอบอัตโนมัติ (Automated Tests):
+     - เพิ่ม `TestForgotPasswordWithStaffBackupEmail` ใน `api_auth_reset_test.go`
+     - เพิ่ม `TestPasswordResetWithStaffBackupEmail` ใน `password_reset_test.go`
+     - ทดสอบครบทั้ง `go test ./...`, `go test -race ./handlers`, `go vet ./...` ผ่าน 100%
+  5. คอมไพล์และทดสอบบน Production Server:
+     - บรรจุ Source Archive และอัปโหลดไปยัง `/home/fang/dorminet_workspace/dorminet-flex-source.tar.gz`
+     - คอมไพล์บน Linux สำเร็จ ได้ไบนารี `server_debian` SHA-256: `94f25804d320f9ef9e46d885999191c01068b52823d0d9f110f4be6039a9c171`
+- ไฟล์หรือระบบที่กระทบ:
+  - `backend-dorm/handlers/api_auth_reset.go`
+  - `backend-dorm/handlers/api_auth_reset_test.go`
+  - `backend-dorm/handlers/password_reset.go`
+  - `backend-dorm/handlers/password_reset_test.go`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ไม่มี (เตรียม Source รอคำสั่ง Safe Deploy)
+- การตรวจสอบและหลักฐาน: Resend API ตอบ HTTP 200, ชุดทดสอบ Go ผ่านฉลุย, คอมไพล์สำเร็จบน Linux จริง
+- สถานะ deploy/UAT: โค้ดได้รับการแก้ไขและคอมไพล์สำเร็จ เตรียมพร้อมให้ผู้ใช้รัน Safe Deploy บน Terminal
+- ผลลัพธ์: ระบบรองรับการส่ง Email OTP ให้แก่ทั้งบัญชี Superadmin และบัญชี Staff (ผ่าน backup_email) ได้อย่างถูกต้องแม่นยำและปลอดภัย
+
+

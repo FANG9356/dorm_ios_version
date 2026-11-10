@@ -333,9 +333,12 @@ func HandleForgotPassword(db *sql.DB) http.HandlerFunc {
 		rand.Read(b)
 		refCode := fmt.Sprintf("REQ-%s-%X", now.Format("20060102"), b)
 
-		// Check if email exists in admins table
+		// Check if email exists in admins table (either staff backup_email or primary email)
 		var id int
-		err = db.QueryRow("SELECT id FROM admins WHERE email = ?", req.Email).Scan(&id)
+		err = db.QueryRow("SELECT id FROM admins WHERE LOWER(backup_email) = LOWER(?) LIMIT 1", req.Email).Scan(&id)
+		if err != nil {
+			err = db.QueryRow("SELECT id FROM admins WHERE LOWER(email) = LOWER(?) ORDER BY id ASC LIMIT 1", req.Email).Scan(&id)
+		}
 		if err != nil {
 			// Email not found — but respond with same message to prevent enumeration
 			w.Header().Set("Content-Type", "application/json")
