@@ -2,24 +2,60 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>บริการและร้านค้ารอบหอพัก | DormiNetX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>บริการรอบหอพัก • DormiNetX</title>
+    <meta name="description" content="คู่มือบริการและร้านค้ารอบหอพัก DormiNetX ร้านอาหาร คาเฟ่ ร้านสะดวกซื้อ และบริการจำเป็นในระยะเดินถึง">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0b0f17;
-            --card-bg: #151c28;
-            --card-border: #222f44;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-muted: #f1f5f9;
+            --bg-subtle: #f8fafc;
+            --border-color: #e2e8f0;
+            --border-hover: #cbd5e1;
+            --text-heading: #0f172a;
+            --text-body: #334155;
             --text-muted: #64748b;
-            --accent: #38bdf8;
-            --accent-hover: #0284c7;
-            --accent-soft: rgba(56, 189, 248, 0.12);
-            --success: #34d399;
-            --success-soft: rgba(52, 211, 153, 0.12);
-            --tag-bg: #1e293b;
-            --divider: #1e293b;
+            --text-light: #94a3b8;
+            --brand-primary: #0f172a;
+            --brand-blue: #0284c7;
+            --brand-blue-soft: rgba(2, 132, 199, 0.08);
+            --brand-accent: #2563eb;
+            --success-color: #16a34a;
+            --success-soft: rgba(22, 163, 74, 0.1);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+            --shadow-float: 0 12px 28px -4px rgba(15, 23, 42, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --radius-full: 9999px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-page: #0b0f17;
+                --bg-card: #151c28;
+                --bg-muted: #1e293b;
+                --bg-subtle: #0f172a;
+                --border-color: #222f44;
+                --border-hover: #334155;
+                --text-heading: #f8fafc;
+                --text-body: #cbd5e1;
+                --text-muted: #94a3b8;
+                --text-light: #64748b;
+                --brand-primary: #f8fafc;
+                --brand-blue: #38bdf8;
+                --brand-blue-soft: rgba(56, 189, 248, 0.12);
+                --brand-accent: #38bdf8;
+                --success-color: #34d399;
+                --success-soft: rgba(52, 211, 153, 0.15);
+                --shadow-card: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
+                --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
+            }
         }
 
         * {
@@ -30,256 +66,435 @@
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Sarabun', sans-serif;
-            line-height: 1.6;
-            padding-bottom: 60px;
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Sarabun", sans-serif;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 32px);
         }
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 860px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 16px;
         }
 
-        /* Top Nav */
-        nav {
-            border-bottom: 1px solid var(--divider);
-            background: rgba(11, 15, 23, 0.85);
-            backdrop-filter: blur(12px);
+        /* Top Navigation Header (Matching LINE LIFF aesthetic) */
+        .site-header {
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 40;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .site-header {
+                background: rgba(11, 15, 23, 0.88);
+            }
         }
 
         .nav-inner {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 60px;
+            height: 58px;
         }
 
-        .brand {
-            font-size: 19px;
+        .nav-brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-title {
+            font-size: 15px;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            color: #ffffff;
+            color: var(--text-heading);
+            letter-spacing: -0.01em;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
-        .brand span {
-            color: var(--accent);
+        .nav-title span {
+            color: var(--brand-blue);
         }
 
-        .badge-portal {
+        .nav-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            letter-spacing: 0.01em;
+        }
+
+        .badge-verified {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             font-size: 11px;
             font-weight: 600;
-            background: var(--accent-soft);
-            color: var(--accent);
-            padding: 3px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            background: var(--brand-blue-soft);
+            color: var(--brand-blue);
+            border: 1px solid rgba(2, 132, 199, 0.2);
         }
 
-        /* Hero Header */
-        header {
-            padding: 40px 0 28px;
-            text-align: left;
+        .badge-verified svg {
+            width: 12px;
+            height: 12px;
+            stroke-width: 2.2;
         }
 
-        .hero-tag {
+        /* Hero Header Section */
+        .hero {
+            padding: 24px 0 18px;
+            text-align: center;
+        }
+
+        .hero-chip {
             display: inline-flex;
             align-items: center;
             gap: 6px;
             font-size: 12px;
             font-weight: 600;
-            color: var(--success);
-            background: var(--success-soft);
-            border: 1px solid rgba(52, 211, 153, 0.2);
-            padding: 4px 12px;
-            border-radius: 999px;
-            margin-bottom: 16px;
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            background: var(--bg-muted);
+            color: var(--text-heading);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
         }
 
-        .hero-tag svg {
+        .hero-chip svg {
             width: 14px;
             height: 14px;
+            color: var(--brand-blue);
             stroke-width: 2.2;
         }
 
-        h1 {
-            font-size: 28px;
+        .hero h1 {
+            font-size: 24px;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            color: #ffffff;
-            margin-bottom: 10px;
+            color: var(--text-heading);
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
             line-height: 1.3;
         }
 
         @media (min-width: 640px) {
-            h1 {
-                font-size: 34px;
+            .hero h1 {
+                font-size: 28px;
             }
         }
 
-        p.lead {
-            font-size: 15px;
-            color: var(--text-secondary);
-            line-height: 1.6;
+        .hero p {
+            font-size: 14px;
+            color: var(--text-muted);
+            max-width: 580px;
+            margin: 0 auto;
+            line-height: 1.5;
         }
 
-        /* Category Filter Tabs */
+        /* Search & Live Filtering */
+        .search-wrapper {
+            margin: 16px 0 14px;
+            position: relative;
+        }
+
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            width: 18px;
+            height: 18px;
+            color: var(--text-light);
+            pointer-events: none;
+            stroke-width: 2;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 40px 12px 42px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-heading);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            outline: none;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-input:focus {
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 0 3px var(--brand-blue-soft);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: var(--radius-full);
+            background: var(--bg-muted);
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .search-clear svg {
+            width: 12px;
+            height: 12px;
+            stroke-width: 2.2;
+        }
+
+        /* Horizontal Category Filter Pills */
+        .filter-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
         .filter-scroll {
+            display: flex;
+            gap: 8px;
             overflow-x: auto;
-            white-space: nowrap;
-            padding: 12px 0 24px;
-            margin: 0 -20px;
-            padding-left: 20px;
-            padding-right: 20px;
+            padding: 4px 2px 8px;
             scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
 
         .filter-scroll::-webkit-scrollbar {
             display: none;
         }
 
-        .filter-buttons {
+        .filter-pill {
             display: inline-flex;
-            gap: 8px;
-        }
-
-        .filter-btn {
-            background: var(--card-bg);
-            color: var(--text-secondary);
-            border: 1px solid var(--card-border);
-            padding: 8px 16px;
-            border-radius: 999px;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
             font-size: 13px;
             font-weight: 500;
+            color: var(--text-body);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            white-space: nowrap;
             cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
+            transition: all 0.18s ease;
+            box-shadow: var(--shadow-sm);
+            flex-shrink: 0;
         }
 
-        .filter-btn:hover {
+        .filter-pill:hover {
+            border-color: var(--border-hover);
+            color: var(--text-heading);
+        }
+
+        .filter-pill.active {
+            background: #0f172a;
             color: #ffffff;
-            border-color: #334155;
-        }
-
-        .filter-btn.active {
-            background: #ffffff;
-            color: #0f172a;
-            border-color: #ffffff;
+            border-color: #0f172a;
             font-weight: 600;
         }
 
-        /* Services Cards Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-
-        @media (min-width: 640px) {
-            .grid {
-                grid-template-columns: repeat(2, 1fr);
+        @media (prefers-color-scheme: dark) {
+            .filter-pill.active {
+                background: #f8fafc;
+                color: #0f172a;
+                border-color: #f8fafc;
             }
         }
 
+        .pill-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: var(--radius-full);
+            background: var(--bg-muted);
+            color: var(--text-muted);
+        }
+
+        .filter-pill.active .pill-count {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .filter-pill.active .pill-count {
+                background: rgba(15, 23, 42, 0.15);
+                color: #0f172a;
+            }
+        }
+
+        /* Result Counter */
+        .results-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            padding: 0 4px;
+        }
+
+        /* Services Grid */
+        .services-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+            margin-bottom: 32px;
+        }
+
+        @media (min-width: 680px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+        }
+
+        /* Service Card (Apple-grade cards) */
         .service-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 18px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
             overflow: hidden;
+            box-shadow: var(--shadow-card);
             display: flex;
             flex-direction: column;
-            transition: transform 0.2s ease, border-color 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
         .service-card:hover {
-            border-color: #334155;
             transform: translateY(-2px);
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-float);
         }
 
+        /* Media Thumbnail */
         .card-media {
             position: relative;
-            height: 170px;
+            height: 180px;
             width: 100%;
+            background: var(--bg-muted);
             overflow: hidden;
-            background: #1e293b;
         }
 
         .card-media img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.35s ease;
+            transition: transform 0.4s ease;
         }
 
         .service-card:hover .card-media img {
             transform: scale(1.03);
         }
 
-        .card-badge {
+        .card-badge-status {
             position: absolute;
             top: 12px;
             left: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(8px);
-            color: #f8fafc;
-            padding: 4px 10px;
-            border-radius: 8px;
+            -webkit-backdrop-filter: blur(8px);
+            color: #ffffff;
             font-size: 11px;
             font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
-        .card-dist {
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #22c55e;
+            box-shadow: 0 0 6px #22c55e;
+        }
+
+        .status-dot.blue {
+            background-color: #38bdf8;
+            box-shadow: 0 0 6px #38bdf8;
+        }
+
+        .card-badge-distance {
             position: absolute;
             bottom: 12px;
             right: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
             background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(8px);
-            color: var(--accent);
-            padding: 4px 10px;
-            border-radius: 8px;
+            -webkit-backdrop-filter: blur(8px);
+            color: #ffffff;
             font-size: 11px;
             font-weight: 600;
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            display: flex;
-            align-items: center;
-            gap: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
 
-        .card-dist svg {
+        .card-badge-distance svg {
             width: 12px;
             height: 12px;
+            stroke-width: 2.2;
+            color: #38bdf8;
         }
 
-        .card-body {
-            padding: 20px;
-            flex: 1;
+        /* Card Body */
+        .card-content {
+            padding: 18px;
             display: flex;
             flex-direction: column;
+            flex: 1;
         }
 
-        .card-header {
+        .card-category-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--brand-blue);
+            margin-bottom: 4px;
+        }
+
+        .card-header-row {
             display: flex;
+            align-items: baseline;
             justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 6px;
+            gap: 8px;
+            margin-bottom: 2px;
         }
 
         .card-title {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text-heading);
+            letter-spacing: -0.01em;
             line-height: 1.3;
         }
 
@@ -289,139 +504,166 @@
             margin-bottom: 14px;
         }
 
-        .info-rows {
+        /* Key-Value Details */
+        .card-details {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-bottom: 16px;
-            font-size: 13px;
+            margin-bottom: 14px;
+            font-size: 12px;
         }
 
-        .info-row {
+        .detail-row {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--text-secondary);
+            color: var(--text-body);
         }
 
-        .info-row svg {
+        .detail-row svg {
             width: 15px;
             height: 15px;
-            stroke-width: 2;
+            color: var(--text-light);
             flex-shrink: 0;
+            stroke-width: 2;
+        }
+
+        .detail-label {
             color: var(--text-muted);
         }
 
-        .info-val {
-            color: #ffffff;
-            font-weight: 500;
-        }
-
-        .highlight-box {
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 10px;
-            padding: 10px 12px;
-            margin-bottom: 18px;
-            border: 1px solid #1e293b;
-        }
-
-        .highlight-label {
-            font-size: 11px;
+        .detail-value {
             font-weight: 600;
-            color: var(--accent);
+            color: var(--text-heading);
+            margin-left: auto;
+        }
+
+        /* Highlight Recommendation Box */
+        .card-highlight {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .highlight-title {
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
+            letter-spacing: 0.03em;
+            color: var(--text-muted);
         }
 
-        .highlight-text {
-            font-size: 12.5px;
-            color: var(--text-secondary);
-            line-height: 1.5;
+        .highlight-desc {
+            color: var(--text-body);
+            line-height: 1.4;
         }
 
+        /* Card Action Buttons (Direct Phone + Map Navigation) */
         .card-actions {
             margin-top: auto;
             display: flex;
-            gap: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--divider);
+            gap: 8px;
         }
 
-        .btn {
-            flex: 1;
+        .btn-action {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
+            padding: 10px 14px;
             font-size: 13px;
             font-weight: 600;
-            padding: 10px 12px;
-            border-radius: 10px;
-            text-decoration: none;
-            transition: all 0.15s ease;
             font-family: inherit;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            transition: all 0.16s ease;
+            flex: 1;
+            white-space: nowrap;
         }
 
-        .btn svg {
+        .btn-action svg {
             width: 15px;
             height: 15px;
-            stroke-width: 2;
+            stroke-width: 2.2;
         }
 
+        /* Call button (Secondary, clean neutral) */
         .btn-call {
-            background: #1e293b;
-            color: #ffffff;
-            border: 1px solid #334155;
+            background: var(--bg-muted);
+            color: var(--text-heading);
+            border: 1px solid var(--border-color);
         }
 
         .btn-call:hover {
-            background: #334155;
+            background: var(--border-color);
+            border-color: var(--border-hover);
         }
 
+        /* Map direction button (Primary deep navy matching LIFF submit button) */
         .btn-map {
-            background: var(--accent);
-            color: #0b0f17;
-            font-weight: 700;
+            background: #0f172a;
+            color: #ffffff;
+            border: 1px solid #0f172a;
         }
 
         .btn-map:hover {
-            background: #7dd3fc;
+            background: #1e293b;
+            border-color: #1e293b;
         }
 
-        /* Emergency Box */
-        .emergency-box {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.9));
-            border: 1px solid #334155;
-            border-radius: 20px;
-            padding: 24px;
-            margin-top: 40px;
+        @media (prefers-color-scheme: dark) {
+            .btn-map {
+                background: var(--brand-accent);
+                color: #0b0f17;
+                border-color: var(--brand-accent);
+                font-weight: 700;
+            }
+
+            .btn-map:hover {
+                background: #7dd3fc;
+            }
+        }
+
+        /* Emergency Box (Matches system security/safe guidelines) */
+        .emergency-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 10px;
+            box-shadow: var(--shadow-card);
         }
 
         .emergency-header {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .emergency-header svg {
-            width: 22px;
-            height: 22px;
-            color: var(--accent);
-            stroke-width: 2;
+            width: 20px;
+            height: 20px;
+            color: #ef4444;
+            stroke-width: 2.2;
         }
 
         .emergency-header h2 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text-heading);
         }
 
         .emergency-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 12px;
+            gap: 10px;
         }
 
         @media (min-width: 640px) {
@@ -430,422 +672,617 @@
             }
         }
 
-        .emergency-item {
-            background: rgba(11, 15, 23, 0.6);
-            border: 1px solid #1e293b;
-            border-radius: 12px;
-            padding: 14px;
+        .emergency-card {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
 
-        .em-title {
-            font-size: 12px;
-            color: var(--text-muted);
+        .emergency-card-title {
+            font-size: 11px;
             font-weight: 500;
+            color: var(--text-muted);
         }
 
-        .em-value {
-            font-size: 15px;
+        .emergency-card-phone {
+            font-size: 14px;
             font-weight: 700;
-            color: #ffffff;
+            color: var(--text-heading);
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 6px;
+            transition: color 0.15s ease;
         }
 
-        .em-value:hover {
-            color: var(--accent);
+        .emergency-card-phone:hover {
+            color: var(--brand-blue);
         }
 
-        /* Footer */
-        footer {
-            margin-top: 50px;
-            padding-top: 24px;
-            border-top: 1px solid var(--divider);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            align-items: center;
+        .emergency-card-phone svg {
+            width: 14px;
+            height: 14px;
+            color: var(--brand-blue);
+            stroke-width: 2.2;
+        }
+
+        /* Empty Search State */
+        .empty-state {
+            display: none;
             text-align: center;
+            padding: 48px 16px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            margin: 20px 0;
+        }
+
+        .empty-state svg {
+            width: 40px;
+            height: 40px;
+            color: var(--text-light);
+            stroke-width: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+        }
+
+        .empty-state p {
             font-size: 13px;
             color: var(--text-muted);
         }
 
+        /* Footer */
+        .site-footer {
+            margin-top: 36px;
+            padding: 24px 0 12px;
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            text-align: center;
+        }
+
         @media (min-width: 640px) {
-            footer {
+            .site-footer {
                 flex-direction: row;
                 justify-content: space-between;
                 text-align: left;
             }
         }
 
-        footer a {
-            color: var(--text-secondary);
+        .footer-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
             text-decoration: none;
-            margin: 0 8px;
             transition: color 0.15s ease;
         }
 
-        footer a:hover {
-            color: var(--accent);
+        .footer-links a:hover {
+            color: var(--text-heading);
         }
     </style>
 </head>
 <body>
 
-    <!-- Sticky Navigation -->
-    <nav>
+    <!-- Sticky Navigation Bar (Matching LINE LIFF) -->
+    <header class="site-header">
         <div class="container nav-inner">
-            <div class="brand">
-                Dormi<span>Net</span>
+            <div class="nav-brand">
+                <div class="nav-title">
+                    Dormi<span>NetX</span>
+                </div>
+                <div class="nav-sub">dorminet.studio · Resident Services</div>
             </div>
-            <span class="badge-portal">Resident Guide</span>
+            <div class="badge-verified">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                บริการแนะนำรอบหอ
+            </div>
         </div>
-    </nav>
+    </header>
 
-    <div class="container">
+    <main class="container">
+
         <!-- Hero Header -->
-        <header>
-            <div class="hero-tag">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-                คู่มือลูกบ้านหอพัก
+        <section class="hero">
+            <div class="hero-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                แผนที่และบริการรอบหอพัก
             </div>
             <h1>บริการและร้านค้ารอบหอพัก</h1>
-            <p class="lead">รวมร้านอาหาร คาเฟ่ ร้านสะดวกซื้อ และบริการจำเป็นในระยะเดินถึงจากหอพัก สะดวก ปลอดภัย ตลอดการพักอาศัย</p>
-        </header>
+            <p>คัดสรรร้านอาหาร ร้านสะดวกซื้อ ซักรีด และบริการจำเป็นในระยะเดินถึง เพื่อความสะดวก ปลอดภัย ของลูกบ้าน DormiNetX</p>
+        </section>
 
-        <!-- Category Filters -->
-        <div class="filter-scroll">
-            <div class="filter-buttons">
-                <button class="filter-btn active" data-category="all">ทั้งหมด</button>
-                <button class="filter-btn" data-category="food">ร้านอาหาร & คาเฟ่</button>
-                <button class="filter-btn" data-category="convenience">ร้านสะดวกซื้อ 24 ชม.</button>
-                <button class="filter-btn" data-category="laundry">ซักรีด & สะดวกซัก</button>
-                <button class="filter-btn" data-category="transport">การเดินทาง & วิน</button>
-                <button class="filter-btn" data-category="health">ร้านยา & สุขภาพ</button>
+        <!-- Search Bar -->
+        <div class="search-wrapper">
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input 
+                    type="search" 
+                    id="search-input" 
+                    class="search-input" 
+                    placeholder="ค้นหาชื่อร้าน, เมนู, หรือประเภทบริการ..." 
+                    autocomplete="off"
+                >
+                <button type="button" id="search-clear" class="search-clear" aria-label="ล้างการค้นหา">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
         </div>
 
-        <!-- Cards Grid -->
-        <div class="grid" id="services-grid">
+        <!-- Horizontal Category Filters -->
+        <div class="filter-container">
+            <div class="filter-scroll" id="filter-buttons">
+                <button class="filter-pill active" data-category="all">
+                    ทั้งหมด <span class="pill-count" id="count-all">6</span>
+                </button>
+                <button class="filter-pill" data-category="food">
+                    ร้านอาหาร & คาเฟ่ <span class="pill-count">2</span>
+                </button>
+                <button class="filter-pill" data-category="convenience">
+                    สะดวกซื้อ 24 ชม. <span class="pill-count">1</span>
+                </button>
+                <button class="filter-pill" data-category="laundry">
+                    สะดวกซัก 24 ชม. <span class="pill-count">1</span>
+                </button>
+                <button class="filter-pill" data-category="transport">
+                    วินมอเตอร์ไซค์ <span class="pill-count">1</span>
+                </button>
+                <button class="filter-pill" data-category="health">
+                    ร้านยา & สุขภาพ <span class="pill-count">1</span>
+                </button>
+            </div>
+        </div>
 
-            <!-- Card 1: Steak New York -->
-            <div class="service-card" data-category="food">
+        <!-- Result Metadata -->
+        <div class="results-meta">
+            <span id="results-count-text">แสดงทั้งหมด 6 สถานที่รอบหอพัก</span>
+            <span>อัปเดตล่าสุด: พฤศจิกายน 2569</span>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            <h3>ไม่พบข้อมูลร้านค้าหรือบริการที่ค้นหา</h3>
+            <p>ลองค้นหาด้วยคำอื่น เช่น สเต็ก, กาแฟ, ซักรีด, วินมอเตอร์ไซค์ หรือกดเลือกดูหมวดหมู่ทั้งหมด</p>
+        </div>
+
+        <!-- Service Cards Grid -->
+        <div class="services-grid" id="services-grid">
+
+            <!-- Card 1: สเต็ก นิวยอร์ก (Steak New York Ubon) -->
+            <article class="service-card" data-category="food" data-keywords="สเต็ก นิวยอร์ก steak new york ร้านอาหาร เนื้อโคขุน หมู ไก่ สลัด ของกิน ข้าว มื้อเย็น">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=800&q=80" alt="สเต็ก นิวยอร์ก" loading="lazy">
-                    <span class="card-badge">ร้านอาหาร</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80" alt="สเต็ก นิวยอร์ก อุบลราชธานี" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 11:00 - 21:00
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         เดิน 10 นาที (800 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">สเต็ก นิวยอร์ก</div>
+                <div class="card-content">
+                    <div class="card-category-label">ร้านอาหาร & สเต็ก</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">สเต็ก นิวยอร์ก</h2>
                     </div>
-                    <div class="card-subtitle">Steak New York · อาหารจานด่วน & สเต็ก</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">Steak New York Ubon · สเต็กกระทะร้อน & อาหารจานด่วน</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาเปิด: <span class="info-val">11:00 - 21:00 น.</span></span>
+                            <span class="detail-label">เวลาเปิดทำการ</span>
+                            <span class="detail-value">11:00 - 21:00 น.</span>
                         </div>
-                        <div class="info-row">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>ราคา: <span class="info-val">เริ่มต้น 59 บาท</span></span>
+                            <span class="detail-label">ช่วงราคา</span>
+                            <span class="detail-value">เริ่มต้น 59 - 189 บาท</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">เมนูแนะนำ</div>
-                        <div class="highlight-text">สเต็กเนื้อโคขุนพริกไทยดำ, สเต็กพอร์คชอปสูตรพิเศษ, สลัดผักออร์แกนิก</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูแนะนำประจำร้าน</div>
+                        <div class="highlight-desc">สเต็กเนื้อโคขุนพริกไทยดำ, สเต็กพอร์คชอปซอสเกรวี่, เฟรนช์ฟรายส์ชีส, สลัดผักสด</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:0812345678" class="btn btn-call">
+                        <a href="tel:0812345678" class="btn-action btn-call">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรติดต่อ
+                            โทรสั่งล่วงหน้า
                         </a>
-                        <a href="https://maps.google.com/?q=ร้านสเต็ก+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn btn-map">
+                        <a href="https://maps.google.com/?q=สเต็ก+นิวยอร์ก+อุบลราชธานี" target="_blank" rel="noopener noreferrer" class="btn-action btn-map">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เส้นทาง
+                            นำทาง
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
-            <!-- Card 2: Cafe Amazon -->
-            <div class="service-card" data-category="food">
+            <!-- Card 2: Café Amazon (ตลาดหนองบัว) -->
+            <article class="service-card" data-category="food" data-keywords="café amazon อเมซอน คาเฟ่ กาแฟ ชาเขียว เบเกอรี่ ขนม เครื่องดื่ม ตลาดหนองบัว อ่านหนังสือ ทำงาน">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80" alt="Café Amazon" loading="lazy">
-                    <span class="card-badge">คาเฟ่ & เครื่องดื่ม</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80" alt="Café Amazon สาขาตลาดหนองบัว" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:00 - 20:00
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         เดิน 13 นาที (950 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">Café Amazon</div>
+                <div class="card-content">
+                    <div class="card-category-label">คาเฟ่ & เครื่องดื่ม</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">Café Amazon</h2>
                     </div>
-                    <div class="card-subtitle">สาขาตลาดหนองบัว · กาแฟสด & เบเกอรี่</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">สาขาตลาดหนองบัว · กาแฟสด ชาเขียว & มีที่นั่งทำงาน</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาเปิด: <span class="info-val">06:00 - 20:00 น.</span></span>
+                            <span class="detail-label">เวลาเปิดทำการ</span>
+                            <span class="detail-value">06:00 - 20:00 น.</span>
                         </div>
-                        <div class="info-row">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>ราคา: <span class="info-val">เริ่มต้น 45 บาท</span></span>
+                            <span class="detail-label">ช่วงราคา</span>
+                            <span class="detail-value">เริ่มต้น 45 - 75 บาท</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">เมนูแนะนำ</div>
-                        <div class="highlight-text">อเมซอนเย็น (Amazon Cold), แบล็คคอฟฟี่น้ำผึ้งมะนาว, ชาเขียวนมสด</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูแนะนำ & สิ่งอำนวยความสะดวก</div>
+                        <div class="highlight-desc">อเมซอนเย็นสูตรเข้มข้น, ชาเขียวนมสด, แบล็คคอฟฟี่น้ำผึ้งมะนาว · มีที่นั่งแอร์เย็นและ Wi-Fi</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:045111222" class="btn btn-call">
+                        <a href="tel:045111222" class="btn-action btn-call">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรติดต่อ
+                            โทรสอบถาม
                         </a>
-                        <a href="https://maps.google.com/?q=Cafe+Amazon+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn btn-map">
+                        <a href="https://maps.google.com/?q=Cafe+Amazon+ตลาดหนองบัว+อุบลราชธานี" target="_blank" rel="noopener noreferrer" class="btn-action btn-map">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เส้นทาง
+                            นำทาง
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
-            <!-- Card 3: 7-Eleven -->
-            <div class="service-card" data-category="convenience">
+            <!-- Card 3: 7-Eleven ใกล้หอพัก -->
+            <article class="service-card" data-category="convenience" data-keywords="7-eleven เซเว่น อีเลฟเว่น สะดวกซื้อ 24 ชม atm อาหารเวฟ ของใช้ น้ำดื่ม เคาน์เตอร์เซอร์วิส ดึก">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=800&q=80" alt="7-Eleven" loading="lazy">
-                    <span class="card-badge" style="color: var(--success); border-color: rgba(52, 211, 153, 0.3);">เปิด 24 ชั่วโมง</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=800&q=80" alt="7-Eleven สะดวกซื้อ 24 ชั่วโมง" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot blue"></span>
+                        เปิดบริการ 24 ชั่วโมง
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         เดิน 4 นาที (300 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">7-Eleven</div>
+                <div class="card-content">
+                    <div class="card-category-label">ร้านสะดวกซื้อ 24 ชม.</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">7-Eleven</h2>
                     </div>
-                    <div class="card-subtitle">สาขาใกล้หอพัก · สินค้าอุปโภคบริโภค 24 ชม.</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">สาขาใกล้หอพัก · สินค้าอุปโภคบริโภคครบวงจร</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาเปิด: <span class="info-val">เปิดตลอด 24 ชั่วโมง ทุกวัน</span></span>
+                            <span class="detail-label">เวลาเปิดทำการ</span>
+                            <span class="detail-value">เปิดตลอด 24 ชั่วโมง</span>
                         </div>
-                        <div class="info-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>จุดบริการ: <span class="info-val">มีตู้ ATM / เคาน์เตอร์เซอร์วิส</span></span>
+                        <div class="detail-row">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                            <span class="detail-label">บริการพิเศษ</span>
+                            <span class="detail-value">ตู้ ATM / จ่ายบิล / All Café</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">บริการเด่น</div>
-                        <div class="highlight-text">ตู้ ATM ทุกธนาคาร, เคาน์เตอร์จ่ายบิล, อาหารอุ่นร้อน 24 ชม., All Café กาแฟสด</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">บริการเด่นสำหรับลูกบ้าน</div>
+                        <div class="highlight-desc">ตู้เอทีเอ็มหลายธนาคาร, จุดรับพัสดุ, อาหารกล่องอุ่นร้อนตลอด 24 ชม., กาแฟสด All Café</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="https://maps.google.com/?q=7-Eleven+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn btn-map" style="flex: 1;">
+                        <a href="https://maps.google.com/?q=7-Eleven+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn-action btn-map" style="flex: 1;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            นำทางไปยังสาขาใกล้หอพัก
+                            เปิดแผนที่นำทางไปยัง 7-Eleven
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
-            <!-- Card 4: Wash & Dry -->
-            <div class="service-card" data-category="laundry">
+            <!-- Card 4: Wash & Dry 24H -->
+            <article class="service-card" data-category="laundry" data-keywords="wash and dry ซักผ้า อบผ้า ร้านสะดวกซัก หยอดเหรียญ ซักรีด 24 ชม ผ้าห่ม ปั่นแห้ง">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80" alt="ร้านสะดวกซัก 24 ชม." loading="lazy">
-                    <span class="card-badge" style="color: var(--accent); border-color: rgba(56, 189, 248, 0.3);">สะดวกซัก 24 ชม.</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80" alt="ร้านสะดวกซัก 24 ชม Wash & Dry" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot blue"></span>
+                        เปิดบริการ 24 ชั่วโมง
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         เดิน 5 นาที (350 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">Wash & Dry 24H</div>
+                <div class="card-content">
+                    <div class="card-category-label">สะดวกซัก 24 ชั่วโมง</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">Wash & Dry 24H</h2>
                     </div>
-                    <div class="card-subtitle">ร้านสะดวกซัก & อบผ้าหยอดเหรียญมาตรฐานสูง</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">ร้านสะดวกซัก & เครื่องอบผ้ามาตรฐานสากล</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาเปิด: <span class="info-val">เปิดตลอด 24 ชั่วโมง</span></span>
+                            <span class="detail-label">เวลาเปิดทำการ</span>
+                            <span class="detail-value">เปิดตลอด 24 ชั่วโมง</span>
                         </div>
-                        <div class="info-row">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>ราคา: <span class="info-val">ซักเริ่ม 30.- / อบเริ่ม 40.-</span></span>
+                            <span class="detail-label">ค่าบริการ</span>
+                            <span class="detail-value">ซักเริ่ม 30.- / อบเริ่ม 40.-</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">สิ่งอำนวยความสะดวก</div>
-                        <div class="highlight-text">เครื่องซักอุตสาหกรรมสะอาด ฆ่าเชื้อด้วยน้ำร้อน, ตู้แลกเหรียญอัตโนมัติ, Wi-Fi ฟรี, ที่นั่งรอแอร์เย็น</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">ระบบและสิ่งอำนวยความสะดวก</div>
+                        <div class="highlight-desc">เครื่องซักอุตสาหกรรมระบบน้ำร้อนฆ่าเชื้อ, อบผ้าแห้งสนิทใน 30 นาที, มีตู้แลกเหรียญ, Wi-Fi ฟรี</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="https://maps.google.com/?q=ร้านสะดวกซัก+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn btn-map" style="flex: 1;">
+                        <a href="https://maps.google.com/?q=ร้านสะดวกซัก+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn-action btn-map" style="flex: 1;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            ดูแผนที่ร้านสะดวกซัก
+                            เปิดแผนที่นำทางไปยังร้านสะดวกซัก
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
-            <!-- Card 5: Motorcycle Taxi -->
-            <div class="service-card" data-category="transport">
+            <!-- Card 5: วินมอเตอร์ไซค์รับจ้าง หน้าหอพัก -->
+            <article class="service-card" data-category="transport" data-keywords="วิน มอเตอร์ไซค์ รถรับจ้าง เดินทาง มหาวิทยาลัย บิ๊กซี ตลาด บขส คิวรถ หน้าหอ">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80" alt="วินมอเตอร์ไซค์รับจ้าง" loading="lazy">
-                    <span class="card-badge">การเดินทาง</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80" alt="วินมอเตอร์ไซค์รับจ้าง หน้าหอพัก" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot"></span>
+                        บริการ 06:00 - 20:00
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        หน้าปากซอย (50 ม.)
+                        หน้าหอพัก (50 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">วินมอเตอร์ไซค์หน้าหอพัก</div>
+                <div class="card-content">
+                    <div class="card-category-label">การเดินทาง & รถรับจ้าง</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">วินมอเตอร์ไซค์หน้าหอพัก</h2>
                     </div>
-                    <div class="card-subtitle">บริการรับ-ส่งนักศึกษาและลูกบ้านด่วน</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">บริการรับ-ส่งลูกบ้านและนักศึกษา ราคายุติธรรม</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาบริการ: <span class="info-val">06:00 - 20:00 น.</span></span>
+                            <span class="detail-label">เวลาให้บริการ</span>
+                            <span class="detail-value">06:00 - 20:00 น.</span>
                         </div>
-                        <div class="info-row">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>อัตราค่าบริการ: <span class="info-val">เริ่มต้น 20 บาท</span></span>
+                            <span class="detail-label">อัตราค่าโดยสาร</span>
+                            <span class="detail-value">เริ่มต้น 20 บาท</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">เส้นทางยอดนิยม</div>
-                        <div class="highlight-text">ตลาดหนองบัว 20.- | บิ๊กซีอุบลฯ 30.- | มรภ.อุบลราชธานี 40.- | บขส. อุบลฯ 50.-</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">อัตราค่าโดยสารเส้นทางยอดนิยม</div>
+                        <div class="highlight-desc">ตลาดหนองบัว 20.- | บิ๊กซีอุบลฯ 30.- | มรภ.อุบลราชธานี 40.- | บขส. อุบลฯ 50.-</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:0899998888" class="btn btn-call" style="flex: 1;">
+                        <a href="tel:0899998888" class="btn-action btn-call" style="flex: 1;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             โทรเรียกวินมอเตอร์ไซค์
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
-            <!-- Card 6: Pharmacy -->
-            <div class="service-card" data-category="health">
+            <!-- Card 6: ร้านยาเภสัชกรชุมชน -->
+            <article class="service-card" data-category="health" data-keywords="ร้านยา เภสัชกร ชุมชน ยาสามัญ ยาแก้ไข้ ยาแก้แพ้ ทำแผล ป่วย หาหมอ สุขภาพ เวชภัณฑ์ ปรึกษา">
                 <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=800&q=80" alt="ร้านขายยาใกล้หอพัก" loading="lazy">
-                    <span class="card-badge">สุขภาพ & ยา</span>
-                    <span class="card-dist">
+                    <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=800&q=80" alt="ร้านยาเภสัชกรชุมชน" loading="lazy">
+                    <span class="card-badge-status">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 08:30 - 21:00
+                    </span>
+                    <span class="card-badge-distance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         เดิน 6 นาที (450 ม.)
                     </span>
                 </div>
-                <div class="card-body">
-                    <div class="card-header">
-                        <div class="card-title">ร้านยาเภสัชกรชุมชน</div>
+                <div class="card-content">
+                    <div class="card-category-label">ร้านยา & สุขภาพ</div>
+                    <div class="card-header-row">
+                        <h2 class="card-title">ร้านยาเภสัชกรชุมชน</h2>
                     </div>
-                    <div class="card-subtitle">จำหน่ายยาสามัญ เวชภัณฑ์ และปรึกษาเภสัชกร</div>
-                    
-                    <div class="info-rows">
-                        <div class="info-row">
+                    <div class="card-subtitle">จำหน่ายยาสามัญ เวชภัณฑ์ และให้คำปรึกษาโดยเภสัชกร</div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span>เวลาเปิด: <span class="info-val">08:30 - 21:00 น.</span></span>
+                            <span class="detail-label">เวลาเปิดทำการ</span>
+                            <span class="detail-value">08:30 - 21:00 น.</span>
                         </div>
-                        <div class="info-row">
+                        <div class="detail-row">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            <span>บริการ: <span class="info-val">มีเภสัชกรประจำร้าน</span></span>
+                            <span class="detail-label">มาตรฐาน</span>
+                            <span class="detail-value">มีเภสัชกรประจำตลอดเวลา</span>
                         </div>
                     </div>
 
-                    <div class="highlight-box">
-                        <div class="highlight-label">สินค้าและบริการ</div>
-                        <div class="highlight-text">ยาสามัญประจำบ้าน, ชุดทำแผล, ยาแก้แพ้/ลดไข้, หน้ากากอนามัย, ให้คำปรึกษาอาการเบื้องต้น</div>
+                    <div class="card-highlight">
+                        <div class="highlight-title">สินค้าและบริการ</div>
+                        <div class="highlight-desc">ยาสามัญประจำบ้าน, ชุดอุปกรณ์ทำแผล, ยาลดไข้แก้แพ้, หน้ากากอนามัย, ให้คำปรึกษาอาการเบื้องต้น</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:045222333" class="btn btn-call">
+                        <a href="tel:045222333" class="btn-action btn-call">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรสอบถาม
+                            โทรสอบถามยา
                         </a>
-                        <a href="https://maps.google.com/?q=ร้านยา+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn btn-map">
+                        <a href="https://maps.google.com/?q=ร้านยา+ใกล้ฉัน" target="_blank" rel="noopener noreferrer" class="btn-action btn-map">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เส้นทาง
+                            นำทาง
                         </a>
                     </div>
                 </div>
-            </div>
+            </article>
 
         </div>
 
-        <!-- Emergency Assistance Box -->
-        <div class="emergency-box">
+        <!-- Emergency & Dorm Contact Section -->
+        <section class="emergency-section">
             <div class="emergency-header">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <h2>ติดต่อฉุกเฉินและนิติบุคคลหอพัก</h2>
+                <h2>เบอร์โทรฉุกเฉินและนิติบุคคลหอพัก</h2>
             </div>
             <div class="emergency-grid">
-                <div class="emergency-item">
-                    <span class="em-title">สำนักงานหอพัก / นิติบุคคล</span>
-                    <a href="tel:0891234567" class="em-value">089-123-4567</a>
+                <div class="emergency-card">
+                    <span class="emergency-card-title">สำนักงานหอพัก / นิติบุคคล</span>
+                    <a href="tel:0891234567" class="emergency-card-phone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        089-123-4567
+                    </a>
                 </div>
-                <div class="emergency-item">
-                    <span class="em-title">ช่างซ่อมบำรุงฉุกเฉิน 24 ชม.</span>
-                    <a href="tel:0819876543" class="em-value">081-987-6543</a>
+                <div class="emergency-card">
+                    <span class="emergency-card-title">ช่างซ่อมบำรุงฉุกเฉิน 24 ชม.</span>
+                    <a href="tel:0819876543" class="emergency-card-phone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        081-987-6543
+                    </a>
                 </div>
-                <div class="emergency-item">
-                    <span class="em-title">เหตุด่วนเหตุร้าย / ตำรวจ</span>
-                    <a href="tel:191" class="em-value">191 / 1669</a>
+                <div class="emergency-card">
+                    <span class="emergency-card-title">เหตุด่วนเหตุร้าย / กู้ชีพฉุกเฉิน</span>
+                    <a href="tel:191" class="emergency-card-phone">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        191 / 1669
+                    </a>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Footer -->
-        <footer>
-            <span>&copy; 2026 DormiNet System · ระบบบริการจัดการหอพัก</span>
-            <div>
+        <footer class="site-footer">
+            <span>&copy; 2026 DormiNet System · แพลตฟอร์มบริหารจัดการหอพักอัจฉริยะ</span>
+            <div class="footer-links">
                 <a href="/contact">ติดต่อเรา</a>
                 <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
                 <a href="/terms">ข้อกำหนดการใช้งาน</a>
             </div>
         </footer>
-    </div>
 
-    <!-- Category Filter Script -->
+    </main>
+
+    <!-- Client-side Search and Filter Interaction -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const buttons = document.querySelectorAll('.filter-btn');
+            const searchInput = document.getElementById('search-input');
+            const searchClear = document.getElementById('search-clear');
+            const filterButtons = document.querySelectorAll('.filter-pill');
             const cards = document.querySelectorAll('.service-card');
+            const countText = document.getElementById('results-count-text');
+            const emptyState = document.getElementById('empty-state');
+            const totalCountEl = document.getElementById('count-all');
 
-            buttons.forEach(button => {
+            let currentCategory = 'all';
+            let currentQuery = '';
+
+            function applyFilters() {
+                let visibleCount = 0;
+                const query = currentQuery.toLowerCase().trim();
+
+                cards.forEach(card => {
+                    const category = card.getAttribute('data-category');
+                    const keywords = (card.getAttribute('data-keywords') || '').toLowerCase();
+                    const title = (card.querySelector('.card-title')?.textContent || '').toLowerCase();
+                    const subtitle = (card.querySelector('.card-subtitle')?.textContent || '').toLowerCase();
+
+                    const matchesCategory = (currentCategory === 'all' || category === currentCategory);
+                    const matchesSearch = (!query || title.includes(query) || subtitle.includes(query) || keywords.includes(query));
+
+                    if (matchesCategory && matchesSearch) {
+                        card.style.display = 'flex';
+                        visibleCount++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                if (countText) {
+                    if (visibleCount === cards.length) {
+                        countText.textContent = `แสดงทั้งหมด ${visibleCount} สถานที่รอบหอพัก`;
+                    } else {
+                        countText.textContent = `แสดง ${visibleCount} จาก ${cards.length} รายการ`;
+                    }
+                }
+
+                if (emptyState) {
+                    emptyState.style.display = (visibleCount === 0) ? 'block' : 'none';
+                }
+
+                if (searchClear) {
+                    searchClear.style.display = query.length > 0 ? 'inline-flex' : 'none';
+                }
+            }
+
+            filterButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    buttons.forEach(btn => btn.classList.remove('active'));
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
                     button.classList.add('active');
-
-                    const category = button.getAttribute('data-category');
-                    cards.forEach(card => {
-                        if (category === 'all' || card.getAttribute('data-category') === category) {
-                            card.style.display = 'flex';
-                        } else {
-                            card.style.display = 'none';
-                        }
-                    });
+                    currentCategory = button.getAttribute('data-category') || 'all';
+                    applyFilters();
                 });
             });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    currentQuery = e.target.value;
+                    applyFilters();
+                });
+            }
+
+            if (searchClear) {
+                searchClear.addEventListener('click', () => {
+                    if (searchInput) {
+                        searchInput.value = '';
+                        currentQuery = '';
+                        searchInput.focus();
+                        applyFilters();
+                    }
+                });
+            }
         });
     </script>
 </body>
