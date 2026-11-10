@@ -299,7 +299,7 @@ class SyncManager: ObservableObject {
             repeat {
                 attempts += 1
                 if attempts > 5 {
-                    print("⚠️ Auto-push reached maximum rebase attempts (5); stopping loop")
+                    print("Auto-push reached maximum rebase attempts (5); stopping loop")
                     throw SyncError.conflict
                 }
                 do {
@@ -311,7 +311,8 @@ class SyncManager: ObservableObject {
                     // conflict screen where the new LINE record never appears.
                     state = .downloading
                     message = String(localized: "กำลังรวมข้อมูลใหม่จาก LINE กับข้อมูลในเครื่อง")
-                    print("ℹ️ Sync conflict detected; rebasing pending local records")
+                    print("Sync conflict detected; rebasing pending local records")
+                    try? outbox.remove(accountID: accountID)
                     try await fetchAndApplyLatestSnapshot(
                         modelContext: modelContext,
                         onlyIfRecent: false,
@@ -323,7 +324,7 @@ class SyncManager: ObservableObject {
             state = .completed
         } catch {
             let text = error.localizedDescription
-            print("❌ Automatic sync failed: \(text)")
+            print("Automatic sync failed: \(text)")
             state = .failed(text)
             message = text
         }
@@ -655,10 +656,22 @@ class SyncManager: ObservableObject {
         let sentCheckpoint = checkpoint
         let metadata = try decoder().decode(SyncMetaResponse.self, from: await api.fetchSyncMetadata())
         guard accountID == sentCheckpoint.accountID, api.authToken == token else { throw SyncError.sessionChanged }
+        if let serverAccountID = metadata.accountID, serverAccountID > 0, serverAccountID != accountID {
+            print("Sync account mismatch: local=\(accountID), server=\(serverAccountID). Updating account.")
+            defaults.set(serverAccountID, forKey: "adminID")
+            try? outbox.removeAll()
+            throw SyncError.sessionChanged
+        }
         guard (metadata.syncProtocol ?? 0) >= 2 else { throw SyncError.serverUpgradeRequired }
         let revision = sentCheckpoint.revision
         let upload: PendingSyncUpload
         if let pending = try outbox.load(accountID: accountID) {
+            if let serverVer = metadata.version, pending.baseVersion < serverVer {
+                // Outbox baseVersion is strictly older than server's current version.
+                // Discard stale outbox and signal conflict to trigger immediate rebase.
+                try? outbox.remove(accountID: accountID)
+                throw SyncError.conflict
+            }
             upload = pending
         } else {
             upload = PendingSyncUpload(baseVersion: sentCheckpoint.version,
@@ -747,6 +760,8 @@ class SyncManager: ObservableObject {
         try applySnapshot(verifiedSnapshot, modelContext: modelContext)
         await downloadMissingRemoteMedia(from: verifiedSnapshot)
         checkpoint.version = version
+        try? outbox.remove(accountID: accountID)
+        checkpoint.pending = false
         if !onlyIfRecent {
             message = version == currentVersion ? "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว" : "ดึงข้อมูลล่าสุดแล้ว"
         }
@@ -794,7 +809,7 @@ class SyncManager: ObservableObject {
                                                deleted: Set(dirtyPayments.filter(\.isDeletedLocally).map(\.id)))
         var seenMergedPayments = [String: PaymentSnapshot]()
         for p in rawMergedPayments {
-            let key = "\(p.userId):\(p.month):\(p.installmentPhase)"
+            let key = p.userId > 0 ? "u:\(p.userId):\(p.month):\(p.installmentPhase)" : "r:\(p.roomNumber):\(p.month):\(p.installmentPhase)"
             if let existing = seenMergedPayments[key] {
                 if p.lastUpdated > existing.lastUpdated {
                     seenMergedPayments[key] = p

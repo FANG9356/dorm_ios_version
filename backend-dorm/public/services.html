@@ -138,47 +138,15 @@
             color: var(--brand-blue);
         }
 
-        /* Hero Section */
-        .hero {
-            padding: 16px 0 8px;
-            text-align: center;
+        /* Discovery Control Header (Ultra-Clean & Modern) */
+        .discovery-header {
+            padding: 12px 0 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .hero h1 {
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--text-heading);
-            letter-spacing: -0.02em;
-            margin-bottom: 3px;
-            line-height: 1.25;
-        }
-
-        .hero p {
-            font-size: 13px;
-            color: var(--text-muted);
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.4;
-        }
-
-        @media (max-width: 640px) {
-            .hero {
-                padding: 10px 0 6px;
-            }
-            .hero h1 {
-                font-size: 17px;
-            }
-            .hero p {
-                font-size: 12px;
-            }
-        }
-
-        /* Search Bar */
-        .search-wrapper {
-            position: relative;
-            margin: 8px 0 10px;
-        }
-
+        /* Modern Search Box */
         .search-box {
             position: relative;
             display: flex;
@@ -186,21 +154,22 @@
             background: #ffffff;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 0 12px;
-            box-shadow: var(--shadow-sm);
+            padding: 0 14px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
             transition: all 0.2s ease;
         }
 
         .search-box:focus-within {
             border-color: #0f172a;
             box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+            background: #ffffff;
         }
 
         .search-icon {
             width: 17px;
             height: 17px;
-            color: var(--text-light);
-            margin-right: 8px;
+            color: var(--text-muted);
+            margin-right: 10px;
             flex-shrink: 0;
             stroke-width: 2.2;
         }
@@ -248,216 +217,102 @@
             stroke-width: 2.2;
         }
 
-        /* Zone Segmented Tabs (Area Selector) */
-        .zone-tabs-wrapper {
-            margin-bottom: 8px;
-        }
-
-        .zone-tabs-label {
-            display: none;
-        }
-
-        .zone-tabs {
+        /* Native iOS-Style Segmented Control for Areas */
+        .segmented-track {
             display: flex;
-            gap: 6px;
+            background: #e2e8f0;
+            padding: 3px;
+            border-radius: var(--radius-md);
+            gap: 2px;
             overflow-x: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
             -webkit-overflow-scrolling: touch;
-            padding: 2px 0;
         }
 
-        .zone-tabs::-webkit-scrollbar {
+        .segmented-track::-webkit-scrollbar {
             display: none;
         }
 
-        .zone-tab-btn {
-            flex: 0 0 auto;
-            border: 1px solid var(--border-color);
-            background: #ffffff;
-            padding: 6px 12px;
-            font-size: 12px;
+        .seg-tab {
+            flex: 1 1 0;
+            min-width: 68px;
+            border: none;
+            background: transparent;
+            padding: 7px 10px;
+            font-size: 12.5px;
             font-weight: 600;
             color: var(--text-muted);
-            border-radius: var(--radius-pill);
+            border-radius: calc(var(--radius-md) - 3px);
             cursor: pointer;
-            transition: all 0.16s ease;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
             text-align: center;
             white-space: nowrap;
-            box-shadow: var(--shadow-sm);
+            user-select: none;
         }
 
-        .zone-tab-btn.active {
-            background: #0f172a;
-            color: #ffffff;
-            border-color: #0f172a;
+        .seg-tab:hover {
+            color: var(--text-heading);
+        }
+
+        .seg-tab.active {
+            background: #ffffff;
+            color: var(--text-heading);
             font-weight: 700;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1), 0 1px 2px rgba(15, 23, 42, 0.06);
         }
 
-        @media (min-width: 720px) {
-            .zone-tabs {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                background: #e2e8f0;
-                padding: 3px;
-                border-radius: var(--radius-md);
-                gap: 3px;
-            }
-            .zone-tab-btn {
-                border: none;
-                background: transparent;
-                padding: 8px 6px;
-                border-radius: calc(var(--radius-md) - 3px);
-                box-shadow: none;
-            }
-            .zone-tab-btn.active {
-                background: #ffffff;
-                color: var(--text-heading);
-                border-color: transparent;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-            }
-        }
-
-        /* Category Filter Pills */
-        .filter-container {
-            position: relative;
-            margin-bottom: 10px;
-        }
-
-        .filter-scroll {
+        /* Minimalist Category Chip Strip */
+        .category-strip {
             display: flex;
             gap: 6px;
             overflow-x: auto;
-            padding: 2px 0 4px;
             scrollbar-width: none;
             -ms-overflow-style: none;
             -webkit-overflow-scrolling: touch;
+            padding: 1px 0 2px;
         }
 
-        .filter-scroll::-webkit-scrollbar {
+        .category-strip::-webkit-scrollbar {
             display: none;
         }
 
-        .filter-pill {
+        .category-chip {
             border: 1px solid var(--border-color);
             background: #ffffff;
             color: var(--text-muted);
-            padding: 6px 12px;
+            padding: 5px 13px;
             border-radius: var(--radius-pill);
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 500;
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.16s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            box-shadow: var(--shadow-sm);
             flex: 0 0 auto;
+            user-select: none;
+            box-shadow: var(--shadow-sm);
         }
 
-        .filter-pill:hover {
+        .category-chip:hover {
             border-color: var(--border-hover);
             color: var(--text-heading);
         }
 
-        .filter-pill.active {
+        .category-chip.active {
             background: #0f172a;
             border-color: #0f172a;
             color: #ffffff;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
-        }
-
-        .filter-pill .pill-count {
-            font-size: 10px;
-            padding: 1px 5px;
-            border-radius: var(--radius-pill);
-            background: var(--bg-muted);
-            color: var(--text-muted);
-            font-weight: 700;
-        }
-
-        .filter-pill.active .pill-count {
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
-        }
-
-        /* Overview Map Quick Banner (Compact 1-row) */
-        .map-overview-banner {
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 8px 14px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .map-overview-content {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
-            overflow: hidden;
-        }
-
-        .map-overview-content svg {
-            width: 16px;
-            height: 16px;
-            color: #0f172a;
-            flex-shrink: 0;
-            stroke-width: 2.2;
-        }
-
-        .map-overview-title {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: var(--text-heading);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .btn-overview-map {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            padding: 5px 12px;
-            border-radius: var(--radius-pill);
-            font-size: 12px;
             font-weight: 600;
-            background: #0f172a;
-            color: #ffffff;
-            border: 1px solid #0f172a;
-            text-decoration: none;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.16s ease;
-            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
         }
 
-        .btn-overview-map:hover {
-            background: #1e293b;
-        }
-
-        .btn-overview-map svg {
-            width: 12px;
-            height: 12px;
-            stroke-width: 2.2;
-        }
-
-        /* Results Metadata */
+        /* Compact Results Meta Strip */
         .results-meta {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 11.5px;
+            margin: 8px 0 14px;
+            font-size: 12px;
             color: var(--text-muted);
             padding: 0 2px;
         }
@@ -465,17 +320,12 @@
         .results-count {
             font-weight: 700;
             color: var(--text-heading);
+            letter-spacing: -0.01em;
         }
 
         .results-hint {
-            font-size: 11px;
+            font-size: 11.5px;
             color: var(--text-light);
-        }
-
-        @media (max-width: 480px) {
-            .results-hint {
-                display: none;
-            }
         }
 
         /* Service Cards Grid (Responsive 2-col on desktop, 1-col on mobile) */
@@ -965,14 +815,9 @@
 
     <main class="container">
 
-        <!-- Hero Header -->
-        <section class="hero">
-            <h1>คู่มือสถานที่และบริการชุมชน</h1>
-            <p>รวมร้านอาหาร คาเฟ่ ตลาด และบริการจำเป็นรอบหอพักและเมืองอุบลราชธานี พร้อมระบบนำทาง</p>
-        </section>
-
-        <!-- Search Bar -->
-        <div class="search-wrapper">
+        <!-- Modern Compact Discovery Control Header -->
+        <div class="discovery-header">
+            <!-- Search Bar -->
             <div class="search-box">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input 
@@ -986,65 +831,33 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
-        </div>
 
-        <!-- Zone Selector (Area Tabs) -->
-        <div class="zone-tabs-wrapper">
-            <div class="zone-tabs" id="zone-tabs">
-                <button class="zone-tab-btn active" data-zone="all">ทั้งหมด (200)</button>
-                <button class="zone-tab-btn" data-zone="nongbua">รอบหอพัก (15)</button>
-                <button class="zone-tab-btn" data-zone="ubon">ในเมือง (85)</button>
-                <button class="zone-tab-btn" data-zone="warin">วารินชำราบ (50)</button>
-                <button class="zone-tab-btn" data-zone="province">ต่างอำเภอและท่องเที่ยว (50)</button>
+            <!-- Area Segmented Control (iOS Style Track) -->
+            <div class="segmented-track" id="zone-tabs">
+                <button class="seg-tab active" data-zone="all">ทั้งหมด</button>
+                <button class="seg-tab" data-zone="nongbua">รอบหอพัก</button>
+                <button class="seg-tab" data-zone="ubon">ในเมือง</button>
+                <button class="seg-tab" data-zone="warin">วารินชำราบ</button>
+                <button class="seg-tab" data-zone="province">ต่างอำเภอ</button>
+            </div>
+
+            <!-- Category Filter Strip (Minimalist Clean Chips) -->
+            <div class="category-strip" id="filter-buttons">
+                <button class="category-chip active" data-category="all">ทุกหมวดหมู่</button>
+                <button class="category-chip" data-category="food">ร้านอาหาร</button>
+                <button class="category-chip" data-category="cafe">คาเฟ่</button>
+                <button class="category-chip" data-category="market">ห้างและตลาด</button>
+                <button class="category-chip" data-category="transit">สถานที่สำคัญ</button>
+                <button class="category-chip" data-category="services">บริการจำเป็น</button>
             </div>
         </div>
 
-        <!-- Horizontal Category Filters -->
-        <div class="filter-container">
-            <div class="filter-scroll" id="filter-buttons">
-                <button class="filter-pill active" data-category="all">
-                    ทุกหมวดหมู่ <span class="pill-count" id="count-all">200</span>
-                </button>
-                <button class="filter-pill" data-category="food">
-                    ร้านอาหาร <span class="pill-count" id="count-food">80</span>
-                </button>
-                <button class="filter-pill" data-category="cafe">
-                    คาเฟ่และเครื่องดื่ม <span class="pill-count" id="count-cafe">30</span>
-                </button>
-                <button class="filter-pill" data-category="market">
-                    ห้างและตลาด <span class="pill-count" id="count-market">30</span>
-                </button>
-                <button class="filter-pill" data-category="transit">
-                    สถานที่สำคัญ <span class="pill-count" id="count-transit">41</span>
-                </button>
-                <button class="filter-pill" data-category="services">
-                    บริการจำเป็น <span class="pill-count" id="count-services">19</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Quick Overview Map Banner -->
-        <div class="map-overview-banner">
-            <div class="map-overview-content">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                <span class="map-overview-title">แผนที่ภาพรวมเมืองอุบลราชธานีและวารินชำราบ</span>
-            </div>
-            <a href="https://maps.google.com/maps?q=เมืองอุบลราชธานี+และ+วารินชำราบ" 
-               data-query="เมืองอุบลราชธานี และ วารินชำราบ" 
-               data-place-name="ภาพรวมอุบลและวาริน" 
-               class="btn-overview-map map-nav-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                <span>เปิดแอปแผนที่</span>
-            </a>
-        </div>
-
-        <!-- Result Metadata -->
+        <!-- Compact Results Meta -->
         <div class="results-meta">
-            <span class="results-count" id="results-count-text">สถานที่และบริการทั้งหมด (200 แห่ง)</span>
-            <span class="results-hint">แตะปุ่มเพื่อเปิดระบบนำทางบนอุปกรณ์</span>
+            <span class="results-count" id="results-count-text">200 สถานที่</span>
+            <span class="results-hint">แตะเพื่อนำทางทันที</span>
         </div>
 
-        <!-- Cards List -->
         <div class="cards-grid" id="cards-container"></div>
 
         <!-- Load More Container -->
@@ -1293,8 +1106,8 @@
             const PAGE_SIZE = 24;
             const searchInput = document.getElementById('search-input');
             const searchClear = document.getElementById('search-clear');
-            const zoneTabs = document.querySelectorAll('.zone-tab-btn');
-            const filterButtons = document.querySelectorAll('.filter-pill');
+            const zoneTabs = document.querySelectorAll('.seg-tab');
+            const filterButtons = document.querySelectorAll('.category-chip');
             const countText = document.getElementById('results-count-text');
             const emptyState = document.getElementById('empty-state');
             const cardsContainer = document.getElementById('cards-container');
@@ -1357,9 +1170,9 @@
 
                 if (countText) {
                     if (currentFiltered.length === randomizedDataset.length) {
-                        countText.textContent = `สถานที่และบริการทั้งหมด (${currentFiltered.length} แห่ง)`;
+                        countText.textContent = `${currentFiltered.length} สถานที่`;
                     } else {
-                        countText.textContent = `พบ ${currentFiltered.length} รายการ`;
+                        countText.textContent = `พบ ${currentFiltered.length} สถานที่`;
                     }
                 }
 
