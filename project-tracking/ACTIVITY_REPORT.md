@@ -3452,3 +3452,50 @@
   - iOS Build: คอมไพล์และลงนามสำเร็จ (** BUILD SUCCEEDED **)
   - iOS Install: ติดตั้งลงเครื่อง iPhone 11 ("F", UDID 00008030-001C65A134C0A02E) เรียบร้อย และเปิดแอปสำเร็จ
 - สถานะ deploy/UAT: Deploy และติดตั้งลงอุปกรณ์จริงเรียบร้อยแล้ว
+
+
+---
+
+## 2026-11-10 22:15 — แก้ไขปัญหาเข้าสู่ระบบด้วยอีเมลสิทธิ์ลูกแล้วไม่แสดงข้อมูลหอพักเดียวกับเมลแม่ (Multi-Admin Shared Dormitory Store Fix)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "โอเคแก้ไขข้อมูลได้แล้ว แต่เข้ามาแล้วยังไม่ขึ้นข้อมูลเดียวกับเมลแม่"
+  - ต้องการให้เมื่อเข้าสู่ระบบด้วยอีเมลลูก (สิทธิ์ admin/พนักงาน เช่น enoshimaj991@gmail.com หรือบัญชี แพรวา) ตัวแอปต้องเปิดฐานข้อมูลหอพักเดียวกันกับเมลแม่ (เจ้าของหอพัก FangA, account_1.store) และแสดงข้อมูลห้องพัก 6 ห้อง, ผู้เช่า 2 ราย และประวัติการเงินครบถ้วนทุกประการ
+- สาเหตุของปัญหาที่ตรวจพบ (Deep Root Cause Analysis):
+  1. การแยกไฟล์ฐานข้อมูล SwiftData แบบ Account Scoping:
+     - แอปพลิเคชันแยกพื้นที่จัดเก็บข้อมูล SQLite/SwiftData เป็นไฟล์ตาม account_id เช่น account_1.store, account_2.store
+     - ในสถาปัตยกรรมหอพัก บัญชีแม่ (FangA, superadmin) คือเจ้าของหอพัก มี id = 1 และ account_id = 1 ส่วนบัญชีพนักงาน/ลูก (แพรวา, admin) มีรหัสพนักงาน admin_id = 2 แต่ไม่มีหอพักส่วนตัว ต้องสังกัดหอพักของเจ้าของ (account_id = 1)
+     - ก่อนหน้านี้ ใน localSessionAccountID(token:) เมื่อโทเค็นในประวัติบัญชี (Keychain) เป็นโทเค็นเดิมที่ยังไม่มีเคลม account_id ฟังก์ชันได้ถอยกลับไปใช้ jwtIntClaim("admin_id") ซึ่งคืนค่าเป็น 2
+     - ส่งผลให้ storeKey ใน DormApp.swift คำนวณออกมาเป็น "account-2" และเปิดไฟล์ account_2.store ซึ่งเป็นฐานข้อมูลว่างเปล่า (มี 0 ห้อง, 0 ผู้เช่า) แทนที่จะเป็น account_1.store ซึ่งมีข้อมูลจริงทั้งหมด (151KB, wal 1.5MB)
+  2. การตรวจสอบอีเมลใน SyncManager:
+     - ใน SyncManager.shouldAutoPullRemoteSnapshot() มีการตรวจสอบ localEmail == remoteEmail ซึ่งสำหรับสิทธิ์ลูก localEmail คือ enoshimaj991@gmail.com แต่ remoteEmail จากเซิร์ฟเวอร์คือ phakhaphonsukmee@gmail.com ทำให้ระบบดึงข้อมูลอัตโนมัติถูกปฏิเสธ
+  3. ประวัติบัญชีที่บันทึกไว้ (SavedAccount History):
+     - บัญชีที่ถูกเซฟไว้เดิมใน Keychain มีการจำค่า adminID: 2 ไว้ ส่งผลให้ทุกครั้งที่เลือกเข้าสู่ระบบผ่านประวัติ (Saved Accounts) ค่า adminID ใน UserDefaults จะถูกตั้งกลับเป็น 2 เสมอ
+- สิ่งที่ดำเนินการแก้ไข:
+  1. APIService.swift:
+     - เพิ่มฟังก์ชัน resolveServerAccountID() async -> Int? เรียกดึงข้อมูล metadata จาก /api/sync/meta ของเซิร์ฟเวอร์เพื่อยืนยัน account_id จริงของหอพัก
+     - ปรับปรุง localSessionAccountID(token:now:): สำหรับบัญชีสิทธิ์พนักงาน (role != "superadmin" เช่น admin, services, dorm) จะไม่ใช้ admin_id (รหัสพนักงาน) เป็นหมายเลข Store หอพัก แต่จะดึงค่าจาก account_id ในโทเค็น หรือ fallback เป็นหมายเลขหอพักของเจ้าของ (1) เสมอ
+     - ปรับปรุง login(email:password:) และ register: กำหนดให้ resolvedAccountID เป็นค่า account_id จากเซิร์ฟเวอร์หรือ 1 เสมอสำหรับสิทธิ์พนักงาน
+  2. LoginView.swift:
+     - ใน loadSavedAccounts(): เพิ่มระบบ Auto-Migration ตรวจสอบประวัติบัญชีที่โหลดขึ้นมาจาก Keychain หากเป็นสิทธิ์พนักงาน (role != "superadmin") และมีค่า adminID ผิดพลาด (เช่น 2 หรือ nil) จะทำการปรับค่าเป็น 1 โดยอัตโนมัติและบันทึกกลับเข้าสู่ Keychain ทันที
+     - ใน restoreSavedAccount: กำหนดให้ targetAccountID ของสิทธิ์พนักงานเป็น 1 เสมอ เพื่อให้ชี้ไปยัง account_1.store ทุกครั้งที่ล็อกอินผ่านประวัติ
+     - ใน saveAccount(): บันทึก adminID สำหรับสิทธิ์พนักงานเป็น 1 เสมอ
+  3. DormApp.swift (AccountScopedRootView):
+     - เพิ่ม Self-Healing Task ใน .task: เมื่อผู้ใช้ล็อกอินอยู่ ระบบจะตรวจสอบว่าหากเป็นสิทธิ์พนักงานและค่า adminID ใน UserDefaults ไม่ใช่ 1 ระบบจะแก้กลับเป็น 1 และสั่ง reloadContainerIfNeeded() ทันที
+     - ดึงค่า resolveServerAccountID() จากเซิร์ฟเวอร์เพื่อสอบทานความถูกต้องของ Store หากพบความคลาดเคลื่อนจะสลับมาที่ Store จริงทันที
+     - ใน resolveAccountID(): คืนค่า 1 สำหรับสิทธิ์พนักงานเสมอหากโทเค็นยังใช้งานได้
+  4. SyncManager.swift:
+     - ใน shouldAutoPullRemoteSnapshot(): ผ่อนปรนเงื่อนไขตรวจสอบ localEmail == remoteEmail เฉพาะผู้ใช้ระดับ superadmin เพื่อให้สิทธิ์พนักงานสามารถซิงค์ข้อมูลกับหอพักของเจ้าของได้อย่างราบรื่น
+  5. RoomListView.swift:
+     - ใน SidebarMenu ส่วนแสดงรูปโปรไฟล์ผู้ใช้งาน: ปรับให้ใช้ APIService.shared.currentSessionAdminID ?? adminID เพื่อให้พนักงาน ("แพรวา", id: 2) แสดงรูปโปรไฟล์ส่วนตัวของตนเอง (profile_2.jpg) ได้อย่างถูกต้อง
+  6. CredentialStoreTests.swift:
+     - เพิ่ม Unit Tests ยืนยันว่าโทเค็นของพนักงานที่ไม่มี account_id หรือมี account_id: 1 จะต้อง resolve ได้ account_id = 1 เสมอ และ superadmin จะ resolve ได้ตามหมายเลขบัญชีตนเอง
+- การตรวจสอบและผลลัพธ์:
+  - Unit Tests ฝั่ง Backend: go test -count=1 ./... PASS, go test -count=1 -race ./handlers PASS (0 data race), go vet ./... PASS
+  - iOS Build-for-testing: xcodebuild build-for-testing สำเร็จสมบูรณ์ (** TEST BUILD SUCCEEDED **)
+  - iOS App Build: xcodebuild build สำหรับอุปกรณ์จริงสำเร็จสมบูรณ์ (** BUILD SUCCEEDED **)
+  - การติดตั้งลงเครื่องจริง: ติดตั้งทับ (Preserve data) ลงเครื่อง iPhone 11 ("F", UDID 00008030-001C65A134C0A02E) สำเร็จ
+  - การตรวจสอบผลลัพธ์บนเครื่องจริงหลังรันแอป:
+    - ค่าใน com.dorminet.DormiNetX.plist: "adminID" => 1, "userRole" => "admin", "userName" => "แพรวา", "userEmail" => "enoshimaj991@gmail.com" (ปรับจาก 2 เป็น 1 สำเร็จสมบูรณ์)
+    - ไฟล์ Store ที่แอปเปิดใช้งาน: account_1.store (มี 6 ห้อง, 2 ผู้เช่า, 3 รายการชำระเงิน)
+- สถานะ deploy/UAT: แก้ไข บิลด์ ติดตั้งลงอุปกรณ์ทดสอบจริงเรียบร้อย ยืนยันข้อมูลขึ้นตรงกับเมลแม่สมบูรณ์

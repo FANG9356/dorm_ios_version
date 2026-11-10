@@ -196,6 +196,21 @@ struct AccountScopedRootView: View {
             .task(id: storeKey) {
                 reloadContainerIfNeeded()
             }
+            .task {
+                if UserDefaults.standard.bool(forKey: "isLoggedIn") {
+                    let role = UserDefaults.standard.string(forKey: "userRole") ?? ""
+                    if (role == "admin" || role == "services" || role == "dorm") && UserDefaults.standard.integer(forKey: "adminID") != 1 {
+                        UserDefaults.standard.set(1, forKey: "adminID")
+                        reloadContainerIfNeeded()
+                    }
+                    if let serverAccountID = await APIService.shared.resolveServerAccountID(),
+                       serverAccountID > 0,
+                       UserDefaults.standard.integer(forKey: "adminID") != serverAccountID {
+                        UserDefaults.standard.set(serverAccountID, forKey: "adminID")
+                        reloadContainerIfNeeded()
+                    }
+                }
+            }
             .onChange(of: storeKey) { _, _ in
                 reloadContainerIfNeeded()
             }
@@ -259,6 +274,11 @@ struct AccountScopedRootView: View {
                 UserDefaults.standard.set(accountID, forKey: "adminID")
             }
             return accountID
+        }
+        let role = UserDefaults.standard.string(forKey: "userRole") ?? ""
+        if (role == "admin" || role == "services" || role == "dorm") && CredentialStore.shared.token != nil {
+            UserDefaults.standard.set(1, forKey: "adminID")
+            return 1
         }
         let storedID = UserDefaults.standard.integer(forKey: "adminID")
         if storedID > 0 && CredentialStore.shared.token != nil {

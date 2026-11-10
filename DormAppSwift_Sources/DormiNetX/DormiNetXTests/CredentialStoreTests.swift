@@ -106,6 +106,12 @@ final class CredentialStoreTests: XCTestCase {
         XCTAssertNil(api.localSessionAccountID(token: try token(["admin_id": 1e50, "exp": 2000]), now: now))
         XCTAssertNil(api.localSessionAccountID(token: "invalid", now: now))
         XCTAssertNil(api.localSessionAccountID(token: try token(["admin_id": 3]), now: now))
+        // Multi-admin dorm: Staff account without account_id claim resolves to dorm owner account (1)
+        XCTAssertEqual(api.localSessionAccountID(token: try token(["admin_id": 2, "role": "admin", "exp": 2000]), now: now), 1)
+        // Multi-admin dorm: Staff account with explicit account_id claim resolves to that account
+        XCTAssertEqual(api.localSessionAccountID(token: try token(["admin_id": 2, "account_id": 1, "role": "admin", "exp": 2000]), now: now), 1)
+        // Superadmin resolves to owner account ID
+        XCTAssertEqual(api.localSessionAccountID(token: try token(["admin_id": 1, "role": "superadmin", "exp": 2000]), now: now), 1)
     }
 
     func testKeychainRoundTripUpdateAndScopedDeletion() throws {

@@ -531,7 +531,10 @@ class SyncManager: ObservableObject {
                 let localEmail = (api.currentEmail ?? defaults.string(forKey: "userEmail") ?? "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .lowercased()
-                guard localEmail.isEmpty || localEmail == remoteEmail else { return false }
+                let role = defaults.string(forKey: "userRole") ?? ""
+                if role == "superadmin" {
+                    guard localEmail.isEmpty || localEmail == remoteEmail else { return false }
+                }
             }
 
             return true

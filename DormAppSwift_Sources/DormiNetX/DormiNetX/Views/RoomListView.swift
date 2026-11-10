@@ -914,7 +914,8 @@ struct SidebarMenu: View {
                         
                         ZStack {
                             let _ = profileImageUpdateToken
-                            if let localURL = APIService.shared.getLocalProfileImageURL(adminID: adminID),
+                            let currentUserID = APIService.shared.currentSessionAdminID ?? adminID
+                            if let localURL = APIService.shared.getLocalProfileImageURL(adminID: currentUserID),
                                let uiImage = UIImage(contentsOfFile: localURL.path) {
                                 Image(uiImage: uiImage)
                                     .resizable()

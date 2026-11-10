@@ -77,14 +77,31 @@ class APIService {
             return account
         }
         let role = jwtStringClaim("role", from: token) ?? ""
-        if role != "superadmin" {
+        let isStaff = (role == "admin" || role == "services" || role == "dorm")
+        if isStaff {
             let persisted = UserDefaults.standard.integer(forKey: "adminID")
-            if persisted > 0 {
+            if persisted > 0 && persisted != jwtIntClaim("admin_id", from: token) {
                 return persisted
             }
+            // In a multi-admin dorm, staff accounts operate on the dorm owner store (account 1)
+            return 1
         }
         guard let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
         return account
+    }
+
+    func resolveServerAccountID() async -> Int? {
+        guard let token = authToken, !token.isEmpty else { return nil }
+        do {
+            let data = try await fetchSyncMetadata()
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let accountID = json["account_id"] as? Int, accountID > 0 {
+                return accountID
+            }
+        } catch {
+            print("Failed to resolve server account ID: \(error)")
+        }
+        return nil
     }
 
     private func jwtPayload(from token: String) -> [String: Any]? {
@@ -132,11 +149,13 @@ class APIService {
                 self.userRole = "admin" // Default fallback
             }
             
+            var resolvedAccountID = 1
             if let accountId = json["account_id"] as? Int, accountId > 0 {
-                UserDefaults.standard.set(accountId, forKey: "adminID")
-            } else if let adminId = json["admin_id"] as? Int, adminId > 0 {
-                UserDefaults.standard.set(adminId, forKey: "adminID")
+                resolvedAccountID = accountId
+            } else if self.userRole == "superadmin", let adminId = json["admin_id"] as? Int, adminId > 0 {
+                resolvedAccountID = adminId
             }
+            UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
 
             if let token = json["token"] as? String {
                 try CredentialStore.shared.setToken(token)
@@ -172,19 +191,21 @@ class APIService {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let status = json["status"] as? String, status == "success" {
                 self.currentEmail = email
+                if let role = json["role"] as? String {
+                    self.userRole = role
+                }
+                var resolvedAccountID = 1
+                if let accountId = json["account_id"] as? Int, accountId > 0 {
+                    resolvedAccountID = accountId
+                } else if self.userRole == "superadmin", let adminId = json["admin_id"] as? Int, adminId > 0 {
+                    resolvedAccountID = adminId
+                }
+                UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
                 if let token = json["token"] as? String {
                     try CredentialStore.shared.setToken(token)
                     if let id = self.localSessionAccountID(token: token) {
                         UserDefaults.standard.set(id, forKey: "adminID")
                     }
-                }
-                if let role = json["role"] as? String {
-                    self.userRole = role
-                }
-                if let accountId = json["account_id"] as? Int, accountId > 0 {
-                    UserDefaults.standard.set(accountId, forKey: "adminID")
-                } else if let adminId = json["admin_id"] as? Int {
-                    UserDefaults.standard.set(adminId, forKey: "adminID")
                 }
                 let returnedName = json["name"] as? String
                 return (true, returnedName, nil)
