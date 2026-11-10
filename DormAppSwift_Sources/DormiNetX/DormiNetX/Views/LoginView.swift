@@ -644,18 +644,7 @@ struct LoginView: View {
                             }
                         }
                     } else {
-                        // Fade out LoginView before switching screens
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            isScreenReady = false
-                        }
-                        
-                        // Switch to Dashboard after the login UI has faded out
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            withAnimation(.easeInOut(duration: 0.8)) {
-                                isLoggedIn = true
-                                saveAccount()
-                            }
-                        }
+                        completeLoginTransition(shouldSaveAccount: true)
                     }
                 }
             } else {
@@ -765,31 +754,32 @@ struct LoginView: View {
         } else {
             do {
                 try restoreSavedAccount(account, token: token)
-                completeLoginTransition()
+                completeLoginTransition(shouldSaveAccount: false)
             } catch { showError(error.localizedDescription) }
         }
     }
 
     private func restoreSavedAccount(_ account: SavedAccount, token: String) throws {
-        if let adminID = account.adminID, adminID > 0 {
-            UserDefaults.standard.set(adminID, forKey: "adminID")
-        }
         try APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
+        if let accountID = APIService.shared.localSessionAccountID(token: token) {
+            UserDefaults.standard.set(accountID, forKey: "adminID")
+        }
         userEmail = account.email
         userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "ผู้ใช้") : account.name
     }
 
     private func completeLoginTransition(shouldSaveAccount: Bool = true) {
-        withAnimation(.easeOut(duration: 0.3)) {
+        if shouldSaveAccount {
+            saveAccount()
+        }
+
+        withAnimation(.easeOut(duration: 0.25)) {
             isScreenReady = false
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             withAnimation(.easeInOut(duration: 0.8)) {
                 isLoggedIn = true
-                if shouldSaveAccount {
-                    saveAccount()
-                }
             }
         }
     }
@@ -822,7 +812,7 @@ struct LoginView: View {
                     pendingSavedAccount = nil
                 }
 
-                completeLoginTransition()
+                completeLoginTransition(shouldSaveAccount: false)
             }
         } else {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {

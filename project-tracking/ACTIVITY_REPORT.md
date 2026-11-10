@@ -3060,3 +3060,32 @@
 
 
 
+
+## 2026-11-10 19:00 — แก้ไขปัญหาแอปเด้งออกเมื่อเข้าสู่ระบบด้วยประวัติบัญชี (Saved Account Login Crash Fix)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้งปัญหา: "มีอีกจุดคือตอน เข้าระบบด้วย ประวัติแอพมันเด้งออก ตรวจสอบหน่อย"
+- สาเหตุของปัญหา (Root Cause Analysis):
+  1. ความขัดแย้งของ SwiftData Container ใน `DormApp.swift`: เดิม `storeKey` คำนวณโดยนำสตริง JWT Token (`\(token)`) มารวมด้วย และมีเงื่อนไข `(credentials.token != nil && Self.resolveAccountID() != nil)` ซึ่งทำให้เมื่อผู้ใช้กดเลือกบัญชีที่บันทึกไว้ ฟังก์ชัน `restoreSession` จะบันทึก Token ลง Keychain ส่งผลให้ `storeKey` เปลี่ยนค่าทันทีขณะที่ `isLoggedIn` ยังคงเป็น `false` ทำให้เกิดการเรียก `reloadContainerIfNeeded()` และเปิด `ModelContainer` ของ SQLite ซ้อนทับกันอย่างรวดเร็ว ส่งผลให้ SwiftData เกิด Core Data store collision หรือข้อผิดพลาดร้ายแรงจนแอปพลิเคชันปิดตัวลง (Crash)
+  2. การบันทึก `adminID` คลาดเคลื่อนใน `APIService.swift`: ใน `restoreSession` เดิมมีการนำ `jwtIntClaim("admin_id")` ไปบันทึกลง `UserDefaults["adminID"]` ซึ่งสำหรับบัญชีพนักงานหรือผู้ช่วยดูแล ค่า `admin_id` คือรหัสประจำตัวพนักงาน (เช่น ID 2) ในขณะที่ Tenant Store คือบัญชีหลัก (เช่น Account ID 1) ทำให้รหัสร้านค้าสลับไปมาระหว่าง 1 กับ 2 จนวิว `RoomListView` เกิดการรีเซ็ตผิดจังหวะ
+  3. การเรียก `saveAccount()` ซ้ำขณะมุมมองกำลังถูกทำลาย: ใน `LoginView.swift` มีการสั่ง `saveAccount()` ภายในบล็อกแอนิเมชันหลังหน่วงเวลา 0.3 วินาที ซึ่งไปแก้ไข `@State private var savedAccounts` ในขณะที่ตัววิว `LoginView` กำลังถูกถอดออกจากหน่วยความจำเมื่อ `isLoggedIn = true`
+- สิ่งที่ดำเนินการ:
+  1. `DormApp.swift`:
+     - ปรับโครงสร้าง `storeKey` และ `initialStoreKey` ไม่นำ Raw Token String มารวม โดยผูกกับ `isLoggedIn` และ `accountID` เท่านั้น (`isLoggedIn ? "account-\(accountID)" : "guest"`)
+     - กำหนดให้ระบบเปิดใช้งาน In-Memory Guest Container ตลอดเวลาที่ยังไม่ได้เข้าสู่ระบบจริง (`isLoggedIn == false`) ป้องกันไม่ให้เกิดการโหลด Persistent SQLite Store ซ้ำซ้อนระหว่างทรานซิชัน
+     - ปรับข้อความ Log ให้สะอาดและปฏิบัติตามกฎห้ามใช้อีโมจิอย่างเคร่งครัด
+  2. `APIService.swift`:
+     - ใน `restoreSession` ปรับการตั้งค่า `adminID` ใน `UserDefaults` ให้ใช้ค่า `localSessionAccountID(token: token)` ซึ่งเป็น Tenant Account ID ที่แท้จริง สอดคล้องกับฟังก์ชัน `login` และ `register`
+  3. `LoginView.swift`:
+     - ใน `restoreSavedAccount` ปรับให้อ้างอิง Tenant Account ID จากโทเคนเซสชันโดยตรง
+     - ปรับฟังก์ชัน `completeLoginTransition` ให้เรียก `saveAccount()` ก่อนเริ่มทรานซิชันเฟดหน้าจอ และส่งพารามิเตอร์ `shouldSaveAccount: false` เมื่อเข้าสู่ระบบผ่านประวัติที่เคยบันทึกไว้แล้ว เพื่อตัดการเขียนข้อมูลลงหน่วยความจำและ Keychain ซ้ำซ้อน
+  4. การทดสอบและติดตั้ง (Build & Verification):
+     - ตรวจสอบความถูกต้องของโค้ด Swift และคอมไพล์ผ่านคำสั่ง `xcodebuild -project DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj -scheme DormiNetX -destination 'id=00008030-001C65A134C0A02E' build` สำเร็จ 100% (** BUILD SUCCEEDED **)
+     - ดำเนินการติดตั้งแอปพลิเคชันเวอร์ชันแก้ไขลงบนเครื่องทดสอบจริง (iPhone 11 "F", UDID `00008030-001C65A134C0A02E`) ผ่าน `xcrun devicectl device install app` เรียบร้อยโดยไม่ล้างข้อมูลเดิม
+     - ทดสอบ Go Backend ทั้งหมดผ่าน `go test -count=1 ./...`, `go test -count=1 -race ./handlers` (0 Data Race), และ `go vet ./...` ผ่าน 100%
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift`
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/LoginView.swift`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- สถานะ: แก้ไขเรียบร้อย ทดสอบคอมไพล์และติดตั้งลงเครื่องจริงสำเร็จ

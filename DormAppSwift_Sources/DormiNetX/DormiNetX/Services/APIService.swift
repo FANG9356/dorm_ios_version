@@ -44,8 +44,8 @@ class APIService {
             userRole = "admin"
         }
 
-        if let adminID = jwtIntClaim("admin_id", from: token), adminID > 0 {
-            UserDefaults.standard.set(adminID, forKey: "adminID")
+        if let accountID = localSessionAccountID(token: token) {
+            UserDefaults.standard.set(accountID, forKey: "adminID")
         }
     }
 

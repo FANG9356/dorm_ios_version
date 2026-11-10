@@ -112,8 +112,7 @@ struct AccountScopedRootView: View {
            let accountID = Self.resolveAccountID() {
             do {
                 initialContainer = try AccountScopedStore.makeContainer(accountID: accountID)
-                let token = CredentialStore.shared.token ?? ""
-                initialStoreKey = "account-\(accountID)-\(token)"
+                initialStoreKey = "account-\(accountID)"
             } catch {
                 initError = error
             }
@@ -145,12 +144,10 @@ struct AccountScopedRootView: View {
     }
 
     private var storeKey: String {
-        guard isLoggedIn || (credentials.token != nil && Self.resolveAccountID() != nil),
-              let accountID = Self.resolveAccountID(),
-              let token = credentials.token, !token.isEmpty else {
+        guard isLoggedIn, let accountID = Self.resolveAccountID() else {
             return "guest"
         }
-        return "account-\(accountID)-\(token)"
+        return "account-\(accountID)"
     }
 
     var body: some View {
@@ -187,13 +184,13 @@ struct AccountScopedRootView: View {
             return
         }
 
-        guard let accountID = Self.resolveAccountID(), credentials.token != nil else {
+        guard isLoggedIn, let accountID = Self.resolveAccountID() else {
             do {
                 modelContainer = try AccountScopedStore.makeGuestContainer()
                 loadedStoreKey = "guest"
                 storeInitError = nil
             } catch {
-                print("❌ Failed to create guest SwiftData container: \(error)")
+                print("Failed to create guest SwiftData container: \(error)")
                 storeInitError = error
             }
             return
@@ -203,9 +200,9 @@ struct AccountScopedRootView: View {
             modelContainer = try AccountScopedStore.makeContainer(accountID: accountID)
             loadedStoreKey = storeKey
             storeInitError = nil
-            print("✅ Opened local SwiftData store for account \(accountID)")
+            print("Opened local SwiftData store for account \(accountID)")
         } catch {
-            print("❌ Failed to open account-local SwiftData store: \(error)")
+            print("Failed to open account-local SwiftData store: \(error)")
             storeInitError = error
         }
     }
