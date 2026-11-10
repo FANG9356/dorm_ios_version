@@ -271,7 +271,7 @@
         .zone-tab-btn {
             border: none;
             background: transparent;
-            padding: 8px 6px;
+            padding: 9px 6px;
             font-size: 12px;
             font-weight: 600;
             color: var(--text-muted);
@@ -291,7 +291,7 @@
             font-weight: 700;
         }
 
-        @media (max-width: 520px) {
+        @media (max-width: 540px) {
             .zone-tabs {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -867,7 +867,7 @@
             </div>
             <div class="badge-verified">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11 12 14 22 4"/></svg>
-                พิกัดและร้านจริง
+                พิกัดและร้านจริงทั้งหมด
             </div>
         </div>
     </header>
@@ -878,10 +878,10 @@
         <section class="hero">
             <div class="hero-chip">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                พิกัดจริงทั่วเมืองอุบล & ฝั่งวารินชำราบ
+                พิกัดจริงทั่วเมืองอุบล & ฝั่งวารินชำราบ (ไม่จำกัดจำนวน)
             </div>
-            <h1>บริการและสถานที่สำคัญทั่วเมืองอุบล & วาริน</h1>
-            <p>แนะนำร้านอาหาร คาเฟ่ ตลาด จุดสำคัญ แหล่งช้อปปิ้ง และบริการจำเป็น นำทางตรงไปยังชื่อร้านผ่านแอปแผนที่หลักจากตำแหน่งปัจจุบันของคุณได้ทันที</p>
+            <h1>บริการและร้านค้าทั้งหมด เมืองอุบล & วารินชำราบ</h1>
+            <p>รวมร้านอาหาร คาเฟ่ ตลาด จุดสำคัญ แหล่งช้อปปิ้ง และบริการจำเป็นทั้งหมด พร้อมระบบนำทางปักหมุดไปยังชื่อร้านจากตำแหน่งปัจจุบันของคุณได้ทันที</p>
         </section>
 
         <!-- Search Bar -->
@@ -892,7 +892,7 @@
                     type="search" 
                     id="search-input" 
                     class="search-input" 
-                    placeholder="ค้นหาชื่อร้าน, สถานที่, เมนู, หรือบริการ..." 
+                    placeholder="ค้นหาชื่อร้าน, เมนู, สถานที่, หรือประเภทบริการ..." 
                     autocomplete="off"
                 >
                 <button type="button" id="search-clear" class="search-clear" aria-label="ล้างการค้นหา">
@@ -908,10 +908,10 @@
                 เลือกโซนพื้นที่
             </div>
             <div class="zone-tabs" id="zone-tabs">
-                <button class="zone-tab-btn active" data-zone="all">ทั้งหมด (ทุกโซน)</button>
-                <button class="zone-tab-btn" data-zone="nongbua">รอบหอ & หนองบัว</button>
-                <button class="zone-tab-btn" data-zone="ubon">ในเมืองอุบล</button>
-                <button class="zone-tab-btn" data-zone="warin">ฝั่งวารินชำราบ</button>
+                <button class="zone-tab-btn active" data-zone="all">ทั้งหมด (35)</button>
+                <button class="zone-tab-btn" data-zone="nongbua">รอบหอ & หนองบัว (8)</button>
+                <button class="zone-tab-btn" data-zone="ubon">ในเมืองอุบล (15)</button>
+                <button class="zone-tab-btn" data-zone="warin">ฝั่งวารินชำราบ (12)</button>
             </div>
         </div>
 
@@ -919,7 +919,7 @@
         <div class="filter-container">
             <div class="filter-scroll" id="filter-buttons">
                 <button class="filter-pill active" data-category="all">
-                    ทุกหมวดหมู่ <span class="pill-count" id="count-all">21</span>
+                    ทุกหมวดหมู่ <span class="pill-count" id="count-all">35</span>
                 </button>
                 <button class="filter-pill" data-category="food">
                     ร้านอาหาร & สตรีทฟู้ด
@@ -959,8 +959,8 @@
 
         <!-- Result Metadata -->
         <div class="results-meta">
-            <span class="results-count" id="results-count-text">แสดงทั้งหมด 21 สถานที่จริง</span>
-            <span>ปักหมุดไปยังชื่อร้านโดยตรง</span>
+            <span class="results-count" id="results-count-text">แสดงทั้งหมด 35 สถานที่จริง</span>
+            <span>ปักหมุดตรงไปยังชื่อร้านจากตำแหน่งปัจจุบัน</span>
         </div>
 
         <!-- Cards List -->
@@ -1414,6 +1414,158 @@
                 </div>
             </article>
 
+            <!-- Card: ร้านที่เดิม อาหารตามสั่ง (หนองบัว) -->
+            <article class="service-card" 
+                     data-id="ti-derm-food" 
+                     data-zone="nongbua" 
+                     data-category="food" 
+                     data-keywords="อาหารตามสั่ง กะเพรา หมูกรอบ ข้าวผัด อาหารจานด่วน ไข่ดาว หนองบัว">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80" alt="ร้านที่เดิม อาหารตามสั่ง (หนองบัว)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 10:00 - 20:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ร้านที่เดิม อาหารตามสั่ง (หนองบัว)</h2>
+                        <p class="card-subtitle">ร้านอาหารตามสั่งยอดนิยม กะเพราหมูกรอบจานด่วน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 200 เมตร (เดิน 3 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 140+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">10:00 - 20:00 น. (หยุดวันอาทิตย์)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:086-333-2211" class="detail-value detail-link">086-333-2211</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">จานละ 40 - 65 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูเด่นประจำร้าน</div>
+                        <div class="highlight-desc">ข้าวกะเพราหมูกรอบไข่ดาว, ข้าวผัดต้มยำทะเล, คะน้าหมูกรอบ และข้าวไข่ข้นกุ้งสด</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:086-333-2211" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ร้านที่เดิม อาหารตามสั่ง ตลาดหนองบัว อุบลราชธานี" 
+                           data-place-name="ร้านที่เดิม อาหารตามสั่ง" 
+                           data-query="ร้านที่เดิม อาหารตามสั่ง ตลาดหนองบัว อุบลราชธานี" 
+                           data-lat="15.2615" 
+                           data-lng="104.8460" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ร้านที่เดิม อาหารตามสั่ง
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ร้านยาภาณุวัฒน์เภสัช (หน้าตลาดหนองบัว) -->
+            <article class="service-card" 
+                     data-id="phanuwat-pharmacy" 
+                     data-zone="nongbua" 
+                     data-category="services" 
+                     data-keywords="ร้านยา เภสัชกร ยาสามัญ ป่วย ยาแก้ปวด พารา ปฐมพยาบาล หนองบัว">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1471864190281-a93a3070b6de?auto=format&fit=crop&w=800&q=80" alt="ร้านยาภาณุวัฒน์เภสัช (หน้าตลาดหนองบัว)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 08:00 - 21:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ร้านยาภาณุวัฒน์เภสัช (หน้าตลาดหนองบัว)</h2>
+                        <p class="card-subtitle">ร้านขายยาแผนปัจจุบัน มีเภสัชกรประจำ ให้คำปรึกษาตลอดวัน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 150 เมตร (เดิน 2 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 95+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">08:00 - 21:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-222-333" class="detail-value detail-link">045-222-333</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ยาสามัญและเวชภัณฑ์มาตรฐาน</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บริการและคำแนะนำ</div>
+                        <div class="highlight-desc">ยาสามัญประจำบ้าน, ยาแก้แพ้ แก้หวัด ยาลดไข้, เวชภัณฑ์ทำแผล, วิตามินบำรุง และคำแนะนำจากเภสัชกร</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-222-333" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ภาณุวัฒน์เภสัช ตลาดหนองบัว อุบลราชธานี" 
+                           data-place-name="ร้านยาภาณุวัฒน์เภสัช" 
+                           data-query="ภาณุวัฒน์เภสัช ตลาดหนองบัว อุบลราชธานี" 
+                           data-lat="15.2615" 
+                           data-lng="104.8450" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ร้านยาภาณุวัฒน์เภสัช
+                        </a>
+                    </div>
+                </div>
+            </article>
+
             <!-- Card: เซ็นทรัล อุบล (Central Ubon) -->
             <article class="service-card" 
                      data-id="central-ubon" 
@@ -1558,6 +1710,82 @@
                 </div>
             </article>
 
+            <!-- Card: ห้องอาหารอินโดจีน (Indochine Restaurant) -->
+            <article class="service-card" 
+                     data-id="indochine-ubon" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="อินโดจีน แหนมเนือง อาหารเวียดนาม มิชลิน กุ้งพันอ้อย ปากหม้อญวน สรรพสิทธิ์ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80" alt="ห้องอาหารอินโดจีน (Indochine Restaurant)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 09:00 - 21:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ห้องอาหารอินโดจีน (Indochine Restaurant)</h2>
+                        <p class="card-subtitle">ร้านอาหารเวียดนามระดับตำนาน Michelin Bib Gourmand ถนนสรรพสิทธิ์</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสรรพสิทธิ์ ในเมือง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 2,400+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">09:00 - 21:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-254-129" class="detail-value detail-link">045-254-129</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">100 - 350 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">มิชลิน บิบ กูร์มองด์ แนะนำ</div>
+                        <div class="highlight-desc">แหนมเนืองน้ำจิ้มงาสูตรลับเฉพาะ, กุ้งพันอ้อย, หมูย่างใบชะพลู, ปากหม้อญวน และยำหัวปลีรสเลิศ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-254-129" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ห้องอาหารอินโดจีน อุบลราชธานี" 
+                           data-place-name="ห้องอาหารอินโดจีน" 
+                           data-query="ห้องอาหารอินโดจีน อุบลราชธานี" 
+                           data-lat="15.2310" 
+                           data-lng="104.8620" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ห้องอาหารอินโดจีน
+                        </a>
+                    </div>
+                </div>
+            </article>
+
             <!-- Card: ก๋วยจั๊บ 80 ปี (อุบลราชธานี) -->
             <article class="service-card" 
                      data-id="kuayjab-80-years" 
@@ -1634,6 +1862,82 @@
                 </div>
             </article>
 
+            <!-- Card: ก๋วยจั๊บดับเพลิง (Kuay Jab Dub Plerng) -->
+            <article class="service-card" 
+                     data-id="kuayjab-dub-plerng" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="ก๋วยจั๊บ ดับเพลิง ก๋วยจั๊บญวน หมูยอ ไข่ลวก กระดูกหมู อาหารเช้า ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1552611052-33e04de081de?auto=format&fit=crop&w=800&q=80" alt="ก๋วยจั๊บดับเพลิง (Kuay Jab Dub Plerng)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:30 - 14:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ก๋วยจั๊บดับเพลิง (Kuay Jab Dub Plerng)</h2>
+                        <p class="card-subtitle">ร้านก๋วยจั๊บญวนสูตรเด็ดข้างสถานีดับเพลิง เครื่องแน่น ซุปกลมกล่อม</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนหลวง ข้างสถานีดับเพลิง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 1,100+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:30 - 14:30 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:089-722-4411" class="detail-value detail-link">089-722-4411</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ชามละ 45 - 65 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เอกลักษณ์ความอร่อย</div>
+                        <div class="highlight-desc">น้ำซุปกระดูกหมูเข้มข้นหอมกลมกล่อม เส้นเหนียวนุ่มกำลังดี หมูยอแผ่นโต กระดูกหมูตุ๋นร่อน และไข่ลวกทรงเครื่อง</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:089-722-4411" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ก๋วยจั๊บดับเพลิง อุบลราชธานี" 
+                           data-place-name="ก๋วยจั๊บดับเพลิง" 
+                           data-query="ก๋วยจั๊บดับเพลิง อุบลราชธานี" 
+                           data-lat="15.2300" 
+                           data-lng="104.8580" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ก๋วยจั๊บดับเพลิง
+                        </a>
+                    </div>
+                </div>
+            </article>
+
             <!-- Card: สามชัยกาแฟ (Samchai Coffee Ubon) -->
             <article class="service-card" 
                      data-id="samchai-coffee" 
@@ -1705,6 +2009,158 @@
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                             นำทางไป สามชัยกาแฟ
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: อุบลโอชา (Ubon Ocha) -->
+            <article class="service-card" 
+                     data-id="ubon-ocha" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="อุบลโอชา อาหารเช้า ก๋วยจั๊บ โจ๊ก ไข่กระทะ ขนมปังญวน เขื่อนธานี ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1513442542250-854d436a73f2?auto=format&fit=crop&w=800&q=80" alt="อุบลโอชา (Ubon Ocha)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:00 - 13:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">อุบลโอชา (Ubon Ocha)</h2>
+                        <p class="card-subtitle">ร้านอาหารเช้าและก๋วยจั๊บญวนเครื่องแน่นเจ้าดังบนถนนเขื่อนธานี</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนเขื่อนธานี ในเมือง (ขับรถ 11 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 870+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:00 - 13:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-241-381" class="detail-value detail-link">045-241-381</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารเช้า 40 - 70 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">อาหารเช้าขวัญใจคนอุบล</div>
+                        <div class="highlight-desc">ก๋วยจั๊บญวนชามโต, ไข่กระทะเนยหอม, โจ๊กหมูสับใส่ไข่ และขนมปังฝรั่งเศสอบกรอบนอกนุ่มใน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-241-381" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=อุบลโอชา อุบลราชธานี" 
+                           data-place-name="อุบลโอชา" 
+                           data-query="อุบลโอชา อุบลราชธานี" 
+                           data-lat="15.2270" 
+                           data-lng="104.8615" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป อุบลโอชา
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ปากหม้อโรบอท เจ๊อิม (Pak Mor Robot) -->
+            <article class="service-card" 
+                     data-id="pak-mor-robot" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="ปากหม้อ โรบอท เจ๊อิม ปากหม้อญวน ปากหม้อกรอบ อาหารเช้า เบ็ญจะมะ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1541518763669-27fef04b14ea?auto=format&fit=crop&w=800&q=80" alt="ปากหม้อโรบอท เจ๊อิม (Pak Mor Robot)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:30 - 13:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ปากหม้อโรบอท เจ๊อิม (Pak Mor Robot)</h2>
+                        <p class="card-subtitle">ปากหม้อญวนแป้งบางใส ไส้แน่น ทำรวดเร็วระดับตำนาน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนเบ็ญจะมะ ในเมือง (ขับรถ 9 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 950+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:30 - 13:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:081-600-7214" class="detail-value detail-link">081-600-7214</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">จานละ 35 - 55 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูปากหม้อสารพัดแบบ</div>
+                        <div class="highlight-desc">ปากหม้อกรอบ, ปากหม้อไข่พับ, ปากหม้อธรรมดาไส้หมูสับต้นหอม และข้าวเกรียบปากหม้อกรุบกรอบ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:081-600-7214" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ปากหม้อโรบอท เจ๊อิม อุบลราชธานี" 
+                           data-place-name="ปากหม้อโรบอท" 
+                           data-query="ปากหม้อโรบอท เจ๊อิม อุบลราชธานี" 
+                           data-lat="15.2340" 
+                           data-lng="104.8510" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ปากหม้อโรบอท
                         </a>
                     </div>
                 </div>
@@ -1857,6 +2313,226 @@
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                             นำทางไป Anna Coffee Roasters
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: Song Sarn Coffee (ส่งสาร คาเฟ่) -->
+            <article class="service-card" 
+                     data-id="song-sarn-coffee" 
+                     data-zone="ubon" 
+                     data-category="cafe" 
+                     data-keywords="ส่งสาร กาแฟ คาเฟ่ ตึกเก่า หนังสือ ดริป พโลชัย วินเทจ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80" alt="Song Sarn Coffee (ส่งสาร คาเฟ่)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 08:30 - 17:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">Song Sarn Coffee (ส่งสาร คาเฟ่)</h2>
+                        <p class="card-subtitle">คาเฟ่อบอุ่นในตึกเก่าสุดคลาสสิก ถนนพโลชัย กาแฟดริปและหนังสือ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนพโลชัย ในเมือง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 620+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">08:30 - 17:00 น. (หยุดวันพฤหัสบดี)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:088-581-2022" class="detail-value detail-link">088-581-2022</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เครื่องดื่ม 55 - 95 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บรรยากาศสุดชิล</div>
+                        <div class="highlight-desc">กาแฟคั่วบดคุณภาพ, ขนมเค้กโฮมเมด, โซนอ่านหนังสือเงียบสงบ เหมาะสำหรับนั่งทำงานและพักผ่อน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:088-581-2022" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Song Sarn Coffee อุบลราชธานี" 
+                           data-place-name="ส่งสาร คาเฟ่" 
+                           data-query="Song Sarn Coffee อุบลราชธานี" 
+                           data-lat="15.2285" 
+                           data-lng="104.8590" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ส่งสาร คาเฟ่
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: หมูยอดาวทอง (Dao Thong Moo Yor) -->
+            <article class="service-card" 
+                     data-id="moo-yor-dao-thong" 
+                     data-zone="ubon" 
+                     data-category="market" 
+                     data-keywords="หมูยอ ดาวทอง ของฝาก ไร้แป้ง กุนเชียง ไส้กรอกอีสาน เส้นก๋วยจั๊บ พิชิตรังสรรค์ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80" alt="หมูยอดาวทอง (Dao Thong Moo Yor)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:00 - 20:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">หมูยอดาวทอง (Dao Thong Moo Yor)</h2>
+                        <p class="card-subtitle">ร้านของฝากหมูยออุบลแท้ ไร้แป้ง หมูเน้นๆ ระดับตำนาน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนพิชิตรังสรรค์ ในเมือง (ขับรถ 9 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 1,800+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:00 - 20:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-244-129" class="detail-value detail-link">045-244-129</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">หมูยอแพ็คละ 35 - 150 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">ของฝากยอดนิยมอันดับหนึ่ง</div>
+                        <div class="highlight-desc">หมูยอพริกไทยดำ, หมูยอหนัง, กุนเชียงหมูล้วน, ไส้กรอกอีสาน และเส้นก๋วยจั๊บญวนอบแห้งพร้อมปรุง</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-244-129" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=หมูยอดาวทอง อุบลราชธานี" 
+                           data-place-name="หมูยอดาวทอง" 
+                           data-query="หมูยอดาวทอง อุบลราชธานี" 
+                           data-lat="15.2320" 
+                           data-lng="104.8570" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป หมูยอดาวทอง
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ตลาดโต้รุ่งทุ่งศรีเมือง (Thung Si Mueang Night Market) -->
+            <article class="service-card" 
+                     data-id="night-market-thung" 
+                     data-zone="ubon" 
+                     data-category="market" 
+                     data-keywords="โต้รุ่ง ทุ่งศรีเมือง สตรีทฟู้ด ของกินรอบดึก ผัดไทย บัวลอย ลูกชิ้น ตลาดกลางคืน ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1509315811345-672d83ef2fbc?auto=format&fit=crop&w=800&q=80" alt="ตลาดโต้รุ่งทุ่งศรีเมือง (Thung Si Mueang Night Market)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 16:30 - 23:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ตลาดโต้รุ่งทุ่งศรีเมือง (Thung Si Mueang Night Market)</h2>
+                        <p class="card-subtitle">ศูนย์รวมอาหารสตรีทฟู้ด ขนมหวาน และของกินรอบดึกใจกลางเมือง</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>หน้าศาลหลักเมือง ทุ่งศรีเมือง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 3,100+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">16:30 - 23:00 น. (คึกคักตั้งแต่หัวค่ำ)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารจานด่วน 30 - 80 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">รวมของอร่อยรอบดึก</div>
+                        <div class="highlight-desc">ผัดไทยหอยทอดกระทะร้อน, บัวลอยไข่หวาน, น้ำเต้าหู้ปาท่องโก๋, ก๋วยเตี๋ยวเนื้อตุ๋น, ลูกชิ้นปิ้ง และน้ำผลไม้ปั่น</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ตลาดโต้รุ่งทุ่งศรีเมือง อุบลราชธานี" 
+                           data-place-name="ตลาดโต้รุ่งทุ่งศรีเมือง" 
+                           data-query="ตลาดโต้รุ่งทุ่งศรีเมือง อุบลราชธานี" 
+                           data-lat="15.2280" 
+                           data-lng="104.8580" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ตลาดโต้รุ่งทุ่งศรีเมือง
                         </a>
                     </div>
                 </div>
@@ -2318,6 +2994,234 @@
                 </div>
             </article>
 
+            <!-- Card: มองมูล คาเฟ่ & เรสเตอรองต์ (Mongmoon Cafe) -->
+            <article class="service-card" 
+                     data-id="mongmoon-cafe" 
+                     data-zone="warin" 
+                     data-category="cafe" 
+                     data-keywords="มองมูล คาเฟ่ ร้านอาหาร ริมแม่น้ำมูล ริมน้ำ ชมวิว วาริน วารินชำราบ">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80" alt="มองมูล คาเฟ่ & เรสเตอรองต์ (Mongmoon Cafe)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 10:00 - 21:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">มองมูล คาเฟ่ & เรสเตอรองต์ (Mongmoon Cafe)</h2>
+                        <p class="card-subtitle">คาเฟ่และร้านอาหารริมน้ำ บรรยากาศสุดชิล ชมพระอาทิตย์ตกริมแม่น้ำมูล</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>เลียบแม่น้ำมูล วารินชำราบ (ขับรถ 14 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 520+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">10:00 - 21:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:093-456-1188" class="detail-value detail-link">093-456-1188</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหาร & เครื่องดื่ม 65 - 280 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">วิวแม่น้ำมูลสุดโรแมนติก</div>
+                        <div class="highlight-desc">โซนที่นั่งเอาต์ดอร์รับลมริมน้ำมูล, เบเกอรี่โฮมเมด, กาแฟรสละมุน และอาหารฟิวชั่นรสเด็ดสำหรับมื้อค่ำ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:093-456-1188" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=มองมูล คาเฟ่ วารินชำราบ" 
+                           data-place-name="มองมูล คาเฟ่ วาริน" 
+                           data-query="มองมูล คาเฟ่ วารินชำราบ" 
+                           data-lat="15.2050" 
+                           data-lng="104.8610" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป มองมูล คาเฟ่ วาริน
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: เรือนอาหารวิวมูล (View Moon Restaurant) -->
+            <article class="service-card" 
+                     data-id="view-moon-restaurant" 
+                     data-zone="warin" 
+                     data-category="food" 
+                     data-keywords="วิวมูล ร้านอาหาร ริมแม่น้ำมูล ปลาน้ำโขง ปลาคัง ต้มยำ อาหารไทย อีสาน วาริน">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" alt="เรือนอาหารวิวมูล (View Moon Restaurant)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 10:30 - 22:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">เรือนอาหารวิวมูล (View Moon Restaurant)</h2>
+                        <p class="card-subtitle">ร้านอาหารไทย-อีสานริมแม่น้ำมูลชื่อดัง ปลาน้ำโขงสด รสชาติจัดจ้าน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนเลียบแม่น้ำมูล วารินชำราบ (ขับรถ 15 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 1,300+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">10:30 - 22:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-323-951" class="detail-value detail-link">045-323-951</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">120 - 450 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูปลาสดริมมูล</div>
+                        <div class="highlight-desc">ต้มยำปลาคังน้ำใส, ลาบปลาคัง, ปลาเนื้ออ่อนทอดกระเทียม, ทอดมันปลากรายแท้ และส้มตำปูม้า</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-323-951" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=เรือนอาหารวิวมูล วารินชำราบ" 
+                           data-place-name="เรือนอาหารวิวมูล" 
+                           data-query="เรือนอาหารวิวมูล วารินชำราบ" 
+                           data-lat="15.2080" 
+                           data-lng="104.8580" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป เรือนอาหารวิวมูล
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ร้านอร่อยวาริน (ข้าวผัดปูวาริน) -->
+            <article class="service-card" 
+                     data-id="aroy-warin" 
+                     data-zone="warin" 
+                     data-category="food" 
+                     data-keywords="อร่อยวาริน ข้าวผัดปู กระเพาะปลา สุกี้ อาหารตามสั่ง วาริน วารินชำราบ">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=800&q=80" alt="ร้านอร่อยวาริน (ข้าวผัดปูวาริน)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 10:00 - 21:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ร้านอร่อยวาริน (ข้าวผัดปูวาริน)</h2>
+                        <p class="card-subtitle">ร้านอาหารตามสั่งชื่อดังในตำนาน ข้าวผัดปูคั่วหอมกระทะ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนประทุมเทพ วารินชำราบ (ขับรถ 15 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 650+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">10:00 - 21:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-322-888" class="detail-value detail-link">045-322-888</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">จานละ 60 - 150 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูเด็ดขึ้นชื่อ</div>
+                        <div class="highlight-desc">ข้าวผัดปูก้อนคั่วไฟหอมกระทะ, กระเพาะปลาผัดแห้งเนื้อปู, สุกี้แห้งขี้เมา และกุ้งทอดซอสมะขาม</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-322-888" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ร้านอร่อยวาริน ข้าวผัดปู วารินชำราบ" 
+                           data-place-name="ร้านอร่อยวาริน ข้าวผัดปู" 
+                           data-query="ร้านอร่อยวาริน ข้าวผัดปู วารินชำราบ" 
+                           data-lat="15.1930" 
+                           data-lng="104.8620" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ร้านอร่อยวาริน ข้าวผัดปู
+                        </a>
+                    </div>
+                </div>
+            </article>
+
             <!-- Card: ตลาดสดเทศบาล 1 วารินชำราบ (ตลาดโต้รุ่งวาริน) -->
             <article class="service-card" 
                      data-id="market-warin" 
@@ -2454,6 +3358,150 @@
                 </div>
             </article>
 
+            <!-- Card: รุ่งโรจน์สเต็ก หน้า ม.อุบล (Rungroj Steak UBU) -->
+            <article class="service-card" 
+                     data-id="rung-roj-steak-ubu" 
+                     data-zone="warin" 
+                     data-category="food" 
+                     data-keywords="สเต็ก รุ่งโรจน์ ม.อุบล นักศึกษา อาหารเย็น สปาเก็ตตี้ สถลมาร์ค วาริน">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80" alt="รุ่งโรจน์สเต็ก หน้า ม.อุบล (Rungroj Steak UBU)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 16:00 - 22:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">รุ่งโรจน์สเต็ก หน้า ม.อุบล (Rungroj Steak UBU)</h2>
+                        <p class="card-subtitle">ร้านสเต็กขวัญใจเด็ก ม.อุบล จานใหญ่ อิ่มคุ้ม ราคาเป็นกันเอง</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประตู 1 หน้า ม.อุบล ถนนสถลมาร์ค (ขับรถ 20 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 420+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">16:00 - 22:30 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:089-628-9944" class="detail-value detail-link">089-628-9944</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">สเต็กจานละ 69 - 189 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">สเต็กขวัญใจนักศึกษา</div>
+                        <div class="highlight-desc">สเต็กหมูพริกไทยดำชิ้นโต, สเต็กไก่สไปซี่, สเต็กเนื้อโคขุน, สปาเก็ตตี้ผัดขี้เมา และมันบดโฮมเมด</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:089-628-9944" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=รุ่งโรจน์สเต็ก หน้า ม.อุบล วารินชำราบ" 
+                           data-place-name="รุ่งโรจน์สเต็ก ม.อุบล" 
+                           data-query="รุ่งโรจน์สเต็ก หน้า ม.อุบล วารินชำราบ" 
+                           data-lat="15.1215" 
+                           data-lng="104.9030" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป รุ่งโรจน์สเต็ก ม.อุบล
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ตลาดนัด ม.อุบล / ศูนย์อาหารมีเจริญ -->
+            <article class="service-card" 
+                     data-id="market-mee-charoen-ubu" 
+                     data-zone="warin" 
+                     data-category="market" 
+                     data-keywords="ตลาด ม.อุบล มีเจริญ สตรีทฟู้ด นักศึกษา ของกินดึก หม่าล่า ชาบู วาริน">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" alt="ตลาดนัด ม.อุบล / ศูนย์อาหารมีเจริญ" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 15:30 - 22:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ตลาดนัด ม.อุบล / ศูนย์อาหารมีเจริญ</h2>
+                        <p class="card-subtitle">แหล่งรวมสตรีทฟู้ด ขนมหวาน อาหารตามสั่ง และของกินรอบ ม.อุบล</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>โซนหน้า ม.อุบล ถนนสถลมาร์ค (ขับรถ 20 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 750+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">15:30 - 22:00 น. (เปิดทุกวันช่วงเย็น)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารจานด่วน 30 - 70 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">ศูนย์รวมของกินราคานักศึกษา</div>
+                        <div class="highlight-desc">ชาบูเสียบไม้, ยำแซ่บสารพัดนึก, ข้าวไข่เจียวทรงเครื่อง, หม่าล่าปิ้งย่าง, เครปญี่ปุ่น และน้ำปั่นผลไม้สด</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ศูนย์อาหารมีเจริญ ม.อุบล วารินชำราบ" 
+                           data-place-name="ตลาดนัด ม.อุบล (มีเจริญ)" 
+                           data-query="ศูนย์อาหารมีเจริญ ม.อุบล วารินชำราบ" 
+                           data-lat="15.1200" 
+                           data-lng="104.9040" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ตลาดนัด ม.อุบล (มีเจริญ)
+                        </a>
+                    </div>
+                </div>
+            </article>
+
             <!-- Card: โรงพยาบาลวารินชำราบ (Warin Chamrap Hospital) -->
             <article class="service-card" 
                      data-id="hospital-warin" 
@@ -2535,7 +3583,7 @@
         <div class="empty-state" id="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <h3>ไม่พบสถานที่ที่ค้นหา</h3>
-            <p>ลองค้นหาด้วยคำอื่น เช่น สเต็ก, กาแฟ, เซ็นทรัล, ก๋วยจั๊บ, วาริน หรือเลือกหมวดหมู่อื่น</p>
+            <p>ลองค้นหาด้วยคำอื่น เช่น สเต็ก, กาแฟ, เซ็นทรัล, ก๋วยจั๊บ, วาริน, ม.อุบล หรือเลือกหมวดหมู่อื่น</p>
         </div>
 
         <!-- Emergency Section -->
