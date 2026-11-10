@@ -19,6 +19,11 @@ struct RoomListView: View {
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
     @AppStorage("hasSeenNotificationOnboarding") private var hasSeenNotificationOnboarding = false
     @State private var showNotificationOnboarding = false
+    @State private var editingProfileAdmin: Admin? = nil
+    @AppStorage("userName") private var currentUserName: String = ""
+    @AppStorage("userEmail") private var currentUserEmail: String = ""
+    @AppStorage("userRole") private var currentUserRole: String = "admin"
+    @AppStorage("adminID") private var currentAdminID: Int = 0
     @Environment(\.colorScheme) var colorScheme
     @State private var isLoggingOut = false
     @State private var autoPullTask: Task<Void, Never>?
@@ -170,7 +175,16 @@ struct RoomListView: View {
                     .transition(.opacity)
             }
             
-            SidebarMenu(isOpen: $isSidebarOpen, isLoggedIn: $isLoggedIn, isSettingsMode: $isSettingsMode, selectedTab: $selectedTab, isLoggingOut: $isLoggingOut)
+            SidebarMenu(
+                isOpen: $isSidebarOpen,
+                isLoggedIn: $isLoggedIn,
+                isSettingsMode: $isSettingsMode,
+                selectedTab: $selectedTab,
+                isLoggingOut: $isLoggingOut,
+                onEditProfile: {
+                    openSelfProfileSheet()
+                }
+            )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .offset(x: isSidebarOpen ? 0 : -(UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen.bounds.width }.first ?? 400))
                 .ignoresSafeArea()
@@ -239,6 +253,17 @@ struct RoomListView: View {
         }
         .fullScreenCover(isPresented: $showNotificationOnboarding) {
             NotificationOnboardingView()
+        }
+        .sheet(item: $editingProfileAdmin) { admin in
+            EditAdminSheet(admin: admin, onSuccess: {
+                if let updated = editingProfileAdmin {
+                    currentUserName = updated.username
+                    if updated.role != "superadmin", let backup = updated.backup_email, !backup.isEmpty {
+                        currentUserEmail = backup
+                    }
+                }
+            })
+            .iphoneFullSheetStyle()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
@@ -561,6 +586,54 @@ struct RoomListView: View {
             break
         }
     }
+
+    private func openSelfProfileSheet() {
+        let sessionID = APIService.shared.currentSessionAdminID ?? (currentAdminID > 0 ? currentAdminID : 0)
+        let initialAdmin = Admin(
+            id: sessionID,
+            username: currentUserName,
+            role: currentUserRole,
+            email: currentUserEmail,
+            profile_image: nil,
+            backup_email: currentUserRole == "superadmin" ? "" : currentUserEmail,
+            promptpay_id: "",
+            payment_type: "promptpay",
+            bank_account: "",
+            account_name: "",
+            dorm_code: ""
+        )
+        editingProfileAdmin = initialAdmin
+        
+        Task {
+            do {
+                let admins = try await APIService.shared.fetchAdmins()
+                let target = admins.first { admin in
+                    if sessionID > 0 && admin.id == sessionID { return true }
+                    let normUser = currentUserName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if !normUser.isEmpty && admin.username.lowercased() == normUser {
+                        return true
+                    }
+                    let normEmail = currentUserEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    if !normEmail.isEmpty {
+                        if let backup = admin.backup_email?.lowercased(), backup == normEmail {
+                            return true
+                        }
+                        if admin.email.lowercased() == normEmail {
+                            return true
+                        }
+                    }
+                    return false
+                }
+                if let target = target {
+                    await MainActor.run {
+                        editingProfileAdmin = target
+                    }
+                }
+            } catch {
+                print("Failed to fetch admin profile: \(error)")
+            }
+        }
+    }
 }
 
 struct CloudOutlineShape: Shape {
@@ -766,6 +839,7 @@ struct SidebarMenu: View {
     @Binding var isSettingsMode: Bool
     @Binding var selectedTab: DashboardTab
     @Binding var isLoggingOut: Bool
+    var onEditProfile: () -> Void
     @Environment(\.colorScheme) var colorScheme
     @AppStorage("userName") var userName: String = ""
     @AppStorage("userEmail") var userEmail: String = ""
@@ -773,8 +847,6 @@ struct SidebarMenu: View {
     @AppStorage("adminID") var adminID: Int = 0
     @AppStorage("profileImageUpdateToken") var profileImageUpdateToken: Double = 0
     @AppStorage("selectedHomeIconName") private var selectedHomeIconName: String = "default"
-    @State private var showingEditProfile = false
-    @State private var currentEditingAdmin: Admin? = nil
     @State private var gearRotation: Double = 0
     
     var body: some View {
@@ -883,7 +955,10 @@ struct SidebarMenu: View {
                                     selectedTab = isSettingsMode ? .adminManagement : .overview
                                 }
                             } else {
-                                showingEditProfile = true
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                    isOpen = false
+                                }
+                                onEditProfile()
                             }
                         }) {
                             Image(systemName: "gearshape.fill")
@@ -957,52 +1032,6 @@ struct SidebarMenu: View {
                     .padding(.bottom, 20)
                 }
                 .frame(maxWidth: .infinity)
-            }
-        }
-        .sheet(item: $currentEditingAdmin) { admin in
-            EditAdminSheet(admin: admin, onSuccess: {
-            })
-            .iphoneFullSheetStyle()
-        }
-        .onChange(of: showingEditProfile) { _, newValue in
-            if newValue {
-                Task {
-                    do {
-                        let admins = try await APIService.shared.fetchAdmins()
-                        let sessionID = APIService.shared.currentSessionAdminID
-                        let normalizedUserEmail = userEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                        let normalizedUserName = userName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-
-                        let me = admins.first { admin in
-                            if let sessionID = sessionID, sessionID > 0, admin.id == sessionID {
-                                return true
-                            }
-                            if !normalizedUserName.isEmpty && admin.username.lowercased() == normalizedUserName {
-                                return true
-                            }
-                            if !normalizedUserEmail.isEmpty {
-                                if let backup = admin.backup_email?.lowercased(), backup == normalizedUserEmail {
-                                    return true
-                                }
-                                if admin.email.lowercased() == normalizedUserEmail {
-                                    return true
-                                }
-                            }
-                            return admin.id == adminID
-                        }
-
-                        if let target = me {
-                            await MainActor.run {
-                                currentEditingAdmin = target
-                            }
-                        }
-                    } catch {
-                        print("Failed to fetch admin data: \(error)")
-                    }
-                    await MainActor.run {
-                        showingEditProfile = false
-                    }
-                }
             }
         }
     }

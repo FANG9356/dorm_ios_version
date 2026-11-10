@@ -760,9 +760,10 @@ struct LoginView: View {
     }
 
     private func restoreSavedAccount(_ account: SavedAccount, token: String) throws {
-        try APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role)
-        if let accountID = APIService.shared.localSessionAccountID(token: token) {
-            UserDefaults.standard.set(accountID, forKey: "adminID")
+        try APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role, fallbackAccountID: account.adminID)
+        let resolvedAccountID = APIService.shared.localSessionAccountID(token: token) ?? account.adminID
+        if let resolvedAccountID, resolvedAccountID > 0 {
+            UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
         }
         userEmail = account.email
         userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "ผู้ใช้") : account.name

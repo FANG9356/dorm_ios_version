@@ -333,6 +333,7 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":        "success",
 			"id":            admin.ID,
 			"account_id":    accountID,
 			"token":         tokenString,

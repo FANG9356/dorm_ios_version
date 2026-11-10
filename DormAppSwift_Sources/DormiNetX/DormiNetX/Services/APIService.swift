@@ -31,8 +31,11 @@ class APIService {
         }
     }
 
-    func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil) throws {
-        guard localSessionAccountID(token: token) != nil else { throw CredentialError.expiredSession }
+    func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil, fallbackAccountID: Int? = nil) throws {
+        if let fallbackAccountID, fallbackAccountID > 0 {
+            UserDefaults.standard.set(fallbackAccountID, forKey: "adminID")
+        }
+        guard localSessionAccountID(token: token) != nil || (fallbackAccountID ?? 0) > 0 else { throw CredentialError.expiredSession }
         try CredentialStore.shared.setToken(token)
         currentEmail = email
 
@@ -44,7 +47,9 @@ class APIService {
             userRole = "admin"
         }
 
-        if let accountID = localSessionAccountID(token: token) {
+        if let fallbackAccountID, fallbackAccountID > 0 {
+            UserDefaults.standard.set(fallbackAccountID, forKey: "adminID")
+        } else if let accountID = localSessionAccountID(token: token) {
             UserDefaults.standard.set(accountID, forKey: "adminID")
         }
     }
@@ -70,6 +75,13 @@ class APIService {
               expiry.isFinite, expiry > now.timeIntervalSince1970 else { return nil }
         if let account = jwtIntClaim("account_id", from: token), account > 0 {
             return account
+        }
+        let role = jwtStringClaim("role", from: token) ?? ""
+        if role != "superadmin" {
+            let persisted = UserDefaults.standard.integer(forKey: "adminID")
+            if persisted > 0 {
+                return persisted
+            }
         }
         guard let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
         return account
@@ -110,27 +122,29 @@ class APIService {
         }
         
         if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let status = json["status"] as? String, status == "success" {
+           (json["status"] as? String == "success" || json["token"] != nil) {
             self.currentEmail = email
+            
+            // Extract role first so localSessionAccountID knows whether user is superadmin
+            if let role = json["role"] as? String {
+                self.userRole = role
+            } else {
+                self.userRole = "admin" // Default fallback
+            }
+            
+            if let accountId = json["account_id"] as? Int, accountId > 0 {
+                UserDefaults.standard.set(accountId, forKey: "adminID")
+            } else if let adminId = json["admin_id"] as? Int, adminId > 0 {
+                UserDefaults.standard.set(adminId, forKey: "adminID")
+            }
+
             if let token = json["token"] as? String {
                 try CredentialStore.shared.setToken(token)
                 if let id = self.localSessionAccountID(token: token) {
                     UserDefaults.standard.set(id, forKey: "adminID")
                 }
             }
-            let name = json["name"] as? String
-            
-            // Use role from server response
-            if let role = json["role"] as? String {
-                self.userRole = role
-            } else {
-                self.userRole = "admin" // Default fallback
-            }
-            if let accountId = json["account_id"] as? Int, accountId > 0 {
-                UserDefaults.standard.set(accountId, forKey: "adminID")
-            } else if let adminId = json["admin_id"] as? Int {
-                UserDefaults.standard.set(adminId, forKey: "adminID")
-            }
+            let name = json["name"] as? String ?? json["username"] as? String
             return (true, name)
         }
         

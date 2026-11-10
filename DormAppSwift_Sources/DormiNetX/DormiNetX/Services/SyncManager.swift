@@ -525,7 +525,9 @@ class SyncManager: ObservableObject {
                 guard Date().timeIntervalSince(createdAt) <= recentRemoteAutoPullWindow else { return false }
             }
 
-            if let remoteEmail = meta.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !remoteEmail.isEmpty {
+            if let metaAccountID = meta.accountID, metaAccountID > 0 {
+                guard metaAccountID == accountID else { return false }
+            } else if let remoteEmail = meta.email?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !remoteEmail.isEmpty {
                 let localEmail = (api.currentEmail ?? defaults.string(forKey: "userEmail") ?? "")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                     .lowercased()

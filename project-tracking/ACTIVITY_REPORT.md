@@ -3410,3 +3410,45 @@
   - backend-dorm/public/services.html
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการแก้ไข ทดสอบ และนำขึ้นระบบจริงเรียบร้อย (Fixed & Deployed)
+
+
+## 2026-11-10 21:55 — แก้ไขปัญหาเข้าสู่ระบบด้วยอีเมลสิทธิ์ลูกแล้วข้อมูลไม่ขึ้น และการกดปุ่มฟันเฟืองแก้ไขข้อมูลตนเองไม่ได้
+
+- คำขอ/เป้าหมาย:
+  1. "ทำไมเข้าด้วยเมลล์ลูกแล้ว ข้อมูลไม่ขึ้น" — แก้ไขให้เมื่อล็อกอินด้วยอีเมลสิทธิ์ลูก (เช่น enoshimaj991@gmail.com) สามารถดึงข้อมูลห้องพัก ผู้เช่า และบิลของหอพัก (Account 1) มาแสดงผลได้อย่างถูกต้อง
+  2. "และ ก็กดแก้ไขข้อมูลตัวเองไม่ได้" — แก้ไขให้ผู้ใช้สิทธิ์ลูกสามารถกดปุ่มฟันเฟืองในเมนูด้านข้าง (Sidebar) เพื่อเปิดหน้าต่างแก้ไขข้อมูลตนเอง (EditAdminSheet) และบันทึกข้อมูลชื่อและอีเมลส่วนตัวได้อย่างสมบูรณ์
+- สาเหตุของปัญหาที่ตรวจพบ:
+  1. สาเหตุข้อมูลไม่ขึ้น:
+     - โทเค็น JWT เดิมที่ถูกบันทึกไว้ใน Keychain / ประวัติบัญชี เป็นโทเค็นที่ออกมาก่อนการเพิ่มเคลม account_id ส่งผลให้เมื่อฟังก์ชัน localSessionAccountID(token:) ใน APIService.swift ไม่พบเคลม account_id จึงถอยกลับไปใช้ admin_id (ซึ่งของสิทธิ์ลูกคือ 2)
+     - ทำให้แอปเข้าใจผิดและสร้างฐานข้อมูล SwiftData เปล่าขึ้นมาเป็น account_2.store แทนที่จะชี้ไปที่ account_1.store ซึ่งมีข้อมูลจริงทั้งหมด
+     - ฟังก์ชัน shouldAutoPullRemoteSnapshot() ใน SyncManager.swift มีเงื่อนไขตรวจสอบว่า localEmail == remoteEmail ซึ่งในกรณีของสิทธิ์ลูก localEmail คืออีเมลลูก (enoshimaj991@gmail.com) ส่วน remoteEmail จากเซิร์ฟเวอร์คืออีเมลเจ้าของหอพัก (phakhaphonsukmee@gmail.com) ส่งผลให้เงื่อนไขล้มเหลวและระบบปฏิเสธการดึงข้อมูลจาก Cloud อัตโนมัติ
+     - ฟังก์ชัน login(email:password:) ใน APIService.swift รอรับฟิลด์ "status": "success" ขณะที่เซิร์ฟเวอร์บางเส้นทางตอบกลับข้อมูลโดยตรง
+  2. สาเหตุที่กดปุ่มฟันเฟืองแก้ไขข้อมูลตนเองไม่ได้:
+     - ใน SidebarMenu การเปิด Modal Sheet (.sheet(item: $currentEditingAdmin)) ถูกผูกไว้กับตัว SidebarMenu โดยตรง ซึ่งเป็นวิวที่มีแอนิเมชัน Offset สไลด์เข้าออกและมีการครอบ .ignoresSafeArea() พร้อมกับตัวแปร isOpen ยังคงเป็นจริง ทำให้เกิดการชนของหน้าต่างและถูกบล็อกการแสดงผลใน iOS
+     - ก่อนเปิด Sheet มีการเรียก APIService.shared.fetchAdmins() ผ่านเครือข่ายแบบ Asynchronous โดยไม่มีการแสดงสถานะ Loading ทำให้การตอบสนองของปุ่มดูเหมือนไม่ทำงาน
+- สิ่งที่ดำเนินการแก้ไข:
+  1. ฝั่ง Go Backend (backend-dorm/handlers/auth.go):
+     - เพิ่มฟิลด์ "status": "success" ในผลลัพธ์ของ LoginHandler ให้สอดคล้องกันทุกช่องทาง
+     - รัน Unit Tests และ Race Detector ผ่าน 100%
+     - Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: 8121595f422d67a1a82444619ffda6efdf35a2e6d205c7d6a60e6f6450de5508, สำรองไว้ที่ /home/fang/dorminet_workspace/backups/20261110-065220-pre-flex-ui)
+  2. ฝั่ง iOS Client (APIService.swift, LoginView.swift, SyncManager.swift, RoomListView.swift, AdminManagementTabView.swift):
+     - APIService.swift:
+       - ปรับปรุง localSessionAccountID(token:) หากผู้ใช้ไม่ใช่ superadmin ให้ดึงค่าบัญชีหอพักจาก UserDefaults.adminID เป็นลำดับหลัก ไม่หลงไปใช้ admin_id ของพนักงาน
+       - ปรับปรุง restoreSession ให้รองรับ fallbackAccountID จากประวัติบัญชี
+       - ปรับปรุง login(email:password:) ให้รองรับทั้ง "status": "success" และการตรวจสอบ "token" พร้อมจัดเก็บ account_id ให้พร้อมก่อนการสลับหน้า
+     - LoginView.swift:
+       - ส่ง account.adminID เข้าสู่ restoreSession ในฟังก์ชัน restoreSavedAccount ป้องกันการเปิด Store ผิดบัญชี
+     - SyncManager.swift:
+       - ปรับปรุงเงื่อนไขใน shouldAutoPullRemoteSnapshot() ให้ตรวจสอบ meta.accountID == accountID เป็นหลัก เพื่อให้สิทธิ์ลูกสามารถซิงค์ข้อมูลล่าสุดของหอพักเดียวกันได้อย่างสมบูรณ์
+     - RoomListView.swift:
+       - ย้ายการผูก Sheet (.sheet(item: $editingProfileAdmin)) ขึ้นมาระดับบนสุดของ RoomListView ป้องกันปัญหา Sheet Suppression จาก Sidebar
+       - เมื่อสิทธิ์ลูกกดปุ่มฟันเฟือง ระบบจะปิด Sidebar ลงอย่างนุ่มนวลทันที (isOpen = false) และเปิด EditAdminSheet ขึ้นมาทันทีโดยไม่ต้องรอผลทางเครือข่าย
+       - มีการโหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์แบบเบื้องหลังเพื่ออัปเดตฟิลด์เพิ่มเติมในทันที
+     - AdminManagementTabView.swift:
+       - ใน EditAdminSheet.submit() เพิ่มการอัปเดต userEmail ใน UserDefaults เมื่อสิทธิ์ลูกแก้ไขอีเมลส่วนตัว (backupEmail)
+- การตรวจสอบและผลลัพธ์:
+  - Backend: go test ./... -> PASS, go test -race ./handlers -> PASS (0 data race), go vet ./... -> PASS
+  - Backend Deploy: DEPLOY_SUCCESS, SHA-256: 8121595f422d67a1a82444619ffda6efdf35a2e6d205c7d6a60e6f6450de5508, Health check: {"status":"online"}
+  - iOS Build: คอมไพล์และลงนามสำเร็จ (** BUILD SUCCEEDED **)
+  - iOS Install: ติดตั้งลงเครื่อง iPhone 11 ("F", UDID 00008030-001C65A134C0A02E) เรียบร้อย และเปิดแอปสำเร็จ
+- สถานะ deploy/UAT: Deploy และติดตั้งลงอุปกรณ์จริงเรียบร้อยแล้ว

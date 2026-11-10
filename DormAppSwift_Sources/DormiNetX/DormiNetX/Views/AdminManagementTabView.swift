@@ -581,6 +581,9 @@ struct EditAdminSheet: View {
                 let sessionAdminID = APIService.shared.currentSessionAdminID ?? UserDefaults.standard.integer(forKey: "adminID")
                 if admin.id == sessionAdminID {
                     UserDefaults.standard.set(username, forKey: "userName")
+                    if admin.role != "superadmin" && !backupEmail.isEmpty {
+                        UserDefaults.standard.set(backupEmail, forKey: "userEmail")
+                    }
                     if !newPassword.isEmpty {
                         // Log out automatically if they changed their own password
                         try? CredentialStore.shared.setToken(nil)
