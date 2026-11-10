@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>บริการรอบหอพัก • DormiNetX</title>
-    <meta name="description" content="คู่มือบริการและร้านค้ารอบหอพัก DormiNetX ตลาดหนองบัว อุบลราชธานี ร้านอาหาร คาเฟ่ ร้านสะดวกซื้อ และบริการจำเป็นในระยะเดินถึง">
+    <title>คู่มือเมืองอุบลและวารินชำราบ • DormiNetX</title>
+    <meta name="description" content="แนะนำร้านอาหาร คาเฟ่ ตลาด จุดสำคัญ แหล่งช้อปปิ้ง และบริการจำเป็นทั่วเมืองอุบลและฝั่งวารินชำราบ พร้อมระบบนำทางด้วยพิกัดและชื่อร้านจริง">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -33,7 +33,7 @@
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 20px;
-            --radius-full: 9999px;
+            --radius-pill: 9999px;
         }
 
         * {
@@ -102,29 +102,28 @@
         .nav-sub {
             font-size: 11px;
             color: var(--text-muted);
-            letter-spacing: 0.01em;
+            font-weight: 500;
         }
 
         .badge-verified {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
-            padding: 5px 12px;
-            border-radius: var(--radius-full);
-            background: var(--brand-blue-soft);
             color: var(--brand-blue);
-            border: 1px solid rgba(2, 132, 199, 0.18);
+            background: var(--brand-blue-soft);
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
         }
 
         .badge-verified svg {
-            width: 13px;
-            height: 13px;
-            stroke-width: 2.2;
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.4;
         }
 
-        /* Hero Header Section */
+        /* Hero Section */
         .hero {
             padding: 24px 0 16px;
             text-align: center;
@@ -134,14 +133,14 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 5px 14px;
+            border-radius: var(--radius-pill);
             font-size: 12px;
             font-weight: 600;
-            padding: 6px 14px;
-            border-radius: var(--radius-full);
-            background: #ffffff;
-            color: var(--text-heading);
+            color: var(--text-muted);
             margin-bottom: 12px;
-            border: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
         }
 
@@ -154,108 +153,163 @@
 
         .hero h1 {
             font-size: 24px;
-            font-weight: 700;
+            font-weight: 800;
             color: var(--text-heading);
             letter-spacing: -0.02em;
             margin-bottom: 8px;
-            line-height: 1.3;
-        }
-
-        @media (min-width: 640px) {
-            .hero h1 {
-                font-size: 28px;
-            }
+            line-height: 1.25;
         }
 
         .hero p {
             font-size: 14px;
             color: var(--text-muted);
-            max-width: 620px;
+            max-width: 640px;
             margin: 0 auto;
             line-height: 1.5;
         }
 
-        /* Search Box */
+        /* Search Bar */
         .search-wrapper {
-            margin: 16px 0 14px;
             position: relative;
+            margin: 16px 0 14px;
         }
 
         .search-box {
             position: relative;
             display: flex;
             align-items: center;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0 14px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: #0f172a;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
         }
 
         .search-icon {
-            position: absolute;
-            left: 14px;
             width: 18px;
             height: 18px;
             color: var(--text-light);
-            pointer-events: none;
-            stroke-width: 2;
+            margin-right: 10px;
+            flex-shrink: 0;
+            stroke-width: 2.2;
         }
 
         .search-input {
             width: 100%;
-            padding: 12px 40px 12px 42px;
-            font-size: 14px;
-            font-family: inherit;
-            color: var(--text-heading);
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
+            height: 46px;
+            border: none;
             outline: none;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow-sm);
+            background: transparent;
+            font-size: 14px;
+            color: var(--text-heading);
+            font-family: inherit;
         }
 
-        .search-input:focus {
-            border-color: var(--brand-blue);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+        .search-input::placeholder {
+            color: var(--text-light);
         }
 
         .search-clear {
-            position: absolute;
-            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
             display: none;
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
-            border-radius: var(--radius-full);
-            background: var(--bg-muted);
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 0;
-            transition: background 0.15s ease;
         }
 
-        .search-clear:hover {
-            background: var(--border-hover);
+        .search-clear.visible {
+            display: flex;
         }
 
         .search-clear svg {
-            width: 12px;
-            height: 12px;
+            width: 16px;
+            height: 16px;
             stroke-width: 2.2;
+        }
+
+        /* Zone Segmented Tabs (Area Selector) */
+        .zone-tabs-wrapper {
+            margin-bottom: 12px;
+        }
+
+        .zone-tabs-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .zone-tabs-label svg {
+            width: 13px;
+            height: 13px;
+            stroke-width: 2.2;
+        }
+
+        .zone-tabs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: #e2e8f0;
+            padding: 3px;
+            border-radius: var(--radius-md);
+            gap: 3px;
+        }
+
+        .zone-tab-btn {
+            border: none;
+            background: transparent;
+            padding: 8px 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: calc(var(--radius-md) - 3px);
+            cursor: pointer;
+            transition: all 0.16s ease;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .zone-tab-btn.active {
+            background: #ffffff;
+            color: var(--text-heading);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        @media (max-width: 520px) {
+            .zone-tabs {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         /* Category Filter Pills */
         .filter-container {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .filter-scroll {
             display: flex;
             gap: 8px;
             overflow-x: auto;
-            padding: 4px 2px 8px;
+            padding-bottom: 4px;
             scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
+            -ms-overflow-style: none;
         }
 
         .filter-scroll::-webkit-scrollbar {
@@ -263,328 +317,46 @@
         }
 
         .filter-pill {
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: var(--text-muted);
+            padding: 7px 14px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.16s ease;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 15px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-body);
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-full);
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.18s ease;
             box-shadow: var(--shadow-sm);
-            flex-shrink: 0;
         }
 
         .filter-pill:hover {
             border-color: var(--border-hover);
-            background: var(--bg-muted);
             color: var(--text-heading);
         }
 
         .filter-pill.active {
             background: #0f172a;
-            color: #ffffff;
             border-color: #0f172a;
-            font-weight: 600;
-            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
         }
 
-        .pill-count {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 600;
-            padding: 1px 6px;
-            border-radius: var(--radius-full);
+        .filter-pill .pill-count {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: var(--radius-pill);
             background: var(--bg-muted);
             color: var(--text-muted);
+            font-weight: 700;
         }
 
         .filter-pill.active .pill-count {
-            background: rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.2);
             color: #ffffff;
-        }
-
-        /* Result Metadata */
-        .results-meta {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-            padding: 0 4px;
-        }
-
-        /* Services Grid */
-        .services-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-
-        @media (min-width: 680px) {
-            .services-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 22px;
-            }
-        }
-
-        /* Service Card (Pure White Apple Style) */
-        .service-card {
-            background: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            box-shadow: var(--shadow-card);
-            display: flex;
-            flex-direction: column;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-        }
-
-        .service-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--border-hover);
-            box-shadow: var(--shadow-float);
-        }
-
-        /* Media Thumbnail */
-        .card-media {
-            position: relative;
-            height: 190px;
-            width: 100%;
-            background: var(--bg-muted);
-            overflow: hidden;
-        }
-
-        .card-media img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.4s ease;
-        }
-
-        .service-card:hover .card-media img {
-            transform: scale(1.03);
-        }
-
-        /* Frosted Glass Badges on Image */
-        .card-badge-status {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 11px;
-            border-radius: var(--radius-full);
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            color: var(--text-heading);
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background-color: var(--success-color);
-            box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
-        }
-
-        .status-dot.blue {
-            background-color: var(--brand-blue);
-            box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
-        }
-
-        .card-badge-distance {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 5px 11px;
-            border-radius: var(--radius-full);
-            background: rgba(255, 255, 255, 0.94);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            color: var(--text-heading);
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .card-badge-distance svg {
-            width: 13px;
-            height: 13px;
-            stroke-width: 2.2;
-            color: var(--brand-blue);
-        }
-
-        /* Card Content */
-        .card-content {
-            padding: 18px;
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            background: #ffffff;
-        }
-
-        .card-category-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--brand-blue);
-            margin-bottom: 4px;
-        }
-
-        .card-header-row {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 2px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-heading);
-            letter-spacing: -0.01em;
-            line-height: 1.3;
-        }
-
-        .card-subtitle {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-        }
-
-        /* Details */
-        .card-details {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 14px;
-            font-size: 12px;
-        }
-
-        .detail-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-body);
-        }
-
-        .detail-row svg {
-            width: 15px;
-            height: 15px;
-            color: var(--text-light);
-            flex-shrink: 0;
-            stroke-width: 2;
-        }
-
-        .detail-label {
-            color: var(--text-muted);
-        }
-
-        .detail-value {
-            font-weight: 600;
-            color: var(--text-heading);
-            margin-left: auto;
-        }
-
-        /* Highlight Box */
-        .card-highlight {
-            background: var(--bg-subtle);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 10px 12px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .highlight-title {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--text-muted);
-        }
-
-        .highlight-desc {
-            color: var(--text-body);
-            line-height: 1.45;
-        }
-
-        /* Card Action Buttons */
-        .card-actions {
-            margin-top: auto;
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            font-family: inherit;
-            border-radius: var(--radius-md);
-            text-decoration: none;
-            transition: all 0.16s ease;
-            flex: 1;
-            white-space: nowrap;
-            cursor: pointer;
-        }
-
-        .btn-action svg {
-            width: 15px;
-            height: 15px;
-            stroke-width: 2.2;
-        }
-
-        .btn-call {
-            background: var(--bg-muted);
-            color: var(--text-heading);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-call:hover {
-            background: var(--border-hover);
-            border-color: var(--border-hover);
-        }
-
-        .btn-map {
-            background: #0f172a;
-            color: #ffffff;
-            border: 1px solid #0f172a;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
-        }
-
-        .btn-map:hover {
-            background: #1e293b;
-            border-color: #1e293b;
         }
 
         /* Overview Map Quick Banner */
@@ -593,7 +365,7 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
             padding: 16px 20px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -667,6 +439,278 @@
             }
         }
 
+        /* Results Metadata */
+        .results-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 0 4px;
+        }
+
+        .results-count {
+            font-weight: 600;
+        }
+
+        /* Service Cards Grid */
+        .cards-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        /* Service Card (Pure White Apple Style) */
+        .service-card {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .service-card:hover {
+            box-shadow: var(--shadow-float);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-image-wrap {
+            position: relative;
+            width: 100%;
+            height: 190px;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+
+        .service-card:hover .card-image {
+            transform: scale(1.03);
+        }
+
+        /* Frosted Glass Badges on Image */
+        .card-badge-status {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            color: var(--text-heading);
+            padding: 5px 11px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-badge-zone {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            padding: 5px 11px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--success-color);
+        }
+
+        .badge-blue .status-dot {
+            background: var(--brand-blue);
+        }
+
+        .card-body {
+            padding: 18px 20px 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-header-group {
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Distance & Rating Meta Pills */
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 14px;
+        }
+
+        .meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-body);
+        }
+
+        .meta-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-muted);
+            stroke-width: 2.2;
+        }
+
+        /* Key-Value Details */
+        .card-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            flex-shrink: 0;
+            margin-right: 12px;
+        }
+
+        .detail-value {
+            color: var(--text-heading);
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .detail-link {
+            color: var(--brand-blue);
+            text-decoration: none;
+            margin-left: auto;
+        }
+
+        /* Highlight Recommendation Box */
+        .card-highlight {
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-bottom: 16px;
+        }
+
+        .highlight-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+
+        .highlight-desc {
+            font-size: 12px;
+            color: var(--text-body);
+            line-height: 1.45;
+        }
+
+        /* Action Buttons */
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.16s ease;
+            flex: 1;
+            white-space: nowrap;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .btn-action svg {
+            width: 15px;
+            height: 15px;
+            stroke-width: 2.2;
+        }
+
+        .btn-call {
+            background: var(--bg-muted);
+            color: var(--text-heading);
+            border-color: var(--border-color);
+        }
+
+        .btn-call:hover {
+            background: #e2e8f0;
+            border-color: var(--border-hover);
+        }
+
+        .btn-map {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+        }
+
+        .btn-map:hover {
+            background: #1e293b;
+            border-color: #1e293b;
+        }
+
         /* Emergency Section */
         .emergency-section {
             background: #ffffff;
@@ -699,14 +743,8 @@
 
         .emergency-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
-        }
-
-        @media (min-width: 640px) {
-            .emergency-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
         }
 
         .emergency-card {
@@ -715,55 +753,76 @@
             border-radius: var(--radius-md);
             padding: 12px 14px;
             display: flex;
-            flex-direction: column;
-            gap: 4px;
+            align-items: center;
+            justify-content: space-between;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.16s ease;
         }
 
-        .emergency-card-title {
+        .emergency-card:hover {
+            background: #ffffff;
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .emergency-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .emergency-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .emergency-desc {
             font-size: 11px;
-            font-weight: 500;
             color: var(--text-muted);
         }
 
-        .emergency-card-phone {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-heading);
-            text-decoration: none;
+        .emergency-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            transition: color 0.15s ease;
-        }
-
-        .emergency-card-phone:hover {
+            gap: 4px;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 5px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 700;
             color: var(--brand-blue);
         }
 
-        .emergency-card-phone svg {
-            width: 14px;
-            height: 14px;
-            color: var(--brand-blue);
+        .emergency-btn svg {
+            width: 12px;
+            height: 12px;
             stroke-width: 2.2;
         }
 
-        /* Empty Search State */
+        /* Empty State */
         .empty-state {
             display: none;
-            text-align: center;
-            padding: 48px 16px;
             background: #ffffff;
-            border: 1px dashed var(--border-color);
+            border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            margin: 20px 0;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .empty-state.visible {
+            display: block;
         }
 
         .empty-state svg {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             color: var(--text-light);
-            stroke-width: 1.8;
             margin-bottom: 12px;
+            stroke-width: 1.5;
         }
 
         .empty-state h3 {
@@ -780,56 +839,35 @@
 
         /* Footer */
         .site-footer {
-            margin-top: 36px;
-            padding: 24px 0 12px;
+            margin-top: auto;
+            padding: 28px 0 16px;
             border-top: 1px solid var(--border-color);
+            text-align: center;
             font-size: 12px;
             color: var(--text-muted);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            text-align: center;
         }
 
-        @media (min-width: 640px) {
-            .site-footer {
-                flex-direction: row;
-                justify-content: space-between;
-                text-align: left;
-            }
-        }
-
-        .footer-links {
-            display: flex;
-            gap: 16px;
-        }
-
-        .footer-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            transition: color 0.15s ease;
-        }
-
-        .footer-links a:hover {
+        .site-footer a {
             color: var(--text-heading);
+            text-decoration: none;
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
 
-    <!-- Sticky Navigation Bar (Clean White Apple Header) -->
+    <!-- Header -->
     <header class="site-header">
         <div class="container nav-inner">
             <div class="nav-brand">
                 <div class="nav-title">
                     Dormi<span>NetX</span>
                 </div>
-                <div class="nav-sub">dorminet.studio · Nong Bua Services</div>
+                <div class="nav-sub">dorminet.studio · Ubon & Warin Guide</div>
             </div>
             <div class="badge-verified">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                พิกัดจริงรอบหอพัก
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11 12 14 22 4"/></svg>
+                พิกัดและร้านจริง
             </div>
         </div>
     </header>
@@ -840,10 +878,10 @@
         <section class="hero">
             <div class="hero-chip">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                แผนที่และบริการรอบหอพักจริง
+                พิกัดจริงทั่วเมืองอุบล & ฝั่งวารินชำราบ
             </div>
-            <h1>บริการและร้านค้ารอบหอพัก</h1>
-            <p>รวมร้านค้า คาเฟ่ ร้านอาหาร และบริการจำเป็นย่านตลาดหนองบัว อุบลราชธานี นำทางผ่านแผนที่จริงของอุปกรณ์ได้ทันที</p>
+            <h1>บริการและสถานที่สำคัญทั่วเมืองอุบล & วาริน</h1>
+            <p>แนะนำร้านอาหาร คาเฟ่ ตลาด จุดสำคัญ แหล่งช้อปปิ้ง และบริการจำเป็น นำทางตรงไปยังชื่อร้านผ่านแอปแผนที่หลักจากตำแหน่งปัจจุบันของคุณได้ทันที</p>
         </section>
 
         <!-- Search Bar -->
@@ -854,11 +892,49 @@
                     type="search" 
                     id="search-input" 
                     class="search-input" 
-                    placeholder="ค้นหาชื่อร้าน, เมนู, หรือประเภทบริการ..." 
+                    placeholder="ค้นหาชื่อร้าน, สถานที่, เมนู, หรือบริการ..." 
                     autocomplete="off"
                 >
                 <button type="button" id="search-clear" class="search-clear" aria-label="ล้างการค้นหา">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Zone Selector (Area Tabs) -->
+        <div class="zone-tabs-wrapper">
+            <div class="zone-tabs-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                เลือกโซนพื้นที่
+            </div>
+            <div class="zone-tabs" id="zone-tabs">
+                <button class="zone-tab-btn active" data-zone="all">ทั้งหมด (ทุกโซน)</button>
+                <button class="zone-tab-btn" data-zone="nongbua">รอบหอ & หนองบัว</button>
+                <button class="zone-tab-btn" data-zone="ubon">ในเมืองอุบล</button>
+                <button class="zone-tab-btn" data-zone="warin">ฝั่งวารินชำราบ</button>
+            </div>
+        </div>
+
+        <!-- Horizontal Category Filters -->
+        <div class="filter-container">
+            <div class="filter-scroll" id="filter-buttons">
+                <button class="filter-pill active" data-category="all">
+                    ทุกหมวดหมู่ <span class="pill-count" id="count-all">21</span>
+                </button>
+                <button class="filter-pill" data-category="food">
+                    ร้านอาหาร & สตรีทฟู้ด
+                </button>
+                <button class="filter-pill" data-category="cafe">
+                    คาเฟ่ & กาแฟ
+                </button>
+                <button class="filter-pill" data-category="market">
+                    ห้างสรรพสินค้า & ตลาด
+                </button>
+                <button class="filter-pill" data-category="transit">
+                    จุดสำคัญ & คมนาคม
+                </button>
+                <button class="filter-pill" data-category="services">
+                    บริการจำเป็น & 24 ชม.
                 </button>
             </div>
         </div>
@@ -868,548 +944,1679 @@
             <div class="map-overview-content">
                 <div class="map-overview-title">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-                    แผนที่ภาพรวมรอบหอพัก ย่านตลาดหนองบัว
+                    แผนที่ภาพรวมเมืองอุบลราชธานีและวารินชำราบ
                 </div>
-                <div class="map-overview-desc">เปิดดูแผนที่ภาพรวมและเส้นทางผ่านแอปแผนที่หลักในโทรศัพท์ของคุณได้ทันที</div>
+                <div class="map-overview-desc">เปิดดูแผนที่ภาพรวมเมืองอุบล-วาริน และตำแหน่งรอบตัวคุณผ่านแอปแผนที่หลักของเครื่อง</div>
             </div>
-            <a href="https://maps.google.com/maps?q=ตลาดสดหนองบัว+อุบลราชธานี" 
-               data-lat="15.2612" 
-               data-lng="104.8455" 
-               data-name="ตลาดสดหนองบัว อุบลราชธานี" 
+            <a href="https://maps.google.com/maps?q=เมืองอุบลราชธานี+และ+วารินชำราบ" 
+               data-query="เมืองอุบลราชธานี และ วารินชำราบ" 
+               data-place-name="ภาพรวมอุบลและวาริน" 
                class="btn-overview-map map-nav-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                 เปิดแอปแผนที่
             </a>
         </div>
 
-        <!-- Horizontal Category Filters -->
-        <div class="filter-container">
-            <div class="filter-scroll" id="filter-buttons">
-                <button class="filter-pill active" data-category="all">
-                    ทั้งหมด <span class="pill-count" id="count-all">8</span>
-                </button>
-                <button class="filter-pill" data-category="food">
-                    ร้านอาหาร & คาเฟ่ <span class="pill-count">4</span>
-                </button>
-                <button class="filter-pill" data-category="convenience">
-                    สะดวกซื้อ 24 ชม. <span class="pill-count">1</span>
-                </button>
-                <button class="filter-pill" data-category="laundry">
-                    สะดวกซัก 24 ชม. <span class="pill-count">1</span>
-                </button>
-                <button class="filter-pill" data-category="transport">
-                    วินมอเตอร์ไซค์ <span class="pill-count">1</span>
-                </button>
-                <button class="filter-pill" data-category="health">
-                    ร้านยา & สุขภาพ <span class="pill-count">1</span>
-                </button>
-            </div>
-        </div>
-
         <!-- Result Metadata -->
         <div class="results-meta">
-            <span id="results-count-text">แสดงทั้งหมด 8 สถานที่จริงรอบหอพัก</span>
-            <span>พิกัด GPS อัปเดตล่าสุด: พฤศจิกายน 2569</span>
+            <span class="results-count" id="results-count-text">แสดงทั้งหมด 21 สถานที่จริง</span>
+            <span>ปักหมุดไปยังชื่อร้านโดยตรง</span>
         </div>
 
-        <!-- Empty State -->
-        <div class="empty-state" id="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            <h3>ไม่พบข้อมูลร้านค้าหรือบริการที่ค้นหา</h3>
-            <p>ลองค้นหาด้วยคำอื่น เช่น สเต็ก, อเมซอน, กะเพรา, ซักรีด, วิน หรือเลือกดูหมวดหมู่ทั้งหมด</p>
-        </div>
+        <!-- Cards List -->
+        <div class="cards-grid" id="cards-container">
 
-        <!-- Service Cards Grid -->
-        <div class="services-grid" id="services-grid">
-
-            <!-- Card 1: สเต็ก นิวยอร์ก (Steak New York Ubon) -->
-            <article class="service-card" data-category="food" data-keywords="สเต็ก นิวยอร์ก steak new york ร้านอาหาร เนื้อโคขุน หมู ไก่ สลัด ของกิน ข้าว มื้อเย็น">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80" alt="สเต็ก นิวยอร์ก อุบลราชธานี" loading="lazy">
-                    <span class="card-badge-status">
+            <!-- Card: สเต็ก นิวยอร์ก (Steak New York Ubon) -->
+            <article class="service-card" 
+                     data-id="steak-newyork" 
+                     data-zone="nongbua" 
+                     data-category="food" 
+                     data-keywords="สเต็ก เนื้อ หมู สปาเก็ตตี้ สลัด อาหารฝรั่ง หนองบัว ใกล้หอพัก">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80" alt="สเต็ก นิวยอร์ก (Steak New York Ubon)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
                         <span class="status-dot"></span>
-                        เปิดบริการ 11:00 - 21:00
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 10 นาที (800 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">ร้านอาหาร & สเต็ก</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">สเต็ก นิวยอร์ก</h2>
+                        เปิดบริการ 11:00 - 21:00 น.
                     </div>
-                    <div class="card-subtitle">Steak New York Ubon · สเต็กกระทะร้อน & อาหารจานด่วน</div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">สเต็ก นิวยอร์ก (Steak New York Ubon)</h2>
+                        <p class="card-subtitle">ร้านสเต็กยอดนิยม โซนตลาดหนองบัว ใกล้หอพัก</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 600 เมตร (เดิน 8 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 320+)</span>
+                        </div>
+                    </div>
 
                     <div class="card-details">
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">11:00 - 21:00 น.</span>
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">11:00 - 21:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:087-440-9775" class="detail-value detail-link">087-440-9775</a>
                         </div>
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">ช่วงราคา</span>
-                            <span class="detail-value">เริ่มต้น 59 - 189 บาท</span>
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">สเต็กเริ่มต้น 79 - 280 บาท</span>
                         </div>
                     </div>
 
                     <div class="card-highlight">
-                        <div class="highlight-title">เมนูแนะนำประจำร้าน</div>
-                        <div class="highlight-desc">สเต็กเนื้อโคขุนพริกไทยดำ, สเต็กพอร์คชอปซอสเกรวี่, สลัดผักสด, เฟรนช์ฟรายส์ชีส</div>
+                        <div class="highlight-title">เมนูแนะนำพิเศษ</div>
+                        <div class="highlight-desc">สเต็กทีโบน, ริบอายโคขุน, พอร์คชอปซอสพริกไทยดำ, สปาเก็ตตี้คาโบนาร่า และสลัดทูน่า</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:0874409775" class="btn-action btn-call">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรสั่งล่วงหน้า
-                        </a>
-                        <a href="https://maps.google.com/maps?daddr=15.2425,104.8560&q=สเต็กนิวยอร์ก+อุบลราชธานี" 
-                           data-lat="15.2425" 
-                           data-lng="104.8560" 
-                           data-name="สเต็ก นิวยอร์ก อุบลราชธานี"
-                           class="btn-action btn-map map-nav-btn" 
-                           target="_blank" 
-                           rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            นำทาง
-                        </a>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Card 2: Café Amazon (สาขาตลาดหนองบัว) -->
-            <article class="service-card" data-category="food" data-keywords="café amazon อเมซอน คาเฟ่ กาแฟ ชาเขียว เบเกอรี่ ขนม เครื่องดื่ม ตลาดหนองบัว อ่านหนังสือ ทำงาน">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80" alt="Café Amazon สาขาตลาดหนองบัว" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot"></span>
-                        เปิดบริการ 06:00 - 20:00
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 8 นาที (650 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">คาเฟ่ & เครื่องดื่ม</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">Café Amazon</h2>
-                    </div>
-                    <div class="card-subtitle">สาขาตลาดหนองบัว (SD5102) · กาแฟสด ชาเขียว & แอร์เย็น</div>
-
-                    <div class="card-details">
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">06:00 - 20:00 น.</span>
-                        </div>
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">ช่วงราคา</span>
-                            <span class="detail-value">เริ่มต้น 45 - 75 บาท</span>
-                        </div>
-                    </div>
-
-                    <div class="card-highlight">
-                        <div class="highlight-title">เมนูแนะนำ & สิ่งอำนวยความสะดวก</div>
-                        <div class="highlight-desc">อเมซอนเย็นสูตรเข้มข้น, ชาเขียวนมสด, แบล็คคอฟฟี่น้ำผึ้งมะนาว · มีที่นั่งแอร์เย็นสบายและ Wi-Fi</div>
-                    </div>
-
-                    <div class="card-actions">
-                        <a href="tel:045111222" class="btn-action btn-call">
+                        
+                        <a href="tel:087-440-9775" class="btn-action btn-call">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                             โทรสอบถาม
                         </a>
-                        <a href="https://maps.google.com/maps?daddr=15.2618,104.8455&q=Cafe+Amazon+ตลาดหนองบัว+อุบลราชธานี" 
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=สเต็ก นิวยอร์ก อุบลราชธานี" 
+                           data-place-name="สเต็ก นิวยอร์ก" 
+                           data-query="สเต็ก นิวยอร์ก อุบลราชธานี" 
+                           data-lat="15.2425" 
+                           data-lng="104.8560" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป สเต็ก นิวยอร์ก
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: Café Amazon สาขาตลาดหนองบัว (SD5102) -->
+            <article class="service-card" 
+                     data-id="amazon-nongbua" 
+                     data-zone="nongbua" 
+                     data-category="cafe" 
+                     data-keywords="กาแฟ คาเฟ่ ชาเขียว อเมซอน ช็อกโกแลต เค้ก นั่งทำงาน แอร์ หนองบัว">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80" alt="Café Amazon สาขาตลาดหนองบัว (SD5102)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:30 - 19:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">Café Amazon สาขาตลาดหนองบัว (SD5102)</h2>
+                        <p class="card-subtitle">คาเฟ่มาตรฐาน ปากทางตลาดหนองบัว ถนนธรรมวิถี</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 180 เมตร (เดิน 2 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 180+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:30 - 19:30 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-111-222" class="detail-value detail-link">045-111-222</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เครื่องดื่ม 45 - 75 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">จุดเด่นสำหรับลูกบ้าน</div>
+                        <div class="highlight-desc">ห้องแอร์เย็น มีปลั๊กไฟและโต๊ะทำงาน เหมาะสำหรับนั่งอ่านหนังสือ ทำงาน หรือแวะซื้อกาแฟช่วงเช้า</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-111-222" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Cafe Amazon สาขาตลาดหนองบัว อุบลราชธานี" 
+                           data-place-name="Café Amazon หนองบัว" 
+                           data-query="Cafe Amazon สาขาตลาดหนองบัว อุบลราชธานี" 
                            data-lat="15.2618" 
                            data-lng="104.8455" 
-                           data-name="Cafe Amazon สาขาตลาดหนองบัว อุบลราชธานี"
                            class="btn-action btn-map map-nav-btn" 
                            target="_blank" 
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            นำทาง
+                            นำทางไป Café Amazon หนองบัว
                         </a>
                     </div>
                 </div>
             </article>
 
-            <!-- Card 3: 7-Eleven สาขา ปตท. ตลาดหนองบัว -->
-            <article class="service-card" data-category="convenience" data-keywords="7-eleven เซเว่น อีเลฟเว่น สะดวกซื้อ 24 ชม atm อาหารเวฟ ของใช้ น้ำดื่ม เคาน์เตอร์เซอร์วิส ดึก ปตท">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=800&q=80" alt="7-Eleven สาขา ปตท. ตลาดหนองบัว อุบล" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot blue"></span>
+            <!-- Card: 7-Eleven สาขา ปตท. ตลาดหนองบัว (รหัส 15104) -->
+            <article class="service-card" 
+                     data-id="7eleven-nongbua" 
+                     data-zone="nongbua" 
+                     data-category="services" 
+                     data-keywords="สะดวกซื้อ เซเว่น 7-11 ตู้เอทีเอ็ม กาแฟ ข้าวกล่อง ขนม น้ำอัดลม ยาสามัญ 24 ชั่วโมง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=800&q=80" alt="7-Eleven สาขา ปตท. ตลาดหนองบัว (รหัส 15104)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
                         เปิดบริการ 24 ชั่วโมง
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 4 นาที (300 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">ร้านสะดวกซื้อ 24 ชม.</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">7-Eleven สาขา ปตท. ตลาดหนองบัว</h2>
                     </div>
-                    <div class="card-subtitle">รหัสสาขา 15104 · ถนนชยางกูร · สินค้าอุปโภคบริโภคครบวงจร</div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">7-Eleven สาขา ปตท. ตลาดหนองบัว (รหัส 15104)</h2>
+                        <p class="card-subtitle">ร้านสะดวกซื้อขนาดใหญ่ พร้อม All Café และตู้ ATM</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 120 เมตร (เดิน 1 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 450+)</span>
+                        </div>
+                    </div>
 
                     <div class="card-details">
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">เปิดตลอด 24 ชั่วโมง</span>
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">24 ชั่วโมง ตลอด 7 วัน</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:02-826-7744" class="detail-value detail-link">02-826-7744</a>
                         </div>
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                            <span class="detail-label">จุดบริการ</span>
-                            <span class="detail-value">ตู้ ATM ทุกธนาคาร / All Café</span>
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">สินค้าสะดวกซื้อทั่วไป</span>
                         </div>
                     </div>
 
                     <div class="card-highlight">
-                        <div class="highlight-title">บริการเด่นสำหรับลูกบ้าน</div>
-                        <div class="highlight-desc">ตู้เอทีเอ็มหลายธนาคาร, จุดรับส่งพัสดุ, อาหารกล่องอุ่นร้อน 24 ชม., กาแฟสด All Café</div>
+                        <div class="highlight-title">บริการสำคัญ</div>
+                        <div class="highlight-desc">All Café กาแฟสดอบใหม่, ข้าวกล่องอุ่นร้อน, ชำระบิลค่าน้ำค่าไฟ, ตู้ ATM กสิกร/กรุงไทย/ไทยพาณิชย์</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="https://maps.google.com/maps?daddr=15.2612904,104.8461644&q=7-Eleven+ปตท.+ตลาดหนองบัว+อุบล" 
-                           data-lat="15.2612904" 
-                           data-lng="104.8461644" 
-                           data-name="7-Eleven สาขา ปตท. ตลาดหนองบัว อุบล"
+                        
+                        <a href="tel:02-826-7744" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=7-Eleven สาขา ปตท. ตลาดหนองบัว อุบลราชธานี" 
+                           data-place-name="7-Eleven ตลาดหนองบัว" 
+                           data-query="7-Eleven สาขา ปตท. ตลาดหนองบัว อุบลราชธานี" 
+                           data-lat="15.26129" 
+                           data-lng="104.84616" 
                            class="btn-action btn-map map-nav-btn" 
-                           style="flex: 1;" 
                            target="_blank" 
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เปิดแผนที่นำทางไปยัง 7-Eleven
+                            นำทางไป 7-Eleven ตลาดหนองบัว
                         </a>
                     </div>
                 </div>
             </article>
 
-            <!-- Card 4: Otteri Wash & Dry (สาขาตลาดหนองบัว) -->
-            <article class="service-card" data-category="laundry" data-keywords="otteri wash and dry ซักผ้า อบผ้า ร้านสะดวกซัก หยอดเหรียญ ซักรีด 24 ชม ผ้าห่ม ปั่นแห้ง ตลาดหนองบัว">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80" alt="ร้านสะดวกซัก 24 ชม Otteri Wash & Dry ตลาดหนองบัว" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot blue"></span>
+            <!-- Card: Otteri Wash & Dry สาขาตลาดหนองบัว -->
+            <article class="service-card" 
+                     data-id="otteri-nongbua" 
+                     data-zone="nongbua" 
+                     data-category="services" 
+                     data-keywords="ซักรีด ซักผ้า อบผ้า เครื่องซักผ้า หยอดเหรียญ ซักแห้ง ตากผ้า หนองบัว 24 ชั่วโมง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80" alt="Otteri Wash & Dry สาขาตลาดหนองบัว" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
                         เปิดบริการ 24 ชั่วโมง
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 5 นาที (380 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">สะดวกซัก 24 ชั่วโมง</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">Otteri Wash & Dry</h2>
                     </div>
-                    <div class="card-subtitle">สาขาตลาดหนองบัว · ถนนธรรมวิถี · ซักอบแห้งสนิทมาตรฐานสากล</div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">Otteri Wash & Dry สาขาตลาดหนองบัว</h2>
+                        <p class="card-subtitle">ร้านสะดวกซัก-อบผ้าอุตสาหกรรม 24 ชั่วโมง ถนนธรรมวิถี</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 250 เมตร (เดิน 3 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 210+)</span>
+                        </div>
+                    </div>
 
                     <div class="card-details">
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">เปิดตลอด 24 ชั่วโมง</span>
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">24 ชั่วโมง ตลอด 7 วัน</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:02-114-7688" class="detail-value detail-link">02-114-7688</a>
                         </div>
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">ค่าบริการ</span>
-                            <span class="detail-value">ซักเริ่ม 30.- / อบเริ่ม 40.-</span>
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ซัก 40-80 บาท / อบแห้ง 40 บาท</span>
                         </div>
                     </div>
 
                     <div class="card-highlight">
-                        <div class="highlight-title">ระบบและสิ่งอำนวยความสะดวก</div>
-                        <div class="highlight-desc">เครื่องซักอุตสาหกรรมระบบน้ำร้อนฆ่าเชื้อ, อบผ้าแห้งสนิทใน 30 นาที, ตู้แลกเหรียญ, ฟรี Wi-Fi</div>
+                        <div class="highlight-title">บริการที่สะดวกสบาย</div>
+                        <div class="highlight-desc">ระบบน้ำอุ่นซักสะอาดฆ่าเชื้อ เครื่องอบลมร้อนแห้งสนิทภายใน 30 นาที มีที่นั่งรอพร้อม Wi-Fi ฟรี</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="https://maps.google.com/maps?daddr=15.2605,104.8448&q=Otteri+Wash+%26+Dry+ตลาดหนองบัว+อุบลราชธานี" 
+                        
+                        <a href="tel:02-114-7688" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Otteri Wash & Dry สาขาตลาดหนองบัว อุบลราชธานี" 
+                           data-place-name="Otteri Wash & Dry" 
+                           data-query="Otteri Wash & Dry สาขาตลาดหนองบัว อุบลราชธานี" 
                            data-lat="15.2605" 
                            data-lng="104.8448" 
-                           data-name="Otteri Wash & Dry สาขาตลาดหนองบัว"
                            class="btn-action btn-map map-nav-btn" 
-                           style="flex: 1;" 
                            target="_blank" 
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เปิดแผนที่นำทางไปยังร้านสะดวกซัก
+                            นำทางไป Otteri Wash & Dry
                         </a>
                     </div>
                 </div>
             </article>
 
-            <!-- Card 5: ร้านที่เดิม อาหารตามสั่ง (หนองบัว) -->
-            <article class="service-card" data-category="food" data-keywords="ร้านที่เดิม อาหารตามสั่ง กะเพรา หมูกรอบ กะเพราถาด ไข่เค็ม อาหารจานเดียว ข้าวเที่ยง ข้าวเย็น หนองบัว">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=800&q=80" alt="ร้านที่เดิม อาหารตามสั่ง หนองบัว" loading="lazy">
-                    <span class="card-badge-status">
+            <!-- Card: ตลาดสดหนองบัว (Nong Bua Market) -->
+            <article class="service-card" 
+                     data-id="market-nongbua" 
+                     data-zone="nongbua" 
+                     data-category="market" 
+                     data-keywords="ตลาด กับข้าว อาหารเย็น ส้มตำ ไก่ย่าง สตรีทฟู้ด ผลไม้ ขนม หนองบัว">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=800&q=80" alt="ตลาดสดหนองบัว (Nong Bua Market)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
                         <span class="status-dot"></span>
-                        เปิดบริการ 10:00 - 21:00
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 6 นาที (450 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">อาหารตามสั่ง & จานเดียว</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">ร้านที่เดิม อาหารตามสั่ง</h2>
+                        เปิดบริการ 14:00 - 21:00 น.
                     </div>
-                    <div class="card-subtitle">สาขาหนองบัว · เมนูกะเพราหมูกรอบยอดนิยม · ขวัญใจลูกบ้านและนักศึกษา</div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ตลาดสดหนองบัว (Nong Bua Market)</h2>
+                        <p class="card-subtitle">ศูนย์รวมอาหารเย็น สตรีทฟู้ดอีสาน และกับข้าวปรุงสำเร็จ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 300 เมตร (เดิน 4 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 600+)</span>
+                        </div>
+                    </div>
 
                     <div class="card-details">
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">10:00 - 21:00 น.</span>
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">14:00 - 21:00 น. (ช่วงคึกคัก 16:30 - 19:30 น.)</span>
                         </div>
+                        
                         <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">ช่วงราคา</span>
-                            <span class="detail-value">เริ่มต้น 50 - 70 บาท</span>
-                        </div>
-                    </div>
-
-                    <div class="card-highlight">
-                        <div class="highlight-title">เมนูแนะนำยอดฮิต</div>
-                        <div class="highlight-desc">ข้าวกะเพราหมูกรอบ, กะเพราหมูสับไข่เค็ม, พริกแกงหมูกรอบราดข้าว, ให้เยอะคุ้มค่า รสจัดจ้าน</div>
-                    </div>
-
-                    <div class="card-actions">
-                        <a href="tel:0863332211" class="btn-action btn-call">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรสั่งล่วงหน้า
-                        </a>
-                        <a href="https://maps.google.com/maps?daddr=15.2615,104.8460&q=ร้านที่เดิม+อาหารตามสั่ง+หนองบัว+อุบล" 
-                           data-lat="15.2615" 
-                           data-lng="104.8460" 
-                           data-name="ร้านที่เดิม อาหารตามสั่ง หนองบัว อุบล"
-                           class="btn-action btn-map map-nav-btn" 
-                           target="_blank" 
-                           rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            นำทาง
-                        </a>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Card 6: ร้านยาภาณุวัฒน์เภสัช (ทางเข้าตลาดหนองบัว) -->
-            <article class="service-card" data-category="health" data-keywords="ร้านยา ภาณุวัฒน์เภสัช บ้านยาคุณฝน เภสัชกร ทางเข้าตลาดหนองบัว ยาสามัญ ทำแผล ป่วย หาหมอ สุขภาพ เวชภัณฑ์">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?auto=format&fit=crop&w=800&q=80" alt="ร้านยาภาณุวัฒน์เภสัช ตลาดหนองบัว" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot"></span>
-                        เปิดบริการ 08:30 - 21:00
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 6 นาที (450 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">ร้านยา & สุขภาพ</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">ร้านยาภาณุวัฒน์เภสัช</h2>
-                    </div>
-                    <div class="card-subtitle">บริเวณทางเข้าตลาดหนองบัว · ถนนธรรมวิถี · จำหน่ายยาและเวชภัณฑ์</div>
-
-                    <div class="card-details">
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">08:30 - 21:00 น.</span>
-                        </div>
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            <span class="detail-label">มาตรฐาน</span>
-                            <span class="detail-value">มีเภสัชกรให้คำปรึกษา</span>
-                        </div>
-                    </div>
-
-                    <div class="card-highlight">
-                        <div class="highlight-title">สินค้าและบริการ</div>
-                        <div class="highlight-desc">ยาสามัญประจำบ้าน, ชุดอุปกรณ์ทำแผล, ยาลดไข้แก้แพ้, หน้ากากอนามัย, ปรึกษาอาการป่วยเบื้องต้น</div>
-                    </div>
-
-                    <div class="card-actions">
-                        <a href="tel:045222333" class="btn-action btn-call">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรสอบถามยา
-                        </a>
-                        <a href="https://maps.google.com/maps?daddr=15.2615,104.8450&q=ร้านยา+ตลาดหนองบัว+อุบลราชธานี" 
-                           data-lat="15.2615" 
-                           data-lng="104.8450" 
-                           data-name="ร้านยา ตลาดหนองบัว อุบลราชธานี"
-                           class="btn-action btn-map map-nav-btn" 
-                           target="_blank" 
-                           rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            นำทาง
-                        </a>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Card 7: วินมอเตอร์ไซค์รับจ้าง จุดตลาดหนองบัว-หน้าหอ -->
-            <article class="service-card" data-category="transport" data-keywords="วิน มอเตอร์ไซค์ รถรับจ้าง เดินทาง มหาวิทยาลัย ราชภัฏ บิ๊กซี ตลาด บขส คิวรถ หน้าหอ">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80" alt="วินมอเตอร์ไซค์รับจ้าง หน้าหอพักและตลาดหนองบัว" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot"></span>
-                        บริการ 06:00 - 20:00
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        หน้าหอพัก (50 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">การเดินทาง & รถรับจ้าง</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">วินมอเตอร์ไซค์รับจ้าง</h2>
-                    </div>
-                    <div class="card-subtitle">จุดบริการตลาดหนองบัว & หน้าหอพัก · บริการรับส่งนักศึกษาและลูกบ้าน</div>
-
-                    <div class="card-details">
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาให้บริการ</span>
-                            <span class="detail-value">06:00 - 20:00 น.</span>
-                        </div>
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">อัตราค่าโดยสาร</span>
-                            <span class="detail-value">เริ่มต้น 20 บาท</span>
-                        </div>
-                    </div>
-
-                    <div class="card-highlight">
-                        <div class="highlight-title">อัตราค่าโดยสารเส้นทางยอดนิยม</div>
-                        <div class="highlight-desc">ตลาดหนองบัว 20.- | บิ๊กซีอุบลฯ 30.- | มรภ.อุบลราชธานี 40.- | บขส. อุบลฯ 50.-</div>
-                    </div>
-
-                    <div class="card-actions">
-                        <a href="tel:0899998888" class="btn-action btn-call">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                            โทรเรียกวิน
-                        </a>
-                        <a href="https://maps.google.com/maps?daddr=15.2610,104.8458&q=คิววินมอเตอร์ไซค์+ตลาดหนองบัว+อุบล" 
-                           data-lat="15.2610" 
-                           data-lng="104.8458" 
-                           data-name="จุดบริการวินมอเตอร์ไซค์ ตลาดหนองบัว อุบล"
-                           class="btn-action btn-map map-nav-btn" 
-                           target="_blank" 
-                           rel="noopener noreferrer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            จุดจอด
-                        </a>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Card 8: ตลาดสดหนองบัว (Nong Bua Market) -->
-            <article class="service-card" data-category="food" data-keywords="ตลาดหนองบัว ตลาดสด สตรีทฟู้ด กับข้าว อาหารอีสาน ส้มตำ ไก่ย่าง ผลไม้สด มื้อเย็น ของกิน">
-                <div class="card-media">
-                    <img src="https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=800&q=80" alt="ตลาดสดหนองบัว อุบลราชธานี" loading="lazy">
-                    <span class="card-badge-status">
-                        <span class="status-dot"></span>
-                        เปิดบริการ 15:00 - 20:30
-                    </span>
-                    <span class="card-badge-distance">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        เดิน 7 นาที (550 ม.)
-                    </span>
-                </div>
-                <div class="card-content">
-                    <div class="card-category-label">ตลาดสด & สตรีทฟู้ดเย็น</div>
-                    <div class="card-header-row">
-                        <h2 class="card-title">ตลาดสดหนองบัว</h2>
-                    </div>
-                    <div class="card-subtitle">ศูนย์รวมอาหารเย็น กับข้าวปรุงสำเร็จ อาหารอีสานพื้นเมือง และผลไม้สด</div>
-
-                    <div class="card-details">
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                            <span class="detail-label">เวลาเปิดทำการ</span>
-                            <span class="detail-value">15:00 - 20:30 น. (ทุกวัน)</span>
-                        </div>
-                        <div class="detail-row">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span class="detail-label">ช่วงราคา</span>
+                            <span class="detail-label">อัตราค่าบริการ</span>
                             <span class="detail-value">อาหารจานด่วน 30 - 60 บาท</span>
                         </div>
                     </div>
 
                     <div class="card-highlight">
                         <div class="highlight-title">ของกินเด่นประจำตลาด</div>
-                        <div class="highlight-desc">ส้มตำรสแซ่บ, ไก่ย่างเขาสวนกวาง, กับข้าวถุงปรุงสำเร็จ, ขนมไทย, ผลไม้สดตามฤดูกาล</div>
+                        <div class="highlight-desc">ส้มตำรสแซ่บ, ไก่ย่างเขาสวนกวาง, กับข้าวถุงปรุงสำเร็จ, ขนมไทยโบราณ และผลไม้สดตามฤดูกาล</div>
                     </div>
 
                     <div class="card-actions">
-                        <a href="https://maps.google.com/maps?daddr=15.2612,104.8455&q=ตลาดสดหนองบัว+อุบลราชธานี" 
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ตลาดสดหนองบัว อุบลราชธานี" 
+                           data-place-name="ตลาดสดหนองบัว" 
+                           data-query="ตลาดสดหนองบัว อุบลราชธานี" 
                            data-lat="15.2612" 
                            data-lng="104.8455" 
-                           data-name="ตลาดสดหนองบัว อุบลราชธานี"
                            class="btn-action btn-map map-nav-btn" 
-                           style="flex: 1;" 
                            target="_blank" 
                            rel="noopener noreferrer">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                            เปิดแผนที่นำทางไปยังตลาดหนองบัว
+                            นำทางไป ตลาดสดหนองบัว
                         </a>
                     </div>
                 </div>
             </article>
 
+            <!-- Card: วัดพระธาตุหนองบัว (Phra That Nong Bua Temple) -->
+            <article class="service-card" 
+                     data-id="wat-nongbua" 
+                     data-zone="nongbua" 
+                     data-category="transit" 
+                     data-keywords="วัด พระธาตุ ไหว้พระ ทำบุญ ท่องเที่ยว สถาปัตยกรรม เจดีย์ หนองบัว">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=800&q=80" alt="วัดพระธาตุหนองบัว (Phra That Nong Bua Temple)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดให้เข้าชม 06:00 - 18:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        รอบหอพัก & หนองบัว
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">วัดพระธาตุหนองบัว (Phra That Nong Bua Temple)</h2>
+                        <p class="card-subtitle">พระธาตุเจดีย์ศรีมหาโพธิ์สีทองจำลองพุทธคยา แลนด์มาร์กสำคัญ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ประมาณ 750 เมตร (เดิน 10 นาที / ขี่รถ 2 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 2,800+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:00 - 18:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-244-848" class="detail-value detail-link">045-244-848</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เข้าชมฟรี</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">สถาปัตยกรรมทรงคุณค่า</div>
+                        <div class="highlight-desc">เจดีย์จำลองพุทธคยาสีทองอร่าม บรรยากาศร่มรื่นเงียบสงบ เหมาะสำหรับกราบสักการะและถ่ายภาพ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-244-848" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=วัดพระธาตุหนองบัว อุบลราชธานี" 
+                           data-place-name="วัดพระธาตุหนองบัว" 
+                           data-query="วัดพระธาตุหนองบัว อุบลราชธานี" 
+                           data-lat="15.2642" 
+                           data-lng="104.8458" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป วัดพระธาตุหนองบัว
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: เซ็นทรัล อุบล (Central Ubon) -->
+            <article class="service-card" 
+                     data-id="central-ubon" 
+                     data-zone="ubon" 
+                     data-category="market" 
+                     data-keywords="ห้าง เซ็นทรัล ช้อปปิ้ง ดูหนัง ซูเปอร์มาร์เก็ต ธนาคาร เสื้อผ้า อาหาร แจระแม">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?auto=format&fit=crop&w=800&q=80" alt="เซ็นทรัล อุบล (Central Ubon)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 10:00 - 21:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">เซ็นทรัล อุบล (Central Ubon)</h2>
+                        <p class="card-subtitle">ศูนย์การค้าครบวงจรขนาดใหญ่ที่สุดในจังหวัดอุบลราชธานี</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>โซนเลี่ยงเมืองแจระแม (รถยนต์ 7-10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 8,500+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">10:00 - 21:00 น. (วันหยุดถึง 21:30 น.)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-950-888" class="detail-value detail-link">045-950-888</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ระดับมาตรฐานห้างสรรพสินค้า</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">ครบครันทุกไลฟ์สไตล์</div>
+                        <div class="highlight-desc">โรงภาพยนตร์ Major Cineplex, ซูเปอร์มาร์เก็ต Tops, ฟู้ดพาร์ค, แบรนด์แฟชั่น Uniqlo, ธนาคารครบทุกแห่ง</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-950-888" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=เซ็นทรัล อุบลราชธานี" 
+                           data-place-name="เซ็นทรัล อุบล" 
+                           data-query="เซ็นทรัล อุบลราชธานี" 
+                           data-lat="15.2492" 
+                           data-lng="104.8242" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป เซ็นทรัล อุบล
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ทุ่งศรีเมือง อุบลราชธานี (Thung Si Mueang) -->
+            <article class="service-card" 
+                     data-id="thung-si-mueang" 
+                     data-zone="ubon" 
+                     data-category="transit" 
+                     data-keywords="ทุ่งศรีเมือง สวนสาธารณะ วิ่ง ออกกำลังกาย เทียนพรรษา โต้รุ่ง ใจกลางเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80" alt="ทุ่งศรีเมือง อุบลราชธานี (Thung Si Mueang)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
+                        เปิดตลอด 24 ชั่วโมง
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ทุ่งศรีเมือง อุบลราชธานี (Thung Si Mueang)</h2>
+                        <p class="card-subtitle">ลานอนุสาวรีย์เทียนพรรษา และสวนสาธารณะใจกลางเมืองอุบล</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ใจกลางเมืองอุบล (ขับรถ 10-12 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 3,400+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">เปิดตลอดเวลา (ช่วงเย็นออกกำลังกายคึกคัก)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เข้าชมฟรี</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">จุดเด่นใจกลางเมือง</div>
+                        <div class="highlight-desc">ประติมากรรมเทียนพรรษาเฉลิมพระเกียรติ, ทางวิ่งออกกำลังกายรอบสวน, ลานกีฬา และตลาดโต้รุ่งของกินรอบทุ่งยามค่ำคืน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ทุ่งศรีเมือง อุบลราชธานี" 
+                           data-place-name="ทุ่งศรีเมือง" 
+                           data-query="ทุ่งศรีเมือง อุบลราชธานี" 
+                           data-lat="15.2287" 
+                           data-lng="104.8587" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ทุ่งศรีเมือง
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ก๋วยจั๊บ 80 ปี (อุบลราชธานี) -->
+            <article class="service-card" 
+                     data-id="kuayjab-80-years" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="ก๋วยจั๊บ ก๋วยจั๊บญวน หมูยอ เส้นสด อาหารเช้า ต้มเส้น สรรพสิทธิ์ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80" alt="ก๋วยจั๊บ 80 ปี (อุบลราชธานี)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:00 - 14:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ก๋วยจั๊บ 80 ปี (อุบลราชธานี)</h2>
+                        <p class="card-subtitle">ร้านก๋วยจั๊บญวนเส้นสดในตำนาน น้ำซุปกระดูกหมูสูตรโบราณ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสรรพสิทธิ์ ในเมือง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 920+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:00 - 14:00 น. (เช้าถึงบ่าย)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:086-465-9851" class="detail-value detail-link">086-465-9851</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ชามละ 40 - 60 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูซิกเนเจอร์ประจำเมือง</div>
+                        <div class="highlight-desc">ก๋วยจั๊บญวนเส้นสดเหนียวนุ่ม ซี่โครงหมูตุ๋นเปื่อย หมูยออุบลแท้ และหอมเจียวกรอบหอมไม่อั้น</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:086-465-9851" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ก๋วยจั๊บ 80 ปี อุบลราชธานี" 
+                           data-place-name="ก๋วยจั๊บ 80 ปี" 
+                           data-query="ก๋วยจั๊บ 80 ปี อุบลราชธานี" 
+                           data-lat="15.2295" 
+                           data-lng="104.8565" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ก๋วยจั๊บ 80 ปี
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: สามชัยกาแฟ (Samchai Coffee Ubon) -->
+            <article class="service-card" 
+                     data-id="samchai-coffee" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="สามชัย อาหารเช้า ไข่กระทะ ปากหม้อญวน ขนมปังญวน ชาเย็น กาแฟโบราณ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80" alt="สามชัยกาแฟ (Samchai Coffee Ubon)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 05:30 - 13:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">สามชัยกาแฟ (Samchai Coffee Ubon)</h2>
+                        <p class="card-subtitle">ร้านอาหารเช้าขึ้นชื่อระดับตำนาน ไข่กระทะ ปากหม้อญวน ชานมโบราณ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>เยื้องจวนผู้ว่าฯ ถนนอุปลีสาน (ขับรถ 8 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 2,100+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">05:30 - 13:30 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-244-666" class="detail-value detail-link">045-244-666</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารเช้า 35 - 90 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">ของดีห้ามพลาด</div>
+                        <div class="highlight-desc">ไข่กระทะทรงเครื่อง, ปากหม้อญวนแป้งนุ่ม, ขนมปังญวนสอดไส้หมูยอกุนเชียง และกาแฟโบราณสูตรเข้มข้น</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-244-666" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=สามชัยกาแฟ อุบลราชธานี" 
+                           data-place-name="สามชัยกาแฟ" 
+                           data-query="สามชัยกาแฟ อุบลราชธานี" 
+                           data-lat="15.2312" 
+                           data-lng="104.8550" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป สามชัยกาแฟ
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ส้มตำจินดา (Somtum Jinda Ubon) -->
+            <article class="service-card" 
+                     data-id="somtum-jinda" 
+                     data-zone="ubon" 
+                     data-category="food" 
+                     data-keywords="ส้มตำ จินดา ปลาร้า ไก่ย่าง คอหมูย่าง อาหารอีสาน แซ่บ ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=800&q=80" alt="ส้มตำจินดา (Somtum Jinda Ubon)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 09:30 - 17:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ส้มตำจินดา (Somtum Jinda Ubon)</h2>
+                        <p class="card-subtitle">ร้านส้มตำและอาหารอีสานรสเด็ด แซ่บนัวสะอาด วัตถุดิบคัดพิเศษ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนพิชิตรังสรรค์ ในเมือง (ขับรถ 9 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 1,400+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">09:30 - 17:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-255-223" class="detail-value detail-link">045-255-223</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารอีสาน 50 - 180 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เมนูแซ่บประจำร้าน</div>
+                        <div class="highlight-desc">ตำซั่วปูปลาร้ากลิ่นหอมนัว, ไก่ย่างหนังกรอบ, คอหมูย่างน้ำจิ้มแจ่วรสเด็ด, ต้มแซ่บกระดูกอ่อน และลาบเป็ดอุบล</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-255-223" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ส้มตำจินดา อุบลราชธานี" 
+                           data-place-name="ส้มตำจินดา" 
+                           data-query="ส้มตำจินดา อุบลราชธานี" 
+                           data-lat="15.2450" 
+                           data-lng="104.8520" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ส้มตำจินดา
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: Anna Coffee Roasters -->
+            <article class="service-card" 
+                     data-id="anna-coffee-roasters" 
+                     data-zone="ubon" 
+                     data-category="cafe" 
+                     data-keywords="แอนนา กาแฟ คาเฟ่ โรงคั่ว ครัวซองต์ ดริป ถ่ายรูป สุริยาตร์ มินิมอล ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80" alt="Anna Coffee Roasters" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 07:30 - 18:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">Anna Coffee Roasters</h2>
+                        <p class="card-subtitle">โรงคั่วกาแฟคุณภาพและคาเฟ่ดีไซน์สวย ดีกรี Speciality Coffee</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสุริยาตร์ ในเมือง (ขับรถ 8 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 850+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">07:30 - 18:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:095-612-4244" class="detail-value detail-link">095-612-4244</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">กาแฟ & เครื่องดื่ม 65 - 130 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เสน่ห์ของร้าน</div>
+                        <div class="highlight-desc">เมล็ดกาแฟคั่วเอง Single Origin หลากหลายสายพันธุ์, ครัวซองต์อบสดใหม่, สถาปัตยกรรมมินิมอลโมเดิร์น ถ่ายรูปสวยทุกมุม</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:095-612-4244" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Anna Coffee Roasters อุบลราชธานี" 
+                           data-place-name="Anna Coffee Roasters" 
+                           data-query="Anna Coffee Roasters อุบลราชธานี" 
+                           data-lat="15.2355" 
+                           data-lng="104.8480" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป Anna Coffee Roasters
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: โรงพยาบาลสรรพสิทธิประสงค์ (Sunpasitthiprasong Hospital) -->
+            <article class="service-card" 
+                     data-id="hospital-sunpasit" 
+                     data-zone="ubon" 
+                     data-category="services" 
+                     data-keywords="โรงพยาบาล หาหมอ ป่วย ฉุกเฉิน แพทย์ ยา สรรพสิทธิ์ ในเมือง 24 ชั่วโมง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=800&q=80" alt="โรงพยาบาลสรรพสิทธิประสงค์ (Sunpasitthiprasong Hospital)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 24 ชั่วโมง (ฉุกเฉิน)
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">โรงพยาบาลสรรพสิทธิประสงค์ (Sunpasitthiprasong Hospital)</h2>
+                        <p class="card-subtitle">โรงพยาบาลศูนย์ระดับตติยภูมิหลักประจำจังหวัดอุบลราชธานี</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสรรพสิทธิ์ ในเมือง (ขับรถ 10 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.4 (ศูนย์บริการสาธารณสุขหลัก)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">เปิด 24 ชั่วโมง (แผนกอุบัติเหตุ-ฉุกเฉิน ER)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-319-200" class="detail-value detail-link">045-319-200</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">สิทธิประกันสังคม / บัตรทอง / ชำระเอง</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บริการจำเป็นทางการแพทย์</div>
+                        <div class="highlight-desc">ศูนย์อุบัติเหตุ-ฉุกเฉินมาตรฐาน 24 ชม., คลินิกเฉพาะทางทุกสาขา, ธนาคารเลือด และบริการส่งต่อผู้ป่วยฉุกเฉิน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-319-200" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=โรงพยาบาลสรรพสิทธิประสงค์ อุบลราชธานี" 
+                           data-place-name="รพ.สรรพสิทธิประสงค์" 
+                           data-query="โรงพยาบาลสรรพสิทธิประสงค์ อุบลราชธานี" 
+                           data-lat="15.2335" 
+                           data-lng="104.8610" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป รพ.สรรพสิทธิประสงค์
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ท่าอากาศยานนานาชาติอุบลราชธานี (UBP Airport) -->
+            <article class="service-card" 
+                     data-id="airport-ubon" 
+                     data-zone="ubon" 
+                     data-category="transit" 
+                     data-keywords="สนามบิน เครื่องบิน เดินทาง บิน แอร์เอเชีย นกแอร์ เวียตเจ็ท เทพโยธี ในเมือง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80" alt="ท่าอากาศยานนานาชาติอุบลราชธานี (UBP Airport)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 06:00 - 22:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ในเมืองอุบล
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ท่าอากาศยานนานาชาติอุบลราชธานี (UBP Airport)</h2>
+                        <p class="card-subtitle">สนามบินนานาชาติหลักของภาคอีสานตอนล่าง เที่ยวบินพาณิชย์ทุกวัน</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนเทพโยธี ในเมือง (ขับรถ 10-12 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 3,100+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">06:00 - 22:00 น. (ตามตารางบิน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-245-612" class="detail-value detail-link">045-245-612</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ตามอัตราค่าตั๋วสายการบิน</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">การคมนาคมและบริการ</div>
+                        <div class="highlight-desc">สายการบินแอร์เอเชีย, นกแอร์, ไทยเวียตเจ็ท, เคาน์เตอร์รถเช่า, แท็กซี่มิเตอร์ และร้านขายของฝากหมูยออุบล</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-245-612" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ท่าอากาศยานนานาชาติอุบลราชธานี" 
+                           data-place-name="สนามบินอุบลราชธานี" 
+                           data-query="ท่าอากาศยานนานาชาติอุบลราชธานี" 
+                           data-lat="15.2452" 
+                           data-lng="104.8702" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป สนามบินอุบลราชธานี
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: สถานีรถไฟอุบลราชธานี (วารินชำราบ) -->
+            <article class="service-card" 
+                     data-id="railway-warin" 
+                     data-zone="warin" 
+                     data-category="transit" 
+                     data-keywords="รถไฟ สถานีรถไฟ วาริน วารินชำราบ เดินทาง ตั๋วรถไฟ ด่วนพิเศษ ข้ามสะพาน">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=800&q=80" alt="สถานีรถไฟอุบลราชธานี (วารินชำราบ)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
+                        เปิดบริการตลอด 24 ชั่วโมง
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">สถานีรถไฟอุบลราชธานี (วารินชำราบ)</h2>
+                        <p class="card-subtitle">ชุมทางปลายทางรถไฟสายอีสานใต้ ปลายทางรถด่วนพิเศษ CNR</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>อำเภอวารินชำราบ (ขับรถ 15 นาที ข้ามสะพานเสรีประชาธิปไตย)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 2,600+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">เปิดตลอด 24 ชั่วโมง (ตามตารางเดินรถไฟ)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-321-004" class="detail-value detail-link">045-321-004</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">ตามชั้นโดยสารรถไฟ รฟท.</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">จุดเด่นและเส้นทาง</div>
+                        <div class="highlight-desc">สถานีปลายทางรถไฟขบวนด่วนพิเศษ CNR กทม.-อุบลฯ ตู้นอนปรับอากาศ, มีจุดต่อรถสองแถวเข้าตัวเมืองอุบลราชธานีตลอดวัน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-321-004" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=สถานีรถไฟอุบลราชธานี วารินชำราบ" 
+                           data-place-name="สถานีรถไฟอุบล (วาริน)" 
+                           data-query="สถานีรถไฟอุบลราชธานี วารินชำราบ" 
+                           data-lat="15.1997" 
+                           data-lng="104.8596" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป สถานีรถไฟอุบล (วาริน)
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: มหาวิทยาลัยอุบลราชธานี (Ubon Ratchathani University) -->
+            <article class="service-card" 
+                     data-id="ubu-university" 
+                     data-zone="warin" 
+                     data-category="transit" 
+                     data-keywords="มหาลัย ม.อุบล มหาวิทยาลัย นักศึกษา ศรีไค วาริน วารินชำราบ การศึกษา">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=800&q=80" alt="มหาวิทยาลัยอุบลราชธานี (Ubon Ratchathani University)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดทำการ 08:30 - 16:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">มหาวิทยาลัยอุบลราชธานี (Ubon Ratchathani University)</h2>
+                        <p class="card-subtitle">สถาบันอุดมศึกษาหลักของภาคอีสานตอนล่าง ถนนสถลมาร์ค วารินชำราบ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ตำบลเมืองศรีไค วารินชำราบ (ขับรถ 20-25 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 4,500+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">08:30 - 16:30 น. (พื้นที่มหาวิทยาลัยเปิดตลอดวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-353-000" class="detail-value detail-link">045-353-000</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">พื้นที่สาธารณะและสถาบันการศึกษา</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บรรยากาศและสิ่งอำนวยความสะดวก</div>
+                        <div class="highlight-desc">วิทยาเขตสีเขียวร่มรื่น, สำนักวิทยบริการ (ห้องสมุดใหญ่), ศูนย์อาหารนักศึกษา, สนามกีฬากลาง และแหล่งรวมของกินรอบ ม.อุบล</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-353-000" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=มหาวิทยาลัยอุบลราชธานี วารินชำราบ" 
+                           data-place-name="ม.อุบลราชธานี (ม.อุบล)" 
+                           data-query="มหาวิทยาลัยอุบลราชธานี วารินชำราบ" 
+                           data-lat="15.1206" 
+                           data-lng="104.9042" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ม.อุบลราชธานี (ม.อุบล)
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: หลงรัก คอฟฟี่ โรสเตอร์ (Long Lux Coffee Roasters) -->
+            <article class="service-card" 
+                     data-id="long-lux-coffee" 
+                     data-zone="warin" 
+                     data-category="cafe" 
+                     data-keywords="หลงรัก คาเฟ่ วินเทจ อาคารเก่า กาแฟ ดริป ถ่ายรูป สถลมาร์ค วารินชำราบ">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=800&q=80" alt="หลงรัก คอฟฟี่ โรสเตอร์ (Long Lux Coffee Roasters)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 08:00 - 17:30 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">หลงรัก คอฟฟี่ โรสเตอร์ (Long Lux Coffee Roasters)</h2>
+                        <p class="card-subtitle">คาเฟ่และโรงคั่วในอาคารไม้วินเทจโบราณอายุกว่า 80 ปี บรรยากาศสุดคลาสสิก</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสถลมาร์ค วารินชำราบ (ขับรถ 15 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.8 (รีวิว 750+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">08:00 - 17:30 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:084-246-2495" class="detail-value detail-link">084-246-2495</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เครื่องดื่ม 60 - 110 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">เสน่ห์ความคลาสสิก</div>
+                        <div class="highlight-desc">ตัวอาคารเรือนไม้เก่าทรงคุณค่า, กาแฟคั่วสดสไตล์ Specialty Coffee, เค้กโฮมเมดแสนอร่อย และมุมถ่ายรูปสไตล์วินเทจ-ยุโรป</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:084-246-2495" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Long Lux Coffee Roasters วารินชำราบ" 
+                           data-place-name="หลงรัก คอฟฟี่ วาริน" 
+                           data-query="Long Lux Coffee Roasters วารินชำราบ" 
+                           data-lat="15.1950" 
+                           data-lng="104.8625" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป หลงรัก คอฟฟี่ วาริน
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: Nap's Coffee X Warin -->
+            <article class="service-card" 
+                     data-id="naps-coffee-warin" 
+                     data-zone="warin" 
+                     data-category="cafe" 
+                     data-keywords="แนปส์ naps คาเฟ่ กาแฟ ชาเขียว ถ่ายรูป มินิมอล วาริน วารินชำราบ">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=80" alt="Nap's Coffee X Warin" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 07:00 - 17:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">Nap's Coffee X Warin</h2>
+                        <p class="card-subtitle">คาเฟ่โมเดิร์นมินิมอลยอดนิยมของคนรุ่นใหม่ฝั่งวารินชำราบ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>อำเภอวารินชำราบ (ขับรถ 16 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.7 (รีวิว 480+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">07:00 - 17:00 น. (เปิดทุกวัน)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:062-892-4299" class="detail-value detail-link">062-892-4299</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">เครื่องดื่ม 55 - 95 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">จุดเด่นของสาขาวาริน</div>
+                        <div class="highlight-desc">ดีไซน์คลีนสว่างตา มีทั้งโซนห้องแอร์และโซนสวนสีเขียว กาแฟหอมเข้ม Dirty Coffee รสเลิศ และเครื่องดื่มสูตรพิเศษสดชื่น</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:062-892-4299" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=Naps Coffee X Warin วารินชำราบ" 
+                           data-place-name="Nap's Coffee วาริน" 
+                           data-query="Naps Coffee X Warin วารินชำราบ" 
+                           data-lat="15.1920" 
+                           data-lng="104.8650" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป Nap's Coffee วาริน
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: ตลาดสดเทศบาล 1 วารินชำราบ (ตลาดโต้รุ่งวาริน) -->
+            <article class="service-card" 
+                     data-id="market-warin" 
+                     data-zone="warin" 
+                     data-category="market" 
+                     data-keywords="ตลาด ตลาดโต้รุ่ง ข้าวต้ม ของกิน ดึก สตรีทฟู้ด วาริน วารินชำราบ">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80" alt="ตลาดสดเทศบาล 1 วารินชำราบ (ตลาดโต้รุ่งวาริน)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 16:00 - 23:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">ตลาดสดเทศบาล 1 วารินชำราบ (ตลาดโต้รุ่งวาริน)</h2>
+                        <p class="card-subtitle">ตลาดเก่าแก่และแหล่งรวมสตรีทฟู้ดยามค่ำคืนใจกลางอำเภอวารินชำราบ</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ใจกลางเมืองวารินชำราบ (ขับรถ 15 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.5 (รีวิว 890+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">16:00 - 23:00 น. (ช่วงค่ำของกินละลานตา)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารจานด่วน 35 - 70 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">ของกินเด็ดวารินชำราบ</div>
+                        <div class="highlight-desc">ข้าวต้มรอบดึกกับข้าวร้อนๆ, ผัดไทยเตาถ่าน, บัวลอยไข่หวาน, ก๋วยเตี๋ยวเนื้อตุ๋น และโรตีแป้งกรอบ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=ตลาดสดเทศบาล 1 วารินชำราบ" 
+                           data-place-name="ตลาดสดเทศบาล 1 วาริน" 
+                           data-query="ตลาดสดเทศบาล 1 วารินชำราบ" 
+                           data-lat="15.1945" 
+                           data-lng="104.8610" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป ตลาดสดเทศบาล 1 วาริน
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: หาดคูเดื่อ (Khu Duea Beach - แพอาหารริมมูล) -->
+            <article class="service-card" 
+                     data-id="had-khu-duea" 
+                     data-zone="warin" 
+                     data-category="food" 
+                     data-keywords="หาดคูเดื่อ แพอาหาร แม่น้ำมูล ริมน้ำ ปลาเผา กุ้งเต้น ส้มตำ ธรรมชาติ วาริน">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80" alt="หาดคูเดื่อ (Khu Duea Beach - แพอาหารริมมูล)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-green">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 09:00 - 19:00 น.
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">หาดคูเดื่อ (Khu Duea Beach - แพอาหารริมมูล)</h2>
+                        <p class="card-subtitle">แหล่งพักผ่อนรับลมริมแม่น้ำมูล นั่งแพทานอาหารอีสานและปลาแม่น้ำสด</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ริมแม่น้ำมูล วารินชำราบ (ขับรถ 12-15 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.6 (รีวิว 1,800+)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">09:00 - 19:00 น. (ช่วงเย็นบรรยากาศดีมาก)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">อาหารอีสาน & ปลาแม่น้ำ 80 - 350 บาท</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บรรยากาศริมแม่น้ำมูล</div>
+                        <div class="highlight-desc">แพลอยน้ำรับลมเย็นสดชื่น, เมนูกุ้งเต้นรสแซ่บ, ต้มยำปลาคังแม่น้ำมูล, ปลานิลเผาเกลือ และส้มตำถาดริมน้ำ</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=หาดคูเดื่อ วารินชำราบ" 
+                           data-place-name="แพอาหารหาดคูเดื่อ" 
+                           data-query="หาดคูเดื่อ วารินชำราบ" 
+                           data-lat="15.2285" 
+                           data-lng="104.8210" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป แพอาหารหาดคูเดื่อ
+                        </a>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card: โรงพยาบาลวารินชำราบ (Warin Chamrap Hospital) -->
+            <article class="service-card" 
+                     data-id="hospital-warin" 
+                     data-zone="warin" 
+                     data-category="services" 
+                     data-keywords="โรงพยาบาล หมอ ป่วย ฉุกเฉิน ยา วาริน วารินชำราบ สถิตนิมานกาล 24 ชั่วโมง">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80" alt="โรงพยาบาลวารินชำราบ (Warin Chamrap Hospital)" class="card-image" loading="lazy">
+                    <div class="card-badge-status badge-blue">
+                        <span class="status-dot"></span>
+                        เปิดบริการ 24 ชั่วโมง (ฉุกเฉิน)
+                    </div>
+                    <div class="card-badge-zone">
+                        ฝั่งวารินชำราบ
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="card-header-group">
+                        <h2 class="card-title">โรงพยาบาลวารินชำราบ (Warin Chamrap Hospital)</h2>
+                        <p class="card-subtitle">โรงพยาบาลทั่วไปหลักประจำอำเภอวารินชำราบ บริการการแพทย์ครบวงจร</p>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>ถนนสถิตนิมานกาล วารินชำราบ (ขับรถ 16 นาที)</span>
+                        </div>
+                        <div class="meta-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span>4.3 (ศูนย์สาธารณสุขหลักฝั่งวาริน)</span>
+                        </div>
+                    </div>
+
+                    <div class="card-details">
+                        <div class="detail-row">
+                            <span class="detail-label">เวลาทำการ</span>
+                            <span class="detail-value">เปิด 24 ชั่วโมง (แผนกอุบัติเหตุ-ฉุกเฉิน ER)</span>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <span class="detail-label">เบอร์ติดต่อ</span>
+                            <a href="tel:045-321-221" class="detail-value detail-link">045-321-221</a>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">อัตราค่าบริการ</span>
+                            <span class="detail-value">สิทธิประกันสังคม / บัตรทอง / ชำระเอง</span>
+                        </div>
+                    </div>
+
+                    <div class="card-highlight">
+                        <div class="highlight-title">บริการจำเป็นฝั่งวาริน</div>
+                        <div class="highlight-desc">แผนกอุบัติเหตุและฉุกเฉิน 24 ชม., คลินิกโรคทั่วไปและเฉพาะทาง, แผนกตรวจรักษาผู้ป่วยนอก และห้องจ่ายยามาตรฐาน</div>
+                    </div>
+
+                    <div class="card-actions">
+                        
+                        <a href="tel:045-321-221" class="btn-action btn-call">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            โทรสอบถาม
+                        </a>
+                        <a href="https://www.google.com/maps/dir/?api=1&destination=โรงพยาบาลวารินชำราบ" 
+                           data-place-name="รพ.วารินชำราบ" 
+                           data-query="โรงพยาบาลวารินชำราบ" 
+                           data-lat="15.1880" 
+                           data-lng="104.8670" 
+                           class="btn-action btn-map map-nav-btn" 
+                           target="_blank" 
+                           rel="noopener noreferrer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                            นำทางไป รพ.วารินชำราบ
+                        </a>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <h3>ไม่พบสถานที่ที่ค้นหา</h3>
+            <p>ลองค้นหาด้วยคำอื่น เช่น สเต็ก, กาแฟ, เซ็นทรัล, ก๋วยจั๊บ, วาริน หรือเลือกหมวดหมู่อื่น</p>
         </div>
 
         <!-- Emergency Section -->
         <section class="emergency-section">
             <div class="emergency-header">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <h2>เบอร์โทรฉุกเฉินและนิติบุคคลหอพัก</h2>
+                <h2>เบอร์โทรฉุกเฉินและบริการสำคัญ เมืองอุบล & วารินชำราบ</h2>
             </div>
             <div class="emergency-grid">
-                <div class="emergency-card">
-                    <span class="emergency-card-title">สำนักงานหอพัก / นิติบุคคล</span>
-                    <a href="tel:0891234567" class="emergency-card-phone">
+                <a href="tel:1669" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">หน่วยแพทย์ฉุกเฉิน กู้ชีพ</span>
+                        <span class="emergency-desc">อุบัติเหตุ เจ็บป่วยฉุกเฉิน 24 ชม.</span>
+                    </div>
+                    <div class="emergency-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                        089-123-4567
-                    </a>
-                </div>
-                <div class="emergency-card">
-                    <span class="emergency-card-title">ช่างซ่อมบำรุงฉุกเฉิน 24 ชม.</span>
-                    <a href="tel:0819876543" class="emergency-card-phone">
+                        1669
+                    </div>
+                </a>
+
+                <a href="tel:045319200" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">รพ.สรรพสิทธิประสงค์</span>
+                        <span class="emergency-desc">แผนกอุบัติเหตุ-ฉุกเฉิน ในเมือง</span>
+                    </div>
+                    <div class="emergency-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                        081-987-6543
-                    </a>
-                </div>
-                <div class="emergency-card">
-                    <span class="emergency-card-title">เหตุด่วนเหตุร้าย / กู้ชีพฉุกเฉิน</span>
-                    <a href="tel:191" class="emergency-card-phone">
+                        โทรออก
+                    </div>
+                </a>
+
+                <a href="tel:045321221" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">รพ.วารินชำราบ</span>
+                        <span class="emergency-desc">แผนกอุบัติเหตุ-ฉุกเฉิน ฝั่งวาริน</span>
+                    </div>
+                    <div class="emergency-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                        191 / 1669
-                    </a>
-                </div>
+                        โทรออก
+                    </div>
+                </a>
+
+                <a href="tel:045254008" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">สภ.เมืองอุบลราชธานี</span>
+                        <span class="emergency-desc">สถานีตำรวจภูธรเมืองอุบลฯ</span>
+                    </div>
+                    <div class="emergency-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        โทรออก
+                    </div>
+                </a>
+
+                <a href="tel:045321213" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">สภ.วารินชำราบ</span>
+                        <span class="emergency-desc">สถานีตำรวจภูธรวารินชำราบ</span>
+                    </div>
+                    <div class="emergency-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        โทรออก
+                    </div>
+                </a>
+
+                <a href="tel:0961950943" class="emergency-card">
+                    <div class="emergency-info">
+                        <span class="emergency-name">นิติบุคคลหอพัก DormiNetX</span>
+                        <span class="emergency-desc">ติดต่อผู้จัดการหอพัก</span>
+                    </div>
+                    <div class="emergency-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        096-195-0943
+                    </div>
+                </a>
             </div>
         </section>
 
         <!-- Footer -->
         <footer class="site-footer">
-            <span>&copy; 2026 DormiNet System · แพลตฟอร์มบริหารจัดการหอพักอัจฉริยะ</span>
-            <div class="footer-links">
-                <a href="/contact">ติดต่อเรา</a>
-                <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
-                <a href="/terms">ข้อกำหนดการใช้งาน</a>
-            </div>
+            <p>DormiNetX • คู่มือแนะนำสถานที่สำคัญและบริการสำหรับลูกบ้าน</p>
+            <p style="margin-top: 4px; color: var(--text-light);">ระบบนำทางเชื่อมต่อแอปแผนที่หลักจากตำแหน่งปัจจุบันแบบเรียลไทม์</p>
         </footer>
 
     </main>
@@ -1419,38 +2626,39 @@
         document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.getElementById('search-input');
             const searchClear = document.getElementById('search-clear');
+            const zoneTabs = document.querySelectorAll('.zone-tab-btn');
             const filterButtons = document.querySelectorAll('.filter-pill');
             const cards = document.querySelectorAll('.service-card');
             const countText = document.getElementById('results-count-text');
             const emptyState = document.getElementById('empty-state');
             const navButtons = document.querySelectorAll('.map-nav-btn');
 
+            let currentZone = 'all';
             let currentCategory = 'all';
             let currentQuery = '';
 
-            // Smart Native Map Navigation: Open Apple Maps on iOS, Google Maps on Android/PC
+            // Smart Native Map Navigation: Pin to Exact Store Name from Current Device Location
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
             const isAndroid = /Android/i.test(navigator.userAgent);
 
             navButtons.forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const lat = btn.getAttribute('data-lat');
-                    const lng = btn.getAttribute('data-lng');
-                    const name = btn.getAttribute('data-name') || '';
+                    const query = btn.getAttribute('data-query');
+                    const placeName = btn.getAttribute('data-place-name') || '';
 
-                    if (lat && lng) {
+                    if (query) {
                         e.preventDefault();
                         if (isIOS) {
-                            // Universal link for Apple Maps app on iPhone (direct native app open)
-                            const appleMapsUrl = `https://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`;
+                            // Apple Maps Directions: daddr locks onto place name, dirflg=d (driving), starts from Current Location
+                            const appleMapsUrl = 'https://maps.apple.com/?daddr=' + encodeURIComponent(query) + '&dirflg=d';
                             window.location.href = appleMapsUrl;
                         } else if (isAndroid) {
-                            // Universal link for Google Maps app on Android
-                            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=&travelmode=walking`;
+                            // Google Maps Directions: destination locks onto place name, origin omitted = Current Location
+                            const googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(query);
                             window.location.href = googleMapsUrl;
                         } else {
                             // Desktop web browser
-                            const webMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=`;
+                            const webMapsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(query);
                             window.open(webMapsUrl, '_blank');
                         }
                     }
@@ -1462,15 +2670,20 @@
                 const query = currentQuery.toLowerCase().trim();
 
                 cards.forEach(card => {
+                    const zone = card.getAttribute('data-zone');
                     const category = card.getAttribute('data-category');
                     const keywords = (card.getAttribute('data-keywords') || '').toLowerCase();
                     const title = (card.querySelector('.card-title')?.textContent || '').toLowerCase();
                     const subtitle = (card.querySelector('.card-subtitle')?.textContent || '').toLowerCase();
 
+                    const matchesZone = (currentZone === 'all' || zone === currentZone);
                     const matchesCategory = (currentCategory === 'all' || category === currentCategory);
-                    const matchesSearch = (!query || title.includes(query) || subtitle.includes(query) || keywords.includes(query));
+                    const matchesSearch = !query || 
+                        title.includes(query) || 
+                        subtitle.includes(query) || 
+                        keywords.includes(query);
 
-                    if (matchesCategory && matchesSearch) {
+                    if (matchesZone && matchesCategory && matchesSearch) {
                         card.style.display = 'flex';
                         visibleCount++;
                     } else {
@@ -1480,47 +2693,63 @@
 
                 if (countText) {
                     if (visibleCount === cards.length) {
-                        countText.textContent = `แสดงทั้งหมด ${visibleCount} สถานที่จริงรอบหอพัก`;
+                        countText.textContent = 'แสดงทั้งหมด ' + visibleCount + ' สถานที่จริง';
                     } else {
-                        countText.textContent = `แสดง ${visibleCount} จาก ${cards.length} รายการ`;
+                        countText.textContent = 'แสดง ' + visibleCount + ' จาก ' + cards.length + ' รายการ';
                     }
                 }
 
                 if (emptyState) {
-                    emptyState.style.display = (visibleCount === 0) ? 'block' : 'none';
-                }
-
-                if (searchClear) {
-                    searchClear.style.display = query.length > 0 ? 'inline-flex' : 'none';
+                    if (visibleCount === 0) {
+                        emptyState.classList.add('visible');
+                    } else {
+                        emptyState.classList.remove('visible');
+                    }
                 }
             }
 
+            // Zone Tabs Interaction
+            zoneTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    zoneTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentZone = tab.getAttribute('data-zone') || 'all';
+                    applyFilters();
+                });
+            });
+
+            // Category Filter Pills
             filterButtons.forEach(button => {
                 button.addEventListener('click', () => {
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    filterButtons.forEach(b => b.classList.remove('active'));
                     button.classList.add('active');
                     currentCategory = button.getAttribute('data-category') || 'all';
                     applyFilters();
                 });
             });
 
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
+            // Search Input with Debounce
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
                     currentQuery = e.target.value;
-                    applyFilters();
-                });
-            }
-
-            if (searchClear) {
-                searchClear.addEventListener('click', () => {
-                    if (searchInput) {
-                        searchInput.value = '';
-                        currentQuery = '';
-                        searchInput.focus();
-                        applyFilters();
+                    if (currentQuery.length > 0) {
+                        searchClear.classList.add('visible');
+                    } else {
+                        searchClear.classList.remove('visible');
                     }
-                });
-            }
+                    applyFilters();
+                }, 150);
+            });
+
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                currentQuery = '';
+                searchClear.classList.remove('visible');
+                searchInput.focus();
+                applyFilters();
+            });
         });
     </script>
 </body>
