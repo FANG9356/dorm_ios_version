@@ -587,6 +587,86 @@
             border-color: #1e293b;
         }
 
+        /* Overview Map Quick Banner */
+        .map-overview-banner {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .map-overview-content {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .map-overview-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .map-overview-title svg {
+            width: 18px;
+            height: 18px;
+            color: #0f172a;
+            stroke-width: 2.2;
+        }
+
+        .map-overview-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .btn-overview-map {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 9px 18px;
+            border-radius: var(--radius-pill);
+            font-size: 13px;
+            font-weight: 600;
+            background: #0f172a;
+            color: #ffffff;
+            border: 1px solid #0f172a;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: all 0.16s ease;
+            cursor: pointer;
+        }
+
+        .btn-overview-map:hover {
+            background: #1e293b;
+        }
+
+        .btn-overview-map svg {
+            width: 15px;
+            height: 15px;
+            stroke-width: 2.2;
+        }
+
+        @media (max-width: 580px) {
+            .map-overview-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 16px;
+            }
+            .btn-overview-map {
+                width: 100%;
+            }
+        }
+
         /* Emergency Section */
         .emergency-section {
             background: #ffffff;
@@ -781,6 +861,25 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
+        </div>
+
+        <!-- Quick Overview Map Banner -->
+        <div class="map-overview-banner">
+            <div class="map-overview-content">
+                <div class="map-overview-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    แผนที่ภาพรวมรอบหอพัก ย่านตลาดหนองบัว
+                </div>
+                <div class="map-overview-desc">เปิดดูแผนที่ภาพรวมและเส้นทางผ่านแอปแผนที่หลักในโทรศัพท์ของคุณได้ทันที</div>
+            </div>
+            <a href="https://maps.google.com/maps?q=ตลาดสดหนองบัว+อุบลราชธานี" 
+               data-lat="15.2612" 
+               data-lng="104.8455" 
+               data-name="ตลาดสดหนองบัว อุบลราชธานี" 
+               class="btn-overview-map map-nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                เปิดแอปแผนที่
+            </a>
         </div>
 
         <!-- Horizontal Category Filters -->
@@ -1331,6 +1430,7 @@
 
             // Smart Native Map Navigation: Open Apple Maps on iOS, Google Maps on Android/PC
             const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isAndroid = /Android/i.test(navigator.userAgent);
 
             navButtons.forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -1341,13 +1441,17 @@
                     if (lat && lng) {
                         e.preventDefault();
                         if (isIOS) {
-                            // Universal link for Apple Maps app on iPhone
+                            // Universal link for Apple Maps app on iPhone (direct native app open)
                             const appleMapsUrl = `https://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(name)}`;
-                            window.open(appleMapsUrl, '_blank');
-                        } else {
-                            // Universal link for Google Maps app on Android / Web
+                            window.location.href = appleMapsUrl;
+                        } else if (isAndroid) {
+                            // Universal link for Google Maps app on Android
                             const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=&travelmode=walking`;
-                            window.open(googleMapsUrl, '_blank');
+                            window.location.href = googleMapsUrl;
+                        } else {
+                            // Desktop web browser
+                            const webMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=`;
+                            window.open(webMapsUrl, '_blank');
                         }
                     }
                 });

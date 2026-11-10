@@ -227,7 +227,7 @@ func handleTextMessage(master, db *sql.DB, accountID int, replyToken, lineUserID
 		return
 	}
 
-	if text == "บริการ" || text == "บริการรอบหอพัก" || text == "บริการแนะนำ" || text == "ร้านค้า" || text == "รอบหอพัก" {
+	if text == "บริการ" || text == "บริการรอบหอพัก" || text == "บริการแนะนำ" || text == "ร้านค้า" || text == "รอบหอพัก" || text == "แผนที่" || text == "แผนที่หอพัก" || text == "แผนที่รอบหอ" || text == "นำทาง" || text == "เส้นทาง" {
 		replyToLineWithFlexMessage(replyToken, "บริการและร้านค้ารอบหอพัก", map[string]interface{}{
 			"type": "bubble",
 			"size": "kilo",
