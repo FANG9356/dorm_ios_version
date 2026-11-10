@@ -931,14 +931,14 @@ struct SidebarMenu: View {
                             
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                                 // ปรับเวลาให้เท่ากับของ ContentView (0.8 วิ) จะได้ละลายสลับหน้าแบบพอดีกัน
-                                withAnimation(.easeInOut(duration: 0.8)) {
-                                    isLoggedIn = false
-                                }
-                                
                                 APIService.shared.authToken = nil
                                 APIService.shared.currentEmail = nil
                                 APIService.shared.userRole = nil
                                 UserDefaults.standard.removeObject(forKey: "adminID")
+                                
+                                withAnimation(.easeInOut(duration: 0.8)) {
+                                    isLoggedIn = false
+                                }
                                 
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                                     isLoggingOut = false

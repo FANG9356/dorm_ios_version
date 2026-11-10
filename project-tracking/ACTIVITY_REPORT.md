@@ -3349,3 +3349,34 @@
   - backend-dorm/public/services.html
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: เสร็จสิ้นและนำขึ้นระบบจริงเรียบร้อย (Deployed & Verified)
+
+---
+
+## 2026-11-10 20:30 ICT: แก้ไขบั๊กแอพเด้งออก (Crash) เมื่อออกจากระบบแล้วเข้าใช้งานผ่านประวัติบัญชี (Saved Accounts History)
+
+- วัตถุประสงค์: แก้ไขปัญหาแอพพลิเคชัน iOS (DormiNetX) เด้งปิดตัวเอง (Crash) เมื่อผู้ใช้กดออกจากระบบ (Logout) แล้วพยายามกลับเข้ามาสู่ระบบใหม่ผ่านปุ่มประวัติบัญชีเดิมที่บันทึกไว้ (Clock/History Button) ซึ่งเดิมผู้ใช้ต้องปัดแอพทิ้ง (Force Quit) แล้วเปิดใหม่จึงจะเข้าสู่ระบบได้
+- สาเหตุของปัญหา (Root Cause Analysis):
+  1. การสลับ ModelContainer ของ SwiftData ขณะมี View Active อยู่: เมื่อผู้ใช้กดเข้าสู่ระบบผ่านประวัติ (Saved Account) ตัวแปร `isLoggedIn` จะเปลี่ยนเป็น `true` ซึ่งทำให้ `ContentView` แสดง `RoomListView` ทันที แต่ขณะนั้น `AccountScopedRootView` ยังคงถือ `guestContainer` อยู่ (เพราะการ reload container เกิดขึ้นใน `.onChange` / `.task` หลังจาก render pass) ทำให้ `@Query` ภายใน `RoomListView` ถูกผูกเข้ากับ `guestContainer` จากนั้นเมื่อ `reloadContainerIfNeeded()` สลับไปใช้ `makeContainer(accountID:)` ของบัญชีจริง SwiftData ตรวจพบว่า ModelContainer ใน Environment ถูกสลับกะทันหันขณะที่มี `@Query` ทำงานอยู่ จึงเกิด Fatal Exception / Crash ทันที (ซึ่งในการเปิดแอพแบบ Cold Start จะไม่พบปัญหานี้เพราะ Container ถูกเตรียมไว้ตั้งแต่ก่อน View ถูกสร้าง)
+  2. การสร้าง ModelContainer ซ้ำซ้อนสำหรับ SQLite Store เดิม: ฟังก์ชัน `makeContainer(accountID:)` เดิมจะสร้าง instance ใหม่ของ `ModelContainer` สำหรับไฟล์ `account_\(accountID).store` เสมอในกระบวนการเดิม โดยไม่มีการ Cache เมื่อผู้ใช้ออกจากระบบแล้วเข้าใหม่ ทำให้เกิดการชนของ Persistent Store Coordinator และ File Lock
+  3. Side-effect ใน Resolver Function: `resolveAccountID()` เดิมมีการเรียก `UserDefaults.standard.set(accountID, forKey: "adminID")` ทุกครั้งที่ถูก evaluate ซึ่งส่งผลกระทบให้ `@AppStorage("adminID")` trigger view re-render ซ้ำซ้อน
+  4. ลำดับการล้าง Session ขณะ Logout: ใน `RoomListView` เดิมมีการตั้งค่า `isLoggedIn = false` ก่อนการล้าง Token และ AdminID ออกจาก Keychain / UserDefaults
+- สิ่งที่ดำเนินการแก้ไข:
+  1. อัปเดต `AccountScopedStore` ใน `DormApp.swift`:
+     - เพิ่ม `containerCache: [Int: ModelContainer]` และ `guestContainer` เพื่อ Reuse Instance เดิมของ ModelContainer ที่เปิดไว้แล้วสำหรับแต่ละบัญชี ไม่สร้างซ้ำซ้อน ป้องกัน SQLite Coordinator Conflict
+     - เพิ่ม `invalidateContainer(for:)` และ `invalidateAll()` สำหรับกรณี Recovery
+  2. ปรับปรุง Lifecycle ใน `AccountScopedRootView` (`DormApp.swift`):
+     - ตรวจสอบ `storeKey != loadedStoreKey`: หาก Store ของบัญชียังโหลดไม่เสร็จ ให้แสดง `AccountStoreLoadingView` ก่อน และโหลด Container ให้พร้อม เพื่อป้องกันไม่ให้ `RoomListView` และ `@Query` ถูก Mount ด้วย Guest Container
+     - กำหนด `.id(loadedStoreKey)` ให้กับ `SplashView()` เพื่อให้ SwiftUI ทำลายและสร้าง View Hierarchy ใหม่ที่สะอาดหมดจดเมื่อมีการสลับบัญชีหรือสลับ Store
+     - ใน `resolveAccountID()` เพิ่มการตรวจสอบว่าค่าใน `UserDefaults` ต่างจากเดิมจริงหรือไม่ก่อนทำการบันทึก เพื่อลด Notification ซ้ำซ้อน
+  3. ปรับปรุงลำดับการ Logout ใน `RoomListView.swift`:
+     - ล้าง `authToken`, `currentEmail`, `userRole` และ `adminID` ออกให้เรียบร้อยก่อนทำการตั้งค่า `isLoggedIn = false`
+  4. ทำความสะอาด Emojis ตาม Zero Emojis Policy ในจุดที่เกี่ยวข้อง
+- การตรวจสอบและผลการทดสอบ (Verification):
+  1. iOS Build: ผ่านสมบูรณ์ (`** BUILD SUCCEEDED **`)
+  2. iOS Deployment: ติดตั้งเวอร์ชันแก้ไขลงเครื่องทดสอบจริง iPhone 11 "F" (`00008030-001C65A134C0A02E`) สำเร็จและรันได้ปกติ
+  3. Backend Integrity: รันชุดทดสอบ Backend Go ทั้งหมด `go test ./...`, `go test -race -count=1 ./handlers`, และ `go vet ./...` ผ่าน 100%
+- ไฟล์หรือระบบที่เกี่ยวข้อง:
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/RoomListView.swift
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการแก้ไข ทดสอบ และติดตั้งลงเครื่องจริงเรียบร้อย (Fixed & Installed)

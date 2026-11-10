@@ -6,6 +6,7 @@ import UIKit
 ///
 /// Each account gets a separate persistent store. This keeps local data isolated
 /// even when multiple accounts use the same physical iPhone/iPad.
+@MainActor
 enum AccountScopedStore {
     static let schema = Schema([
         DormUser.self,
@@ -19,10 +20,16 @@ enum AccountScopedStore {
     ])
 
     private static let fileManager = FileManager.default
+    private static var containerCache: [Int: ModelContainer] = [:]
+    private static var guestContainer: ModelContainer?
 
     static func makeContainer(accountID: Int) throws -> ModelContainer {
         guard accountID > 0 else {
             throw AccountStoreError.invalidAccountID
+        }
+
+        if let cached = containerCache[accountID] {
+            return cached
         }
 
         let directory = try accountsDirectory()
@@ -42,6 +49,7 @@ enum AccountScopedStore {
         if try PaymentLedger.migrateLegacyBalances(in: container.mainContext) > 0 {
             try container.mainContext.save()
         }
+        containerCache[accountID] = container
         return container
     }
 
@@ -49,15 +57,29 @@ enum AccountScopedStore {
     /// It prevents the previous account's persistent context from remaining
     /// attached to the login screen.
     static func makeGuestContainer() throws -> ModelContainer {
+        if let guest = guestContainer {
+            return guest
+        }
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: true
         )
 
-        return try ModelContainer(
+        let container = try ModelContainer(
             for: schema,
             configurations: [configuration]
         )
+        guestContainer = container
+        return container
+    }
+
+    static func invalidateContainer(for accountID: Int) {
+        containerCache.removeValue(forKey: accountID)
+    }
+
+    static func invalidateAll() {
+        containerCache.removeAll()
+        guestContainer = nil
     }
 
     private static func accountsDirectory() throws -> URL {
@@ -160,8 +182,14 @@ struct AccountScopedRootView: View {
                     storeInitError = nil
                     resetToGuestStore()
                 }
+            } else if storeKey != loadedStoreKey {
+                AccountStoreLoadingView()
+                    .onAppear {
+                        reloadContainerIfNeeded()
+                    }
             } else {
                 SplashView()
+                    .id(loadedStoreKey)
             }
         }
             .modelContainer(modelContainer)
@@ -213,12 +241,13 @@ struct AccountScopedRootView: View {
         APIService.shared.userRole = nil
         UserDefaults.standard.removeObject(forKey: "adminID")
         isLoggedIn = false
+        AccountScopedStore.invalidateAll()
 
         do {
             modelContainer = try AccountScopedStore.makeGuestContainer()
             loadedStoreKey = "guest"
         } catch {
-            print("❌ Failed to recover guest SwiftData container: \(error)")
+            print("Failed to recover guest SwiftData container: \(error)")
         }
     }
 
@@ -226,7 +255,9 @@ struct AccountScopedRootView: View {
     private static func resolveAccountID() -> Int? {
         if let token = CredentialStore.shared.token,
            let accountID = APIService.shared.localSessionAccountID(token: token) {
-            UserDefaults.standard.set(accountID, forKey: "adminID")
+            if UserDefaults.standard.integer(forKey: "adminID") != accountID {
+                UserDefaults.standard.set(accountID, forKey: "adminID")
+            }
             return accountID
         }
         let storedID = UserDefaults.standard.integer(forKey: "adminID")
@@ -379,7 +410,7 @@ private struct SwiftDataRecoveryView: View {
             try? FileManager.default.removeItem(at: storeURL)
             try? FileManager.default.removeItem(at: shmURL)
             try? FileManager.default.removeItem(at: walURL)
-            print("🗑️ Deleted corrupted store for account \(accountID)")
+            print("Deleted corrupted store for account \(accountID)")
         } catch {
             print("Failed to delete corrupted store: \(error)")
         }
