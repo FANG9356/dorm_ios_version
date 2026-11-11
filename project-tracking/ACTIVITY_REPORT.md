@@ -3499,3 +3499,35 @@
     - ค่าใน com.dorminet.DormiNetX.plist: "adminID" => 1, "userRole" => "admin", "userName" => "แพรวา", "userEmail" => "enoshimaj991@gmail.com" (ปรับจาก 2 เป็น 1 สำเร็จสมบูรณ์)
     - ไฟล์ Store ที่แอปเปิดใช้งาน: account_1.store (มี 6 ห้อง, 2 ผู้เช่า, 3 รายการชำระเงิน)
 - สถานะ deploy/UAT: แก้ไข บิลด์ ติดตั้งลงอุปกรณ์ทดสอบจริงเรียบร้อย ยืนยันข้อมูลขึ้นตรงกับเมลแม่สมบูรณ์
+
+
+---
+
+## 2026-11-11 12:18 — ตรวจสอบระบบโดยรวมอย่างละเอียดในระยะทดสอบแก้ไขรายจุด (Comprehensive Verification & Readiness Check)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "ตรวจสอบอีกรอบเพราะตอนนี้อยู่ในช่วง ทดสอบแก้ จะแก้ไขไปที่ละจุด"
+  - ตรวจสอบความถูกต้องและเสถียรภาพของทุกจุดที่มีการแก้ไขไปอย่างละเอียด เพื่อให้มั่นใจว่าระบบพร้อมสำหรับการทดสอบใช้งานจริงทีละส่วน
+- ผลการตรวจสอบรายจุด (Point-by-Point Verification):
+  1. จุดที่ 1: การแชร์ฐานข้อมูลหอพักระหว่างบัญชีแม่ (Superadmin) และบัญชีลูก (Admin/Staff)
+     - ยืนยันฟังก์ชัน localSessionAccountID: สิทธิ์พนักงาน (role != "superadmin") ชี้ไปที่ฐานข้อมูลหอพักหลัก (account_1.store) เสมอ ไม่หลงไปสร้าง account_2.store
+     - ยืนยันระบบ Self-Healing ใน AccountScopedRootView (DormApp.swift): ตรวจสอบและแก้ไขค่า adminID ให้เป็น 1 อัตโนมัติเมื่อเข้าสู่ระบบ
+     - ยืนยัน com.dorminet.DormiNetX.plist บนเครื่องทดสอบจริง: adminID = 1, userRole = admin, userName = แพรวา
+     - ไฟล์ฐานข้อมูล account_1.store มีข้อมูลครบถ้วน: 6 ห้องพัก, 2 ผู้เช่า, 3 ประวัติการชำระเงิน
+  2. จุดที่ 2: การเข้าสู่ระบบด้วยประวัติ (Saved Accounts History) และการแก้ปัญหาแอปเด้งออก
+     - ยืนยัน loadSavedAccounts() มีระบบ Auto-Migration ปรับปรุงค่า adminID ของสิทธิ์พนักงานใน Keychain ให้เป็น 1
+     - ฟังก์ชัน restoreSavedAccount คืนค่าเซสชันโดยระบุ targetAccountID = 1 เสมอ ไม่เกิดอาการ Crash หรือสลับไปเปิด Store ว่างเปล่า
+  3. จุดที่ 3: การกดปุ่มฟันเฟืองแก้ไขข้อมูลตนเองของสิทธิ์ลูก
+     - ยืนยันการผูก Modal Sheet (.sheet(item: $editingProfileAdmin)) อยู่ระดับบนสุดของ RoomListView ปิด Sidebar ทันทีเมื่อกดปุ่ม ไม่มีการชนของแอนิเมชันหรือถูกบล็อกใน iOS
+     - ใน EditAdminSheet: แสดงช่อง "อีเมลส่วนตัว (ใช้เข้าสู่ระบบ)" สำหรับ backup_email และเมื่อบันทึกจะอัปเดต userEmail ใน UserDefaults ทันที
+     - รูปโปรไฟล์ใน Sidebar ดึงจาก currentSessionAdminID ทำให้บัญชีลูกแสดงภาพถ่ายโปรไฟล์ของตนเอง (profile_2.jpg) ได้อย่างถูกต้อง
+  4. จุดที่ 4: การแสดง QR Code ในบิลรายเดือนผ่านปุ่ม "การเงิน" (LINE Bot)
+     - ยืนยันฟังก์ชัน buildLineInvoiceFlexMessage และ isInvoiceDueForPayment ใน backend-dorm/handlers/line_bot.go:
+       - กรณีบิลถึงรอบชำระ (เดือนปัจจุบันหรือค้างชำระ) และมียอดคงค้าง: ส่ง Flex Message แบบ Carousel 2 บับเบิล (บับเบิลแรกคือรายละเอียดบิล + บับเบิลสองคือ QR Code พร้อมเพย์และเลขบัญชี)
+       - กรณีบิลยังไม่ถึงรอบ (รอบบิลอนาคต) หรือชำระเงินครบแล้ว: ส่งแบบ Single Bubble แสดงเฉพาะรายละเอียดบิล โดยไม่มีการแนบ QR Code
+     - ยืนยันชุดทดสอบ TestLineInvoiceFlexMessageIncludesQRWhenDue และ TestLineInvoiceFlexMessageExcludesQRWhenNotDue ผ่าน 100%
+  5. จุดที่ 5: ความเสถียรของ Production Service และ API
+     - เซิร์ฟเวอร์จริงตอบสนองปกติผ่าน https://dorminet.studio/api/system/ping: {"status":"online"}
+     - Backend Unit Tests: go test -count=1 ./... PASS, go test -count=1 -race ./handlers PASS (0 data race), go vet ./... PASS
+     - iOS Build Tests: xcodebuild build-for-testing PASS (0 errors)
+- สถานะ: ตรวจสอบครบทุกจุด ระบบอยู่ในสถานะสมบูรณ์พร้อมสำหรับการทดสอบของผู้ใช้งาน
