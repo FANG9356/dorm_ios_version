@@ -1,12 +1,13 @@
 # คู่มือส่งต่องาน DormiNetX
 
-อัปเดตล่าสุด: 28 ตุลาคม 2569
+อัปเดตล่าสุด: 11 พฤศจิกายน 2569
 
 ## อ่านก่อนแก้โค้ด
 
 - โปรเจกต์ iOS ที่ใช้งานจริงคือ `DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj`
 - backend อยู่ที่ `backend-dorm` ใช้ Go + SQLite
 - ระบบเป็น local-first: แอปบันทึก local ก่อน แล้ว sync snapshot แยกตามบัญชีไป backend
+- Multi-Admin Architecture: สิทธิ์พนักงาน (Admin/Staff) สังกัดหอพักของเจ้าของ (Superadmin) เสมอ และใช้งานฐานข้อมูล SwiftData ร่วมกัน (`account_1.store`) โดยไม่สร้าง Store แยก
 - LINE เป็น resident-facing channel; action จาก LINE ที่เปลี่ยนข้อมูลต้องตรวจ tenant/ผู้พักปัจจุบันและ publish snapshot กลับเข้าแอป
 - production มีข้อมูลจริง ห้ามสร้าง/เปลี่ยนสถานะเพื่อ UAT โดยไม่มีรายการทดสอบที่ได้รับอนุญาต
 
@@ -14,6 +15,9 @@
 
 | เรื่อง | ไฟล์/โฟลเดอร์ |
 | --- | --- |
+| Account Scoping & SwiftData Store | `DormAppSwift_Sources/DormiNetX/DormiNetX/DormApp.swift` |
+| Auth & Multi-Admin Session Resolution | `DormAppSwift_Sources/DormiNetX/DormiNetX/Services/APIService.swift` |
+| Saved Accounts History & Passcode | `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/LoginView.swift` |
 | UI และกฎ workflow งานซ่อม | `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/MaintenanceTabView.swift` |
 | iOS workflow tests | `DormAppSwift_Sources/DormiNetX/DormiNetXTests/MaintenanceWorkflowTests.swift` |
 | iOS sync/data safety tests | `DormAppSwift_Sources/DormiNetX/DormiNetXTests/CoreDataSafetyTests.swift` |
@@ -21,7 +25,7 @@
 | iOS Localization Catalog | `DormAppSwift_Sources/DormiNetX/DormiNetX/Resources/Localizable.xcstrings` |
 | Maintenance API/materialization | `backend-dorm/handlers/api_maintenances.go` |
 | Maintenance E2E Integration Tests | `backend-dorm/handlers/maintenance_e2e_integration_test.go` |
-| LINE webhook/actions/Flex | `backend-dorm/handlers/line_bot.go` |
+| LINE webhook/actions/Flex/Invoice QR | `backend-dorm/handlers/line_bot.go` |
 | LINE notification outbox | `backend-dorm/handlers/line_notification_outbox.go` |
 | LINE → app snapshot | `backend-dorm/handlers/line_snapshot.go` |
 | Financial Ledger API | `backend-dorm/handlers/api_financial_ledger.go` |

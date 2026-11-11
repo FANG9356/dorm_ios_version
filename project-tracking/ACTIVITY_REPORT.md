@@ -3531,3 +3531,33 @@
      - Backend Unit Tests: go test -count=1 ./... PASS, go test -count=1 -race ./handlers PASS (0 data race), go vet ./... PASS
      - iOS Build Tests: xcodebuild build-for-testing PASS (0 errors)
 - สถานะ: ตรวจสอบครบทุกจุด ระบบอยู่ในสถานะสมบูรณ์พร้อมสำหรับการทดสอบของผู้ใช้งาน
+
+
+---
+
+## 2026-11-11 12:23 — อัปเดตเอกสารติดตามโครงการและคู่มือการพัฒนาระบบ (Documentation Synchronization)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสั่งการ: "อัพเดตเอกสารที่เกี่ยวข้อง"
+  - ปรับปรุงเอกสารติดตามสถานะโครงการทั้งหมดใน project-tracking/ ให้สะท้อนการแก้ไขล่าสุดของ Multi-Admin Store Isolation, การแก้ไขบั๊กเข้าสู่ระบบด้วยประวัติ (Saved Accounts), การแก้ไขหน้าต่างสิทธิ์ผู้ดูแลระบบ, ระบบบิลรายเดือนแนบ QR Code ตามรอบบิล และบริการรอบหอพัก 200 แห่ง
+- สิ่งที่ดำเนินการ:
+  1. project-tracking/WORK_STATUS.md:
+     - อัปเดตวันที่ล่าสุดเป็น 11 พฤศจิกายน 2569
+     - เพิ่มรายการสถานะงานเสร็จสิ้น 100% สำหรับ: Multi-Admin Store Isolation & Sharing, Saved Account History Login, Staff Profile Self-Editing, Monthly Bill QR on Billing Cycle
+     - บันทึกรายละเอียดในหัวข้อ "ทำเสร็จแล้วล่าสุด" และปรับปรุงตาราง "หลักฐานทดสอบล่าสุด" ให้ตรงกับผลการทดสอบ Unit Tests/Race Detector/Build-for-testing ล่าสุด
+  2. project-tracking/PENDING_WORK.md:
+     - อัปเดตวันที่ล่าสุดเป็น 11 พฤศจิกายน 2569
+     - ย้ายงานที่ดำเนินการสำเร็จเข้าสู่หัวข้อ "ปิดแล้วในรอบนี้" และทำความสะอาดแท็กสถานะให้เรียบร้อยสมบูรณ์
+  3. project-tracking/README.md:
+     - อัปเดตวันที่ล่าสุดเป็น 11 พฤศจิกายน 2569
+  4. project-tracking/HANDOFF.md:
+     - อัปเดตวันที่ล่าสุดเป็น 11 พฤศจิกายน 2569
+     - เพิ่มหลักการ Multi-Admin Architecture ในหัวข้อ "อ่านก่อนแก้โค้ด" เพื่อให้ผู้รับช่วงเข้าใจว่าบัญชีพนักงานใช้งานฐานข้อมูล SwiftData ร่วมกับหอพักหลัก (account_1.store) ของเจ้าของหอพัก
+     - อัปเดตตาราง "แผนที่โค้ดสำคัญ" เพิ่ม DormApp.swift (Account Scoping), APIService.swift (Auth & Multi-Admin Session), และ LoginView.swift (Saved Accounts History)
+- ไฟล์ที่เกี่ยวข้อง:
+  - project-tracking/WORK_STATUS.md
+  - project-tracking/PENDING_WORK.md
+  - project-tracking/README.md
+  - project-tracking/HANDOFF.md
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการอัปเดตเอกสารครบถ้วน เรียบร้อย 100%

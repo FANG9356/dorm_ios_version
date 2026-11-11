@@ -1,13 +1,17 @@
 # สถานะการทำงานปัจจุบัน
 
-> สถานะระบบล่าสุด ณ 10 พฤศจิกายน 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
+> สถานะระบบล่าสุด ณ 11 พฤศจิกายน 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
 
-อัปเดตล่าสุด: 10 พฤศจิกายน 2569 (Asia/Bangkok)
+อัปเดตล่าสุด: 11 พฤศจิกายน 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ
 
 | งาน | สถานะ | สิ่งที่เสร็จแล้ว | สิ่งที่ต้องทำเพื่อปิด |
 | --- | --- | --- | --- |
+| Multi-Admin Store Isolation & Sharing | **เสร็จสิ้น 100%** | บัญชีสิทธิ์พนักงาน (Admin/Staff) ชี้ตรงไปยังฐานข้อมูลหอพักหลัก (`account_1.store`) ของเจ้าของหอพัก พร้อมระบบ Self-Healing อัตโนมัติ | ผ่านการทดสอบ Unit Tests และติดตั้งบน iPhone 11 จริงเรียบร้อย |
+| Saved Account History Login | **เสร็จสิ้น 100%** | ระบบ Auto-Migration ปรับปรุงค่า `adminID` ใน Keychain History ให้เป็น 1 อัตโนมัติ ป้องกันแอปเด้งออกและเปิด Store ว่างเปล่า | ทดสอบการเข้าสู่ระบบผ่านประวัติสำเร็จสมบูรณ์ |
+| Staff Profile Self-Editing | **เสร็จสิ้น 100%** | ย้าย Modal Sheet ขึ้นระดับบนสุด ปิด Sidebar ทันที และรองรับการแก้ไข `backup_email` พร้อมแสดงรูปโปรไฟล์ส่วนตัว (`profile_2.jpg`) | ทดสอบบนอุปกรณ์จริงเรียบร้อย |
+| Monthly Bill QR on Billing Cycle (LINE) | **เสร็จสิ้น 100%** | แนบ PromptPay QR Code เฉพาะบิลที่ถึงรอบชำระ (เดือนปัจจุบันหรือค้างชำระ) หากเป็นรอบบิลอนาคตหรือไม่มียอดค้างจะไม่แสดง QR | ชุดทดสอบ `TestLineInvoiceFlexMessageIncludesQRWhenDue` และ `TestLineInvoiceFlexMessageExcludesQRWhenNotDue` ผ่าน 100% |
 | Maintenance quote → approval/reject → repair → bill → slip | **เสร็จสิ้น 100%** | โค้ด iOS/backend, validation, LINE Flex, outbox และชุดทดสอบ `TestMaintenanceE2E` (6/6 tests) ผ่าน 100% | ผ่านการทดสอบครบ 6 ด้าน ทั้ง Paid flow, Rejection, Security, Replay, Stale action |
 | งานซ่อมไม่มีค่าใช้จ่าย | **เสร็จสิ้น 100%** | อนุญาตข้าม quote และ payment ไปซ่อม/เสร็จสิ้นตามกฎ ทดสอบใน `TestMaintenanceE2E_FreeFlow_SkipsQuoteAndPayment` ผ่าน 100% | ผ่านการทดสอบครอบคลุมสมบูรณ์ ไม่สร้างบิลหรือขออนุมัติโดยไม่จำเป็น |
 | UI Automation Target (Xcode) | **เสร็จสิ้น 100%** | ผูก Target `DormiNetXUITests` เข้ากับ `project.pbxproj` และ Scheme เรียบร้อย คอมไพล์ test bundle ผ่านฉลุย | รองรับการรัน UI Automation ครบถ้วน |
@@ -20,6 +24,28 @@
 
 ## ทำเสร็จแล้วล่าสุด
 
+- แก้ไขระบบ Multi-Admin Shared Dormitory Store (สิทธิ์ลูกใช้งานฐานข้อมูลเดียวกับเมลแม่):
+  - ปรับปรุงฟังก์ชัน `localSessionAccountID(token:now:)` ใน `APIService.swift`: กำหนดให้สิทธิ์พนักงาน (`role != "superadmin"` เช่น admin, services, dorm) ชี้ตรงไปยังฐานข้อมูลหอพักหลัก (`account_1.store`) ของเจ้าของหอพักเสมอ ไม่ถอยกลับไปใช้ `admin_id = 2` ซึ่งทำให้แอปไปสร้างฐานข้อมูลว่างเปล่า `account_2.store`
+  - เพิ่มฟังก์ชัน `resolveServerAccountID()` ใน `APIService.swift` สอบทานหมายเลขหอพักจริงจาก `/api/sync/meta` ของเซิร์ฟเวอร์
+  - เพิ่มระบบ Self-Healing Task ใน `AccountScopedRootView` (`DormApp.swift`): ตรวจสอบค่า `adminID` ของสิทธิ์พนักงาน หากค้างเป็น 2 ระบบจะปรับกลับเป็น 1 และสั่ง `reloadContainerIfNeeded()` ทันที
+  - ผ่อนปรนเงื่อนไขตรวจสอบอีเมลใน `SyncManager.shouldAutoPullRemoteSnapshot()` ให้สิทธิ์ลูกสามารถซิงค์และรับ Snapshot ล่าสุดของหอพักร่วมกับเมลแม่ได้
+  - ปรับการแสดงผลรูปโปรไฟล์ใน Sidebar ให้ดึงตามรหัสพนักงาน (`currentSessionAdminID`) เพื่อให้บัญชีลูกแสดงภาพถ่ายโปรไฟล์ส่วนตัว (`profile_2.jpg`)
+  - ตรวจสอบไฟล์ Preference (`com.dorminet.DormiNetX.plist`) บนเครื่อง iPhone 11 จริง: `adminID` ปรับเป็น 1 เรียบร้อย และเปิดใช้งาน `account_1.store` ซึ่งมีข้อมูลห้องพัก 6 ห้อง, ผู้เช่า 2 ราย และประวัติการเงินครบถ้วน
+- แก้ไขปัญหาออกจากระบบแล้วล็อกอินผ่านประวัติ (Saved Accounts) แล้วแอปเด้งออก:
+  - เพิ่มระบบ Auto-Migration ใน `loadSavedAccounts()` ตรวจสอบประวัติบัญชีใน Keychain หากเป็นสิทธิ์พนักงานจะปรับค่า `adminID` เป็น 1 ทันที และบันทึกกลับ Keychain
+  - ปรับปรุง `restoreSavedAccount` และ `saveAccount()` ให้บันทึกและส่ง `targetAccountID = 1` เสมอ ทำให้การเข้าสู่ระบบผ่านประวัติมีความเสถียรและไม่ Crash
+- ระบบบิลรายเดือนผ่าน LINE Bot แนบ PromptPay QR Code สแกนจ่ายอัตโนมัติเฉพาะเมื่อถึงรอบบิล:
+  - เพิ่มการตรวจสอบรอบบิล (`isInvoiceDueForPayment`): บิลรอบปัจจุบันหรือย้อนหลังที่ยังค้างชำระ จะสร้าง Flex Message รูปแบบ Carousel 2 ใบ (การ์ดที่ 1: รายละเอียดบิล, การ์ดที่ 2: ช่องทางชำระเงิน พร้อม PromptPay QR Code ยอดตรงตามบิล และชื่อบัญชีเจ้าของหอพัก) เหมือนกับระบบแจ้งซ่อม
+  - หากเป็นรอบบิลในอนาคตที่ยังไม่ถึงเวลาชำระ ("ยังไม่ถึงรอบ") หรือชำระครบแล้ว ระบบจะไม่ส่ง QR Code (ส่งเป็นการ์ดบิลใบเดียวตามปกติ)
+  - มี Unit Tests ครอบคลุมทั้งกรณี Due และ Not Due ใน `line_bot_invoice_test.go` ผ่าน 100%
+- ปรับปรุงหน้าต่างแก้ไขข้อมูลตนเองของผู้ดูแลระบบ (`EditAdminSheet`):
+  - ย้ายการผูก Sheet (`.sheet(item: $editingProfileAdmin)`) ขึ้นมาระดับบนสุดของ `RoomListView` ปิด Sidebar ทันทีเมื่อกดปุ่มฟันเฟือง ป้องกันปัญหา Sheet Suppression จากแอนิเมชัน Sidebar
+  - รองรับการแก้ไข `backup_email` (อีเมลส่วนตัวสำหรับเข้าสู่ระบบ) ของสิทธิ์ลูก และอัปเดต `userEmail` ใน `UserDefaults` ทันทีเมื่อบันทึกสำเร็จ
+- ปรับปรุงคู่มือบริการและสถานที่รอบหอพัก (`services.html`) ครบ 200 แห่ง พร้อมพิกัด GPS จริง (Lat, Lng):
+  - บันทึกพิกัดจริงระดับถนนและย่านครบ 200 สถานที่ทั่วจังหวัดอุบลราชธานี ป้องกันปัญหาการนำทางปักหมุดหลุดไปใจกลางจังหวัด
+  - เชื่อมต่อการนำทางแบบเจาะจง: Apple Maps (`dirflg=d`) บน iOS และ Google Maps บน Android/Desktop
+  - ภาพถ่ายคมชัดตรงประเภท 100% ไม่ซ้ำกัน 200 URL พร้อมระบบสุ่มหมุนเวียน (Fisher-Yates Shuffle) และ Progressive Loading (Lazy Load)
+  - Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `046d93a04ad2c609467eee826e39a17c2be336aecd2b95c2b41b157188455438`)
 - ปรับปรุงหน้าต่างแก้ไขและจัดการสิทธิ์ผู้ดูแลระบบ (`EditAdminSheet` และ `AddAdminSheet`):
   - เพิ่มตัวเลือกระดับสิทธิ์ (`Role / Permission`) ในการเพิ่มผู้ดูแลระบบใหม่ (`AddAdminSheet`) และการแก้ไขผู้ดูแลระบบ (`EditAdminSheet`) ให้รองรับ 3 บทบาทหลัก: `ผู้ดูแลระบบทั่วไป` (admin), `ช่างและบริการ` (services), และ `พนักงานหอพัก` (dorm)
   - ปรับปรุงการแสดงผลอีเมลให้แยกแยะชัดเจนระหว่าง `อีเมลหอพักหลัก (ระบบ)` และ `อีเมลส่วนตัวสำหรับเข้าสู่ระบบ` (`backup_email`) สำหรับสิทธิ์ลูก
@@ -71,10 +97,10 @@
 
 | พื้นที่ | ผล |
 | --- | --- |
-| Backend | `go test ./...`, `go test -race ./handlers` และ `go vet ./...` ผ่าน |
-| LINE maintenance payload | automated tests ครอบคลุม status, quote, approve/reject, bill, JSON/date, outbox persistence/retry และป้องกัน `alignItems: baseline` ที่ LINE ปฏิเสธ |
-| iOS maintenance/sync | `MaintenanceWorkflowTests` 4/4 + `CoreDataSafetyTests` 19/19 รวม 23/23 ผ่าน รวม conflict rebase และ paid repair เริ่มได้หลังมี approval marker เท่านั้น |
-| Production | หลักฐานเวลา 16:25 น. (10 พ.ย. 2569): main/OCR services เป็น `active`, main health `online`; binary ล่าสุด SHA-256 `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`, backup `/home/fang/dorminet_workspace/backups/20261110-012424-pre-flex-ui`; ทดสอบ push snapshot v57 สำเร็จ 200 OK |
+| Backend | `go test -count=1 ./...`, `go test -count=1 -race ./handlers` (0 data race) และ `go vet ./...` ผ่าน 100% |
+| LINE monthly invoice & maintenance | automated tests ครอบคลุม PromptPay QR conditional display (`TestLineInvoiceFlexMessageIncludesQRWhenDue` / `TestLineInvoiceFlexMessageExcludesQRWhenNotDue`) และ maintenance status, quote, approve/reject, bill, outbox ครบถ้วน |
+| iOS multi-admin & safety | `CredentialStoreTests` (รวมการทดสอบ multi-admin store resolution: staff resolves to account 1 และ superadmin resolves to owner account), `MaintenanceWorkflowTests` 4/4, `CoreDataSafetyTests` 19/19 ผ่านครบถ้วน; `build-for-testing` ผ่าน 100% |
+| Production | สถานะ ณ 11 พ.ย. 2569: `https://dorminet.studio/api/system/ping` ตอบ `{"status":"online"}`; binary SHA-256 `8121595f422d67a1a82444619ffda6efdf35a2e6d205c7d6a60e6f6450de5508`; iPhone 11 ("F") ติดตั้งแอปเวอร์ชันล่าสุดสำเร็จ และ Preference `adminID = 1` เปิด Store `account_1.store` สมบูรณ์ |
 | ข้อจำกัดหลักฐาน | OCR HTTP 400 พิสูจน์เพียงว่า service ตอบ ไม่พิสูจน์ความแม่นยำ; ยังไม่มี UAT ที่ยืนยัน amount/receiver/reference/replay และ fallback ปัจจุบันไม่ fail closed |
 
 ## สรุปการส่งมอบงาน (Delivery Summary: 100% Complete)

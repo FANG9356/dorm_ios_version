@@ -1,6 +1,6 @@
 # รายการงานรอแก้ไข DormiNetX
 
-อัปเดตล่าสุด: 28 ตุลาคม 2569
+อัปเดตล่าสุด: 11 พฤศจิกายน 2569
 
 สถานะอ้างอิงปัจจุบัน: พัฒนาและตรวจสอบเสร็จสมบูรณ์ 100% ครบทุกด้าน (Release v1.0.0) ทั้ง P0, P1, และ P2 ผ่านการทดสอบ Automated Quality Gates และ Verification ทุกระดับเรียบร้อย
 
@@ -47,6 +47,11 @@
 
 ## ปิดแล้วในรอบนี้
 
+- [x] แก้ไขระบบ Multi-Admin Shared Dormitory Store (สิทธิ์ลูกใช้งานฐานข้อมูลเดียวกับเมลแม่): บัญชีสิทธิ์พนักงาน (`role != "superadmin"` เช่น admin, services, dorm) ชี้ตรงไปยังฐานข้อมูลหอพักหลัก (`account_1.store`) ของเจ้าของหอพักเสมอ ไม่ถอยกลับไปใช้ `admin_id = 2` ซึ่งทำให้แอปไปสร้างฐานข้อมูลว่างเปล่า `account_2.store`, เพิ่ม `resolveServerAccountID()` สอบทานหมายเลขหอพักจริงจาก `/api/sync/meta` ของเซิร์ฟเวอร์, เพิ่ม Self-Healing Task ใน `AccountScopedRootView` (`DormApp.swift`) ปรับค่า `adminID` เป็น 1 อัตโนมัติ, ผ่อนปรนเงื่อนไขตรวจสอบอีเมลใน `SyncManager.shouldAutoPullRemoteSnapshot()`, ปรับ Sidebar รูปโปรไฟล์พนักงาน (`profile_2.jpg`), ผ่าน Unit Tests และติดตั้งบน iPhone 11 ("F") สำเร็จ
+- [x] แก้ไขปัญหาออกจากระบบแล้วล็อกอินผ่านประวัติ (Saved Accounts) แล้วแอปเด้งออก: เพิ่มระบบ Auto-Migration ใน `loadSavedAccounts()` ตรวจสอบประวัติบัญชีใน Keychain หากเป็นสิทธิ์พนักงานจะปรับค่า `adminID` เป็น 1 ทันที และบันทึกกลับ Keychain, ปรับปรุง `restoreSavedAccount` และ `saveAccount()` ให้บันทึกและส่ง `targetAccountID = 1` เสมอ ทำให้การเข้าสู่ระบบผ่านประวัติเสถียรและไม่ Crash
+- [x] ระบบบิลรายเดือนผ่าน LINE Bot แนบ PromptPay QR Code สแกนจ่ายอัตโนมัติเฉพาะเมื่อถึงรอบบิล: เพิ่มการตรวจสอบรอบบิล (`isInvoiceDueForPayment`) บิลรอบปัจจุบันหรือย้อนหลังที่ยังค้างชำระ จะสร้าง Flex Message รูปแบบ Carousel 2 ใบ (การ์ดที่ 1: รายละเอียดบิล, การ์ดที่ 2: ช่องทางชำระเงิน พร้อม PromptPay QR Code ยอดตรงตามบิล และชื่อบัญชีเจ้าของหอพัก) ส่วนบิลอนาคตหรือไม่มียอดค้างจะไม่แนบ QR Code; มี Unit Tests ครอบคลุมผ่าน 100%
+- [x] ปรับปรุงหน้าต่างแก้ไขข้อมูลตนเองของผู้ดูแลระบบ (`EditAdminSheet`): ย้ายการผูก Sheet ขึ้นมาระดับบนสุดของ `RoomListView` ปิด Sidebar ทันทีเมื่อกดปุ่มฟันเฟือง ป้องกันปัญหา Sheet Suppression จากแอนิเมชัน Sidebar และรองรับการแก้ไข `backup_email` สำหรับสิทธิ์ลูก พร้อมอัปเดต `userEmail` ใน `UserDefaults` ทันที
+- [x] ปรับปรุงคู่มือบริการและสถานที่รอบหอพัก (`services.html`) ครบ 200 แห่ง พร้อมพิกัด GPS จริง (Lat, Lng): บันทึกพิกัดจริงระดับถนนและย่านครบ 200 สถานที่ทั่วจังหวัดอุบลราชธานี นำทางแม่นยำด้วย Apple Maps (`dirflg=d`) และ Google Maps ภาพถ่ายคมชัดตรงประเภท 100% ไม่ซ้ำกัน 200 URL พร้อมระบบสุ่มหมุนเวียนและ Progressive Loading; Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `046d93a04ad2c609467eee826e39a17c2be336aecd2b95c2b41b157188455438`)
 - [x] แก้ปัญหา Sync ล้มเหลว "Server Error" และ "ส่งไม่สำเร็จ" ในการใช้งานสองเครื่อง: แก้ไขการชนกันของดัชนีบิลชำระเงินในฐานข้อมูล SQLite (`idx_payments_unique`) โดยเพิ่ม `normalizePaymentSnapshots` ทำ Deduplication รายการบิลตาม slot `(user_id, month, installment_phase)` และทำความสะอาดบิลที่ชนก่อน Upsert, ปรับระบบ Multi-Admin Sync ให้ใช้ Master Account ID ของหอพักเป็นหลักผ่าน Claim `account_id` ใน JWT Token, ปรับ `APIService.swift` และ `SyncManager.swift` ให้จัดการบิลซ้ำและรับ Snapshot ได้ถูกต้อง, Safe Deploy ขึ้น Production Server สำเร็จ (SHA-256: `df98ea71174615e5cca74d8012b86d48fab10f62104aa828a1b2b59868008461`) และผ่านการทดสอบ End-to-End บน Production อัปเดตห้อง 105 เป็น "นางสาวพลเกาะแก้ว" ที่ Snapshot เวอร์ชัน 57 เรียบร้อย
 - [x] แก้ sync conflict ที่ทำให้รายการจาก LINE ไม่เข้าแอปเมื่อมี local dirty record: ดึง remote snapshot, rebase ข้อมูลในเครื่องแล้ว push ซ้ำอัตโนมัติ; เพิ่ม sync ตอนเปิด dashboard/หน้าแจ้งซ่อม และพิสูจน์บน iPhone จริงถึง snapshot v161 โดยข้อมูลเดิมไม่หาย
 - [x] รองรับสถานะ `ปฏิเสธค่าใช้จ่าย` ใน backend materialization เป็น terminal branch ป้องกัน snapshot รับสำเร็จแต่ side-effect ตอบ HTTP 500; targeted iOS maintenance/sync tests ผ่าน 23/23 และ backend test/race/vet ผ่าน
@@ -80,6 +85,6 @@
 - [x] พัฒนาและอัปเกรด Tenant Portal บนเว็บแอปพลิเคชัน LIFF โดยดึงประวัติการชำระเงินบิลเก่าและประเมินยอดบิลล่วงหน้ามาแสดง 
 - [x] เปลี่ยนการตอบกลับของปุ่ม "ประวัติการชำระ" จาก Carousel เป็น Flex Message ขนาดเล็กที่ลิงก์ไปหน้า Tenant Portal LIFF
 - [x] อุดช่องโหว่ความปลอดภัยระดับ P0 โดยการทำ Passwordless SSH Key Authentication และลบสคริปต์ `.exp` ที่มีรหัสผ่านฮาร์ดโค้ดกว่า 30 ไฟล์ออกจาก Git History ของโค้ดปัจจุบัน
-- [x] (ยังไม่ได้ Commit) แก้ไขปัญหา SwiftData `EXC_BREAKPOINT` จากการใช้ OR Condition ภายใน Predicate โดยเปลี่ยนวิธีตรวจสอบเพื่อป้องกันแอป Crash
-- [x] (ยังไม่ได้ Commit) พัฒนาระบบ Multi-Tenant สำหรับ PromptPay ID ให้รองรับการตั้งค่าแยกตามลูกบ้าน/ผู้ดูแล และให้ LINE Bot สร้างสลิปถูกบัญชี
-- [x] (ยังไม่ได้ Commit) ปรับปรุงความรัดกุม Maintenance Workflow (iOS/Backend) ป้องกันข้ามสถานะการอนุมัติ และแก้ `BackupTabView` ให้แสดงผลลัพธ์การทำงานครบถ้วน
+- [x] แก้ไขปัญหา SwiftData `EXC_BREAKPOINT` จากการใช้ OR Condition ภายใน Predicate โดยเปลี่ยนวิธีตรวจสอบเพื่อป้องกันแอป Crash
+- [x] พัฒนาระบบ Multi-Tenant สำหรับ PromptPay ID ให้รองรับการตั้งค่าแยกตามลูกบ้าน/ผู้ดูแล และให้ LINE Bot สร้างสลิปถูกบัญชี
+- [x] ปรับปรุงความรัดกุม Maintenance Workflow (iOS/Backend) ป้องกันข้ามสถานะการอนุมัติ และแก้ `BackupTabView` ให้แสดงผลลัพธ์การทำงานครบถ้วน
