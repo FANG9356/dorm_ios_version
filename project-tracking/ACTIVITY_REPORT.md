@@ -3806,3 +3806,46 @@
   - docs/system_architecture.html
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการเปิดหน้าเว็บและเริ่มบริการ Local Server สำเร็จ (Resolved & Serving)
+
+
+---
+
+## 2026-11-13 17:15 ICT: การปรับรูปแบบไดอะแกรมโครงสร้างระบบเป็น UML Activity Swimlane ตามตัวอย่างที่ผู้ใช้คาดหวัง
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานระบุ: "ลายตามาก คาดหวังให้เป็นแบบนี้" พร้อมแนบภาพตัวอย่างแผนผังกระบวนการแบบแบ่งเลนแนวตั้ง (UML Activity Diagram with Swimlanes / Cross-Functional Flowchart)
+- การวิเคราะห์และการปรับปรุง:
+  1. วิเคราะห์รูปแบบจากภาพตัวอย่างของผู้ใช้งาน:
+     - พื้นหลังสีขาวล้วน สะอาดตา ไม่ใช้สีมืดหรือเอฟเฟกต์ที่ทำให้ลายตา
+     - โครงสร้างเลนแนวตั้ง (Swimlanes) มีหัวตารางกำกับด้านบนและเส้นแบ่งคอลัมน์ชัดเจน
+     - สัญลักษณ์มาตรฐานสากลตาม UML Activity Diagram:
+       - วงกลมทึบสีดำ (Initial Node / Start)
+       - สี่เหลี่ยมมุมมน (Action / Activity States)
+       - สี่เหลี่ยมข้าวหลามตัดสีเหลืองพาสเทล (Decision / Branch Nodes) พร้อมเส้นลูกศรแยกเงื่อนไข Yes / No
+       - แถบแท่งทึบสีดำแนวนอน (Synchronization Bars สำหรับ Fork และ Join ขนาน)
+       - วงกลมซ้อนจุดทึบ / กากบาท (Activity Final Node / End)
+       - สัญลักษณ์รูปคน (Actor)
+  2. การจัดแบ่ง Swimlanes ให้ตรงตามโครงสร้าง 3 ส่วนหลัก (Frontend, Backend, Server) และผู้ใช้งาน:
+     - **Lane 1: User (Admin / Tenant)** - การเปิดแอป, ล็อกอิน, กรอกรหัสมิเตอร์, ชำระเงิน และรับใบเสร็จ
+     - **Lane 2: Frontend (iOS App & LINE LIFF)** - SwiftUI 5, SwiftData แคชออฟไลน์ (`account_1.store`), คำนวณ SHA-256 Checksum, LINE LIFF Webview
+     - **Lane 3: Backend (Go REST API :4283)** - ตรวจสอบ Argon2id Hash, ออก JWT Token, แยกข้อมูลตามผู้เช่าผ่าน `TenantHelper`, คำนวณค่าน้ำไฟ, สร้าง PromptPay QR และยิง APNs Push
+     - **Lane 4: Services (Python OCR & LINE API)** - ตรวจสลิปด้วย Dual-Engine OCR (PaddleOCR + Tesseract), ยิง Flex Message Carousel และใบเสร็จผ่าน LINE Messaging API
+     - **Lane 5: Server & DB (Debian Linux / SQLite)** - ระบบปฏิบัติการ Debian 12, Master DB (`master.db`), Tenant DB แยกรายหอ (`tenant_1.db`) ในโหมด WAL, และพื้นที่จัดเก็บไฟล์ `/opt/dormitory/uploads/`
+  3. ผลิตไฟล์ทั้งสองรูปแบบและคัดลอกไปยังโฟลเดอร์ปลายทาง:
+     - จัดทำไฟล์ `docs/system_architecture.drawio` ตามมาตรฐานโครงสร้าง XML ของ Diagrams.net
+     - จัดทำไฟล์ `docs/system_architecture.html` แบบ Pure Vector SVG รองรับการซูม (Zoom In/Out/Fit/Reset), แดร็กเลื่อน (Pan), ช่องค้นหาและไฮไลต์โหนด, ปุ่มดาวน์โหลด .drawio และปุ่มสั่งพิมพ์/บันทึกเป็น PDF
+     - ซิงค์ไฟล์ไปยัง `/Volumes/FangB/` และ `/Volumes/FangB/dorminet_server/`
+  4. ตรวจสอบการเปิดใช้งาน:
+     - ทดสอบ HTTP 200 OK ผ่าน Local Server `http://localhost:8080/system_architecture.html`
+     - สั่งเปิดแสดงผลใน Safari ผ่านคำสั่งระบบเรียบร้อย
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.drawio
+  - docs/system_architecture.html
+  - /Volumes/FangB/system_architecture.drawio
+  - /Volumes/FangB/system_architecture.html
+  - /Volumes/FangB/dorminet_server/system_architecture.drawio
+  - /Volumes/FangB/dorminet_server/system_architecture.html
+  - scripts/generate_architecture_diagrams.py
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการปรับรูปแบบไดอะแกรมตรงตามภาพตัวอย่างและมาตรฐานสากลเรียบร้อยสมบูรณ์ (Redesigned & Verified)
+

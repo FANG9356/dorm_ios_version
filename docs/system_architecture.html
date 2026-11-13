@@ -1,1070 +1,764 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DormiNetX — 3-Tier Enterprise System Architecture</title>
+  <title>DormiNetX Architecture &amp; Operational Flowchart</title>
   <style>
-    :root {
-      --bg-base: #0b0f19;
-      --bg-surface: #111827;
-      --bg-card: #1e293b;
-      --bg-card-hover: #334155;
-      --border-subtle: #334155;
-      --border-focus: #3b82f6;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-      --tier-1-border: #3b82f6;
-      --tier-1-badge: #1d4ed8;
-      --tier-1-text: #93c5fd;
-      --tier-2-border: #10b981;
-      --tier-2-badge: #047857;
-      --tier-2-text: #6ee7b7;
-      --tier-3-border: #8b5cf6;
-      --tier-3-badge: #6d28d9;
-      --tier-3-text: #c4b5fd;
-      --accent-orange: #f97316;
-      --accent-purple: #a855f7;
-      --accent-cyan: #06b6d4;
-      --font-stack: -apple-system, BlinkMacSystemFont, "Sukhumvit Set", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
     body {
-      font-family: var(--font-stack);
-      background-color: var(--bg-base);
-      color: var(--text-main);
-      line-height: 1.5;
-      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f1f3f5;
+      color: #212529;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
     }
-
-    /* Top Navigation Header */
     header {
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border-subtle);
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      padding: 14px 24px;
+      background: #ffffff;
+      border-bottom: 1px solid #dee2e6;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-tag {
-      background: var(--tier-1-badge);
-      color: #fff;
-      font-size: 11px;
+    .title-area h1 {
+      font-size: 18px;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 3px 8px;
-      border-radius: 4px;
+      color: #111827;
+      margin-bottom: 3px;
     }
-
-    .brand-title {
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--text-main);
-      letter-spacing: -0.01em;
+    .title-area p {
+      font-size: 13px;
+      color: #6b7280;
     }
-
-    .brand-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      display: block;
-    }
-
     .controls {
       display: flex;
-      align-items: center;
       gap: 8px;
-      flex-wrap: wrap;
+      align-items: center;
     }
-
     .btn {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-main);
-      font-family: var(--font-stack);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 6px 14px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      padding: 6px 12px;
       border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
-
     .btn:hover {
-      background: var(--bg-card-hover);
-      border-color: var(--border-focus);
+      background: #f9fafb;
+      border-color: #9ca3af;
+      color: #111827;
     }
-
-    .btn.active {
-      background: var(--border-focus);
+    .btn-primary {
+      background: #1f2937;
+      border-color: #1f2937;
       color: #ffffff;
-      border-color: var(--border-focus);
     }
-
-    /* Main Container */
-    main {
-      max-width: 1560px;
-      margin: 0 auto;
-      padding: 24px;
+    .btn-primary:hover {
+      background: #111827;
+      border-color: #111827;
+      color: #ffffff;
     }
-
-    /* System Info Bar */
-    .info-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .info-item {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 12px 16px;
-    }
-
-    .info-item-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
-    }
-
-    .info-item-value {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-    }
-
-    /* Canvas / Viewport */
-    .viewport-wrapper {
+    .search-box {
       position: relative;
-      background: #060911;
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
     }
-
-    .floating-toolbar {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      z-index: 10;
-      display: flex;
-      gap: 6px;
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 6px;
-      border-radius: 8px;
-      border: 1px solid var(--border-subtle);
+    .search-input {
+      border: 1px solid #d1d5db;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 220px;
+      outline: none;
     }
-
-    .tool-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-main);
-      width: 32px;
-      height: 32px;
-      border-radius: 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
+    .search-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
     }
-
-    .tool-btn:hover {
-      background: var(--bg-card);
-    }
-
-    .canvas-container {
-      width: 100%;
+    #viewer-container {
+      flex: 1;
       overflow: auto;
-      cursor: grab;
-      user-select: none;
+      position: relative;
+      background: #e5e7eb;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
       padding: 24px;
+      user-select: none;
     }
-
-    .canvas-container:active {
+    .svg-wrapper {
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 4px;
+      transform-origin: top center;
+      transition: transform 0.1s ease-out;
+      cursor: grab;
+    }
+    .svg-wrapper:active {
       cursor: grabbing;
     }
-
-    svg.diagram-svg {
-      display: block;
-      margin: 0 auto;
-      min-width: 1200px;
-      height: auto;
-      transition: transform 0.15s ease-out;
-      transform-origin: center center;
-    }
-
-    /* Node Styles */
-    .node-card {
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .node-card:hover rect.node-bg {
-      filter: brightness(1.2);
-      stroke-width: 2.5;
-    }
-
-    .tier-frame {
-      fill: #0c1222;
-      stroke-width: 1.5;
-      rx: 10;
-    }
-
-    .tier-header-bar {
-      fill-opacity: 0.25;
-    }
-
-    /* Technical Specifications Panel (Modal / Drawer) */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(6px);
-      z-index: 100;
-      display: none;
+    .legend-bar {
+      background: #ffffff;
+      border-top: 1px solid #dee2e6;
+      padding: 8px 24px;
+      display: flex;
+      gap: 20px;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 680px;
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
-    }
-
-    .modal-header {
-      padding: 18px 24px;
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .modal-subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 22px;
-      cursor: pointer;
-      line-height: 1;
-      padding: 4px;
-    }
-
-    .modal-close:hover {
-      color: var(--text-main);
-    }
-
-    .modal-body {
-      padding: 24px;
-    }
-
-    .spec-grid {
-      display: grid;
-      grid-template-columns: 140px 1fr;
-      gap: 12px 16px;
-      font-size: 13px;
-      margin-bottom: 20px;
-    }
-
-    .spec-label {
-      color: var(--text-muted);
-      font-weight: 600;
-    }
-
-    .spec-value {
-      color: var(--text-main);
-      font-family: var(--font-mono);
-      font-size: 12.5px;
-    }
-
-    .spec-desc {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 14px;
-      font-size: 13px;
-      line-height: 1.6;
-      color: #cbd5e1;
-    }
-
-    .spec-desc ul {
-      margin-left: 20px;
-      margin-top: 8px;
-    }
-
-    .spec-desc li {
-      margin-bottom: 4px;
-    }
-
-    /* Footer */
-    footer {
-      margin-top: 32px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border-subtle);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
       font-size: 12px;
-      color: var(--text-dim);
+      color: #4b5563;
+      flex-shrink: 0;
     }
-
-    @media print {
-      header, .floating-toolbar, .info-bar, footer {
-        display: none !important;
-      }
-      body {
-        background: #ffffff;
-        color: #000000;
-      }
-      .viewport-wrapper {
-        border: none;
-        box-shadow: none;
-      }
-      svg.diagram-svg {
-        min-width: 100%;
-      }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-icon {
+      width: 14px;
+      height: 14px;
+      display: inline-block;
+    }
+    .node-highlight rect, .node-highlight polygon {
+      stroke: #2563eb !important;
+      stroke-width: 3px !important;
+      filter: drop-shadow(0 0 6px rgba(37,99,235,0.4));
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Header Navigation -->
   <header>
-    <div class="brand">
-      <span class="brand-tag">ISO/IEC 42010 Architecture</span>
-      <div>
-        <div class="brand-title">DormiNetX — Enterprise System Architecture</div>
-        <span class="brand-sub">3-Tier Multi-Tenant & Local-First Distributed System</span>
-      </div>
+    <div class="title-area">
+      <h1>DormiNetX Multi-Tier Architecture &amp; Activity Swimlane</h1>
+      <p>Standard UML Activity Cross-Functional Diagram (Frontend, Backend, Services, Server &amp; Database)</p>
     </div>
-
     <div class="controls">
-      <button class="btn active" onclick="filterTier('all', this)">All Tiers</button>
-      <button class="btn" onclick="filterTier('t1', this)">Tier 1: Frontend</button>
-      <button class="btn" onclick="filterTier('t2', this)">Tier 2: Backend</button>
-      <button class="btn" onclick="filterTier('t3', this)">Tier 3: Server &amp; DB</button>
-      <button class="btn" onclick="openSpec('system_overview')">System Overview</button>
-      <button class="btn" onclick="window.print()">Print / PDF</button>
+      <div class="search-box">
+        <input type="text" id="searchInput" class="search-input" placeholder="Find component or step...">
+      </div>
+      <button class="btn" onclick="zoomIn()">Zoom In (+)</button>
+      <button class="btn" onclick="zoomOut()">Zoom Out (-)</button>
+      <button class="btn" onclick="resetZoom()">100%</button>
+      <button class="btn" onclick="fitWidth()">Fit Width</button>
+      <a href="system_architecture.drawio" download="system_architecture.drawio" class="btn">Download .drawio</a>
+      <button class="btn btn-primary" onclick="window.print()">Print / PDF</button>
     </div>
   </header>
 
-  <main>
-    <!-- System Meta Information Bar -->
-    <div class="info-bar">
-      <div class="info-item">
-        <div class="info-item-label">System Tier 1</div>
-        <div class="info-item-value">
-          <span class="badge-dot" style="background:#3b82f6;"></span>
-          iOS SwiftData + LINE LIFF
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="info-item-label">System Tier 2</div>
-        <div class="info-item-value">
-          <span class="badge-dot" style="background:#10b981;"></span>
-          Go RESTful API (Port: 4283)
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="info-item-label">System Tier 3</div>
-        <div class="info-item-value">
-          <span class="badge-dot" style="background:#8b5cf6;"></span>
-          Debian 12 + SQLite Multi-Tenant
-        </div>
-      </div>
-      <div class="info-item">
-        <div class="info-item-label">Security &amp; Ingress</div>
-        <div class="info-item-value">
-          <span class="badge-dot" style="background:#f97316;"></span>
-          Cloudflare Zero-Trust Tunnel
-        </div>
-      </div>
+  <div id="viewer-container">
+    <div id="svgWrapper" class="svg-wrapper">
+      
+    <svg id="diagramSvg" viewBox="0 0 1420 1740" width="1420" height="1740" xmlns="http://www.w3.org/2000/svg" style="background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <defs>
+        <!-- Arrowhead Markers -->
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000" />
+        </marker>
+        <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2e7d32" />
+        </marker>
+        <marker id="arrow-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c62828" />
+        </marker>
+      </defs>
+
+      <!-- Swimlane Grid & Headers -->
+      <g id="swimlanes">
+        <!-- Outer Border -->
+        <rect x="20" y="20" width="1360" height="1700" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+
+        <!-- Lane 0: User -->
+        <rect x="20" y="20" width="260" height="44" fill="#f8f9fa" stroke="#000000" stroke-width="1.5" />
+        <text x="150" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">User (Admin / Tenant)</text>
+        <line x1="280" y1="20" x2="280" y2="1720" stroke="#000000" stroke-width="1.5" />
+
+        <!-- Lane 1: Frontend -->
+        <rect x="280" y="20" width="280" height="44" fill="#f8f9fa" stroke="#000000" stroke-width="1.5" />
+        <text x="420" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">Frontend (iOS App &amp; LINE LIFF)</text>
+        <line x1="560" y1="20" x2="560" y2="1720" stroke="#000000" stroke-width="1.5" />
+
+        <!-- Lane 2: Backend -->
+        <rect x="560" y="20" width="280" height="44" fill="#f8f9fa" stroke="#000000" stroke-width="1.5" />
+        <text x="700" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">Backend (Go REST API :4283)</text>
+        <line x1="840" y1="20" x2="840" y2="1720" stroke="#000000" stroke-width="1.5" />
+
+        <!-- Lane 3: Services -->
+        <rect x="840" y="20" width="280" height="44" fill="#f8f9fa" stroke="#000000" stroke-width="1.5" />
+        <text x="980" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">Services (Python OCR &amp; LINE API)</text>
+        <line x1="1120" y1="20" x2="1120" y2="1720" stroke="#000000" stroke-width="1.5" />
+
+        <!-- Lane 4: Server & DB -->
+        <rect x="1120" y="20" width="260" height="44" fill="#f8f9fa" stroke="#000000" stroke-width="1.5" />
+        <text x="1250" y="47" text-anchor="middle" font-size="13" font-weight="700" fill="#000000">Server &amp; DB (Debian Linux / SQLite)</text>
+      </g>
+
+      <!-- Connectors (Drawn below nodes for proper layering) -->
+      <g id="connectors" fill="none" stroke-width="1.5">
+        <!-- e1: Start -> Open App -->
+        <path d="M 150 92 L 150 130" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e2: Open App -> Token Decision -->
+        <path d="M 250 152 L 340 152" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e3: Token Decision [No] -> Enter Email -->
+        <path d="M 420 182 L 420 237 L 250 237" stroke="#c62828" marker-end="url(#arrow-red)" />
+        <text x="340" y="232" font-size="11" font-weight="600" fill="#c62828">No (Unauthenticated)</text>
+
+        <!-- e4: Token Decision [Yes] -> Load SwiftData -->
+        <path d="M 500 152 L 535 152 L 535 547 L 520 547" stroke="#2e7d32" marker-end="url(#arrow-green)" />
+        <text x="540" y="340" font-size="11" font-weight="600" fill="#2e7d32" transform="rotate(90, 540, 340)">Yes (Valid Token)</text>
+
+        <!-- e5: Enter Email -> Forgot Password? -->
+        <path d="M 150 260 L 150 290" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e6: Forgot Password [Yes] -> Request OTP -->
+        <path d="M 150 344 L 150 375" stroke="#c62828" marker-end="url(#arrow-red)" />
+        <text x="156" y="362" font-size="11" font-weight="600" fill="#c62828">Yes</text>
+
+        <!-- e7: Forgot Password [No] -> Submit Login -->
+        <path d="M 230 317 L 320 317" stroke="#2e7d32" marker-end="url(#arrow-green)" />
+        <text x="260" y="311" font-size="11" font-weight="600" fill="#2e7d32">No</text>
+
+        <!-- e8: Request OTP -> Verify OTP -->
+        <path d="M 150 415 L 150 440" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e9: Reset Password -> Loop back to Enter Email -->
+        <path d="M 50 460 L 35 460 L 35 237 L 50 237" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e10: Submit Login -> Validate Argon2id -->
+        <path d="M 520 317 L 600 317" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e11: Validate Argon2id -> Query Admins Master DB -->
+        <path d="M 800 317 L 1150 317" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e12: Query Admins -> Credentials Valid? -->
+        <path d="M 1250 341 L 1250 397 L 780 397" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e13: Credentials Valid [Invalid] -> Back to Enter Cred -->
+        <path d="M 700 370 L 700 248 L 250 248" stroke="#c62828" marker-end="url(#arrow-red)" />
+        <text x="610" y="243" font-size="11" font-weight="600" fill="#c62828">Invalid (401)</text>
+
+        <!-- e14: Credentials Valid [Valid] -> Issue JWT -->
+        <path d="M 700 424 L 700 450" stroke="#2e7d32" marker-end="url(#arrow-green)" />
+        <text x="706" y="440" font-size="11" font-weight="600" fill="#2e7d32">Valid (200)</text>
+
+        <!-- e15: Issue JWT -> Store in Keychain -->
+        <path d="M 600 472 L 520 472" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e16: Store in Keychain -> Load SwiftData -->
+        <path d="M 420 494 L 420 525" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e17: Admin Actor -> Record Action -->
+        <path d="M 95 620 L 110 620" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e18: Record Action -> Save in SwiftData -->
+        <path d="M 250 620 L 320 620" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e19: Load SwiftData -> Save Mutation -->
+        <path d="M 420 569 L 420 595" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e20: Save Mutation -> Compute Hash -->
+        <path d="M 420 641 L 420 670" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e21: Compute Hash -> POST Sync -->
+        <path d="M 520 692 L 600 692" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e22: POST Sync -> TenantHelper Switch -->
+        <path d="M 700 714 L 700 745" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e23: TenantHelper Switch -> Write WAL to tenant_1.db -->
+        <path d="M 800 768 L 1150 768" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e24: Write WAL -> Log Sync State master.db -->
+        <path d="M 1250 789 L 1250 820" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e25: Log Sync State -> Fork Bar -->
+        <path d="M 1250 864 L 1250 895" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e26: Fork Bar -> Calculate Bill Engine -->
+        <path d="M 700 905 L 700 935" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e27: Calculate Bill -> Generate PromptPay QR -->
+        <path d="M 700 981 L 700 1010" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e28: Generate QR -> Dispatch LINE API -->
+        <path d="M 800 1033 L 880 1033" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e29: Dispatch LINE API -> Tenant Receives Bill -->
+        <path d="M 880 1045 L 250 1045" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e30: Tenant Receives Bill -> Tenant Transfers Funds -->
+        <path d="M 150 1056 L 150 1090" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e31: Tenant Transfers Funds -> LINE LIFF POST Slip -->
+        <path d="M 250 1113 L 320 1113" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e32: LINE LIFF POST Slip -> Store Image File in uploads -->
+        <path d="M 520 1105 L 1150 1105" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e33: LINE LIFF POST Slip -> Go API Calls Python OCR -->
+        <path d="M 420 1134 L 420 1193 L 600 1193" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e34: Go API Calls Python OCR -> Dual Engine PaddleOCR + Tesseract -->
+        <path d="M 800 1193 L 880 1193" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e35: Dual OCR -> Slip Valid? -->
+        <path d="M 980 1216 L 980 1245" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e36: Slip Valid [No] -> Flag Suspicious Slip -->
+        <path d="M 900 1277 L 800 1277" stroke="#c62828" marker-end="url(#arrow-red)" />
+        <text x="835" y="1271" font-size="11" font-weight="600" fill="#c62828">No (Mismatch)</text>
+
+        <!-- e37: Flag Suspicious -> Loop to Tenant for Re-upload -->
+        <path d="M 600 1277 L 270 1277 L 270 1125 L 250 1125" stroke="#c62828" marker-end="url(#arrow-red)" />
+
+        <!-- e38: Slip Valid [Yes] -> UPDATE bills status='paid' -->
+        <path d="M 1060 1277 L 1250 1277 L 1250 1345" stroke="#2e7d32" marker-end="url(#arrow-green)" />
+        <text x="1080" y="1271" font-size="11" font-weight="600" fill="#2e7d32">Yes (Verified)</text>
+
+        <!-- e39: UPDATE bills -> Append Immutable Audit Log -->
+        <path d="M 1250 1389 L 1250 1420" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e40: Append Audit Log -> Join Bar -->
+        <path d="M 1250 1464 L 1250 1495" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e41: Join Bar -> Send LINE Receipt -->
+        <path d="M 980 1505 L 980 1535" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e42: Send LINE Receipt -> Tenant Receives Confirmation -->
+        <path d="M 880 1558 L 250 1558" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e43: Join Bar -> Dispatch APNs Push -->
+        <path d="M 700 1505 L 700 1535" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e44: Dispatch APNs Push -> Admin Dashboard Metric -->
+        <path d="M 600 1558 L 520 1558" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e45: Tenant Receives Conf -> End Node -->
+        <path d="M 150 1581 L 150 1645 L 485 1645" stroke="#000000" marker-end="url(#arrow)" />
+
+        <!-- e46: Admin Dashboard Metric -> End Node -->
+        <path d="M 420 1581 L 420 1645 L 485 1645" stroke="#000000" marker-end="url(#arrow)" />
+      </g>
+
+      <!-- Sync Bars (Fork & Join) -->
+      <g id="sync_bars">
+        <rect x="60" y="895" width="1260" height="10" fill="#000000" rx="2" />
+        <text x="70" y="888" font-size="11" font-weight="700" fill="#555555">FORK (PARALLEL EXECUTION)</text>
+
+        <rect x="60" y="1495" width="1260" height="10" fill="#000000" rx="2" />
+        <text x="70" y="1488" font-size="11" font-weight="700" fill="#555555">JOIN (SYNCHRONIZED COMPLETION)</text>
+      </g>
+
+      <!-- Nodes & Elements -->
+      <g id="nodes">
+        <!-- Start Node -->
+        <circle cx="150" cy="80" r="12" fill="#000000" stroke="#000000" stroke-width="1.5" />
+
+        <!-- node_open_app -->
+        <g class="diagram-node" data-title="Launch DormiNetX">
+          <rect x="50" y="130" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="148" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Launch DormiNetX</text>
+          <text x="150" y="163" text-anchor="middle" font-size="10" fill="#555555">(iOS App / LINE Webview)</text>
+        </g>
+
+        <!-- dec_token -->
+        <g class="diagram-node" data-title="Token Check">
+          <polygon points="420,122 500,152 420,182 340,152" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" />
+          <text x="420" y="148" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Valid Token in</text>
+          <text x="420" y="161" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Keychain Cache?</text>
+        </g>
+
+        <!-- node_enter_cred -->
+        <g class="diagram-node" data-title="Enter Credentials">
+          <rect x="50" y="215" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="242" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Enter Email &amp; Password</text>
+        </g>
+
+        <!-- dec_forgot -->
+        <g class="diagram-node" data-title="Forgot Password">
+          <polygon points="150,290 230,317 150,344 70,317" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" />
+          <text x="150" y="314" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Forgot</text>
+          <text x="150" y="327" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Password?</text>
+        </g>
+
+        <!-- node_req_otp -->
+        <g class="diagram-node" data-title="Request OTP">
+          <rect x="50" y="375" width="200" height="40" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="400" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Request OTP via Email</text>
+        </g>
+
+        <!-- node_reset_pwd -->
+        <g class="diagram-node" data-title="Reset Password">
+          <rect x="50" y="440" width="200" height="40" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="465" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Verify OTP &amp; Reset Password</text>
+        </g>
+
+        <!-- node_submit_login -->
+        <g class="diagram-node" data-title="Submit Login">
+          <rect x="320" y="295" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="313" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">POST /api/v1/login</text>
+          <text x="420" y="328" text-anchor="middle" font-size="10" fill="#555555">(JSON Payload)</text>
+        </g>
+
+        <!-- node_verify_hash -->
+        <g class="diagram-node" data-title="Validate Hash">
+          <rect x="600" y="295" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="313" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Validate Argon2id Hash</text>
+          <text x="700" y="328" text-anchor="middle" font-size="10" fill="#555555">&amp; Check IP Rate-Limiter</text>
+        </g>
+
+        <!-- node_query_admin -->
+        <g class="diagram-node" data-title="Query Master DB">
+          <rect x="1150" y="295" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="313" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">SELECT * FROM admins</text>
+          <text x="1250" y="328" text-anchor="middle" font-size="10" fill="#555555">in Master DB (master.db)</text>
+        </g>
+
+        <!-- dec_auth_valid -->
+        <g class="diagram-node" data-title="Auth Decision">
+          <polygon points="700,370 780,397 700,424 620,397" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" />
+          <text x="700" y="394" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Credentials</text>
+          <text x="700" y="407" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Valid?</text>
+        </g>
+
+        <!-- node_jwt_issue -->
+        <g class="diagram-node" data-title="Issue JWT">
+          <rect x="600" y="450" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="468" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Issue Signed JWT Token</text>
+          <text x="700" y="483" text-anchor="middle" font-size="10" fill="#555555">(AdminID, Role, TenantDB)</text>
+        </g>
+
+        <!-- node_store_token -->
+        <g class="diagram-node" data-title="Store Keychain">
+          <rect x="320" y="450" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="468" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Store JWT in iOS Keychain</text>
+          <text x="420" y="483" text-anchor="middle" font-size="10" fill="#555555">&amp; Cache Local Session</text>
+        </g>
+
+        <!-- node_init_swiftdata -->
+        <g class="diagram-node" data-title="Load SwiftData Cache">
+          <rect x="320" y="525" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="543" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Load SwiftData Cache</text>
+          <text x="420" y="558" text-anchor="middle" font-size="10" fill="#555555">(account_1.store / SQLite)</text>
+        </g>
+
+        <!-- Actor Admin -->
+        <g id="actor_admin" transform="translate(65, 595)">
+          <circle cx="15" cy="10" r="8" fill="none" stroke="#000000" stroke-width="1.5" />
+          <line x1="15" y1="18" x2="15" y2="36" stroke="#000000" stroke-width="1.5" />
+          <line x1="5" y1="24" x2="25" y2="24" stroke="#000000" stroke-width="1.5" />
+          <line x1="15" y1="36" x2="5" y2="52" stroke="#000000" stroke-width="1.5" />
+          <line x1="15" y1="36" x2="25" y2="52" stroke="#000000" stroke-width="1.5" />
+          <text x="15" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="#000000">Admin</text>
+        </g>
+
+        <!-- node_crud_dorm -->
+        <g class="diagram-node" data-title="CRUD Dormitory Action">
+          <rect x="110" y="595" width="140" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="180" y="614" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Record Meter Reading,</text>
+          <text x="180" y="629" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Contract or Room CRUD</text>
+        </g>
+
+        <!-- node_save_local -->
+        <g class="diagram-node" data-title="Save SwiftData Local">
+          <rect x="320" y="595" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="614" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Save Mutation in SwiftData</text>
+          <text x="420" y="629" text-anchor="middle" font-size="10" fill="#555555">(Instant 0ms UI, isDirty=true)</text>
+        </g>
+
+        <!-- node_calc_hash -->
+        <g class="diagram-node" data-title="Compute Checksum">
+          <rect x="320" y="670" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="688" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">SyncManager Computes</text>
+          <text x="420" y="703" text-anchor="middle" font-size="10" fill="#555555">SHA-256 Checksum</text>
+        </g>
+
+        <!-- node_post_sync -->
+        <g class="diagram-node" data-title="POST Sync Snapshot">
+          <rect x="600" y="670" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="688" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">POST /api/v1/sync Snapshot</text>
+          <text x="700" y="703" text-anchor="middle" font-size="10" fill="#555555">(Bearer JWT Authorization)</text>
+        </g>
+
+        <!-- node_route_tenant -->
+        <g class="diagram-node" data-title="Route TenantHelper">
+          <rect x="600" y="745" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="763" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">TenantHelper Context Switch</text>
+          <text x="700" y="778" text-anchor="middle" font-size="10" fill="#555555">(Resolve tenant_1.db)</text>
+        </g>
+
+        <!-- node_write_wal -->
+        <g class="diagram-node" data-title="Execute WAL Transaction">
+          <rect x="1150" y="745" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="763" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Execute SQLite WAL Trans.</text>
+          <text x="1250" y="778" text-anchor="middle" font-size="10" fill="#555555">(tenant_1.db Isolated Schema)</text>
+        </g>
+
+        <!-- node_log_sync -->
+        <g class="diagram-node" data-title="Log Snapshot Master DB">
+          <rect x="1150" y="820" width="200" height="44" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="838" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Write Sync Snapshot State</text>
+          <text x="1250" y="853" text-anchor="middle" font-size="10" fill="#555555">(sync_snapshots in master.db)</text>
+        </g>
+
+        <!-- node_calc_bill -->
+        <g class="diagram-node" data-title="Calculate Bill">
+          <rect x="600" y="935" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="954" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Go Billing Engine Calculates</text>
+          <text x="700" y="969" text-anchor="middle" font-size="10" fill="#555555">Rent + Utility Meter Usage</text>
+        </g>
+
+        <!-- node_gen_qr -->
+        <g class="diagram-node" data-title="Generate PromptPay QR">
+          <rect x="600" y="1010" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="1029" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Generate EMVCo PromptPay</text>
+          <text x="700" y="1044" text-anchor="middle" font-size="10" fill="#555555">Standard Dynamic QR Payload</text>
+        </g>
+
+        <!-- node_line_dispatch -->
+        <g class="diagram-node" data-title="Dispatch LINE Message">
+          <rect x="880" y="1010" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="980" y="1029" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Dispatch Flex Carousel</text>
+          <text x="980" y="1044" text-anchor="middle" font-size="10" fill="#555555">via LINE Messaging API</text>
+        </g>
+
+        <!-- node_tenant_receive -->
+        <g class="diagram-node" data-title="Tenant Receives Bill">
+          <rect x="50" y="1010" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="1029" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Tenant Receives Bill &amp; QR</text>
+          <text x="150" y="1044" text-anchor="middle" font-size="10" fill="#555555">on LINE Official Account</text>
+        </g>
+
+        <!-- node_tenant_pay -->
+        <g class="diagram-node" data-title="Tenant Pays & Uploads">
+          <rect x="50" y="1090" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="1109" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Tenant Transfers Funds &amp;</text>
+          <text x="150" y="1124" text-anchor="middle" font-size="10" fill="#555555">Uploads Bank Slip Image</text>
+        </g>
+
+        <!-- node_liff_upload -->
+        <g class="diagram-node" data-title="LINE LIFF Upload">
+          <rect x="320" y="1090" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="1109" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">LINE LIFF Webview POSTs Slip</text>
+          <text x="420" y="1124" text-anchor="middle" font-size="10" fill="#555555">to /api/v1/bills/:id/pay</text>
+        </g>
+
+        <!-- node_save_upload -->
+        <g class="diagram-node" data-title="Save Upload File">
+          <rect x="1150" y="1090" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="1109" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Store Physical Image File</text>
+          <text x="1250" y="1124" text-anchor="middle" font-size="10" fill="#555555">in /opt/dormitory/uploads/</text>
+        </g>
+
+        <!-- node_call_ocr -->
+        <g class="diagram-node" data-title="Call Python OCR">
+          <rect x="600" y="1170" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="1189" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Go API Calls Python OCR</text>
+          <text x="700" y="1204" text-anchor="middle" font-size="10" fill="#555555">Microservice (127.0.0.1:5001)</text>
+        </g>
+
+        <!-- node_run_ocr -->
+        <g class="diagram-node" data-title="Run Dual OCR">
+          <rect x="880" y="1170" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="980" y="1189" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Dual Engine Verification:</text>
+          <text x="980" y="1204" text-anchor="middle" font-size="10" fill="#555555">PaddleOCR + Tesseract</text>
+        </g>
+
+        <!-- dec_ocr_valid -->
+        <g class="diagram-node" data-title="OCR Decision">
+          <polygon points="980,1245 1060,1277 980,1310 900,1277" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5" />
+          <text x="980" y="1270" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Slip Valid &amp;</text>
+          <text x="980" y="1283" text-anchor="middle" font-size="10" font-weight="600" fill="#000000">Amount Match &amp; Ref?</text>
+        </g>
+
+        <!-- node_ocr_fail -->
+        <g class="diagram-node" data-title="Flag Invalid Slip">
+          <rect x="600" y="1255" width="200" height="46" rx="8" fill="#ffffff" stroke="#c62828" stroke-width="1.5" />
+          <text x="700" y="1274" text-anchor="middle" font-size="11" font-weight="600" fill="#c62828">Flag Suspicious Slip</text>
+          <text x="700" y="1289" text-anchor="middle" font-size="10" fill="#555555">&amp; Alert Landlord for Review</text>
+        </g>
+
+        <!-- node_update_paid -->
+        <g class="diagram-node" data-title="Update Bill Paid">
+          <rect x="1150" y="1345" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="1364" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">UPDATE bills SET status='paid'</text>
+          <text x="1250" y="1379" text-anchor="middle" font-size="10" fill="#555555">in isolated tenant_1.db</text>
+        </g>
+
+        <!-- node_audit_log -->
+        <g class="diagram-node" data-title="Financial Audit Log">
+          <rect x="1150" y="1420" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="1250" y="1439" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Append Immutable Record to</text>
+          <text x="1250" y="1454" text-anchor="middle" font-size="10" fill="#555555">financial_audits (master.db)</text>
+        </g>
+
+        <!-- node_line_receipt -->
+        <g class="diagram-node" data-title="Send LINE Receipt">
+          <rect x="880" y="1535" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="980" y="1554" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Send Digital Receipt</text>
+          <text x="980" y="1569" text-anchor="middle" font-size="10" fill="#555555">via LINE Flex Message</text>
+        </g>
+
+        <!-- node_tenant_receipt -->
+        <g class="diagram-node" data-title="Tenant Receives Conf">
+          <rect x="50" y="1535" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="150" y="1554" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Tenant Receives Conf</text>
+          <text x="150" y="1569" text-anchor="middle" font-size="10" fill="#555555">in LINE Chat</text>
+        </g>
+
+        <!-- node_apns_push -->
+        <g class="diagram-node" data-title="APNs Push Landlord">
+          <rect x="600" y="1535" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="700" y="1554" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Dispatch APNs Push</text>
+          <text x="700" y="1569" text-anchor="middle" font-size="10" fill="#555555">Notification to Landlord Device</text>
+        </g>
+
+        <!-- node_admin_reflect -->
+        <g class="diagram-node" data-title="Admin Dashboard Metric">
+          <rect x="320" y="1535" width="200" height="46" rx="8" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+          <text x="420" y="1554" text-anchor="middle" font-size="11" font-weight="600" fill="#000000">Admin Dashboard Updates</text>
+          <text x="420" y="1569" text-anchor="middle" font-size="10" fill="#555555">(Real-time Revenue Metric)</text>
+        </g>
+
+        <!-- End Node (Bullseye / Circled Cross) -->
+        <g id="node_end" transform="translate(500, 1645)">
+          <circle cx="0" cy="0" r="14" fill="#ffffff" stroke="#000000" stroke-width="2" />
+          <circle cx="0" cy="0" r="8" fill="#000000" stroke="#000000" stroke-width="1" />
+        </g>
+      </g>
+    </svg>
+    
     </div>
+  </div>
 
-    <!-- Interactive Diagram Viewport -->
-    <div class="viewport-wrapper">
-      <div class="floating-toolbar">
-        <button class="tool-btn" onclick="zoomIn()" title="Zoom In">+</button>
-        <button class="tool-btn" onclick="zoomOut()" title="Zoom Out">-</button>
-        <button class="tool-btn" onclick="resetZoom()" title="Reset Zoom">100%</button>
-      </div>
-
-      <div class="canvas-container" id="canvasContainer">
-        <!-- SVG DIAGRAM EMBEDDED -->
-        <svg class="diagram-svg" id="diagramSvg" viewBox="0 0 1600 1260" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <!-- Markers for Arrows -->
-            <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
-            </marker>
-            <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#34d399"/>
-            </marker>
-            <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#fb923c"/>
-            </marker>
-            <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#c084fc"/>
-            </marker>
-            <marker id="arrow-indigo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#818cf8"/>
-            </marker>
-            <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#fbbf24"/>
-            </marker>
-
-            <!-- Gradients -->
-            <linearGradient id="cfGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#c2410c"/>
-              <stop offset="100%" stop-color="#ea580c"/>
-            </linearGradient>
-            <linearGradient id="iosGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#1e3a8a"/>
-              <stop offset="100%" stop-color="#172554"/>
-            </linearGradient>
-            <linearGradient id="liffGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#064e3b"/>
-              <stop offset="100%" stop-color="#022c22"/>
-            </linearGradient>
-            <linearGradient id="goGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#0369a1"/>
-              <stop offset="100%" stop-color="#082f49"/>
-            </linearGradient>
-            <linearGradient id="ocrGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#6b21a8"/>
-              <stop offset="100%" stop-color="#3b0764"/>
-            </linearGradient>
-            <linearGradient id="dbMasterGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#312e81"/>
-              <stop offset="100%" stop-color="#1e1b4b"/>
-            </linearGradient>
-            <linearGradient id="dbTenantGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#065f46"/>
-              <stop offset="100%" stop-color="#022c22"/>
-            </linearGradient>
-          </defs>
-
-          <!-- ==================== TIER 1: FRONTEND LAYER ==================== -->
-          <g id="group-tier1">
-            <rect class="tier-frame" x="40" y="30" width="1520" height="310" stroke="#3b82f6" fill="#0b1329"/>
-            <rect class="tier-header-bar" x="40" y="30" width="1520" height="36" fill="#3b82f6" rx="10"/>
-            <text x="60" y="54" fill="#93c5fd" font-size="14" font-weight="700" letter-spacing="1">TIER 1: FRONTEND &amp; CLIENT APPLICATIONS (ส่วนติดต่อผู้ใช้)</text>
-            <text x="1420" y="54" fill="#60a5fa" font-size="12" font-weight="600">Client Tier</text>
-
-            <!-- 1A: DormiNetX iOS Native App -->
-            <g class="node-card" onclick="openSpec('ios_app')" transform="translate(65, 85)">
-              <rect class="node-bg" x="0" y="0" width="760" height="235" rx="8" fill="#131d35" stroke="#2563eb" stroke-width="1.5"/>
-              <rect x="0" y="0" width="760" height="32" rx="8" fill="#1e3a8a"/>
-              <text x="16" y="22" fill="#bfdbfe" font-size="13" font-weight="700">DormiNetX iOS Native App (Owner &amp; Staff Client) — Swift / SwiftUI / SwiftData</text>
-
-              <!-- Modules inside iOS -->
-              <rect x="16" y="44" width="170" height="90" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-              <text x="28" y="66" fill="#60a5fa" font-size="11" font-weight="700">Presentation Layer</text>
-              <text x="28" y="84" fill="#e2e8f0" font-size="10">• SwiftUI 5 Views</text>
-              <text x="28" y="100" fill="#e2e8f0" font-size="10">• Frosted Glass UI</text>
-              <text x="28" y="116" fill="#e2e8f0" font-size="10">• Dark / Light Mode</text>
-
-              <rect x="200" y="44" width="170" height="90" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1"/>
-              <text x="212" y="66" fill="#60a5fa" font-size="11" font-weight="700">ViewModels &amp; Logic</text>
-              <text x="212" y="84" fill="#e2e8f0" font-size="10">• @MainActor Concurrency</text>
-              <text x="212" y="100" fill="#e2e8f0" font-size="10">• Dashboard &amp; Tenants</text>
-              <text x="212" y="116" fill="#e2e8f0" font-size="10">• Finance &amp; Maintenance</text>
-
-              <rect x="384" y="44" width="176" height="90" rx="6" fill="url(#iosGrad)" stroke="#60a5fa" stroke-width="1.5"/>
-              <text x="396" y="66" fill="#93c5fd" font-size="11" font-weight="700">Local SwiftData Store</text>
-              <text x="396" y="84" fill="#ffffff" font-size="10">• Scoped account_1.store</text>
-              <text x="396" y="100" fill="#ffffff" font-size="10">• Multi-Admin Data Share</text>
-              <text x="396" y="116" fill="#ffffff" font-size="10">• Offline-First Resilience</text>
-
-              <rect x="574" y="44" width="170" height="90" rx="6" fill="url(#iosGrad)" stroke="#60a5fa" stroke-width="1.5"/>
-              <text x="586" y="66" fill="#93c5fd" font-size="11" font-weight="700">Sync &amp; Network Engine</text>
-              <text x="586" y="84" fill="#ffffff" font-size="10">• SyncManager (SHA-256)</text>
-              <text x="586" y="100" fill="#ffffff" font-size="10">• Snapshot Protocol 2</text>
-              <text x="586" y="116" fill="#ffffff" font-size="10">• APIService (URLSession)</text>
-
-              <!-- Hardware Bar -->
-              <rect x="16" y="146" width="728" height="68" rx="6" fill="#0284c7" fill-opacity="0.25" stroke="#38bdf8" stroke-width="1"/>
-              <text x="28" y="168" fill="#7dd3fc" font-size="11" font-weight="700">Hardware &amp; Security Services (iOS Platform Integration)</text>
-              <text x="28" y="188" fill="#f0f9ff" font-size="10.5">Apple Keychain Services (JWT &amp; Passcode)  |  AVFoundation &amp; Vision OCR Camera  |  Apple Push Notifications (APNs)</text>
-            </g>
-
-            <!-- 1B: LINE LIFF Web App -->
-            <g class="node-card" onclick="openSpec('liff_app')" transform="translate(855, 85)">
-              <rect class="node-bg" x="0" y="0" width="680" height="235" rx="8" fill="#0c251d" stroke="#059669" stroke-width="1.5"/>
-              <rect x="0" y="0" width="680" height="32" rx="8" fill="#065f46"/>
-              <text x="16" y="22" fill="#a7f3d0" font-size="13" font-weight="700">LINE LIFF Resident Portal (Tenant Web Client) — HTML5 / Tailwind / JS / LIFF SDK</text>
-
-              <rect x="16" y="44" width="200" height="90" rx="6" fill="url(#liffGrad)" stroke="#10b981" stroke-width="1"/>
-              <text x="28" y="66" fill="#34d399" font-size="11" font-weight="700">Invoice &amp; Meter View</text>
-              <text x="28" y="84" fill="#ecfdf5" font-size="10">• Monthly Rent &amp; Utilities</text>
-              <text x="28" y="100" fill="#ecfdf5" font-size="10">• Water / Electric Units</text>
-              <text x="28" y="116" fill="#ecfdf5" font-size="10">• PromptPay QR Display</text>
-
-              <rect x="232" y="44" width="200" height="90" rx="6" fill="url(#liffGrad)" stroke="#10b981" stroke-width="1"/>
-              <text x="244" y="66" fill="#34d399" font-size="11" font-weight="700">Maintenance Tickets</text>
-              <text x="244" y="84" fill="#ecfdf5" font-size="10">• Online Issue Filing</text>
-              <text x="244" y="100" fill="#ecfdf5" font-size="10">• Photo Evidence Upload</text>
-              <text x="244" y="116" fill="#ecfdf5" font-size="10">• Repair Status Timeline</text>
-
-              <rect x="448" y="44" width="216" height="90" rx="6" fill="url(#liffGrad)" stroke="#10b981" stroke-width="1"/>
-              <text x="460" y="66" fill="#34d399" font-size="11" font-weight="700">Identity &amp; Line Auth</text>
-              <text x="460" y="84" fill="#ecfdf5" font-size="10">• LIFF SDK Profile Verification</text>
-              <text x="460" y="100" fill="#ecfdf5" font-size="10">• Secure Phone/Room Binding</text>
-              <text x="460" y="116" fill="#ecfdf5" font-size="10">• Anti-Impersonation Token</text>
-
-              <!-- Line Runtime Info -->
-              <rect x="16" y="146" width="648" height="68" rx="6" fill="#047857" fill-opacity="0.25" stroke="#34d399" stroke-width="1"/>
-              <text x="28" y="168" fill="#6ee7b7" font-size="11" font-weight="700">Client Runtime Environment</text>
-              <text x="28" y="188" fill="#f0fdf4" font-size="10.5">Runs in LINE In-App Webview (iOS / Android)  |  Zero App Installation  |  Encrypted HTTPS / WSS Channel</text>
-            </g>
-          </g>
-
-          <!-- ==================== INGRESS CONNECTOR ==================== -->
-          <!-- Path from iOS to Cloudflare -->
-          <path d="M 600 320 L 600 390 L 730 390 L 730 435" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow-blue)"/>
-          <text x="560" y="375" fill="#38bdf8" font-size="10.5" font-weight="600" text-anchor="middle">HTTPS / TLS 1.3 (REST APIs &amp; Snapshots)</text>
-
-          <!-- Path from LIFF to Cloudflare -->
-          <path d="M 1050 320 L 1050 390 L 870 390 L 870 435" fill="none" stroke="#34d399" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow-green)"/>
-          <text x="1100" y="375" fill="#34d399" font-size="10.5" font-weight="600" text-anchor="middle">HTTPS / WSS (Tenant APIs &amp; Uploads)</text>
-
-          <!-- ==================== TIER 2: BACKEND LAYER ==================== -->
-          <g id="group-tier2">
-            <rect class="tier-frame" x="40" y="420" width="1520" height="390" stroke="#10b981" fill="#091d17"/>
-            <rect class="tier-header-bar" x="40" y="420" width="1520" height="36" fill="#10b981" rx="10"/>
-            <text x="60" y="444" fill="#a7f3d0" font-size="14" font-weight="700" letter-spacing="1">TIER 2: BACKEND &amp; APPLICATION SERVICES TIER (ส่วนประมวลผล บริการ และความปลอดภัย)</text>
-            <text x="1390" y="444" fill="#34d399" font-size="12" font-weight="600">Application Tier</text>
-
-            <!-- Ingress Gateway: Cloudflare Tunnel -->
-            <g class="node-card" onclick="openSpec('cloudflare_tunnel')" transform="translate(520, 440)">
-              <rect class="node-bg" x="0" y="0" width="560" height="48" rx="8" fill="url(#cfGrad)" stroke="#fdba74" stroke-width="1.5"/>
-              <text x="280" y="22" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle">Cloudflare Zero-Trust Secure Tunnel (cloudflared)</text>
-              <text x="280" y="38" fill="#ffedd5" font-size="10.5" text-anchor="middle">Public Gateway: https://dorminet.studio  |  TLS 1.3 Termination  |  Internal Port 4283 Reverse Proxy</text>
-            </g>
-
-            <!-- Go Backend Core Container -->
-            <g class="node-card" onclick="openSpec('go_backend')" transform="translate(65, 505)">
-              <rect class="node-bg" x="0" y="0" width="880" height="285" rx="8" fill="#0f2638" stroke="#0284c7" stroke-width="1.5"/>
-              <rect x="0" y="0" width="880" height="32" rx="8" fill="#0369a1"/>
-              <text x="16" y="22" fill="#e0f2fe" font-size="13" font-weight="700">Go Core Microservice Engine (server_debian — Port: 4283) — Golang 1.22+ Standard HTTP</text>
-
-              <!-- Modules inside Go Backend -->
-              <rect x="16" y="44" width="160" height="110" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>
-              <text x="26" y="66" fill="#7dd3fc" font-size="11" font-weight="700">AuthMiddleware</text>
-              <text x="26" y="84" fill="#e0f2fe" font-size="10">• JWT Claims Verify</text>
-              <text x="26" y="100" fill="#e0f2fe" font-size="10">• Context Propagation</text>
-              <text x="26" y="116" fill="#e0f2fe" font-size="10">• Role-Based Guard</text>
-              <text x="26" y="132" fill="#e0f2fe" font-size="10">• Session Token Check</text>
-
-              <rect x="188" y="44" width="160" height="110" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>
-              <text x="198" y="66" fill="#7dd3fc" font-size="11" font-weight="700">Multi-Tenant Router</text>
-              <text x="198" y="84" fill="#e0f2fe" font-size="10">• tenant_helper.go</text>
-              <text x="198" y="100" fill="#e0f2fe" font-size="10">• RequestTenantDB</text>
-              <text x="198" y="116" fill="#e0f2fe" font-size="10">• Superadmin / Staff</text>
-              <text x="198" y="132" fill="#e0f2fe" font-size="10">• Dynamic Conn Pool</text>
-
-              <rect x="360" y="44" width="160" height="110" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>
-              <text x="370" y="66" fill="#7dd3fc" font-size="11" font-weight="700">Snapshot Sync</text>
-              <text x="370" y="84" fill="#e0f2fe" font-size="10">• /api/sync/push</text>
-              <text x="370" y="100" fill="#e0f2fe" font-size="10">• /api/sync/latest</text>
-              <text x="370" y="116" fill="#e0f2fe" font-size="10">• Version Vectors</text>
-              <text x="370" y="132" fill="#e0f2fe" font-size="10">• SHA-256 Validation</text>
-
-              <rect x="532" y="44" width="160" height="110" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>
-              <text x="542" y="66" fill="#7dd3fc" font-size="11" font-weight="700">Financial Ledger</text>
-              <text x="542" y="84" fill="#e0f2fe" font-size="10">• Monthly Bill Engine</text>
-              <text x="542" y="100" fill="#e0f2fe" font-size="10">• Partial/Paid Cycles</text>
-              <text x="542" y="116" fill="#e0f2fe" font-size="10">• Void / Refund / Adj</text>
-              <text x="542" y="132" fill="#e0f2fe" font-size="10">• Immutable Audits</text>
-
-              <rect x="704" y="44" width="160" height="110" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1"/>
-              <text x="714" y="66" fill="#7dd3fc" font-size="11" font-weight="700">Workflow Engines</text>
-              <text x="714" y="84" fill="#e0f2fe" font-size="10">• Maintenance States</text>
-              <text x="714" y="100" fill="#e0f2fe" font-size="10">• Damage Cost Sync</text>
-              <text x="714" y="116" fill="#e0f2fe" font-size="10">• Occupancy Computor</text>
-              <text x="714" y="132" fill="#e0f2fe" font-size="10">• Outbox Queue Dispatch</text>
-
-              <!-- Go Subsystems Strip -->
-              <rect x="16" y="166" width="848" height="100" rx="6" fill="#0369a1" fill-opacity="0.3" stroke="#38bdf8" stroke-width="1"/>
-              <text x="28" y="188" fill="#bae6fd" font-size="11" font-weight="700">Critical Backend Subsystems &amp; Protocols</text>
-              <text x="28" y="208" fill="#f0f9ff" font-size="10.5">• PromptPay EMVCo Payload &amp; CRC-16 Checksum Generator (Dynamic PromptPay QR Code standard)</text>
-              <text x="28" y="226" fill="#f0f9ff" font-size="10.5">• Resident Self-Service API Endpoints: /api/liff/rooms, /api/liff/verify-tenant, /api/liff/status, /api/media/*</text>
-              <text x="28" y="244" fill="#f0f9ff" font-size="10.5">• Notification Queue Worker: Dispatches asynchronous events to LINE Messaging API and Apple APNs</text>
-            </g>
-
-            <!-- Dual-Engine OCR Microservice -->
-            <g class="node-card" onclick="openSpec('ocr_service')" transform="translate(965, 505)">
-              <rect class="node-bg" x="0" y="0" width="295" height="285" rx="8" fill="#24123b" stroke="#9333ea" stroke-width="1.5"/>
-              <rect x="0" y="0" width="295" height="32" rx="8" fill="#581c87"/>
-              <text x="16" y="22" fill="#f3e8ff" font-size="13" font-weight="700">Dual-Engine OCR Service (:5001)</text>
-
-              <rect x="16" y="44" width="263" height="95" rx="6" fill="url(#ocrGrad)" stroke="#a855f7" stroke-width="1"/>
-              <text x="26" y="66" fill="#d8b4fe" font-size="11" font-weight="700">Recognition Engines</text>
-              <text x="26" y="84" fill="#f5f3ff" font-size="10">• Engine 1: PaddleOCR (Bilinear)</text>
-              <text x="26" y="100" fill="#f5f3ff" font-size="10">• Engine 2: Tesseract OCR Engine</text>
-              <text x="26" y="116" fill="#f5f3ff" font-size="10">• Python 3.11 / Flask Framework</text>
-              <text x="26" y="130" fill="#f5f3ff" font-size="10">• Localhost Only (127.0.0.1:5001)</text>
-
-              <rect x="16" y="150" width="263" height="116" rx="6" fill="#3b0764" fill-opacity="0.4" stroke="#c084fc" stroke-width="1"/>
-              <text x="26" y="172" fill="#e9d5ff" font-size="11" font-weight="700">Fail-Closed Security Safeguards</text>
-              <text x="26" y="190" fill="#ffffff" font-size="10">• Strict Exact-Amount Verification</text>
-              <text x="26" y="206" fill="#ffffff" font-size="10">• PromptPay Account Recipient Match</text>
-              <text x="26" y="222" fill="#ffffff" font-size="10">• Duplicate Slip Reference Replay Guard</text>
-              <text x="26" y="238" fill="#ffffff" font-size="10">• Automatic Fail-Closed Rollback Policy</text>
-            </g>
-
-            <!-- External Cloud Gateways -->
-            <g class="node-card" onclick="openSpec('external_gateways')" transform="translate(1280, 505)">
-              <rect class="node-bg" x="0" y="0" width="255" height="285" rx="8" fill="#182234" stroke="#64748b" stroke-width="1.5"/>
-              <rect x="0" y="0" width="255" height="32" rx="8" fill="#334155"/>
-              <text x="16" y="22" fill="#e2e8f0" font-size="13" font-weight="700">External Cloud Gateways</text>
-
-              <rect x="14" y="44" width="227" height="66" rx="6" fill="#0f172a" stroke="#22c55e" stroke-width="1.5"/>
-              <text x="24" y="66" fill="#4ade80" font-size="11" font-weight="700">LINE Messaging API</text>
-              <text x="24" y="82" fill="#f8fafc" font-size="10">• Webhook Receiver</text>
-              <text x="24" y="96" fill="#f8fafc" font-size="10">• Interactive Flex Message Invoices</text>
-
-              <rect x="14" y="122" width="227" height="66" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
-              <text x="24" y="144" fill="#38bdf8" font-size="11" font-weight="700">Apple Push Service (APNs)</text>
-              <text x="24" y="160" fill="#f8fafc" font-size="10">• HTTP/2 Push Token Notification</text>
-              <text x="24" y="174" fill="#f8fafc" font-size="10">• Real-time Staff Alert Delivery</text>
-
-              <rect x="14" y="200" width="227" height="66" rx="6" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
-              <text x="24" y="222" fill="#fbbf24" font-size="11" font-weight="700">EasySlip API Gateway</text>
-              <text x="24" y="238" fill="#f8fafc" font-size="10">• High-Volume Slip Validation</text>
-              <text x="24" y="252" fill="#f8fafc" font-size="10">• Redundant Fallback Channel</text>
-            </g>
-          </g>
-
-          <!-- ==================== TIER 2 INTERNAL CONNECTORS ==================== -->
-          <!-- Cloudflare to Go Core -->
-          <path d="M 800 488 L 800 505" fill="none" stroke="#fb923c" stroke-width="2.5" marker-end="url(#arrow-orange)"/>
-          <text x="815" y="500" fill="#fb923c" font-size="10" font-weight="700">Internal :4283</text>
-
-          <!-- Go Core to OCR Service -->
-          <path d="M 945 610 L 965 610" fill="none" stroke="#c084fc" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
-          <text x="955" y="600" fill="#c084fc" font-size="10" font-weight="700" text-anchor="middle">Local IPC (127.0.0.1:5001)</text>
-
-          <!-- Go Core to External Cloud -->
-          <path d="M 1260 610 L 1280 610" fill="none" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow-blue)"/>
-          <text x="1270" y="600" fill="#cbd5e1" font-size="10" font-weight="600" text-anchor="middle">Outbound</text>
-
-          <!-- ==================== TIER 3: SERVER & DATA PERSISTENCE LAYER ==================== -->
-          <g id="group-tier3">
-            <rect class="tier-frame" x="40" y="840" width="1520" height="390" stroke="#8b5cf6" fill="#130e26"/>
-            <rect class="tier-header-bar" x="40" y="840" width="1520" height="36" fill="#8b5cf6" rx="10"/>
-            <text x="60" y="864" fill="#ddd6fe" font-size="14" font-weight="700" letter-spacing="1">TIER 3: SERVER HOST &amp; MULTI-TENANT DATA LAYER (เครื่องแม่ข่าย ระบบปฏิบัติการ และฐานข้อมูลแยกหอพัก)</text>
-            <text x="1370" y="864" fill="#a78bfa" font-size="12" font-weight="600">Infrastructure Tier</text>
-
-            <!-- Linux Host Info Banner -->
-            <rect x="65" y="890" width="1470" height="38" rx="6" fill="#2e1065" stroke="#7c3aed" stroke-width="1"/>
-            <text x="85" y="914" fill="#ede9fe" font-size="12" font-weight="600">
-              Host Environment: Debian GNU/Linux 12 (x86_64)  |  Production IP: 202.29.232.28  |  Supervisor: systemd (dormitory.service &amp; dormitory-ocr.service)  |  Security: Ed25519 SSH Keys
-            </text>
-
-            <!-- Master SQLite Database -->
-            <g class="node-card" onclick="openSpec('master_db')" transform="translate(65, 945)">
-              <rect class="node-bg" x="0" y="0" width="360" height="260" rx="8" fill="url(#dbMasterGrad)" stroke="#6366f1" stroke-width="1.5"/>
-              <rect x="0" y="0" width="360" height="32" rx="8" fill="#3730a3"/>
-              <text x="16" y="22" fill="#e0e7ff" font-size="13" font-weight="700">Master System Database (/opt/dormitory/dormitory.db)</text>
-
-              <text x="16" y="52" fill="#a5b4fc" font-size="11" font-weight="700">System Orchestration Tables (SQLite WAL Mode):</text>
-
-              <rect x="16" y="60" width="328" height="185" rx="6" fill="#0f172a" stroke="#4f46e5" stroke-width="1"/>
-              <text x="28" y="82" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">admins:</tspan> Owners, Staff, Hashed Passwords, Roles, Emails</text>
-              <text x="28" y="102" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">sessions:</tspan> Active JWT Tokens &amp; Device UUID Sessions</text>
-              <text x="28" y="122" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">line_tenants:</tspan> LINE User ID to Dormitory Resident Maps</text>
-              <text x="28" y="142" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">sync_snapshots:</tspan> Compressed Snapshots &amp; SHA-256 Hashes</text>
-              <text x="28" y="162" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">financial_audits:</tspan> Double-Entry Ledger Adjustments &amp; Voids</text>
-              <text x="28" y="182" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">outbox:</tspan> Asynchronous Message Queue for LINE &amp; APNs</text>
-              <text x="28" y="202" fill="#c7d2fe" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">password_resets:</tspan> Secure One-Time Reset Tokens</text>
-              <text x="28" y="222" fill="#a5b4fc" font-size="10">• High-Concurrency SQLite PRAGMA journal_mode=WAL</text>
-            </g>
-
-            <!-- Multi-Tenant Databases -->
-            <g class="node-card" onclick="openSpec('tenant_db')" transform="translate(445, 945)">
-              <rect class="node-bg" x="0" y="0" width="460" height="260" rx="8" fill="url(#dbTenantGrad)" stroke="#10b981" stroke-width="1.5"/>
-              <rect x="0" y="0" width="460" height="32" rx="8" fill="#047857"/>
-              <text x="16" y="22" fill="#d1fae5" font-size="13" font-weight="700">Isolated Tenant Databases (/opt/dormitory/dorm_data/tenant_*.db)</text>
-
-              <text x="16" y="52" fill="#6ee7b7" font-size="11" font-weight="700">Isolated Dormitory Data per Owner (Physical SQLite File Isolation):</text>
-
-              <rect x="16" y="60" width="428" height="185" rx="6" fill="#022c22" stroke="#059669" stroke-width="1"/>
-              <text x="28" y="82" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">rooms:</tspan> Room Numbers, Room Types, Monthly Pricing, Dynamic Occupancy</text>
-              <text x="28" y="102" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">users:</tspan> Resident National ID, Contracts, Move-In/Out Dates, Deposits</text>
-              <text x="28" y="122" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">payments:</tspan> Invoices, Water/Electric Meter Readings, Paid Amounts, Plans</text>
-              <text x="28" y="142" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">payment_transactions:</tspan> Immutable Transaction Receipts &amp; Balances</text>
-              <text x="28" y="162" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">maintenances:</tspan> Repair Records, Damage Photos, Technician Assignment</text>
-              <text x="28" y="182" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">deposit_refunds:</tspan> Move-Out Deductions, Bank Refund Accounts, Status</text>
-              <text x="28" y="202" fill="#a7f3d0" font-size="10.5">• <tspan font-weight="700" fill="#ffffff">system_logs:</tspan> Tenant Activity Audits &amp; Timestamped Operations</text>
-              <text x="28" y="222" fill="#6ee7b7" font-size="10">• Guaranteed Zero Cross-Dormitory Data Leakage via File Isolation</text>
-            </g>
-
-            <!-- Media Storage -->
-            <g class="node-card" onclick="openSpec('media_storage')" transform="translate(925, 945)">
-              <rect class="node-bg" x="0" y="0" width="295" height="260" rx="8" fill="#3a1c06" stroke="#f59e0b" stroke-width="1.5"/>
-              <rect x="0" y="0" width="295" height="32" rx="8" fill="#b45309"/>
-              <text x="16" y="22" fill="#fef3c7" font-size="13" font-weight="700">Media Storage (/opt/dormitory/uploads/)</text>
-
-              <text x="16" y="52" fill="#fde68a" font-size="11" font-weight="700">Static Files &amp; User Uploads:</text>
-
-              <rect x="16" y="60" width="263" height="185" rx="6" fill="#1c0d02" stroke="#d97706" stroke-width="1"/>
-              <text x="26" y="84" fill="#fef08a" font-size="10.5">• Bank Transfer Payment Slips</text>
-              <text x="26" y="104" fill="#fef08a" font-size="10.5">• Maintenance Damage Photos</text>
-              <text x="26" y="124" fill="#fef08a" font-size="10.5">• Scanned Lease Agreements</text>
-              <text x="26" y="144" fill="#fef08a" font-size="10.5">• Admin &amp; Staff Profile Avatars</text>
-              <text x="26" y="164" fill="#fef08a" font-size="10.5">• Public Web Assets (/public/)</text>
-              <text x="26" y="194" fill="#fbbf24" font-size="10">• Path-Traversal Sanitization Guard</text>
-              <text x="26" y="210" fill="#fbbf24" font-size="10">• Max Upload Size Enforcement (50MB)</text>
-            </g>
-
-            <!-- Deploy Workspace -->
-            <g class="node-card" onclick="openSpec('deploy_workspace')" transform="translate(1240, 945)">
-              <rect class="node-bg" x="0" y="0" width="295" height="260" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
-              <rect x="0" y="0" width="295" height="32" rx="8" fill="#475569"/>
-              <text x="16" y="22" fill="#f1f5f9" font-size="13" font-weight="700">Deploy Workspace (dorminet_workspace)</text>
-
-              <text x="16" y="52" fill="#cbd5e1" font-size="11" font-weight="700">Operations &amp; Rollback Archives:</text>
-
-              <rect x="16" y="60" width="263" height="185" rx="6" fill="#0f172a" stroke="#64748b" stroke-width="1"/>
-              <text x="26" y="84" fill="#e2e8f0" font-size="10.5">• deploy_flex_safe_remote.sh</text>
-              <text x="26" y="104" fill="#e2e8f0" font-size="10.5">• clean_reset_production.sh</text>
-              <text x="26" y="124" fill="#e2e8f0" font-size="10.5">• reset_test_env.sh</text>
-              <text x="26" y="144" fill="#e2e8f0" font-size="10.5">• backups/ (Pre-Deploy DB Backups)</text>
-              <text x="26" y="164" fill="#e2e8f0" font-size="10.5">• server_debian.rollback* Binaries</text>
-              <text x="26" y="194" fill="#94a3b8" font-size="10">• Atomic Deployment Pipeline</text>
-              <text x="26" y="210" fill="#94a3b8" font-size="10">• Automated Instant Rollback Engine</text>
-            </g>
-          </g>
-
-          <!-- ==================== TIER 2 TO TIER 3 DATA CONNECTORS ==================== -->
-          <!-- Go Core to Master DB -->
-          <path d="M 280 790 L 280 945" fill="none" stroke="#818cf8" stroke-width="2" marker-end="url(#arrow-indigo)"/>
-          <text x="290" y="820" fill="#818cf8" font-size="10" font-weight="600">SQLite database/sql (WAL Mode)</text>
-
-          <!-- Go Core to Tenant DB -->
-          <path d="M 640 790 L 640 945" fill="none" stroke="#34d399" stroke-width="2" marker-end="url(#arrow-green)"/>
-          <text x="650" y="820" fill="#34d399" font-size="10" font-weight="600">Dynamic RequestTenantDB()</text>
-
-          <!-- Go Core to Media Storage -->
-          <path d="M 850 790 L 850 825 L 1050 825 L 1050 945" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow-amber)"/>
-          <text x="960" y="820" fill="#fbbf24" font-size="10" font-weight="600">File I/O Stream (Slips/Photos)</text>
-        </svg>
-      </div>
+  <div class="legend-bar">
+    <span style="font-weight: 600; color: #111827;">UML Notation Standard:</span>
+    <div class="legend-item">
+      <span class="legend-icon" style="background:#000000; border-radius:50%;"></span>
+      <span>Initial Node (Start)</span>
     </div>
-
-    <!-- Technical Specification Modal -->
-    <div class="modal-overlay" id="specModal" onclick="closeModalOnBackdrop(event)">
-      <div class="modal-card">
-        <div class="modal-header">
-          <div>
-            <div class="modal-title" id="specTitle">Component Technical Specification</div>
-            <div class="modal-subtitle" id="specSubtitle">Detailed Architectural Breakdown</div>
-          </div>
-          <button class="modal-close" onclick="closeModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="spec-grid" id="specGrid">
-            <!-- Dynamic Spec Content -->
-          </div>
-          <div class="spec-desc" id="specDesc">
-            <!-- Dynamic Description -->
-          </div>
-        </div>
-      </div>
+    <div class="legend-item">
+      <span class="legend-icon" style="background:#ffffff; border:1px solid #000000; border-radius:3px;"></span>
+      <span>Action State (Process)</span>
     </div>
-
-    <footer>
-      <div>DormiNetX Architecture Specification • Release v1.0.0 • Strict Zero Emojis Compliance</div>
-      <div>Designed for Production Verification &amp; Developer Handoff</div>
-    </footer>
-  </main>
+    <div class="legend-item">
+      <span class="legend-icon" style="background:#fff2cc; border:1px solid #d6b656; transform:rotate(45deg); width:10px; height:10px;"></span>
+      <span>Decision Node (Branch)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-icon" style="background:#000000; height:4px;"></span>
+      <span>Sync Bar (Fork / Join)</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-icon" style="background:#ffffff; border:2px solid #000000; border-radius:50%; position:relative;"></span>
+      <span>Final Node (End)</span>
+    </div>
+  </div>
 
   <script>
-    // Component Technical Specifications Database
-    const specs = {
-      system_overview: {
-        title: "DormiNetX — 3-Tier Distributed Architecture",
-        subtitle: "Enterprise Local-First & Multi-Tenant Isolated Infrastructure",
-        grid: {
-          "Tier 1 (Frontend)": "Native iOS App (SwiftUI/SwiftData) & LINE LIFF Resident Webview",
-          "Tier 2 (Backend)": "Go Core Engine (:4283), Python OCR (:5001), Cloudflare Tunnel",
-          "Tier 3 (Server/DB)": "Debian Linux 12 (:202.29.232.28), Master SQLite & Multi-Tenant DBs",
-          "Protocols": "TLS 1.3, HTTPS, WSS, SQLite WAL Mode, Local IPC HTTP",
-          "Core Design": "Local-First Offline Resilience with Snapshot Protocol 2"
-        },
-        desc: "ระบบ DormiNetX ถูกออกแบบตามมาตรฐานสากล ISO/IEC 42010 เพื่อแก้ปัญหาข้อจำกัดของระบบคลาวด์แบบเดิม โดยแบ่งการทำงานออกเป็น 3 ส่วนหลัก (Tier 1: Frontend, Tier 2: Backend, Tier 3: Server & Data Persistence) พร้อมแยกสิทธิ์การใช้งานของเจ้าของหอพัก (Superadmin), พนักงาน (Admin/Staff), และลูกบ้าน (Tenant) อย่างเด็ดขาด"
-      },
-      ios_app: {
-        title: "DormiNetX iOS Native Application",
-        subtitle: "Primary Management Interface for Dormitory Owners & Staff",
-        grid: {
-          "Language & UI": "Swift 5.10, SwiftUI 5 (Declarative Material Design)",
-          "Persistence": "SwiftData (SQLite backing store account_1.store)",
-          "State & Concurrency": "Combine, @Observable Macro, @MainActor Concurrency",
-          "Sync Client": "SyncManager (SHA-256 Checksum, Snapshot Protocol 2)",
-          "Hardware Features": "Apple Keychain, AVFoundation Camera, Vision OCR",
-          "Architecture Pattern": "MVVM + Local-First Store with Multi-Admin Sharing"
-        },
-        desc: "แอปพลิเคชันหลักของผู้ดูแลหอพัก ทำงานแบบ Local-First 100% สามารถเปิดดูห้องพัก ออกบิล และบันทึกข้อมูลได้แม้ไม่มีสัญญาณอินเทอร์เน็ต โดยข้อมูลจะถูกบันทึกใน SwiftData Store ของเครื่อง และซิงค์ขึ้นเซิร์ฟเวอร์แบบ Atomic ทันทีที่เชื่อมต่อเครือข่ายสำเร็จ"
-      },
-      liff_app: {
-        title: "LINE LIFF Resident Self-Service Portal",
-        subtitle: "Resident & Tenant Self-Service Mobile Web Client",
-        grid: {
-          "Technology": "HTML5, Modern CSS / Tailwind CSS, Vanilla JavaScript",
-          "Framework SDK": "@line/liff (LINE Front-end Framework SDK v2)",
-          "Security": "LINE OAuth2 ID Token Verification & Room Binding",
-          "Modules": "Bill Inspection, PromptPay QR, Maintenance Tickets",
-          "Client Platform": "Runs inside LINE In-App Webview (iOS / Android)"
-        },
-        desc: "ช่องทางบริการสำหรับลูกบ้าน โดยไม่ต้องดาวน์โหลดแอปพลิเคชันเพิ่มเติม ลูกบ้านสามารถเปิดดูบิลค่าเช่า ตรวจสอบหน่วยมิเตอร์น้ำ-ไฟ สแกนจ่ายผ่าน QR Code พร้อมเพย์ และส่งคำร้องแจ้งซ่อมพร้อมแนบรูปภาพได้โดยตรงผ่านแอปพลิเคชัน LINE"
-      },
-      cloudflare_tunnel: {
-        title: "Cloudflare Zero-Trust Secure Tunnel",
-        subtitle: "Public Ingress Gateway & Edge Protection Layer",
-        grid: {
-          "Domain": "https://dorminet.studio",
-          "Daemon": "cloudflared (Linux Systemd Service)",
-          "Security": "TLS 1.3 Termination, Automatic HTTPS, DDoS Shield",
-          "Routing Target": "127.0.0.1:4283 (Internal Go Backend Port)",
-          "Port Forwarding": "No Public Ports Exposed (Direct Outbound Tunnel)"
-        },
-        desc: "อุโมงค์เชื่อมต่อความปลอดภัยระดับ Zero-Trust ทำหน้าที่เป็น Reverse Proxy รับทราฟฟิกจากภายนอกเข้าสู่เซิร์ฟเวอร์ โดยไม่ต้องเปิดพอร์ต 80 หรือ 443 สู่สาธารณะ ป้องกันการถูกสแกนพอร์ตและการโจมตีแบบ DDoS"
-      },
-      go_backend: {
-        title: "Go Core Application Engine",
-        subtitle: "High-Performance RESTful Gateway & Synchronization Core",
-        grid: {
-          "Language & Engine": "Go (Golang 1.22+ Standard Library)",
-          "Binary & Service": "server_debian / dormitory.service",
-          "Internal Port": "4283 (Listening on localhost & Cloudflare Tunnel)",
-          "Authentication": "JWT Bearer Tokens with HMAC-SHA256 Signing",
-          "Tenant Router": "tenant_helper.go (RequestTenantDB Dynamic Resolver)",
-          "Key Subsystems": "Sync Handlers, PromptPay EMVCo Generator, Financial Ledger"
-        },
-        desc: "หัวใจหลักของระบบหลังบ้าน พัฒนาด้วยภาษา Go เพื่อความเร็ว ประสิทธิภาพ และการใช้หน่วยความจำที่ต่ำ ทำหน้าที่ตรวจสอบสิทธิ์ (AuthMiddleware), จัดเส้นทางฐานข้อมูลแยกตามหอพัก (Multi-Tenant Router), ประมวลผลรอบบิล, สร้าง QR Code พร้อมเพย์มาตรฐาน EMVCo และจัดการการซิงค์ข้อมูลแบบ Versioned Snapshots"
-      },
-      ocr_service: {
-        title: "Dual-Engine OCR Microservice",
-        subtitle: "Slip Recognition & Fraud Prevention Microservice",
-        grid: {
-          "Engines": "PaddleOCR (Primary) + Tesseract OCR (Secondary)",
-          "Framework": "Python 3.11 / Flask Microservice",
-          "Internal Port": "127.0.0.1:5001 (Isolated on Local Loopback)",
-          "Security Policy": "Fail-Closed: Strict Amount, Recipient & Replay Checks"
-        },
-        desc: "ไมโครเซอร์วิสสำหรับตรวจสอบสลิปการโอนเงินอัตโนมัติ โดยผสาน 2 เอนจินเพื่อความแม่นยำสูงสุด มีระบบรักษาความปลอดภัยแบบ Fail-Closed โดยจะปฏิเสธการตัดยอดทันทีหากยอดเงิน ผู้รับ หรือเลขอ้างอิงสลิปไม่ตรงกับเงื่อนไข เพื่อป้องกันการปลอมแปลงสลิป"
-      },
-      external_gateways: {
-        title: "External Cloud Gateways & Providers",
-        subtitle: "Third-Party Communication & Verification Services",
-        grid: {
-          "LINE Messaging API": "Interactive Flex Messages, Carousels, Webhooks",
-          "Apple APNs": "HTTP/2 Remote Push Notifications to iOS Devices",
-          "EasySlip API": "High-Volume Automated Bank Slip Verification Gateway"
-        },
-        desc: "เกตเวย์เชื่อมต่อไปยังบริการคลาวด์ภายนอก ทั้งระบบแจ้งเตือนผ่าน LINE Official Account, การส่ง Push Notifications ไปยังเครื่องผู้ดูแลผ่านเครือข่ายของ Apple (APNs) และช่องทางตรวจสอบสลิปสำรอง"
-      },
-      master_db: {
-        title: "Master System Database",
-        subtitle: "Global System Identity & Synchronization Orchestrator",
-        grid: {
-          "Database Path": "/opt/dormitory/dormitory.db",
-          "Engine": "SQLite 3 with PRAGMA journal_mode = WAL",
-          "Tables": "admins, sessions, line_tenants, sync_snapshots, financial_audits, outbox",
-          "Isolation Role": "Holds System-wide Auth, Sessions & Audit Records"
-        },
-        desc: "ฐานข้อมูลหลักของระบบ ทำหน้าที่จัดเก็บข้อมูลผู้ดูแลระบบ (Admins), เซสชันการเข้าสู่ระบบ, การจับคู่ไอดีลูกบ้าน LINE, ประวัติการซิงค์ Snapshot ของข้อมูล และบันทึก Audit Trail ของธุรกรรมทางการเงินทั้งหมด"
-      },
-      tenant_db: {
-        title: "Isolated Tenant Databases (File-per-Tenant)",
-        subtitle: "Physical Multi-Tenant Database Isolation Architecture",
-        grid: {
-          "Storage Path": "/opt/dormitory/dorm_data/tenant_<account_id>.db",
-          "Engine": "SQLite 3 with PRAGMA journal_mode = WAL",
-          "Tables": "rooms, users, payments, payment_transactions, maintenances, deposit_refunds",
-          "Security Guarantee": "Zero Cross-Dormitory Data Leakage via File Boundaries"
-        },
-        desc: "สถาปัตยกรรมฐานข้อมูลแบบแยกไฟล์ตามหอพัก (File-per-Tenant) โดยแต่ละหอพักจะมีไฟล์ SQLite แยกออกจากกัน 100% ทำให้ปลอดภัยจากการคิวรีหลุดข้ามหอพัก และรองรับการสำรองข้อมูลรายหอพักได้อย่างอิสระ"
-      },
-      media_storage: {
-        title: "Media & File Asset Storage",
-        subtitle: "Protected Local Static File Repository",
-        grid: {
-          "Filesystem Path": "/opt/dormitory/uploads/",
-          "Asset Types": "Bank Slips, Maintenance Photos, Leases, Profile Avatars",
-          "Security": "Path Traversal Sanitization, Max 50MB per Request",
-          "Access Control": "Authenticated Streamer Endpoint (/api/media/*)"
-        },
-        desc: "พื้นที่จัดเก็บไฟล์สื่อและเอกสารของระบบ มีระบบตรวจสอบชื่อไฟล์และป้องกัน Path Traversal เพื่อความปลอดภัยสูงสุด"
-      },
-      deploy_workspace: {
-        title: "Operations & Deploy Workspace",
-        subtitle: "Safe Deploy Pipeline & Recovery Archives",
-        grid: {
-          "Server Path": "/home/fang/dorminet_workspace/",
-          "Key Scripts": "deploy_flex_safe_remote.sh, reset_test_env.sh",
-          "Backup Directory": "backups/ (Atomic Pre-Deploy DB Snapshots)",
-          "Rollback Binaries": "server_debian.rollback* (Instant Binary Fallback)"
-        },
-        desc: "พื้นที่ทำงานและสคริปต์สำหรับการดีพลอยระบบอัตโนมัติ พร้อมระบบสำรองข้อมูลฐานข้อมูลและไบนารีก่อนการดีพลอยทุกครั้ง รองรับการ Rollback คืนค่าระบบกลับสู่สถานะสมบูรณ์ได้ทันทีภายใน 5 วินาที"
-      }
-    };
+    let scale = 1.0;
+    const wrapper = document.getElementById('svgWrapper');
+    const container = document.getElementById('viewer-container');
 
-    // Zoom & Pan Controller
-    let currentZoom = 1;
-    const svgElement = document.getElementById("diagramSvg");
+    function applyZoom() {
+      wrapper.style.transform = `scale(${scale})`;
+    }
 
     function zoomIn() {
-      currentZoom = Math.min(currentZoom + 0.15, 2.5);
+      scale = Math.min(scale + 0.15, 2.5);
       applyZoom();
     }
 
     function zoomOut() {
-      currentZoom = Math.max(currentZoom - 0.15, 0.5);
+      scale = Math.max(scale - 0.15, 0.4);
       applyZoom();
     }
 
     function resetZoom() {
-      currentZoom = 1;
+      scale = 1.0;
       applyZoom();
     }
 
-    function applyZoom() {
-      svgElement.style.transform = `scale(${currentZoom})`;
+    function fitWidth() {
+      const availableWidth = container.clientWidth - 48;
+      scale = availableWidth / 1420;
+      applyZoom();
     }
 
-    // Tier Filtering Controller
-    function filterTier(tier, btnElement) {
-      document.querySelectorAll(".controls .btn").forEach(b => b.classList.remove("active"));
-      if (btnElement) btnElement.classList.add("active");
+    // Search & highlight
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+      const query = e.target.value.trim().toLowerCase();
+      const nodes = document.querySelectorAll('.diagram-node');
+      nodes.forEach(node => {
+        const text = node.textContent.toLowerCase();
+        if (query && text.includes(query)) {
+          node.classList.add('node-highlight');
+        } else {
+          node.classList.remove('node-highlight');
+        }
+      });
+    });
 
-      const t1 = document.getElementById("group-tier1");
-      const t2 = document.getElementById("group-tier2");
-      const t3 = document.getElementById("group-tier3");
+    // Drag to pan
+    let isPanning = false;
+    let startX, startY, scrollLeft, scrollTop;
 
-      if (tier === "all") {
-        t1.style.opacity = "1";
-        t2.style.opacity = "1";
-        t3.style.opacity = "1";
-      } else if (tier === "t1") {
-        t1.style.opacity = "1";
-        t2.style.opacity = "0.15";
-        t3.style.opacity = "0.15";
-      } else if (tier === "t2") {
-        t1.style.opacity = "0.15";
-        t2.style.opacity = "1";
-        t3.style.opacity = "0.15";
-      } else if (tier === "t3") {
-        t1.style.opacity = "0.15";
-        t2.style.opacity = "0.15";
-        t3.style.opacity = "1";
+    container.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button') || e.target.closest('input')) return;
+      isPanning = true;
+      startX = e.pageX - container.offsetLeft;
+      startY = e.pageY - container.offsetTop;
+      scrollLeft = container.scrollLeft;
+      scrollTop = container.scrollTop;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const y = e.pageY - container.offsetTop;
+      const walkX = (x - startX) * 1.5;
+      const walkY = (y - startY) * 1.5;
+      container.scrollLeft = scrollLeft - walkX;
+      container.scrollTop = scrollTop - walkY;
+    });
+
+    // Mouse wheel zoom with Ctrl or Alt
+    container.addEventListener('wheel', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
       }
-    }
+    }, { passive: false });
 
-    // Modal Specifications Controller
-    function openSpec(key) {
-      const data = specs[key];
-      if (!data) return;
-
-      document.getElementById("specTitle").textContent = data.title;
-      document.getElementById("specSubtitle").textContent = data.subtitle;
-
-      let gridHtml = "";
-      for (const [k, v] of Object.entries(data.grid)) {
-        gridHtml += `<div class="spec-label">${k}</div><div class="spec-value">${v}</div>`;
+    // Auto fit width on load if window is narrow
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.innerWidth < 1480) {
+        fitWidth();
       }
-      document.getElementById("specGrid").innerHTML = gridHtml;
-      document.getElementById("specDesc").innerHTML = `<div>${data.desc}</div>`;
-
-      document.getElementById("specModal").classList.add("active");
-    }
-
-    function closeModal() {
-      document.getElementById("specModal").classList.remove("active");
-    }
-
-    function closeModalOnBackdrop(event) {
-      if (event.target === document.getElementById("specModal")) {
-        closeModal();
-      }
-    }
-
-    // Keyboard Shortcuts
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeModal();
-      if (e.key === "+" || e.key === "=") zoomIn();
-      if (e.key === "-") zoomOut();
-      if (e.key === "0") resetZoom();
     });
   </script>
 </body>
 </html>
-
