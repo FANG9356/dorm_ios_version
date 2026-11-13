@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" modified="2026-11-13T16:15:00.000Z" agent="Mozilla/5.0" version="21.6.8" type="device">
+  <diagram id="dorminetx-system-architecture" name="DormiNetX 3-Tier System Architecture">
+    <mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1680" pageHeight="1180" background="#0b0f19" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== HEADER & TITLE ==================== -->
+        <mxCell id="title_block" value="DormiNetX — 3-Tier Enterprise System Architecture Diagram&#xa;Standard ISO/IEC 42010 Architecture Description | Client-First &amp; Multi-Tenant Isolated Infrastructure" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#f8fafc;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="50" y="25" width="1100" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend_box" value="&lt;b&gt;Architecture Legend:&lt;/b&gt;&#xa;[Tier 1] Client Presentation  |  [Tier 2] Backend &amp; Microservices  |  [Tier 3] Host &amp; Multi-Tenant Data Layer&#xa;&lt;b&gt;Security:&lt;/b&gt; TLS 1.3 / HTTPS  |  JWT Bearer RBAC  |  Zero-Trust Cloudflare Tunnel  |  Fail-Closed Dual OCR" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#334155;fontColor=#cbd5e1;fontSize=11;align=left;spacingLeft=12;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="20" width="460" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TIER 1: FRONTEND (CLIENT TIER) ==================== -->
+        <mxCell id="tier1_container" value="TIER 1: FRONTEND &amp; CLIENT APPLICATIONS (ส่วนติดต่อผู้ใช้)" style="swimlane;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#0f172a;strokeColor=#3b82f6;strokeWidth=2;fontColor=#60a5fa;fontStyle=1;fontSize=14;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="50" y="100" width="1580" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Subsystem 1A: DormiNetX iOS Native Application -->
+        <mxCell id="ios_app_container" value="DormiNetX iOS Native Application (Admin &amp; Staff Client) — Swift / SwiftUI / SwiftData" style="swimlane;html=1;startSize=26;rounded=1;arcSize=8;fillColor=#1e293b;strokeColor=#2563eb;fontColor=#93c5fd;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier1_container">
+          <mxGeometry x="25" y="45" width="810" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ios_ui_layer" value="&lt;b&gt;Presentation Layer (UI)&lt;/b&gt;&lt;br&gt;SwiftUI 5 Declarative Views&lt;br&gt;Frosted Glass Material Design&lt;br&gt;Dark/Light Mode &amp; Localizable&lt;br&gt;Adaptive iPad / iPhone Layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#3b82f6;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="ios_app_container">
+          <mxGeometry x="15" y="40" width="180" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ios_viewmodel_layer" value="&lt;b&gt;Application Layer&lt;/b&gt;&lt;br&gt;Combine &amp; MainActor VMs&lt;br&gt;Dashboard, Tenants, Rooms&lt;br&gt;Finance &amp; Maintenance VMs&lt;br&gt;Business Workflow Logic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#3b82f6;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="ios_app_container">
+          <mxGeometry x="215" y="40" width="180" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ios_store_layer" value="&lt;b&gt;Local Data Layer&lt;/b&gt;&lt;br&gt;SwiftData Persistence Engine&lt;br&gt;Multi-Admin Store Sharing&lt;br&gt;&lt;i&gt;account_1.store (SQLite)&lt;/i&gt;&lt;br&gt;ModelContext Local CRUD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a8a;strokeColor=#60a5fa;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="ios_app_container">
+          <mxGeometry x="415" y="40" width="180" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ios_sync_layer" value="&lt;b&gt;Sync Engine &amp; API Client&lt;/b&gt;&lt;br&gt;SyncManager (SHA-256 Checksum)&lt;br&gt;Snapshot Protocol 2 Engine&lt;br&gt;APIService (URLSession HTTP)&lt;br&gt;Offline Queue &amp; Rebase Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e3a8a;strokeColor=#60a5fa;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="ios_app_container">
+          <mxGeometry x="615" y="40" width="180" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ios_hardware_layer" value="&lt;b&gt;Hardware &amp; Security Layer:&lt;/b&gt; Apple Keychain Services (Secure Tokens)  |  AVFoundation Camera &amp; Vision OCR  |  Push Notifications (APNs)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0284c7;strokeColor=#38bdf8;fontColor=#ffffff;fontSize=11;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="ios_app_container">
+          <mxGeometry x="15" y="145" width="780" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Subsystem 1B: LINE LIFF Web Application -->
+        <mxCell id="liff_app_container" value="LINE LIFF Resident Portal (Tenant Web Client) — HTML5 / Tailwind / JavaScript / LIFF SDK" style="swimlane;html=1;startSize=26;rounded=1;arcSize=8;fillColor=#1e293b;strokeColor=#059669;fontColor=#6ee7b7;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier1_container">
+          <mxGeometry x="860" y="45" width="695" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="liff_modules_layer" value="&lt;b&gt;Tenant Self-Service UI&lt;/b&gt;&lt;br&gt;Monthly Bill &amp; Meter Inspection&lt;br&gt;Utility Breakdown Calculator&lt;br&gt;PromptPay QR Instant Display&lt;br&gt;Dark Glass Mobile-First Layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="liff_app_container">
+          <mxGeometry x="20" y="40" width="205" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="liff_maintenance_layer" value="&lt;b&gt;Maintenance Portal&lt;/b&gt;&lt;br&gt;Repair Ticket Submission Form&lt;br&gt;Damage Photo Attachment&lt;br&gt;Status Lifecycle Tracking&lt;br&gt;Direct Technician Messaging" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="liff_app_container">
+          <mxGeometry x="245" y="40" width="205" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="liff_auth_layer" value="&lt;b&gt;LINE Identity &amp; Auth&lt;/b&gt;&lt;br&gt;LINE Front-end Framework SDK&lt;br&gt;OAuth2 ID Token Verification&lt;br&gt;Resident Phone/Room Binding&lt;br&gt;Anti-Impersonation Guard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#10b981;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="liff_app_container">
+          <mxGeometry x="470" y="40" width="205" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="liff_client_env" value="&lt;b&gt;Execution Environment:&lt;/b&gt; Runs inside LINE In-App Webview (iOS / Android)  |  Zero Client Installation Required  |  HTTPS WSS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#047857;strokeColor=#34d399;fontColor=#ffffff;fontSize=11;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="liff_app_container">
+          <mxGeometry x="20" y="145" width="655" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TIER 2: BACKEND & SERVICES TIER ==================== -->
+        <mxCell id="tier2_container" value="TIER 2: BACKEND &amp; APPLICATION SERVICES TIER (ส่วนประมวลผล บริการ และความปลอดภัย)" style="swimlane;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#0f172a;strokeColor=#10b981;strokeWidth=2;fontColor=#34d399;fontStyle=1;fontSize=14;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="50" y="410" width="1580" height="360" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway: Cloudflare Tunnel -->
+        <mxCell id="cf_tunnel" value="&lt;b&gt;Cloudflare Zero-Trust Secure Tunnel (cloudflared)&lt;/b&gt;&lt;br&gt;Public Domain: &lt;i&gt;https://dorminet.studio&lt;/i&gt;  |  TLS 1.3 Termination  |  DDoS Mitigation  |  Port 4283 Reverse Proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ea580c;strokeColor=#fb923c;fontColor=#ffffff;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier2_container">
+          <mxGeometry x="480" y="40" width="620" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Go Backend Core Service -->
+        <mxCell id="go_backend_container" value="Go Core Microservice Engine (server_debian — Port: 4283) — Go 1.22+ Standard Library" style="swimlane;html=1;startSize=26;rounded=1;arcSize=8;fillColor=#1e293b;strokeColor=#0284c7;fontColor=#38bdf8;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier2_container">
+          <mxGeometry x="25" y="110" width="940" height="230" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_auth_mw" value="&lt;b&gt;AuthMiddleware &amp; RBAC&lt;/b&gt;&lt;br&gt;JWT Bearer Validation&lt;br&gt;Claims Context Propagation&lt;br&gt;Superadmin vs Staff Guard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="15" y="40" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_tenant_router" value="&lt;b&gt;Multi-Tenant Router&lt;/b&gt;&lt;br&gt;tenant_helper.go Engine&lt;br&gt;RequestTenantDB Resolver&lt;br&gt;Multi-Admin Store Mapping" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="200" y="40" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_sync_handler" value="&lt;b&gt;Cloud Sync Handlers&lt;/b&gt;&lt;br&gt;/api/sync/push &amp; latest&lt;br&gt;SHA-256 Hash Verification&lt;br&gt;Versioned Snapshot Store" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="385" y="40" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_financial_engine" value="&lt;b&gt;Financial Ledger Engine&lt;/b&gt;&lt;br&gt;Monthly Billing Generator&lt;br&gt;Partial/Full Payments&lt;br&gt;Immutable Audit Trails" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="570" y="40" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_maintenance_engine" value="&lt;b&gt;Workflow State Machine&lt;/b&gt;&lt;br&gt;Maintenance Lifecycle&lt;br&gt;Pending &gt; In-Progress &gt; Done&lt;br&gt;Damage Cost Tracking" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;fontColor=#f8fafc;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="755" y="40" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="go_subsystems" value="&lt;b&gt;Core Engine Modules:&lt;/b&gt; PromptPay EMVCo Payload &amp; CRC-16 Generator  |  Notification Outbox Worker  |  LIFF Web APIs (/api/liff/*)  |  Media Streamer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0369a1;strokeColor=#38bdf8;fontColor=#ffffff;fontSize=11;fontStyle=1;fontFamily=Helvetica;" vertex="1" parent="go_backend_container">
+          <mxGeometry x="15" y="135" width="910" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Python OCR Microservice -->
+        <mxCell id="ocr_service_container" value="Dual-Engine OCR Service (ocr-bot — Port: 5001)" style="swimlane;html=1;startSize=26;rounded=1;arcSize=8;fillColor=#1e293b;strokeColor=#9333ea;fontColor=#c084fc;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier2_container">
+          <mxGeometry x="985" y="110" width="285" height="230" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ocr_engines" value="&lt;b&gt;Dual Recognition Engines&lt;/b&gt;&lt;br&gt;PaddleOCR + Tesseract OCR&lt;br&gt;Python 3 Flask Microservice&lt;br&gt;Pre-processing &amp; Bounding Boxes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#581c87;strokeColor=#a855f7;fontColor=#ffffff;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="ocr_service_container">
+          <mxGeometry x="15" y="40" width="255" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ocr_security" value="&lt;b&gt;Fail-Closed Fraud Prevention:&lt;/b&gt;&lt;br&gt;• Strict Slip Amount Matching&lt;br&gt;• Bank PromptPay Receiver Guard&lt;br&gt;• Duplicate Transfer Ref Replay Check&lt;br&gt;• Rollback on Optical Ambiguity" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3b0764;strokeColor=#9333ea;fontColor=#f3e8ff;fontSize=10;align=left;spacingLeft=8;fontFamily=Helvetica;" vertex="1" parent="ocr_service_container">
+          <mxGeometry x="15" y="130" width="255" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- External Cloud Gateways -->
+        <mxCell id="external_gateways_container" value="External Cloud APIs &amp; Gateways" style="swimlane;html=1;startSize=26;rounded=1;arcSize=8;fillColor=#1e293b;strokeColor=#64748b;fontColor=#cbd5e1;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier2_container">
+          <mxGeometry x="1290" y="110" width="265" height="230" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ext_line" value="&lt;b&gt;LINE Messaging API&lt;/b&gt;&lt;br&gt;Webhook Event Processing&lt;br&gt;Interactive Flex Invoices&lt;br&gt;Payment QR Carousels" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#22c55e;fontColor=#86efac;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="external_gateways_container">
+          <mxGeometry x="15" y="40" width="235" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ext_apns" value="&lt;b&gt;Apple Push (APNs)&lt;/b&gt;&lt;br&gt;HTTP/2 Real-time Remote Alerts&lt;br&gt;Staff Maintenance Notification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#38bdf8;fontColor=#bae6fd;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="external_gateways_container">
+          <mxGeometry x="15" y="105" width="235" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ext_easyslip" value="&lt;b&gt;EasySlip Gateway&lt;/b&gt;&lt;br&gt;External Bank Slip Verification&lt;br&gt;Redundant Verification Fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#f59e0b;fontColor=#fde68a;fontSize=11;fontFamily=Helvetica;" vertex="1" parent="external_gateways_container">
+          <mxGeometry x="15" y="165" width="235" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TIER 3: SERVER & DATA PERSISTENCE TIER ==================== -->
+        <mxCell id="tier3_container" value="TIER 3: SERVER HOST &amp; MULTI-TENANT DATA LAYER (เครื่องแม่ข่าย ระบบปฏิบัติการ และฐานข้อมูลแยกหอพัก)" style="swimlane;html=1;startSize=30;rounded=1;arcSize=6;fillColor=#0f172a;strokeColor=#8b5cf6;strokeWidth=2;fontColor=#a78bfa;fontStyle=1;fontSize=14;fontFamily=Helvetica;" vertex="1" parent="1">
+          <mxGeometry x="50" y="800" width="1580" height="340" as="geometry" />
+        </mxCell>
+
+        <mxCell id="host_server_box" value="&lt;b&gt;Linux Host OS Environment:&lt;/b&gt; Debian GNU/Linux 12 (x86_64)  |  Host IP: &lt;i&gt;202.29.232.28&lt;/i&gt;  |  Process Supervisor: systemd (&lt;i&gt;dormitory.service&lt;/i&gt; &amp; &lt;i&gt;dormitory-ocr.service&lt;/i&gt;)  |  Security: Ed25519 SSH Key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2e1065;strokeColor=#8b5cf6;fontColor=#ffffff;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="25" y="45" width="1530" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Master Database -->
+        <mxCell id="db_master_box" value="Master System Database&#xa;(/opt/dormitory/dormitory.db)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#1e1b4b;strokeColor=#6366f1;fontColor=#c7d2fe;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="35" y="105" width="370" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db_master_tables" value="&lt;b&gt;System Orchestration Tables:&lt;/b&gt;&lt;br&gt;• &lt;b&gt;admins:&lt;/b&gt; Superadmin &amp; Staff Credentials, Roles, Emails&lt;br&gt;• &lt;b&gt;sessions:&lt;/b&gt; Active JWT Tokens &amp; Device UUID Bindings&lt;br&gt;• &lt;b&gt;line_tenants:&lt;/b&gt; LINE UID &lt;-&gt; Dormitory Resident Map&lt;br&gt;• &lt;b&gt;sync_snapshots:&lt;/b&gt; Version Vectors, SHA-256 Checksums&lt;br&gt;• &lt;b&gt;financial_audits:&lt;/b&gt; Ledger Adjustments &amp; Void Logs&lt;br&gt;• &lt;b&gt;outbox:&lt;/b&gt; Asynchronous Notification Message Queue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#4338ca;fontColor=#e0e7ff;fontSize=11;align=left;spacingLeft=10;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="45" y="165" width="350" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- Multi-Tenant Databases -->
+        <mxCell id="db_tenant_box" value="Isolated Tenant Databases&#xa;(/opt/dormitory/dorm_data/tenant_&lt;id&gt;.db)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#064e3b;strokeColor=#10b981;fontColor=#a7f3d0;fontStyle=1;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="435" y="105" width="460" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="db_tenant_tables" value="&lt;b&gt;Isolated Dormitory Data per Owner (Physical SQLite File):&lt;/b&gt;&lt;br&gt;• &lt;b&gt;rooms:&lt;/b&gt; Room Numbers, Types, Pricing, Dynamic Occupancy&lt;br&gt;• &lt;b&gt;users:&lt;/b&gt; Resident Profiles, Leases, Deposits, Move-In/Out Dates&lt;br&gt;• &lt;b&gt;payments:&lt;/b&gt; Invoices, Water/Electric Meters, Paid Amount, Plans&lt;br&gt;• &lt;b&gt;payment_transactions:&lt;/b&gt; Immutable Transaction Receipts&lt;br&gt;• &lt;b&gt;maintenances:&lt;/b&gt; Repair Tickets, Photos, Technician Status&lt;br&gt;• &lt;b&gt;deposit_refunds:&lt;/b&gt; Move-Out Damage Deductions &amp; Refunds" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#022c22;strokeColor=#059669;fontColor=#ecfdf5;fontSize=11;align=left;spacingLeft=10;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="445" y="165" width="440" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- Media Storage -->
+        <mxCell id="storage_uploads_box" value="Media &amp; File Storage&#xa;(/opt/dormitory/uploads/)" style="shape=folder;fontStyle=1;tabWidth=110;tabHeight=24;tabPosition=left;html=1;boundedLbl=1;fillColor=#78350f;strokeColor=#d97706;fontColor=#fef3c7;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="925" y="105" width="300" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="storage_uploads_details" value="&lt;b&gt;Static &amp; Uploaded Assets:&lt;/b&gt;&lt;br&gt;• Payment Bank Transfer Slips (JPEG/PNG)&lt;br&gt;• Maintenance Damage Evidence Photos&lt;br&gt;• Lease Agreement Scanned Documents&lt;br&gt;• User Profile &amp; Staff Avatars&lt;br&gt;&lt;br&gt;&lt;i&gt;Protected via Path Traversal Guards&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#451a03;strokeColor=#b45309;fontColor=#fffbeb;fontSize=11;align=left;spacingLeft=10;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="935" y="165" width="280" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- Deploy & Backups Workspace -->
+        <mxCell id="workspace_box" value="Operations &amp; Deploy Workspace&#xa;(/home/fang/dorminet_workspace/)" style="shape=folder;fontStyle=1;tabWidth=130;tabHeight=24;tabPosition=left;html=1;boundedLbl=1;fillColor=#334155;strokeColor=#64748b;fontColor=#f1f5f9;fontSize=12;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="1255" y="105" width="295" height="215" as="geometry" />
+        </mxCell>
+
+        <mxCell id="workspace_details" value="&lt;b&gt;Safe Deploy &amp; Recovery:&lt;/b&gt;&lt;br&gt;• &lt;b&gt;deploy_flex_safe_remote.sh:&lt;/b&gt; Safe Deployer&lt;br&gt;• &lt;b&gt;backups/:&lt;/b&gt; Atomic Pre-Deploy DB Backups&lt;br&gt;• &lt;b&gt;server_debian.rollback*:&lt;/b&gt; Binary Archives&lt;br&gt;• Automated Rollback Drill Engine&lt;br&gt;• Zero Downtime Service Restarts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#475569;fontColor=#f8fafc;fontSize=11;align=left;spacingLeft=10;fontFamily=Helvetica;" vertex="1" parent="tier3_container">
+          <mxGeometry x="1265" y="165" width="275" height="145" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CONNECTORS & DATA FLOWS ==================== -->
+
+        <!-- Ingress 1: iOS App to Cloudflare Tunnel -->
+        <mxCell id="flow_ios_to_cf" value="HTTPS / TLS 1.3 (REST APIs &amp; Sync Snapshots)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.25;entryY=0;entryDx=0;entryDy=0;exitX=0.7;exitY=1;exitDx=0;exitDy=0;strokeColor=#38bdf8;strokeWidth=2;fontColor=#38bdf8;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="1" source="ios_app_container" target="cf_tunnel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ingress 2: LINE LIFF to Cloudflare Tunnel -->
+        <mxCell id="flow_liff_to_cf" value="HTTPS / WSS (REST APIs &amp; Slip Uploads)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.75;entryY=0;entryDx=0;entryDy=0;exitX=0.3;exitY=1;exitDx=0;exitDy=0;strokeColor=#34d399;strokeWidth=2;fontColor=#34d399;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="1" source="liff_app_container" target="cf_tunnel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Gateway 3: Cloudflare Tunnel to Go Backend -->
+        <mxCell id="flow_cf_to_go" value="Reverse Proxy (HTTP :4283)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.6;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=#fb923c;strokeWidth=2;fontColor=#fb923c;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="tier2_container" source="cf_tunnel" target="go_backend_container">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Internal Microservice: Go Backend to OCR Bot -->
+        <mxCell id="flow_go_to_ocr" value="Local IPC (HTTP 127.0.0.1:5001)&#xa;Slip Image Verification Request" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#c084fc;strokeWidth=2;fontColor=#c084fc;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="tier2_container" source="go_backend_container" target="ocr_service_container">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Cloud Integration: Go Backend to External APIs -->
+        <mxCell id="flow_go_to_ext" value="HTTPS Outbound&#xa;Webhooks &amp; Push" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.8;exitDx=0;exitDy=0;strokeColor=#94a3b8;strokeWidth=2;fontColor=#cbd5e1;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="tier2_container" source="ocr_service_container" target="external_gateways_container">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow: Go Backend to Master DB -->
+        <mxCell id="flow_go_to_master_db" value="SQLite WAL Connection (database/sql)&#xa;Auth, Snapshot &amp; Identity Query" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;strokeColor=#818cf8;strokeWidth=2;fontColor=#818cf8;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="1" source="go_backend_container" target="db_master_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow: Go Backend to Tenant DBs -->
+        <mxCell id="flow_go_to_tenant_db" value="Dynamic SQLite Pool (tenant_helper.go)&#xa;Isolated File-per-Tenant Operations" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.65;exitY=1;exitDx=0;exitDy=0;strokeColor=#34d399;strokeWidth=2;fontColor=#34d399;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="1" source="go_backend_container" target="db_tenant_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Data Flow: Go Backend to Upload Storage -->
+        <mxCell id="flow_go_to_storage" value="File I/O Stream (Slips &amp; Photos)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.9;exitY=1;exitDx=0;exitDy=0;strokeColor=#fbbf24;strokeWidth=2;fontColor=#fbbf24;fontSize=11;fontStyle=1;labelBackgroundColor=#0b0f19;" edge="1" parent="1" source="go_backend_container" target="storage_uploads_box">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

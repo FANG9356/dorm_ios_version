@@ -3748,3 +3748,41 @@
   - /Volumes/FangB/dorminet_server
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: จัดระเบียบโฟลเดอร์เรียบร้อยสมบูรณ์ (Organized & Verified)
+
+
+---
+
+## 2026-11-13 16:15 ICT: การสร้างไดอะแกรมโครงสร้างระบบ 3 ส่วนตามมาตรฐานสากล (.drawio และ .html)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานร้องขอ: "เขียนไดอะแกรมโครงสร้างของระบบให้หน่อยขอแบบละเอียกและ แยกของ ระบบมัน เช่น โครงสร้างระบบเรามี 3 ส่วน คือ font Back และ server ให้สร้างออกมา เป็น แผนผัง ที่ตรงตามมาตรฐานสากล ทางสัญลักษณ์ ปล. สร้งในรูปแบบไฟล์ drow.io หรือ html หรือทั้งคู่"
+- สิ่งที่ดำเนินการ:
+  1. ออกแบบสถาปัตยกรรมระบบ DormiNetX ตามมาตรฐาน ISO/IEC 42010 แบ่งเป็น 3 ส่วนหลัก (3-Tier Layered Architecture):
+     - **Tier 1 (Frontend & Client Applications):**
+       - DormiNetX iOS Native App (Owner & Staff): Swift, SwiftUI 5, SwiftData (`account_1.store`), `SyncManager` (Snapshot Protocol 2, SHA-256), AVFoundation / Vision OCR, Keychain Secure Store
+       - LINE LIFF Resident Portal (Tenant Webview): HTML5, Tailwind CSS, JavaScript, LINE LIFF SDK, Bill/Meter Viewer, PromptPay QR, Maintenance Form
+     - **Tier 2 (Backend & Application Services):**
+       - Cloudflare Zero-Trust Secure Tunnel (`dorminet.studio` -> 127.0.0.1:4283)
+       - Go Core Microservice (`server_debian` :4283): Global `AuthMiddleware` (JWT Bearer), Multi-Tenant Router (`tenant_helper.go` / `RequestTenantDB`), Snapshot Sync Handlers, PromptPay EMVCo Generator, Financial Ledger Engine, Maintenance State Machine
+       - Dual-Engine OCR Service (`ocr-bot` :5001): Python Flask, PaddleOCR + Tesseract, Fail-Closed Security Policy (Strict Amount, PromptPay Recipient, Replay Guard)
+       - External Cloud Gateways: LINE Messaging API (Flex Messages, Webhook), Apple Push (APNs HTTP/2), EasySlip API
+     - **Tier 3 (Server Host & Multi-Tenant Data Persistence):**
+       - Linux Host OS: Debian 12 (x86_64, IP: `202.29.232.28`), systemd services (`dormitory.service`, `dormitory-ocr.service`), Ed25519 SSH Keys
+       - Master Database (`/opt/dormitory/dormitory.db`): `admins`, `sessions`, `line_tenants`, `sync_snapshots`, `financial_audits`, `outbox`
+       - Isolated Tenant Databases (`/opt/dormitory/dorm_data/tenant_*.db`): `rooms`, `users`, `payments`, `payment_transactions`, `maintenances`, `deposit_refunds`
+       - Media & File Storage: `/opt/dormitory/uploads/` (Slips, maintenance photos, leases, avatars)
+       - Deploy Workspace: `/home/fang/dorminet_workspace/` (`deploy_flex_safe_remote.sh`, atomic backups, rollback archives)
+  2. จัดทำไฟล์ไดอะแกรมทั้ง 2 รูปแบบตามคำขอ:
+     - ไฟล์ `.drawio` สำหรับเปิด แก้ไข หรือนำไปใช้ใน Diagrams.net / Draw.io Desktop: [system_architecture.drawio](file:///Volumes/FangB/dorm_project/docs/system_architecture.drawio)
+     - ไฟล์ `.html` แบบ Interactive มีระบบ Zoom, Pan, Tier Filtering, และ Modal สเปกทางเทคนิค: [system_architecture.html](file:///Volumes/FangB/dorm_project/docs/system_architecture.html)
+     - สำเนาไฟล์ไว้ที่ `/Volumes/FangB/` และ `/Volumes/FangB/dorminet_server/` เพื่อให้เปิดใช้งานได้สะดวกรวดเร็ว
+  3. บันทึกรายงานการดำเนินงานลงใน Activity Report ตามกติกาข้อ 4 ของ AGENTS.md
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.drawio
+  - docs/system_architecture.html
+  - /Volumes/FangB/system_architecture.drawio
+  - /Volumes/FangB/system_architecture.html
+  - /Volumes/FangB/dorminet_server/system_architecture.drawio
+  - /Volumes/FangB/dorminet_server/system_architecture.html
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการสร้างและตรวจสอบไดอะแกรมทั้ง 2 รูปแบบเสร็จสมบูรณ์ 100% (Completed & Verified)
