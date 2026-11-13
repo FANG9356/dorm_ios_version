@@ -3616,3 +3616,32 @@
 - ไฟล์ที่เกี่ยวข้อง:
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการอัปโหลดและซิงค์ขึ้น GitHub (origin/main) ครบถ้วน 100% เรียบร้อย
+
+
+---
+
+## 2026-11-13 12:08 ICT: การตรวจสอบโค้ดเชิงลึกและปรับปรุงเสถียรภาพ (Code Health & Edge-Case Audit)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานขอให้ตรวจสอบโค้ดซ้ำอีกรอบเพื่อค้นหาข้อผิดพลาดหรือจุดบกพร่องที่อาจหลงเหลือ ("ตรวจสอบโค้ดอีกรอบ ว่ามีข้อผิดพลาดอีก")
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบ backend-dorm/handlers/tenant_helper.go:
+     - ปัญหาเดิม: การสืบค้น Superadmin ID อาศัยการ JOIN ระหว่างอีเมล `a.email = s.email` ตรงๆ ซึ่งใน SQLite เป็นแบบ Case-Sensitive และหากบัญชี Superadmin มีอีเมลเป็นค่าว่าง/NULL หรือกรณีตัวพิมพ์ไม่ตรงกัน จะทำให้ไม่พบ Tenant DB และเด้งกลับไปใช้ Master DB ส่งผลให้ข้อมูลหอพักว่างเปล่า
+     - การแก้ไข: ปรับปรุง `RequestTenantDB` ให้หากผู้ใช้งานมี role เป็น `superadmin` ให้ดึง Tenant DB จาก ID ตัวเองโดยตรงทันที ไม่ต้องผ่านอีเมล JOIN และสำหรับบัญชีพนักงานให้ใช้ `LOWER(email)` พร้อม fallback ไปยัง Superadmin หลักของระบบ ป้องกันปัญหาห้องพักไม่แสดงผล 100%
+  2. ตรวจสอบ DormAppSwift_Sources/DormiNetX/DormiNetX/Views/DashboardViewModel.swift:
+     - ปัญหาเดิม: การคำนวณรายรับ `received` และ `financialStats` คิดเฉพาะสถานะ `paid` แต่ไม่ได้รวมยอดชำระบางส่วน (`partial`) ที่ลูกบ้านจ่ายเข้ามาจริงในเดือนนั้น และการคำนวณสัญญาใกล้หมดอายุ (`expiringContracts`) ไม่ได้ถูกเรียกทำงานในโหมดออฟไลน์/Local Store
+     - การแก้ไข: เพิ่มการคำนวณยอดเงินรับจริงจากสถานะ `partial` และคำนวณ `expiringContracts` ใน `updateLocalData` ให้พร้อมแสดงผลในเครื่องทันที
+  3. ตรวจสอบ DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsTabView.swift และ TenantsViewModel.swift:
+     - ปัญหาเดิม: หน้ารายชื่อลูกบ้านดึงข้อมูลเฉพาะตอน `.onAppear` หากมีการซิงค์ข้อมูลเบื้องหลังจะไม่รีเฟรชหน้าจออัตโนมัติ และการเรียงลำดับห้องใช้ string comparison ปกติ ("10" มาก่อน "2")
+     - การแก้ไข: ผูก `@Query` สำหรับ `localUsers` พร้อม `.task(id: usersDataKey)` เพื่อให้หน้ารายการลูกบ้านอัปเดตแบบ Reactive ทันทีเมื่อ SwiftData มีการเปลี่ยนแปลง และปรับการเรียงลำดับเลขห้องเป็น `.localizedStandardCompare` (Natural Sorting)
+  4. ผลการทดสอบ:
+     - Backend: `go test -count=1 ./...` และ `go test -count=1 -race ./handlers` ผ่าน 100%
+     - Go Vet: `go vet ./...` ผ่าน 0 errors
+     - iOS App: `xcodebuild build-for-testing` สำเร็จสมบูรณ์ (BUILD SUCCEEDED)
+- ไฟล์ที่เกี่ยวข้อง:
+  - backend-dorm/handlers/tenant_helper.go
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/DashboardViewModel.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsTabView.swift
+  - DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TenantsViewModel.swift
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ตรวจสอบ แก้ไขจุดบกพร่อง และผ่านการทดสอบทุกชุดเรียบร้อย 100%

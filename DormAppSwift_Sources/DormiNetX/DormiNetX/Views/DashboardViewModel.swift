@@ -194,7 +194,7 @@ class DashboardViewModel: ObservableObject {
         let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
         let currentMonth = monthKey(for: Date())
         let currentPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == currentMonth }
-        let received = currentPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
+        let received = currentPayments.filter { $0.paymentStatus == "paid" || $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
         let pending = currentPayments.filter { $0.paymentStatus != "paid" }
 
         stats = APIDashboardStats(
@@ -217,6 +217,26 @@ class DashboardViewModel: ObservableObject {
         }.reduce(0) { $0 + $1.deposit }
         financialStats = financialStatsFrom(payments: payments)
         moveInStats = moveInStatsFrom(users: users)
+        
+        // Expiring Contracts in local mode
+        let upcoming = activeUsers.filter { !$0.contractEndDate.isEmpty }
+            .sorted {
+                let d1 = AppDate.date(fromStorageDate: $0.contractEndDate) ?? Date.distantFuture
+                let d2 = AppDate.date(fromStorageDate: $1.contractEndDate) ?? Date.distantFuture
+                return d1 < d2
+            }
+        expiringContracts = Array(upcoming.prefix(5)).map { user in
+            APIUser(
+                id: stableLocalUserID(for: user),
+                prefix: user.prefix,
+                first_name: user.firstName,
+                last_name: user.lastName,
+                room_number: user.roomNumber,
+                status: user.status,
+                phone: user.phone,
+                contract_end_date: user.contractEndDate
+            )
+        }
         isLoading = false
     }
 
@@ -256,7 +276,12 @@ class DashboardViewModel: ObservableObject {
         }
         return grouped.keys.sorted().suffix(6).map { month in
             let monthPayments = grouped[month] ?? []
-            return FinancialStat(month: month, name: AppDate.thaiShortMonth(month), income: monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }, pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + $1.amount })
+            return FinancialStat(
+                month: month,
+                name: AppDate.thaiShortMonth(month),
+                income: monthPayments.filter { $0.paymentStatus == "paid" || $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) },
+                pending: monthPayments.filter { $0.paymentStatus != "paid" }.reduce(0) { $0 + max($1.amount - ($1.paidAmount ?? 0.0), 0) }
+            )
         }
     }
 

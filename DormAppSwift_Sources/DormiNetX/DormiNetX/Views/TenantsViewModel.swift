@@ -41,17 +41,17 @@ class TenantsViewModel: ObservableObject {
         // Sort
         switch sortBy {
         case "room_asc":
-            result.sort { ($0.room_number ?? "") < ($1.room_number ?? "") }
+            result.sort { ($0.room_number ?? "").localizedStandardCompare($1.room_number ?? "") == .orderedAscending }
         case "room_desc":
-            result.sort { ($0.room_number ?? "") > ($1.room_number ?? "") }
+            result.sort { ($0.room_number ?? "").localizedStandardCompare($1.room_number ?? "") == .orderedDescending }
         case "status_active":
             result.sort { a, b in
-                if a.status == b.status { return (a.room_number ?? "") < (b.room_number ?? "") }
+                if a.status == b.status { return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending }
                 return a.status == "กำลังพักอาศัย"
             }
         case "status_inactive":
             result.sort { a, b in
-                if a.status == b.status { return (a.room_number ?? "") < (b.room_number ?? "") }
+                if a.status == b.status { return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending }
                 return a.status == "ย้ายออกแล้ว"
             }
         default:

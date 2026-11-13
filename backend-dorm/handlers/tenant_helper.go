@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 // getTenantDB extracts the admin_id from the request context and returns
@@ -24,18 +25,42 @@ func RequestTenantDB(r *http.Request, master *sql.DB) (*sql.DB, error) {
 	adminID := r.Context().Value("admin_id")
 	if adminID != nil {
 		if id, ok := adminID.(int); ok {
-			var superadminID int
-			// ค้นหา ID ของ superadmin ที่มีอีเมลหลักตรงกับ user คนนี้
+			var role, email string
 			err := master.QueryRow(`
-				SELECT s.id 
-				FROM admins a
-				JOIN admins s ON a.email = s.email 
-				WHERE a.id = ? AND s.role = 'superadmin' 
-				LIMIT 1
-			`, id).Scan(&superadminID)
+				SELECT COALESCE(role, 'services'), COALESCE(email, '')
+				FROM admins
+				WHERE id = ?
+			`, id).Scan(&role, &email)
+			if err != nil {
+				return nil, fmt.Errorf("resolve admin: %w", err)
+			}
+
+			if role == "superadmin" {
+				return GetTenantDB(id)
+			}
+
+			var superadminID int
+			email = strings.ToLower(strings.TrimSpace(email))
+			if email != "" {
+				err = master.QueryRow(`
+					SELECT id 
+					FROM admins 
+					WHERE LOWER(email) = ? AND role = 'superadmin' 
+					ORDER BY id ASC
+					LIMIT 1
+				`, email).Scan(&superadminID)
+			}
 
 			if err != nil || superadminID <= 0 {
-				return nil, fmt.Errorf("resolve tenant owner: %w", err)
+				// Fallback to primary owner (superadmin) in single-dorm deployment
+				var defaultOwnerID int
+				if fallbackErr := master.QueryRow(`
+					SELECT id FROM admins WHERE role = 'superadmin' ORDER BY id ASC LIMIT 1
+				`).Scan(&defaultOwnerID); fallbackErr == nil && defaultOwnerID > 0 {
+					superadminID = defaultOwnerID
+				} else {
+					return nil, fmt.Errorf("resolve tenant owner: %w", err)
+				}
 			}
 
 			return GetTenantDB(superadminID)

@@ -7,11 +7,16 @@ struct TenantsTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = TenantsViewModel()
+    @Query(sort: \DormUser.lastUpdated, order: .reverse) private var localUsers: [DormUser]
     @State private var selectedUser: APIUser? = nil
     @State private var showDeleteAlert = false
     @State private var userToDelete: APIUser? = nil
     @Binding var showAddSheet: Bool
     @State private var editingUser: APIUser? = nil
+    
+    private var usersDataKey: String {
+        "\(localUsers.count):\(localUsers.first?.lastUpdated.timeIntervalSince1970 ?? 0)"
+    }
     
     var body: some View {
         // บังคับ ZStack ให้กางเต็มจอ 100% เสมอ และจัดตำแหน่งของในนี้ให้อยู่มุมล่างขวา
@@ -200,7 +205,9 @@ struct TenantsTabView: View {
             })
             // บังคับ ScrollView ให้เต็มจอ ป้องกันการหดตัว
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .onAppear { Task { await viewModel.fetchUsers(modelContext: modelContext) } }
+            .task(id: usersDataKey) {
+                await viewModel.fetchUsers(modelContext: modelContext)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing) // ล็อกกรอบใหญ่สุดอีกชั้น พร้อมยึดมุมขวาล่าง
         .sheet(item: $selectedUser) { user in
