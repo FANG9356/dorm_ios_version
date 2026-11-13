@@ -3849,3 +3849,58 @@
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการปรับรูปแบบไดอะแกรมตรงตามภาพตัวอย่างและมาตรฐานสากลเรียบร้อยสมบูรณ์ (Redesigned & Verified)
 
+
+---
+
+## 2026-11-13 17:18 ICT: การอธิบายรายละเอียดสถาปัตยกรรมไดอะแกรม รูปแบบมาตรฐานสากล และสัญลักษณ์ Actor
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสอบถาม: "อธิบาย แต่ละส่วนหน่อย ใช้รูปแบบไหน ทำไมมีคนเป็น usecase หรือ หรือ ผัง flow chart แบบไหน"
+- สิ่งที่ดำเนินการและวิเคราะห์:
+  1. ชี้แจงมาตรฐานไดอะแกรม (Diagram Specification):
+     - ไดอะแกรมนี้คือ **UML Activity Diagram with Swimlanes** (หรือ **Cross-Functional Flowchart**) ตามข้อกำหนดมาตรฐานสากลของ OMG UML 2.5
+  2. ชี้แจงเหตุผลที่มีสัญลักษณ์รูปคน (Actor / Stick Figure):
+     - ในมาตรฐาน UML สัญลักษณ์รูปคน (Actor) ไม่ได้จำกัดอยู่แค่ใน Use Case Diagram แต่สามารถใช้ใน Activity Diagram / Swimlane เพื่อระบุจุดที่เป็นการกระทำของมนุษย์ (Human Initiator / Manual Trigger) เทียบกับการประมวลผลอัตโนมัติของระบบ (Automated System Process)
+     - เปรียบเทียบความแตกต่างระหว่าง Use Case Diagram (ภาพรวมว่าระบบทำอะไรได้บ้าง ไม่ระบุลำดับเวลา) กับ Activity Diagram with Swimlanes (กระบวนการทำงานจริงตามลำดับเวลา ตัดข้ามส่วนประกอบ Frontend, Backend, Server)
+  3. อธิบายรายละเอียดทั้ง 5 Swimlanes และวงจรการทำงานครบ 5 ขั้นตอน (Auth, Local-First Sync, Billing/QR, Dual OCR Payment, Dual Notifications)
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.html
+  - docs/system_architecture.drawio
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: วิเคราะห์และจัดทำคำอธิบายโครงสร้างเชิงลึกพร้อมสัญลักษณ์มาตรฐานสากลครบถ้วน (Documented & Explained)
+
+
+---
+
+## 2026-11-13 17:21 ICT: การสร้างและส่งมอบไดอะแกรมสถาปัตยกรรมระบบในรูปแบบ PDF แผ่นเดียว (Single-Page Vector PDF)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานร้องขอ: "อยากได้เป็นแผ่นเดียว แบบ pdf"
+- สิ่งที่ดำเนินการ:
+  1. ออกแบบและเพิ่มส่วนประกอบหัวกระดาษและสัญลักษณ์ลงในผัง (Title & Legend Integration):
+     - เพิ่ม Title Banner ด้านบน: "DormiNetX Multi-Tier Architecture & Operational Flowchart | Standard UML 2.5 Activity Diagram with Swimlanes"
+     - เพิ่ม Legend Banner ด้านล่าง สรุปสัญลักษณ์มาตรฐาน UML 2.5 ทั้ง 6 ชนิด (Initial Node, Action State, Decision Node, Sync Bar, Final Node, Actor)
+  2. แปลงและส่งออกไฟล์ PDF หน้าเดียวแบบ Pure Vector:
+     - ใช้เครื่องมือ `rsvg-convert` เรนเดอร์ Vector SVG สู่ PDF ขนาด 1065 x 1395 พอยต์ หน้าเดียวจบ (Single Page, 1 Page Count) ไม่มีการตัดแบ่งหน้า
+     - ตัวหนังสือและเส้นทุกเส้นเป็น Vector แท้ ไม่แตกแม้ซูม 1000%
+  3. คัดลอกและซิงค์ไฟล์ไปยังจุดใช้งาน:
+     - [docs/system_architecture.pdf](file:///Volumes/FangB/dorm_project/docs/system_architecture.pdf)
+     - [FangB/system_architecture.pdf](file:///Volumes/FangB/system_architecture.pdf)
+     - [dorminet_server/system_architecture.pdf](file:///Volumes/FangB/dorminet_server/system_architecture.pdf)
+     - เสิร์ฟผ่าน Local HTTP: `http://localhost:8080/system_architecture.pdf`
+  4. ตรวจสอบความถูกต้องและเปิดแสดงผล:
+     - ใช้ macOS CoreGraphics ยืนยันว่า PDF มีจำนวน 1 หน้าถ้วน (`Total Pages: 1`)
+     - รันคำสั่งเปิดไฟล์ตรงเข้าสู่ Apple Preview ให้ผู้ใช้งานทันที
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.pdf
+  - docs/system_architecture.svg
+  - docs/system_architecture.html
+  - docs/system_architecture.drawio
+  - /Volumes/FangB/system_architecture.pdf
+  - /Volumes/FangB/dorminet_server/system_architecture.pdf
+  - scripts/generate_architecture_diagrams.py
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: สร้างและส่งมอบไฟล์ PDF หน้าเดียวเสร็จสมบูรณ์ 100% (Completed & Verified)
+
+
+
