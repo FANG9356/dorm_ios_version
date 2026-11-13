@@ -3786,3 +3786,23 @@
   - /Volumes/FangB/dorminet_server/system_architecture.html
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการสร้างและตรวจสอบไดอะแกรมทั้ง 2 รูปแบบเสร็จสมบูรณ์ 100% (Completed & Verified)
+
+
+---
+
+## 2026-11-13 17:02 ICT: การแก้ไขและเปิดแสดงผลเว็บไดอะแกรมสถาปัตยกรรมระบบ (Local Web Serving & Browser Launch)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "เปิดเว็บไม่ได้" (ขณะเปิดดูไฟล์ docs/system_architecture.html)
+- สิ่งที่ดำเนินการ:
+  1. วิเคราะห์สาเหตุ:
+     - ใน IDE / Code Editor เมื่อคลิกไฟล์ `.html` ระบบจะเปิดเป็น Text Editor แสดง Source Code ไม่ได้เรนเดอร์เป็นหน้าเว็บเบราว์เซอร์
+     - ตรวจสอบสถานะ Server Production `https://dorminet.studio`: Service และ Cloudflare Tunnel ออนไลน์ปกติ (`https://dorminet.studio/api/system/ping` 200 OK, `https://dorminet.studio/services` 200 OK)
+  2. วิธีแก้ไขเพื่อเปิดใช้งานเว็บไดอะแกรม:
+     - รันคำสั่งเปิดไฟล์ตรงเข้าสู่ Web Browser หลักของ Mac: `open -a Safari /Volumes/FangB/dorm_project/docs/system_architecture.html`
+     - รัน Local Web Server เบื้องหลังผ่านพอร์ต 8080: `http://localhost:8080/system_architecture.html` เพื่อให้สามารถเข้าดูผ่านเบราว์เซอร์ใดๆ ได้ทันที
+  3. บันทึกรายงานการดำเนินงานลงใน Activity Report ตามกติกาข้อ 4 ของ AGENTS.md
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.html
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการเปิดหน้าเว็บและเริ่มบริการ Local Server สำเร็จ (Resolved & Serving)
