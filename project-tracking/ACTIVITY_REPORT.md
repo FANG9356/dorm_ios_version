@@ -3903,4 +3903,29 @@
 - สถานะ: สร้างและส่งมอบไฟล์ PDF หน้าเดียวเสร็จสมบูรณ์ 100% (Completed & Verified)
 
 
+---
+
+## 2026-11-13 17:23 ICT: การลบไฟล์เว็บ (.html) และ .drawio พร้อมหยุดการทำงานของ Local Python Server
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสั่งการ: "ลบไฟล์เว็บกับ io ออกเลย และเลิกรัน python ได้"
+- สิ่งที่ดำเนินการ:
+  1. ยุติการทำงานของ Process เบื้องหลัง (Stop Background Task):
+     - สั่งยกเลิก Background Task `07abec59-6584-4876-9de4-356896dc0a0d/task-8196` (Python HTTP Server พอร์ต 8080)
+     - ตรวจสอบผ่าน `lsof -i :8080` ยืนยันว่าพอร์ต 8080 ถูกปิดและคืนทรัพยากรระบบเรียบร้อย
+  2. ลบไฟล์เว็บและ Draw.io ออกจากทุกโฟลเดอร์ตามคำสั่ง:
+     - ลบไฟล์ใน Repository: `git rm docs/system_architecture.html docs/system_architecture.drawio`
+     - ลบไฟล์สำเนาบนไดรฟ์ FangB: `/Volumes/FangB/system_architecture.html`, `/Volumes/FangB/system_architecture.drawio`
+     - ลบไฟล์สำเนาในโฟลเดอร์เซิร์ฟเวอร์: `/Volumes/FangB/dorminet_server/system_architecture.html`, `/Volumes/FangB/dorminet_server/system_architecture.drawio`
+  3. คงเหลือเฉพาะไฟล์ PDF สถาปัตยกรรมระบบหน้าเดียว (Single-Page Vector PDF) เป็นผลลัพธ์หลัก:
+     - [docs/system_architecture.pdf](file:///Volumes/FangB/dorm_project/docs/system_architecture.pdf)
+     - [FangB/system_architecture.pdf](file:///Volumes/FangB/system_architecture.pdf)
+     - [dorminet_server/system_architecture.pdf](file:///Volumes/FangB/dorminet_server/system_architecture.pdf)
+- ไฟล์ที่เกี่ยวข้อง:
+  - docs/system_architecture.pdf
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการลบไฟล์และปิดเซอร์วิส Python ตามคำขอเรียบร้อยสมบูรณ์ (Cleaned & Terminated)
+
+
+
 
