@@ -3728,3 +3728,23 @@
   - /Volumes/FangB/dorminet_workspace
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการคัดลอกเสร็จสิ้นสมบูรณ์ 100% (Transferred & Verified)
+
+
+---
+
+## 2026-11-13 14:18 ICT: การจัดระเบียบโฟลเดอร์เซิร์ฟเวอร์บน FangB รวมเป็นโฟลเดอร์หลักเดียว (dorminet_server)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "จัดเรียงให้หน่อยเป็นโฟบเดอร์เดียวใน FangB แล้วให้เห็นสองโฟลเดอร์หลัก ของโปรเจค"
+- สิ่งที่ดำเนินการ:
+  1. สร้างโฟลเดอร์หลักรวบรวมไฟล์เซิร์ฟเวอร์ที่ `/Volumes/FangB/dorminet_server`
+  2. ย้ายโฟลเดอร์ทั้งสองจาก Root ของ FangB เข้าไปจัดเก็บภายใน:
+     - `/Volumes/FangB/dorminet_server/dorminet_workspace` (พื้นที่ทำงาน สคริปต์ และ Backups บนเซิร์ฟเวอร์)
+     - `/Volumes/FangB/dorminet_server/opt_dormitory` (แอปพลิเคชันและฐานข้อมูลจริงจาก `/opt/dormitory`)
+     - ทำ Symlink `dormitory` -> `opt_dormitory` ภายในโฟลเดอร์เพื่อรองรับการเรียกใช้งานทั้งสองชื่อ
+  3. ลบ Symlink ชั่วคราวออกจาก Root ของ FangB เพื่อให้พื้นที่ Root สะอาดและเป็นระเบียบ
+  4. บันทึกรายงานการดำเนินงานลงใน Activity Report ตามกติกาข้อ 4 ของ AGENTS.md
+- ไฟล์/โฟลเดอร์ที่เกี่ยวข้อง:
+  - /Volumes/FangB/dorminet_server
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: จัดระเบียบโฟลเดอร์เรียบร้อยสมบูรณ์ (Organized & Verified)
