@@ -3561,3 +3561,42 @@
   - project-tracking/HANDOFF.md
   - project-tracking/ACTIVITY_REPORT.md
 - สถานะ: ดำเนินการอัปเดตเอกสารครบถ้วน เรียบร้อย 100%
+
+---
+
+## 2026-11-13 10:52 ICT: การวิเคราะห์หมวดหมู่โครงการ DormiNetX สำหรับการลงทะเบียนและส่งผลงาน
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสอบถามว่าโปรเจกต์ DormiNetX ควรจัดอยู่ในหมวดหมู่ใดจากตัวเลือกแบบ Dropdown
+- สิ่งที่ดำเนินการ:
+  1. วิเคราะห์สถาปัตยกรรมและขอบเขตงานของระบบ DormiNetX:
+     - ส่วนหน้าบ้านหลักของผู้ดูแล (Admin): Native iOS Mobile Application พัฒนาด้วย Swift, SwiftUI, SwiftData, กล้อง OCR และระบบ Offline Sync
+     - ส่วนหลังบ้าน (Backend): Go Web Service, REST API, SQLite Multi-Tenant, Cloud Notification, Dual-Engine OCR
+     - ส่วนลูกบ้าน (Tenant): LINE LIFF Web Application และ LINE Bot Flex Messaging
+     - บริบทการใช้งาน: ระบบสารสนเทศสำหรับบริหารจัดการธุรกิจอสังหาริมทรัพย์และห้องพักให้เช่า (หอพัก)
+  2. เปรียบเทียบและสรุปหมวดหมู่ที่เหมาะสมที่สุด:
+     - หมวดหมู่ตามแพลตฟอร์มหลักที่พัฒนา: **Mobile Application Development** (เหมาะสมที่สุดหากเกณฑ์พิจารณาเน้นที่ตัวแอปพลิเคชันและการเขียนโปรแกรมบนสมาร์ทโฟน)
+     - หมวดหมู่ตามประเภทระบบงานเชิงธุรกิจ: **Business Information System** (เหมาะสมที่สุดหากเกณฑ์พิจารณาเน้นที่ระบบสารสนเทศเพื่อการบริหารจัดการธุรกิจ)
+  3. บันทึกรายงานการให้คำปรึกษาลงใน Activity Report ตามกติกาข้อ 4 ของ AGENTS.md
+- ไฟล์ที่เกี่ยวข้อง:
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ดำเนินการวิเคราะห์และให้คำปรึกษาเรียบร้อย (Consulted & Documented)
+
+
+---
+
+## 2026-11-13 10:55 ICT: การตรวจสอบสถานะความพร้อมและการอัปเดตเอกสารโครงการ (Documentation Status Verification)
+
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสอบถามเพื่อยืนยันสถานะการอัปเดตเอกสารโครงการ ("คุณอัพเดตเอกสารใหม่หรือยัง")
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบสถานะการอัปเดตเอกสารโครงการในโฟลเดอร์ project-tracking/ ทั้งหมด:
+     - project-tracking/WORK_STATUS.md: อัปเดตครอบคลุมงาน Multi-Admin Store Isolation & Sharing, Saved Account History Login, Staff Profile Management, และ LINE Bot Monthly Bill Payment QR Logic เรียบร้อย (commit d25f917)
+     - project-tracking/PENDING_WORK.md: อัปเดตย้ายรายการที่แก้ไขเสร็จเข้าสู่หมวด "ปิดแล้วในรอบนี้" เรียบร้อย (commit d25f917)
+     - project-tracking/README.md: อัปเดตวันที่และสถานะภาพรวม 100% เรียบร้อย (commit d25f917)
+     - project-tracking/HANDOFF.md: อัปเดตสถาปัตยกรรม Multi-Admin Data Scoping และแผนที่โค้ดสำคัญ (DormApp, APIService, LoginView) เรียบร้อย (commit d25f917)
+     - project-tracking/ACTIVITY_REPORT.md: มีการบันทึกรายงานต่อเนื่องแบบ Append-only ครบถ้วนทุกขั้นตอน
+  2. ทำการ Commit และ Push รายงานความคืบหน้าล่าสุดขึ้น GitHub Remote Repository (branch main)
+- ไฟล์ที่เกี่ยวข้อง:
+  - project-tracking/ACTIVITY_REPORT.md
+- สถานะ: ตรวจสอบและยืนยันสถานะเอกสารเป็นปัจจุบัน 100% เรียบร้อย
