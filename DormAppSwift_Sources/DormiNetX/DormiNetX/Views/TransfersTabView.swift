@@ -776,8 +776,9 @@ private struct RoomMediaThumbnailView: View {
     }
 }
 
-// MARK: - Room Media Pipeline (Actor-Based Off-Main-Thread Loading & Downsampling)
-actor RoomMediaPipeline {
+// MARK: - Room Media Pipeline (High-Performance Image Downsampling & Caching)
+@MainActor
+final class RoomMediaPipeline {
     static let shared = RoomMediaPipeline()
 
     private let fullImageCache = NSCache<NSString, UIImage>()

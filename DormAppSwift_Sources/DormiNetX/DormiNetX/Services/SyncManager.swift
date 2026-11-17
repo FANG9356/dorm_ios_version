@@ -921,8 +921,8 @@ class SyncManager: ObservableObject {
     private func mediaCandidates(from snapshot: SyncEnvelope) -> [String] {
         var paths = snapshot.tenants.flatMap { $0.bookingSlips }
         for payment in snapshot.payments {
-            paths.append(contentsOf: (payment.slipPathArray ?? []))
-            if !payment.slipPath.isEmpty && !(payment.slipPathArray ?? []).contains(payment.slipPath) {
+            paths.append(contentsOf: payment.slipPathArray)
+            if !payment.slipPath.isEmpty && !payment.slipPathArray.contains(payment.slipPath) {
                 paths.append(payment.slipPath)
             }
         }

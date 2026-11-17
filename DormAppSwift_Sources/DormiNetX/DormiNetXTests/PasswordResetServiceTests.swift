@@ -9,7 +9,7 @@ final class PasswordResetServiceTests: XCTestCase {
             captured = request
             return (Data(#"{"message":"accepted"}"#.utf8), self.response(request, status: 200))
         }
-        try await service.requestCode(email: "  Fang@Example.com \n")
+        _ = try await service.requestCode(email: "  Fang@Example.com \n")
         let request = try XCTUnwrap(captured)
         XCTAssertEqual(request.url?.path, "/api/forgot-password")
         XCTAssertEqual(request.httpMethod, "POST")
@@ -52,7 +52,7 @@ final class PasswordResetServiceTests: XCTestCase {
                 (data, self.response(request, status: status))
             }
             do {
-                try await service.requestCode(email: "test@example.com")
+                _ = try await service.requestCode(email: "test@example.com")
                 XCTFail("Unexpected successful response")
             } catch {
                 if status == 429 { XCTAssertTrue(error.localizedDescription.contains("15")) }
