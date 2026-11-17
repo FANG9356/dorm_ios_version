@@ -32,19 +32,6 @@ enum EvidenceCategory: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - View Mode
-enum EvidenceViewMode: String, CaseIterable {
-    case grid = "การ์ด"
-    case compact = "ตาราง"
-
-    var icon: String {
-        switch self {
-        case .grid: return "square.grid.2x2.fill"
-        case .compact: return "square.grid.3x3.fill"
-        }
-    }
-}
-
 // MARK: - Unified Room Evidence Item Model
 struct RoomEvidenceItem: Identifiable, Hashable {
     let id: String
@@ -79,7 +66,6 @@ struct TransfersTabView: View {
 
     @State private var selectedCategory: EvidenceCategory = .all
     @State private var selectedRoom: String = "all"
-    @State private var viewMode: EvidenceViewMode = .grid
     @State private var searchText = ""
     @State private var activeFullscreenItem: RoomEvidenceItem?
 
@@ -148,52 +134,19 @@ struct TransfersTabView: View {
             // Ambient Glass Control Panel (Search + Category Glow Pills)
             ambientControlPanel
 
-            // Meta Info & View Switcher Row
-            HStack(alignment: .center, spacing: 8) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(selectedCategory.accentColor)
-                        .frame(width: 7, height: 7)
+            // Meta Info Row (Minimalist & Clean)
+            HStack(alignment: .center, spacing: 6) {
+                Circle()
+                    .fill(selectedCategory.accentColor)
+                    .frame(width: 7, height: 7)
 
-                    Text(summaryLabel)
-                        .font(.custom("SukhumvitSet-SemiBold", size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text(summaryLabel)
+                    .font(.custom("SukhumvitSet-SemiBold", size: 12))
+                    .foregroundStyle(.secondary)
 
                 Spacer()
-
-                // Layout Switcher (2-Column Cards vs 3-Column Compact Grid)
-                HStack(spacing: 2) {
-                    ForEach(EvidenceViewMode.allCases, id: \.self) { mode in
-                        Button {
-                            triggerLightHaptic()
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                viewMode = mode
-                            }
-                        } label: {
-                            Image(systemName: mode.icon)
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(viewMode == mode ? Color.primary : Color.secondary.opacity(0.5))
-                                .frame(width: 32, height: 28)
-                                .background(
-                                    viewMode == mode ? Color.primary.opacity(0.12) : Color.clear,
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(3)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-                )
             }
-            .padding(.horizontal, 2)
+            .padding(.horizontal, 4)
             .padding(.top, 2)
 
             // Content Grid
@@ -204,7 +157,7 @@ struct TransfersTabView: View {
             } else if filteredItems.isEmpty {
                 emptyFilteredState
             } else {
-                evidenceContent
+                evidenceGrid
             }
         }
         .padding(.top, 106)
@@ -393,32 +346,17 @@ struct TransfersTabView: View {
         }
     }
 
-    // MARK: - Evidence Grid / Compact View
-    @ViewBuilder
-    private var evidenceContent: some View {
-        if viewMode == .grid {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                ForEach(filteredItems) { item in
-                    Button {
-                        triggerMediumHaptic()
-                        activeFullscreenItem = item
-                    } label: {
-                        RoomEvidenceCard(item: item)
-                    }
-                    .buttonStyle(PressableButtonStyle())
+    // MARK: - Evidence Grid (2-Column Pure Minimalist Grid)
+    private var evidenceGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            ForEach(filteredItems) { item in
+                Button {
+                    triggerMediumHaptic()
+                    activeFullscreenItem = item
+                } label: {
+                    RoomEvidenceCard(item: item)
                 }
-            }
-        } else {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                ForEach(filteredItems) { item in
-                    Button {
-                        triggerMediumHaptic()
-                        activeFullscreenItem = item
-                    } label: {
-                        CompactEvidencePhotoCell(item: item)
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                }
+                .buttonStyle(PressableButtonStyle())
             }
         }
     }
@@ -639,11 +577,10 @@ private struct RoomEvidenceCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Media Preview Thumbnail (Fixed 4:3 Aspect Ratio)
+            // Media Preview Thumbnail (Fixed 140pt Height, Perfectly Clipped via GeometryReader)
             ZStack(alignment: .topLeading) {
                 RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo, category: item.category)
                     .frame(height: 140)
-                    .frame(maxWidth: .infinity)
                     .clipped()
 
                 // Top Floating Glass Badges
@@ -658,7 +595,7 @@ private struct RoomEvidenceCard: View {
                         .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                         .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     // Minimalist Category Light Badge
                     Image(systemName: item.category.icon)
@@ -688,6 +625,8 @@ private struct RoomEvidenceCard: View {
                     .padding(8)
                 }
             }
+            .frame(height: 140)
+            .clipped()
 
             // Card Text Details
             VStack(alignment: .leading, spacing: 3) {
@@ -726,6 +665,7 @@ private struct RoomEvidenceCard: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 9)
         }
+        .frame(maxWidth: .infinity)
         .background(
             Color(uiColor: .secondarySystemGroupedBackground),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -756,39 +696,7 @@ private struct RoomEvidenceCard: View {
     }
 }
 
-// MARK: - Compact Evidence Photo Cell View
-private struct CompactEvidencePhotoCell: View {
-    let item: RoomEvidenceItem
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo, category: item.category)
-                .aspectRatio(1, contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .clipped()
-
-            // Subtle dark gradient scrim at bottom
-            LinearGradient(
-                colors: [.clear, .black.opacity(0.72)],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-
-            // Room number badge
-            Text("ห้อง \(item.roomNumber)")
-                .font(.custom("SukhumvitSet-Bold", size: 10))
-                .foregroundStyle(.white)
-                .padding(6)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Smart Media Thumbnail View (Hardware-Accelerated Downsampling)
+// MARK: - Smart Media Thumbnail View (Hardware-Accelerated Downsampling with Geometry Reader)
 private struct RoomMediaThumbnailView: View {
     let mediaPath: String
     let isVideo: Bool
@@ -797,60 +705,70 @@ private struct RoomMediaThumbnailView: View {
     @State private var isLoading = true
 
     var body: some View {
-        ZStack {
-            Color.primary.opacity(0.03)
+        GeometryReader { geo in
+            ZStack {
+                Color.primary.opacity(0.03)
 
-            if let thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .scaledToFill()
-            } else if isLoading {
-                ProgressView()
-                    .controlSize(.small)
-            } else {
-                // Luminous Digital Slip Placeholder (Minimalist & Illuminated)
-                ZStack {
-                    LinearGradient(
-                        colors: [
-                            category.accentColor.opacity(0.12),
-                            category.accentColor.opacity(0.03)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                if let thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                } else if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    // Luminous Digital Slip Placeholder (Minimalist & Illuminated)
+                    ZStack {
+                        LinearGradient(
+                            colors: [
+                                category.accentColor.opacity(0.12),
+                                category.accentColor.opacity(0.03)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
 
-                    VStack(spacing: 4) {
-                        Image(systemName: isVideo ? "video.circle.fill" : "doc.plaintext.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(category.accentColor.opacity(0.8))
-                            .shadow(color: category.accentColor.opacity(0.3), radius: 6)
+                        VStack(spacing: 4) {
+                            Image(systemName: isVideo ? "video.circle.fill" : "doc.plaintext.fill")
+                                .font(.system(size: 24))
+                                .foregroundStyle(category.accentColor.opacity(0.8))
+                                .shadow(color: category.accentColor.opacity(0.3), radius: 6)
 
-                        Text("หลักฐานถูกบันทึกแล้ว")
-                            .font(.custom("SukhumvitSet-Bold", size: 9))
-                            .foregroundStyle(.secondary)
+                            Text("หลักฐานถูกบันทึกแล้ว")
+                                .font(.custom("SukhumvitSet-Bold", size: 9))
+                                .foregroundStyle(.secondary)
 
-                        Text("แตะเพื่อเปิดดูภาพ")
-                            .font(.custom("SukhumvitSet-Text", size: 8))
-                            .foregroundStyle(.tertiary)
+                            Text("แตะเพื่อเปิดดูภาพ")
+                                .font(.custom("SukhumvitSet-Text", size: 8))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(6)
                     }
-                    .padding(6)
+                    .frame(width: geo.size.width, height: geo.size.height)
+                }
+
+                // Video Play Center Badge
+                if isVideo {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 34, height: 34)
+                        .overlay {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                                .offset(x: 1)
+                        }
+                        .shadow(color: .black.opacity(0.3), radius: 6)
                 }
             }
-
-            // Video Play Center Badge
-            if isVideo {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .frame(width: 34, height: 34)
-                    .overlay {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.white)
-                            .offset(x: 1)
-                    }
-                    .shadow(color: .black.opacity(0.3), radius: 6)
-            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
         }
+        .frame(height: 140)
+        .clipped()
         .task(id: mediaPath) {
             await loadThumbnail()
         }
