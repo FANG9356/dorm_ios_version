@@ -7,27 +7,27 @@ import ImageIO
 // MARK: - Evidence Category
 enum EvidenceCategory: String, CaseIterable, Identifiable {
     case all = "ทั้งหมด"
-    case payment = "สลิปชำระเงิน"
-    case maintenance = "แจ้งซ่อม"
-    case booking = "สลิปมัดจำ"
+    case payment = "สลิปค่าเช่า"
+    case maintenance = "งานแจ้งซ่อม"
+    case booking = "เงินมัดจำ"
 
     var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .all: return "photo.stack"
-        case .payment: return "banknote"
-        case .maintenance: return "wrench.and.screwdriver"
-        case .booking: return "person.badge.shield.checkmark"
+        case .all: return "sparkles"
+        case .payment: return "banknote.fill"
+        case .maintenance: return "wrench.and.screwdriver.fill"
+        case .booking: return "person.badge.shield.checkmark.fill"
         }
     }
 
     var accentColor: Color {
         switch self {
-        case .all: return .blue
-        case .payment: return .teal
-        case .maintenance: return .orange
-        case .booking: return .purple
+        case .all: return Color(red: 0.15, green: 0.55, blue: 0.98) // Electric Blue
+        case .payment: return Color(red: 0.10, green: 0.75, blue: 0.55) // Emerald Mint
+        case .maintenance: return Color(red: 0.98, green: 0.55, blue: 0.12) // Warm Amber
+        case .booking: return Color(red: 0.65, green: 0.38, blue: 0.98) // Royal Violet
         }
     }
 }
@@ -35,12 +35,12 @@ enum EvidenceCategory: String, CaseIterable, Identifiable {
 // MARK: - View Mode
 enum EvidenceViewMode: String, CaseIterable {
     case grid = "การ์ด"
-    case compact = "ตารางภาพ"
+    case compact = "ตาราง"
 
     var icon: String {
         switch self {
-        case .grid: return "square.grid.2x2"
-        case .compact: return "square.grid.3x3"
+        case .grid: return "square.grid.2x2.fill"
+        case .compact: return "square.grid.3x3.fill"
         }
     }
 }
@@ -77,8 +77,8 @@ struct TransfersTabView: View {
     @Query(sort: \DormUser.roomNumber) private var users: [DormUser]
     @Query(sort: \Room.roomNumber) private var allRooms: [Room]
 
-    @State private var selectedRoom: String = "all"
     @State private var selectedCategory: EvidenceCategory = .all
+    @State private var selectedRoom: String = "all"
     @State private var viewMode: EvidenceViewMode = .grid
     @State private var searchText = ""
     @State private var activeFullscreenItem: RoomEvidenceItem?
@@ -97,11 +97,11 @@ struct TransfersTabView: View {
         "\(payments.count)-\(maintenances.count)-\(users.count)-\(payments.first?.lastUpdated.timeIntervalSince1970 ?? 0)"
     }
 
-    // Dynamic list of unique room numbers from rooms & evidence
+    // Dynamic list of unique room numbers for the sleek room picker menu
     private var availableRoomNumbers: [String] {
         var roomSet = Set<String>()
         for r in activeRooms {
-            let n = normalizedRoomNumber(r.roomNumber)
+            let n = normalizedRoomNumberStatic(r.roomNumber)
             if !n.isEmpty { roomSet.insert(n) }
         }
         for item in cachedEvidenceItems {
@@ -110,28 +110,30 @@ struct TransfersTabView: View {
         return Array(roomSet).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    // Count of evidence items per room for badges
-    private var evidenceCountByRoom: [String: Int] {
-        var counts: [String: Int] = [:]
-        for item in cachedEvidenceItems {
-            counts[item.roomNumber, default: 0] += 1
+    // Category count badges
+    private func countForCategory(_ cat: EvidenceCategory) -> Int {
+        if cat == .all {
+            return cachedEvidenceItems.count
         }
-        return counts
+        return cachedEvidenceItems.filter { $0.category == cat }.count
     }
 
-    // Fast in-memory filtering (0.02ms execution time)
+    // Fast in-memory filtering (0.01ms execution time)
     private var filteredItems: [RoomEvidenceItem] {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
         return cachedEvidenceItems.filter { item in
-            if selectedRoom != "all" && item.roomNumber != selectedRoom {
-                return false
-            }
+            // Category filter
             if selectedCategory != .all && item.category != selectedCategory {
                 return false
             }
+            // Room filter via menu
+            if selectedRoom != "all" && item.roomNumber != selectedRoom {
+                return false
+            }
+            // Search text filter
             if !q.isEmpty {
-                let searchable = "\(item.roomNumber) ห้อง \(item.roomNumber) \(item.title) \(item.subtitle) \(item.dateFormatted) \(item.category.rawValue)".lowercased()
+                let searchable = "\(item.roomNumber) ห้อง\(item.roomNumber) \(item.title) \(item.subtitle) \(item.dateFormatted) \(item.category.rawValue)".lowercased()
                 if !searchable.contains(q) {
                     return false
                 }
@@ -141,63 +143,73 @@ struct TransfersTabView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                // Header Area
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("คลังหลักฐานประจำห้อง")
-                        .font(.custom("SukhumvitSet-Bold", size: 28))
-                        .foregroundStyle(.primary)
+        // Root container is a clean VStack (RoomListView provides the outer ScrollView)
+        VStack(alignment: .leading, spacing: 14) {
+            // Ambient Glass Control Panel (Search + Category Glow Pills)
+            ambientControlPanel
 
-                    Text("รวบรวมสลิปโอนเงิน รูปภาพ และวิดีโอจากงานแจ้งซ่อมแยกตามห้องพัก")
-                        .font(.custom("SukhumvitSet-Text", size: 13))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 112)
+            // Meta Info & View Switcher Row
+            HStack(alignment: .center, spacing: 8) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(selectedCategory.accentColor)
+                        .frame(width: 7, height: 7)
 
-                // Liquid Glass Control Bar (Unified Search & Filters)
-                liquidGlassControlBar
-                    .padding(.horizontal, 16)
-
-                // Results Summary Row
-                HStack(spacing: 8) {
                     Text(summaryLabel)
                         .font(.custom("SukhumvitSet-SemiBold", size: 12))
                         .foregroundStyle(.secondary)
+                }
 
-                    Spacer()
+                Spacer()
 
-                    // Layout Mode Switcher
-                    Picker("มุมมอง", selection: $viewMode) {
-                        ForEach(EvidenceViewMode.allCases, id: \.self) { mode in
+                // Layout Switcher (2-Column Cards vs 3-Column Compact Grid)
+                HStack(spacing: 2) {
+                    ForEach(EvidenceViewMode.allCases, id: \.self) { mode in
+                        Button {
+                            triggerLightHaptic()
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                                viewMode = mode
+                            }
+                        } label: {
                             Image(systemName: mode.icon)
-                                .tag(mode)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(viewMode == mode ? Color.primary : Color.secondary.opacity(0.5))
+                                .frame(width: 32, height: 28)
+                                .background(
+                                    viewMode == mode ? Color.primary.opacity(0.12) : Color.clear,
+                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                )
                         }
+                        .buttonStyle(.plain)
                     }
-                    .pickerStyle(.segmented)
-                    .frame(width: 90)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 2)
-
-                // Content View
-                if isProcessingData && cachedEvidenceItems.isEmpty {
-                    loadingShimmerGrid
-                        .padding(.horizontal, 16)
-                } else if cachedEvidenceItems.isEmpty {
-                    emptyOverallState
-                        .padding(.horizontal, 16)
-                } else if filteredItems.isEmpty {
-                    emptyFilteredState
-                        .padding(.horizontal, 16)
-                } else {
-                    evidenceContent
-                        .padding(.horizontal, 16)
-                }
+                .padding(3)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                )
             }
-            .padding(.bottom, 48)
+            .padding(.horizontal, 2)
+            .padding(.top, 2)
+
+            // Content Grid
+            if isProcessingData && cachedEvidenceItems.isEmpty {
+                loadingShimmerGrid
+            } else if cachedEvidenceItems.isEmpty {
+                emptyOverallState
+            } else if filteredItems.isEmpty {
+                emptyFilteredState
+            } else {
+                evidenceContent
+            }
         }
+        .padding(.top, 106)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 40)
         .fullScreenCover(item: $activeFullscreenItem) { item in
             RoomMediaFullscreenViewer(item: item)
         }
@@ -206,172 +218,179 @@ struct TransfersTabView: View {
         }
     }
 
-    // MARK: - Liquid Glass Control Bar
-    private var liquidGlassControlBar: some View {
-        VStack(spacing: 10) {
-            // Row 1: Search Field
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.secondary)
+    // MARK: - Ambient Light Glass Control Panel
+    private var ambientControlPanel: some View {
+        ZStack {
+            // Ambient Backlight Glow (Subtly illuminates according to active category)
+            selectedCategory.accentColor
+                .opacity(colorScheme == .dark ? 0.20 : 0.10)
+                .blur(radius: 28)
+                .frame(height: 70)
+                .offset(y: 8)
 
-                TextField("ค้นหาห้อง, ผู้เช่า, รายการแจ้งซ่อม, สลิป...", text: $searchText)
-                    .font(.custom("SukhumvitSet-Text", size: 14))
-                    .autocorrectionDisabled()
-
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 15))
+            VStack(spacing: 10) {
+                // Row 1: Search Field + Sleek Room Selector Menu
+                HStack(spacing: 8) {
+                    // Search Bar
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.secondary)
+
+                        TextField("ค้นหาห้อง, ผู้เช่า, รายการแจ้งซ่อม...", text: $searchText)
+                            .font(.custom("SukhumvitSet-Text", size: 14))
+                            .autocorrectionDisabled()
+
+                        if !searchText.isEmpty {
+                            Button {
+                                searchText = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.03))
+                    )
+
+                    // Sleek Room Filter Menu (Handles 100+ rooms effortlessly without clutter)
+                    Menu {
+                        Button {
+                            triggerLightHaptic()
+                            selectedRoom = "all"
+                        } label: {
+                            Label("ทุกห้องพัก", systemImage: selectedRoom == "all" ? "checkmark" : "building.2")
+                        }
+
+                        Divider()
+
+                        ForEach(availableRoomNumbers, id: \.self) { room in
+                            Button {
+                                triggerLightHaptic()
+                                selectedRoom = room
+                            } label: {
+                                Label("ห้อง \(room)", systemImage: selectedRoom == room ? "checkmark" : "door.left.hand.closed")
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(selectedRoom == "all" ? "ทุกห้อง" : "ห้อง \(selectedRoom)")
+                                .font(.custom("SukhumvitSet-Bold", size: 12))
+                                .lineLimit(1)
+
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(selectedRoom == "all" ? Color.primary : selectedCategory.accentColor)
+                        .padding(.horizontal, 10)
+                        .frame(height: 36)
+                        .background(
+                            selectedRoom == "all"
+                                ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
+                                : selectedCategory.accentColor.opacity(0.14),
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
 
-            Divider()
-                .opacity(colorScheme == .dark ? 0.35 : 0.15)
-                .padding(.horizontal, 12)
+                // Row 2: Category Filter Glow Pills (Pure Category-Centric Architecture)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(EvidenceCategory.allCases) { cat in
+                            let isSelected = selectedCategory == cat
+                            let count = countForCategory(cat)
 
-            // Row 2: Room Selection Pills
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    // All Rooms Button
-                    roomPillButton(
-                        title: "ทุกห้อง",
-                        count: cachedEvidenceItems.count,
-                        isSelected: selectedRoom == "all"
-                    ) {
-                        triggerLightHaptic()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            selectedRoom = "all"
-                        }
-                    }
+                            Button {
+                                triggerLightHaptic()
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
+                                    selectedCategory = cat
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: cat.icon)
+                                        .font(.system(size: 11, weight: .bold))
 
-                    // Individual Room Buttons
-                    ForEach(availableRoomNumbers, id: \.self) { room in
-                        let count = evidenceCountByRoom[room, default: 0]
-                        roomPillButton(
-                            title: "ห้อง \(room)",
-                            count: count,
-                            isSelected: selectedRoom == room
-                        ) {
-                            triggerLightHaptic()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                selectedRoom = room
+                                    Text(cat.rawValue)
+                                        .font(.custom("SukhumvitSet-Bold", size: 12))
+
+                                    Text("\(count)")
+                                        .font(.custom("SukhumvitSet-Bold", size: 10))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 1.5)
+                                        .background(
+                                            isSelected
+                                                ? Color.white.opacity(0.28)
+                                                : Color.primary.opacity(0.08),
+                                            in: Capsule()
+                                        )
+                                }
+                                .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.75))
+                                .padding(.horizontal, 12)
+                                .frame(height: 32)
+                                .background(
+                                    isSelected
+                                        ? cat.accentColor
+                                        : (colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.55)),
+                                    in: Capsule()
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(
+                                            isSelected ? Color.white.opacity(0.35) : Color.primary.opacity(0.08),
+                                            lineWidth: 1
+                                        )
+                                )
+                                .shadow(
+                                    color: isSelected ? cat.accentColor.opacity(0.4) : Color.clear,
+                                    radius: 8,
+                                    x: 0,
+                                    y: 3
+                                )
                             }
+                            .buttonStyle(PressableButtonStyle())
                         }
                     }
-                }
-                .padding(.horizontal, 12)
-            }
-
-            Divider()
-                .opacity(colorScheme == .dark ? 0.35 : 0.15)
-                .padding(.horizontal, 12)
-
-            // Row 3: Category Filter Pills
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(EvidenceCategory.allCases) { cat in
-                        categoryPillButton(category: cat, isSelected: selectedCategory == cat) {
-                            triggerLightHaptic()
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                selectedCategory = cat
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 4)
-            }
-        }
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.white.opacity(0.45))
-                .shadow(color: colorScheme == .dark ? .black.opacity(0.12) : .black.opacity(0.04), radius: 16, x: 0, y: 6)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.3), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Room Pill Button Helper
-    private func roomPillButton(title: String, count: Int, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.custom("SukhumvitSet-Bold", size: 12))
-
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.custom("SukhumvitSet-Bold", size: 10))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            isSelected
-                                ? (colorScheme == .dark ? Color.black.opacity(0.25) : Color.white.opacity(0.3))
-                                : Color.primary.opacity(0.08),
-                            in: Capsule()
-                        )
+                    .padding(.horizontal, 2)
+                    .padding(.bottom, 2)
                 }
             }
-            .foregroundStyle(pillTextColor(isSelected: isSelected))
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(pillBackgroundColor(isSelected: isSelected), in: Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(isSelected ? Color.clear : Color.primary.opacity(0.08), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Category Pill Button Helper
-    private func categoryPillButton(category: EvidenceCategory, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: category.icon)
-                    .font(.system(size: 11, weight: .semibold))
-
-                Text(category.rawValue)
-                    .font(.custom("SukhumvitSet-Bold", size: 12))
-            }
-            .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.75))
-            .padding(.horizontal, 12)
-            .frame(height: 30)
+            .padding(12)
             .background(
-                isSelected ? category.accentColor : Color.primary.opacity(0.05),
-                in: Capsule()
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.45))
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .shadow(
+                        color: colorScheme == .dark ? Color.black.opacity(0.18) : Color.black.opacity(0.04),
+                        radius: 16,
+                        x: 0,
+                        y: 6
+                    )
             )
             .overlay(
-                Capsule()
-                    .stroke(isSelected ? Color.clear : Color.primary.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(colorScheme == .dark ? 0.22 : 0.45),
+                                Color.white.opacity(colorScheme == .dark ? 0.05 : 0.15)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
         }
-        .buttonStyle(.plain)
-    }
-
-    // Accurate color logic preventing white-on-white bug in dark mode
-    private func pillBackgroundColor(isSelected: Bool) -> Color {
-        guard isSelected else {
-            return Color.primary.opacity(0.05)
-        }
-        return colorScheme == .dark ? Color.white : Color(red: 30/255, green: 41/255, blue: 59/255)
-    }
-
-    private func pillTextColor(isSelected: Bool) -> Color {
-        guard isSelected else {
-            return Color.primary
-        }
-        return colorScheme == .dark ? Color.black : Color.white
     }
 
     // MARK: - Evidence Grid / Compact View
@@ -409,8 +428,8 @@ struct TransfersTabView: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             ForEach(0..<6, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.primary.opacity(0.06))
-                    .frame(height: 210)
+                    .fill(Color.primary.opacity(0.05))
+                    .frame(height: 200)
             }
         }
     }
@@ -420,20 +439,20 @@ struct TransfersTabView: View {
         GlassCard {
             VStack(spacing: 12) {
                 Image(systemName: "photo.stack.fill")
-                    .font(.system(size: 42))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 40))
+                    .foregroundStyle(.secondary.opacity(0.6))
 
                 Text("ยังไม่มีหลักฐานที่บันทึกในระบบ")
-                    .font(.custom("SukhumvitSet-Bold", size: 16))
+                    .font(.custom("SukhumvitSet-Bold", size: 15))
 
-                Text("เมื่อมีสลิปโอนเงินค่าเช่า รูปภาพ หรือวิดีโอจากงานแจ้งซ่อม ระบบจะรวบรวมมาแสดงที่นี่โดยอัตโนมัติ")
+                Text("เมื่อมีสลิปโอนเงิน รูปภาพ หรือวิดีโอจากงานแจ้งซ่อม ระบบจะจัดหมวดหมู่มาแสดงที่นี่โดยอัตโนมัติ")
                     .font(.custom("SukhumvitSet-Text", size: 12))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 36)
+            .padding(.vertical, 32)
         }
     }
 
@@ -441,24 +460,24 @@ struct TransfersTabView: View {
         GlassCard {
             VStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 38))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 36))
+                    .foregroundStyle(.secondary.opacity(0.6))
 
-                Text(selectedRoom == "all" ? "ไม่พบหลักฐานตามเงื่อนไขที่ค้นหา" : "ห้อง \(selectedRoom) ยังไม่มีหลักฐานในหมวดนี้")
-                    .font(.custom("SukhumvitSet-Bold", size: 16))
+                Text(selectedRoom == "all" ? "ไม่พบหลักฐานในหมวดนี้" : "ห้อง \(selectedRoom) ยังไม่มีรายการในหมวดนี้")
+                    .font(.custom("SukhumvitSet-Bold", size: 15))
 
-                Text("ลองเปลี่ยนตัวเลือกห้อง หมวดหมู่ หรือล้างคำค้นหา")
+                Text("ลองเปลี่ยนหมวดหมู่ด้านบน หรือล้างคำค้นหา")
                     .font(.custom("SukhumvitSet-Text", size: 12))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
+            .padding(.vertical, 28)
         }
     }
 
     private var summaryLabel: String {
         let roomLabel = selectedRoom == "all" ? "ทุกห้อง" : "ห้อง \(selectedRoom)"
-        return "แสดง \(filteredItems.count) รายการ (\(roomLabel))"
+        return "\(filteredItems.count) รายการ • \(roomLabel)"
     }
 
     // MARK: - Data Pipeline Aggregation (Off-Main-Thread / High-Performance)
@@ -513,10 +532,11 @@ struct TransfersTabView: View {
                 let room = normalizedRoomNumberStatic(maintenance.roomNumber)
                 guard !room.isEmpty else { continue }
 
+                // Use thaiDayMonth so date string is always short and never overflows
+                let dateStr = !maintenance.reportedAt.isEmpty ? AppDate.thaiDayMonth(maintenance.reportedAt) : AppDate.thaiDayMonth(AppDate.dateKey(from: maintenance.lastUpdated))
+
                 // Issue media attachments
                 let issuePaths = parseMediaPathsStatic(maintenance.issueImage)
-                let dateStr = !maintenance.reportedAt.isEmpty ? AppDate.thaiDateTime(from: maintenance.reportedAt) : AppDate.thaiDayMonth(AppDate.dateKey(from: maintenance.lastUpdated))
-
                 for (index, path) in issuePaths.enumerated() {
                     let isVideo = isVideoFileStatic(path)
                     let cleanIssue = maintenance.issue.isEmpty ? "งานแจ้งซ่อม" : maintenance.issue
@@ -594,10 +614,6 @@ struct TransfersTabView: View {
     private func triggerMediumHaptic() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
-
-    private func normalizedRoomNumber(_ raw: String) -> String {
-        normalizedRoomNumberStatic(raw)
-    }
 }
 
 // Static helper functions to avoid capturing view state inside detached background tasks
@@ -616,7 +632,7 @@ private func isVideoFileStatic(_ path: String) -> Bool {
     return lower.hasSuffix(".mp4") || lower.hasSuffix(".mov") || lower.hasSuffix(".m4v") || lower.hasSuffix(".webm")
 }
 
-// MARK: - Redesigned Room Evidence Card View
+// MARK: - Redesigned Minimalist Room Evidence Card (With Color & Ambient Light)
 private struct RoomEvidenceCard: View {
     let item: RoomEvidenceItem
     @Environment(\.colorScheme) private var colorScheme
@@ -625,29 +641,33 @@ private struct RoomEvidenceCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Media Preview Thumbnail (Fixed 4:3 Aspect Ratio)
             ZStack(alignment: .topLeading) {
-                RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo)
-                    .frame(height: 142)
+                RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo, category: item.category)
+                    .frame(height: 140)
                     .frame(maxWidth: .infinity)
                     .clipped()
 
-                // Overlays on thumbnail (carefully sized to never clip)
+                // Top Floating Glass Badges
                 HStack(alignment: .top) {
-                    // Room Pill Badge
+                    // Room Badge (Luminous Frosted Glass Capsule)
                     Text("ห้อง \(item.roomNumber)")
                         .font(.custom("SukhumvitSet-Bold", size: 10))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.black.opacity(0.65), in: Capsule())
+                        .padding(.vertical, 3.5)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 1)
 
                     Spacer()
 
-                    // Icon-only Category Badge
+                    // Minimalist Category Light Badge
                     Image(systemName: item.category.icon)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 24, height: 24)
-                        .background(item.category.accentColor.opacity(0.9), in: Circle())
+                        .background(item.category.accentColor, in: Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                        .shadow(color: item.category.accentColor.opacity(0.6), radius: 6, x: 0, y: 2)
                 }
                 .padding(8)
 
@@ -657,11 +677,12 @@ private struct RoomEvidenceCard: View {
                         Spacer()
                         HStack {
                             Spacer()
-                            Image(systemName: "video.fill")
+                            Image(systemName: "play.fill")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.white)
-                                .padding(5)
-                                .background(.black.opacity(0.65), in: Circle())
+                                .padding(6)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                         }
                     }
                     .padding(8)
@@ -669,7 +690,7 @@ private struct RoomEvidenceCard: View {
             }
 
             // Card Text Details
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
                     .font(.custom("SukhumvitSet-Bold", size: 12))
                     .foregroundStyle(.primary)
@@ -680,52 +701,75 @@ private struct RoomEvidenceCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
-                HStack {
-                    Text(item.dateFormatted)
-                        .font(.custom("SukhumvitSet-Text", size: 10))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
+                // Non-colliding Bottom Row: Short Date + Amount
+                HStack(alignment: .center) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 8))
+                        Text(item.dateFormatted)
+                            .font(.custom("SukhumvitSet-Text", size: 10))
+                    }
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     if let amount = item.amount, amount > 0 {
                         Text("฿\(amount.formatted())")
                             .font(.custom("SukhumvitSet-Bold", size: 11))
                             .foregroundStyle(item.category.accentColor)
+                            .lineLimit(1)
                     }
                 }
                 .padding(.top, 2)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
         }
         .background(
             Color(uiColor: .secondarySystemGroupedBackground),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
         .overlay(
+            // Specular Gradient Border Highlight (Color & Light effect)
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.07), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            item.category.accentColor.opacity(colorScheme == .dark ? 0.45 : 0.28),
+                            Color.white.opacity(colorScheme == .dark ? 0.12 : 0.35),
+                            Color.clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.15 : 0.04), radius: 8, x: 0, y: 3)
+        .shadow(
+            color: item.category.accentColor.opacity(colorScheme == .dark ? 0.16 : 0.06),
+            radius: 10,
+            x: 0,
+            y: 4
+        )
     }
 }
 
-// MARK: - Compact Photo Grid Cell View
+// MARK: - Compact Evidence Photo Cell View
 private struct CompactEvidencePhotoCell: View {
     let item: RoomEvidenceItem
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo)
+            RoomMediaThumbnailView(mediaPath: item.mediaPath, isVideo: item.isVideo, category: item.category)
                 .aspectRatio(1, contentMode: .fill)
                 .frame(maxWidth: .infinity)
                 .clipped()
 
             // Subtle dark gradient scrim at bottom
             LinearGradient(
-                colors: [.clear, .black.opacity(0.75)],
+                colors: [.clear, .black.opacity(0.72)],
                 startPoint: .center,
                 endPoint: .bottom
             )
@@ -748,12 +792,13 @@ private struct CompactEvidencePhotoCell: View {
 private struct RoomMediaThumbnailView: View {
     let mediaPath: String
     let isVideo: Bool
+    let category: EvidenceCategory
     @State private var thumbnail: UIImage?
     @State private var isLoading = true
 
     var body: some View {
         ZStack {
-            Color.primary.opacity(0.04)
+            Color.primary.opacity(0.03)
 
             if let thumbnail {
                 Image(uiImage: thumbnail)
@@ -763,27 +808,39 @@ private struct RoomMediaThumbnailView: View {
                 ProgressView()
                     .controlSize(.small)
             } else {
-                // Graceful bank-style slip / media placeholder
-                VStack(spacing: 5) {
-                    Image(systemName: isVideo ? "video.circle.fill" : "doc.text.image.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.secondary.opacity(0.7))
+                // Luminous Digital Slip Placeholder (Minimalist & Illuminated)
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            category.accentColor.opacity(0.12),
+                            category.accentColor.opacity(0.03)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
 
-                    Text("หลักฐานถูกบันทึกแล้ว")
-                        .font(.custom("SukhumvitSet-Bold", size: 10))
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 4) {
+                        Image(systemName: isVideo ? "video.circle.fill" : "doc.plaintext.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(category.accentColor.opacity(0.8))
+                            .shadow(color: category.accentColor.opacity(0.3), radius: 6)
 
-                    Text("แตะเพื่อเปิดดู")
-                        .font(.custom("SukhumvitSet-Text", size: 9))
-                        .foregroundStyle(.tertiary)
+                        Text("หลักฐานถูกบันทึกแล้ว")
+                            .font(.custom("SukhumvitSet-Bold", size: 9))
+                            .foregroundStyle(.secondary)
+
+                        Text("แตะเพื่อเปิดดูภาพ")
+                            .font(.custom("SukhumvitSet-Text", size: 8))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(6)
                 }
-                .padding(8)
             }
 
             // Video Play Center Badge
             if isVideo {
                 Circle()
-                    .fill(.black.opacity(0.55))
+                    .fill(.ultraThinMaterial)
                     .frame(width: 34, height: 34)
                     .overlay {
                         Image(systemName: "play.fill")
@@ -791,6 +848,7 @@ private struct RoomMediaThumbnailView: View {
                             .foregroundStyle(.white)
                             .offset(x: 1)
                     }
+                    .shadow(color: .black.opacity(0.3), radius: 6)
             }
         }
         .task(id: mediaPath) {
@@ -878,7 +936,6 @@ actor RoomMediaPipeline {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode == 200 {
-                // Save locally for instant offline access
                 _ = try? SlipImageManager.restoreImageData(data, fileName: fileName)
                 if let thumb = downsample(data: data, maxPixelSize: targetSize) {
                     thumbnailCache.setObject(thumb, forKey: cacheKey)
@@ -886,7 +943,7 @@ actor RoomMediaPipeline {
                 }
             }
         } catch {
-            // Server fetch failed, return nil
+            // Failed gracefully
         }
 
         return nil
@@ -948,7 +1005,6 @@ actor RoomMediaPipeline {
         return nil
     }
 
-    // Hardware-accelerated thumbnail downsampling using ImageIO
     private func downsample(at url: URL, maxPixelSize: CGFloat) -> UIImage? {
         let options: [CFString: Any] = [kCGImageSourceShouldCache: false]
         guard let source = CGImageSourceCreateWithURL(url as CFURL, options as CFDictionary) else {
@@ -1016,14 +1072,14 @@ private struct RoomMediaFullscreenViewer: View {
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background(.black.opacity(0.65), in: Capsule())
+                                    .background(.ultraThinMaterial, in: Capsule())
 
                                 Text(item.category.rawValue)
                                     .font(.custom("SukhumvitSet-Medium", size: 12))
-                                    .foregroundStyle(.white.opacity(0.9))
+                                    .foregroundStyle(.white)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
-                                    .background(item.category.accentColor.opacity(0.85), in: Capsule())
+                                    .background(item.category.accentColor, in: Capsule())
                             }
 
                             Text(item.title)
@@ -1048,7 +1104,7 @@ private struct RoomMediaFullscreenViewer: View {
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(.white)
                                 .frame(width: 38, height: 38)
-                                .background(.black.opacity(0.6), in: Circle())
+                                .background(.ultraThinMaterial, in: Circle())
                                 .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
                         }
                     }
