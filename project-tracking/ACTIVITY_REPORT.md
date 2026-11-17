@@ -5422,3 +5422,41 @@
   - ตรวจสอบความถูกต้องตาม Zero Emojis Policy (0 รายการ)
 - สถานะงาน: การแก้ไขโค้ดและ Build ผ่านสมบูรณ์ พร้อมสำหรับการเปิดใช้งานบนอุปกรณ์ iOS
 - ความเสี่ยง/สิ่งที่ต้องทำต่อ: ติดตั้ง build ใหม่ลงในอุปกรณ์จริงของแอดมินเพื่อทดสอบการแสดงผลสลิปและวิดีโอร่วมกับฐานข้อมูลจริง
+
+
+---
+
+## 2026-11-17 12:31 ICT: Build, Sign และติดตั้ง DormiNetX ลงบนอุปกรณ์จริง (iPhone F)
+
+- ผู้ดำเนินการ: Assistant
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสั่งการ: "build เข้าเครื่องให้หน่อย"
+- สิ่งที่ดำเนินการ:
+  1. ตรวจสอบการเชื่อมต่ออุปกรณ์และสิทธิการพัฒนา:
+     - ตรวจสอบผ่าน `xcrun devicectl list devices` พบอุปกรณ์เป้าหมาย iPhone 11 ชื่อ `F` (UDID: `00008030-001C65A134C0A02E`, CoreDevice ID: `8443F450-FF77-56AB-BE70-0CCCCFDE5C76`)
+  2. ดำเนินการ Build และ Code Signing ตาม runbook:
+     - ใช้คำสั่ง: `xcodebuild build -project DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj -scheme DormiNetX -configuration Debug -destination 'platform=iOS,id=00008030-001C65A134C0A02E' -allowProvisioningUpdates`
+     - Signed ด้วย Signing Identity: `Apple Development: enoshimaj991@gmail.com (B7PZ7F7C45)`
+     - Provisioning Profile: `iOS Team Provisioning Profile: com.dorminet.DormiNetX`
+     - ผลการคอมไพล์: `** BUILD SUCCEEDED **`
+  3. ติดตั้งทับ (Preserve App Data) และเปิดแอปบนเครื่องจริง:
+     - ติดตั้งทับผ่าน `xcrun devicectl device install app --device 8443F450-FF77-56AB-BE70-0CCCCFDE5C76 "/Users/fang/Library/Developer/Xcode/DerivedData/DormiNetX-auptxgymnpdskqckuckpuzrfzmlt/Build/Products/Debug-iphoneos/DormiNetX.app"`
+     - สถานะการติดตั้ง: `App installed: bundleID: com.dorminet.DormiNetX` สำเร็จสมบูรณ์ โดยไม่สูญเสียข้อมูล Local Database เดิม
+     - สั่งเปิดแอปบนเครื่องจริงผ่าน: `xcrun devicectl device process launch --device 8443F450-FF77-56AB-BE70-0CCCCFDE5C76 com.dorminet.DormiNetX`
+- ไฟล์หรือระบบที่กระทบ:
+  - แอปพลิเคชันบนอุปกรณ์จริง iPhone 11 (`F`)
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production:
+  - ไม่มีการเปลี่ยนหรือล้างข้อมูลฐานข้อมูลในเครื่อง (เป็นการติดตั้งทับ)
+  - ไม่มีการแตะต้องเซิร์ฟเวอร์ Production
+- การตรวจสอบและหลักฐาน:
+  - `xcodebuild build`: สำเร็จ (`** BUILD SUCCEEDED **`)
+  - `xcrun devicectl device install app`: รหัสออก 0 (Exit Code 0), `databaseSequenceNumber: 18260`
+  - `xcrun devicectl device process launch`: สำเร็จ (`Launched application with com.dorminet.DormiNetX bundle identifier`)
+  - ตรวจสอบตาม Zero Emojis Policy (0 รายการ)
+- สถานะ deploy/UAT:
+  - Build ผ่าน: ใช่
+  - ติดตั้งลงอุปกรณ์ทดสอบแล้ว: ใช่
+  - UAT จริง: รอผู้ใช้งานทดสอบการทำงานบนหน้าจอของเครื่อง `F` โดยเฉพาะหน้าหลักฐานการโอน (`TransfersTabView`) ที่ปรับปรุงใหม่
+- ผลลัพธ์: ตัวแอปเวอร์ชันล่าสุดที่มีการปรับปรุงหน้าคลังสื่อและหลักฐานรายห้องติดตั้งลงเครื่องและเปิดใช้งานเรียบร้อยแล้ว
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ: ให้ผู้ใช้งานทดสอบดูสลิปและสื่อแจ้งซ่อมบนอุปกรณ์จริง หากมีจุดที่ต้องปรับแต่งเพิ่มเติมสามารถแจ้งได้ทันที
