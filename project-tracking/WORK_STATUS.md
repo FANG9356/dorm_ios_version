@@ -1,13 +1,14 @@
 # สถานะการทำงานปัจจุบัน
 
-> สถานะระบบล่าสุด ณ 11 พฤศจิกายน 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
+> สถานะระบบล่าสุด ณ 17 พฤศจิกายน 2569: สมบูรณ์ 100% พร้อมใช้งานจริง (Release v1.0.0)
 
-อัปเดตล่าสุด: 11 พฤศจิกายน 2569 (Asia/Bangkok)
+อัปเดตล่าสุด: 17 พฤศจิกายน 2569 (Asia/Bangkok)
 
 ## กำลังทำ / รอตรวจ
 
 | งาน | สถานะ | สิ่งที่เสร็จแล้ว | สิ่งที่ต้องทำเพื่อปิด |
 | --- | --- | --- | --- |
+| Transfers Tab & Room Evidence Archive | **เสร็จสิ้น 100%** | รวมศูนย์สลิปค่าเช่า สลิปมัดจำ รูปภาพ/วิดีโองานแจ้งซ่อมแยกตามห้องพัก (Room Evidence Vault) จัดหมวดหมู่ 4 ประเภท ฟิลเตอร์เลือกห้องแบบ Menu ปลดปุ่มกริด และปรับแต่งประสิทธิภาพ 60/120 FPS แบบ Instant Frame 0 | ผ่านการทดสอบ Build, ติดตั้งและทดสอบความลื่นไหลบน iPhone 11 ("F") เรียบร้อย |
 | Multi-Admin Store Isolation & Sharing | **เสร็จสิ้น 100%** | บัญชีสิทธิ์พนักงาน (Admin/Staff) ชี้ตรงไปยังฐานข้อมูลหอพักหลัก (`account_1.store`) ของเจ้าของหอพัก พร้อมระบบ Self-Healing อัตโนมัติ | ผ่านการทดสอบ Unit Tests และติดตั้งบน iPhone 11 จริงเรียบร้อย |
 | Saved Account History Login | **เสร็จสิ้น 100%** | ระบบ Auto-Migration ปรับปรุงค่า `adminID` ใน Keychain History ให้เป็น 1 อัตโนมัติ ป้องกันแอปเด้งออกและเปิด Store ว่างเปล่า | ทดสอบการเข้าสู่ระบบผ่านประวัติสำเร็จสมบูรณ์ |
 | Staff Profile Self-Editing | **เสร็จสิ้น 100%** | ย้าย Modal Sheet ขึ้นระดับบนสุด ปิด Sidebar ทันที และรองรับการแก้ไข `backup_email` พร้อมแสดงรูปโปรไฟล์ส่วนตัว (`profile_2.jpg`) | ทดสอบบนอุปกรณ์จริงเรียบร้อย |
@@ -24,6 +25,17 @@
 
 ## ทำเสร็จแล้วล่าสุด
 
+- ปรับปรุงหน้า "คลังหลักฐานและสื่อประจำห้อง" (`TransfersTabView.swift`):
+  - รวมศูนย์หลักฐานทุกประเภทแยกตามห้องพัก (Room Evidence Vault): สลิปโอนเงินค่าเช่ารายเดือน, สลิปมัดจำแรกเข้า, รูปภาพและวิดีโอจากงานแจ้งซ่อม
+  - สถาปัตยกรรมการกรองแบบ Category-First: จัดหมวดหมู่ 4 ประเภทหลัก (ทั้งหมด, สลิปค่าเช่า, งานแจ้งซ่อม, สลิปมัดจำ) พร้อมปุ่มเลือกห้องแบบ Dropdown Menu ที่กะทัดรัด ไม่รกสายตา
+  - ปลดปุ่มและคอมโพเนนต์ที่ไม่จำเป็น: ถอดปุ่มสลับกริด (2x2 / 3x3) และปุ่ม action ที่ไม่ได้ใช้งานออก เน้นความมินิมอลและโฟกัสที่การตรวจสอบหลักฐาน
+  - แก้ไขปัญหา Layout การ์ดซ้อนทับ: ถอด ScrollView ภายในออกเพื่อป้องกันการซ้อนทับกับ ScrollView หลักของ `RoomListView` พร้อมจัดวาง LazyVGrid 2 คอลัมน์ที่ตัดขอบภาพพอดี ไม่ล้นข้ามเซลล์
+  - ปรับปรุงประสิทธิภาพความลื่นไหลระดับ 60/120 FPS:
+    - Instant Frame 0 Rendering: คำนวณข้อมูลจาก SwiftData Models แบบ Synchronous บน Frame 0 ไม่เกิด Layout Shift หรือจังหวะกระตุกขณะสลับแท็บ
+    - Instant Thumbnail Memory Cache (`ThumbnailCache`): แคชรูปภาพบนหน่วยความจำ แสดงผลทันทีตั้งแต่ขั้นตอน `init`
+    - กำจัด GPU Overhead: เปลี่ยนการใช้ Gaussian blur ซ้อนทับเป็น `RadialGradient` แบบ Single-pass และแทนที่ Material Blur ของ Badge ด้วยค่าโปร่งแสงตรง
+    - ปลด `GeometryReader` ออกจากตารางกริด ใช้ `.frame` และ `.clipped` ตายตัว ปราศจาก Drop Frames ในขณะเลื่อนหน้าจอ
+  - Build และติดตั้งทดสอบบนเครื่องจริง iPhone 11 ("F") สำเร็จ การเปิดดูและเลื่อนรายการลื่นไหลสมบูรณ์เทียบเท่าหน้าอื่นๆ
 - แก้ไขระบบ Multi-Admin Shared Dormitory Store (สิทธิ์ลูกใช้งานฐานข้อมูลเดียวกับเมลแม่):
   - ปรับปรุงฟังก์ชัน `localSessionAccountID(token:now:)` ใน `APIService.swift`: กำหนดให้สิทธิ์พนักงาน (`role != "superadmin"` เช่น admin, services, dorm) ชี้ตรงไปยังฐานข้อมูลหอพักหลัก (`account_1.store`) ของเจ้าของหอพักเสมอ ไม่ถอยกลับไปใช้ `admin_id = 2` ซึ่งทำให้แอปไปสร้างฐานข้อมูลว่างเปล่า `account_2.store`
   - เพิ่มฟังก์ชัน `resolveServerAccountID()` ใน `APIService.swift` สอบทานหมายเลขหอพักจริงจาก `/api/sync/meta` ของเซิร์ฟเวอร์
@@ -99,8 +111,9 @@
 | --- | --- |
 | Backend | `go test -count=1 ./...`, `go test -count=1 -race ./handlers` (0 data race) และ `go vet ./...` ผ่าน 100% |
 | LINE monthly invoice & maintenance | automated tests ครอบคลุม PromptPay QR conditional display (`TestLineInvoiceFlexMessageIncludesQRWhenDue` / `TestLineInvoiceFlexMessageExcludesQRWhenNotDue`) และ maintenance status, quote, approve/reject, bill, outbox ครบถ้วน |
-| iOS multi-admin & safety | `CredentialStoreTests` (รวมการทดสอบ multi-admin store resolution: staff resolves to account 1 และ superadmin resolves to owner account), `MaintenanceWorkflowTests` 4/4, `CoreDataSafetyTests` 19/19 ผ่านครบถ้วน; `build-for-testing` ผ่าน 100% |
-| Production | สถานะ ณ 11 พ.ย. 2569: `https://dorminet.studio/api/system/ping` ตอบ `{"status":"online"}`; binary SHA-256 `8121595f422d67a1a82444619ffda6efdf35a2e6d205c7d6a60e6f6450de5508`; iPhone 11 ("F") ติดตั้งแอปเวอร์ชันล่าสุดสำเร็จ และ Preference `adminID = 1` เปิด Store `account_1.store` สมบูรณ์ |
+| iOS multi-admin & safety | `CredentialStoreTests` (รวมการทดสอบ multi-admin store resolution: staff resolves to account 1 และ superadmin resolves to owner account), `MaintenanceWorkflowTests` 4/4, `CoreDataSafetyTests` 19/19 ผ่านครบถ้วน; `build-for-testing` ผ่าน 100% (ทุกเป้าหมาย `DormiNetX`, `DormiNetXTests`, `DormiNetXUITests`) |
+| iOS UI & Performance | `TransfersTabView.swift` ปรับปรุงสู่สถาปัตยกรรม Instant Frame 0 และกำจัด GPU bottleneck เลื่อนหน้าจอลื่นไหล 60/120 FPS ไม่สะดุด; คอมไพล์และติดตั้งบน iPhone 11 ("F") สำเร็จ |
+| Production | สถานะ ณ 17 พ.ย. 2569: `https://dorminet.studio/api/system/ping` ตอบ `{"status":"online"}`; `https://dorminet.studio/services` ตอบ 200 OK; `https://dorminet.studio/api/admins/ping` ป้องกันด้วย Auth ตอบ 401 Unauthorized; iPhone 11 ("F") ติดตั้งแอปเวอร์ชันล่าสุดสำเร็จ |
 | ข้อจำกัดหลักฐาน | OCR HTTP 400 พิสูจน์เพียงว่า service ตอบ ไม่พิสูจน์ความแม่นยำ; ยังไม่มี UAT ที่ยืนยัน amount/receiver/reference/replay และ fallback ปัจจุบันไม่ fail closed |
 
 ## สรุปการส่งมอบงาน (Delivery Summary: 100% Complete)

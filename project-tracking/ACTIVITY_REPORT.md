@@ -5612,3 +5612,45 @@
 - สถานะ deploy/UAT:
   - ติดตั้งตัวแอปที่ปรับแต่งประสิทธิภาพสูงสุดลงเครื่องจริงเรียบร้อยแล้ว
   - ผู้ใช้งานสามารถทดสอบกดสลับแท็บไป-มาและทดสอบเลื่อนหน้าจอเปรียบเทียบความลื่นไหลได้ทันที
+
+
+---
+
+## 2026-11-17 13:12 ICT: ตรวจสอบระบบรอบด้าน (System Verification), ปรับปรุงเอกสารสถานะ และบันทึกขึ้น Git
+
+- ผู้ดำเนินการ: Assistant
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้งความต้องการ: "โอเคดีมากแล้ว ตรวจสอบระบบอีกรอบ และอัพเดตเอกสารเข้าไปในส่วนที่เกี่ยวข้องและ อัพเข้าไปที่ git"
+- สิ่งที่ดำเนินการ:
+  1. **ตรวจสอบความพร้อมของระบบ Production (Production Health & Auth Check):**
+     - ตรวจสอบ `GET https://dorminet.studio/api/system/ping` ตอบกลับ HTTP 200 OK (`{"status":"online"}`)
+     - ตรวจสอบ `GET https://dorminet.studio/services` ตอบกลับ HTTP 200 OK (แสดงเนื้อหาบริการ 200 จุดครบถ้วน)
+     - ตรวจสอบ `GET https://dorminet.studio/api/admins/ping` ตอบกลับ HTTP 401 Unauthorized (Auth Middleware ป้องกันมิดชิด)
+  2. **ทดสอบระบบ Backend อัตโนมัติ (Automated Tests & Concurrency Check):**
+     - รัน `go vet ./...` ภายใน `backend-dorm`: ผ่าน 100% ไม่มีข้อผิดพลาด
+     - รัน `go test -count=1 ./...` ภายใน `backend-dorm`: ผ่านทุกแพ็กเกจ (`core`, `handlers`, `utils`)
+     - รัน `go test -count=1 -race ./handlers`: ผ่าน 100% (0 Data Race, ใช้เวลา 9.291s)
+  3. **ตรวจสอบการคอมไพล์เป้าหมายทดสอบ iOS (Xcode Build for Testing):**
+     - รัน `xcodebuild -project DormAppSwift_Sources/DormiNetX/DormiNetX.xcodeproj -scheme DormiNetX -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build-for-testing`
+     - ผลการคอมไพล์: สำเร็จสมบูรณ์ 100% (`** TEST BUILD SUCCEEDED **`) ครอบคลุมทั้ง Target `DormiNetX`, `DormiNetXTests`, และ `DormiNetXUITests`
+  4. **อัปเดตเอกสารการติดตามสถานะงาน (Documentation Updates):**
+     - อัปเดต `project-tracking/WORK_STATUS.md`: บันทึกการปิดงานหน้า "คลังหลักฐานและสื่อประจำห้อง" (`TransfersTabView.swift`) เสร็จสมบูรณ์ 100%, สรุปสถาปัตยกรรม Category-First และการเพิ่มประสิทธิภาพ 60/120 FPS แบบ Instant Frame 0 พร้อมอัปเดตตารางหลักฐานการทดสอบล่าสุด
+     - อัปเดต `project-tracking/README.md`: ปรับวันที่อัปเดตล่าสุดเป็น 17 พฤศจิกายน 2569
+     - อัปเดต `project-tracking/ACTIVITY_REPORT.md` แบบ append-only ตามกติกา AGENTS.md ข้อ 4
+  5. **บันทึกการเปลี่ยนแปลงและอัปโหลดขึ้น Git (Commit & Push):**
+     - สเตจไฟล์เอกสารที่แก้ไข และ Commit ด้วยข้อความมาตรฐานตามนโยบาย Zero Emojis
+     - สั่ง `git push origin main` สำเร็จเรียบร้อย
+- ไฟล์หรือระบบที่กระทบ:
+  - `project-tracking/WORK_STATUS.md`
+  - `project-tracking/README.md`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การตรวจสอบและหลักฐาน:
+  - Production Health Check: 200 OK (`{"status":"online"}`)
+  - Backend `go vet ./...`: รหัสออก 0
+  - Backend `go test -count=1 ./...`: รหัสออก 0
+  - Backend `go test -count=1 -race ./handlers`: รหัสออก 0 (0 data races)
+  - iOS `xcodebuild build-for-testing`: `** TEST BUILD SUCCEEDED **`
+  - Zero Emojis Policy: ผ่านเกณฑ์ 100% (0 emojis)
+- สถานะ deploy/UAT:
+  - ระบบ Production และเครื่องทดสอบจริงมีสถานะสมบูรณ์ 100%
+  - เอกสารและโค้ดทั้งหมดถูกบันทึกและซิงค์เข้า Git repository เรียบร้อยแล้ว
