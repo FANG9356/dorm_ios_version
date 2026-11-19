@@ -269,16 +269,15 @@ struct TransfersTabView: View {
 
     var body: some View {
         // Root container is a clean VStack (RoomListView provides the outer ScrollView)
-        VStack(alignment: .leading, spacing: 14) {
-            // Ambient Glass Control Panel (Search + Category Glow Pills)
-            ambientControlPanel
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            header
+
+            // Search & Filter Panel (โมเดลมาตรฐานเดียวกับหน้าอื่นๆ ในระบบ)
+            filterPanel
 
             // Meta Info Row (Minimalist & Clean)
             HStack(alignment: .center, spacing: 6) {
-                Circle()
-                    .fill(selectedCategory.accentColor)
-                    .frame(width: 7, height: 7)
-
                 Text(summaryLabel)
                     .font(.custom("SukhumvitSet-SemiBold", size: 12))
                     .foregroundStyle(.secondary)
@@ -298,182 +297,154 @@ struct TransfersTabView: View {
             }
         }
         .padding(.top, 106)
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 20)
         .padding(.bottom, 40)
         .fullScreenCover(item: $activeFullscreenItem) { item in
             RoomMediaFullscreenViewer(item: item)
         }
     }
 
-    // MARK: - Ambient Light Glass Control Panel (Optimized GPU Rendering)
-    private var ambientControlPanel: some View {
-        ZStack {
-            // High-efficiency Radial Gradient (1 GPU pass, replaces heavy blur)
-            RadialGradient(
-                colors: [
-                    selectedCategory.accentColor.opacity(colorScheme == .dark ? 0.22 : 0.12),
-                    Color.clear
-                ],
-                center: .center,
-                startRadius: 0,
-                endRadius: 180
-            )
-            .frame(height: 70)
-            .offset(y: 8)
+    // MARK: - Header
+    private var header: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("คลังหลักฐานประจำห้อง")
+                    .font(.custom("SukhumvitSet-Bold", size: 24))
+                Text("รวบรวมสลิปโอนเงิน รูปภาพ และวิดีโอจากงานแจ้งซ่อมแยกตามห้องพัก")
+                    .font(.custom("SukhumvitSet-Text", size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+    }
 
-            VStack(spacing: 10) {
-                // Row 1: Search Field + Sleek Room Selector Menu
-                HStack(spacing: 8) {
-                    // Search Bar
-                    HStack(spacing: 8) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.secondary)
+    // MARK: - Standard Filter Panel (โมเดลมาตรฐานเดียวกับหน้าอื่นๆ ในระบบ)
+    private var filterPanel: some View {
+        VStack(spacing: 0) {
+            // Row 1: Search Field + Room Filter Menu
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.custom("SukhumvitSet-Medium", size: 15))
+                    .foregroundColor(.secondary)
 
-                        TextField("ค้นหาห้อง, ผู้เช่า, รายการแจ้งซ่อม...", text: $searchText)
-                            .font(.custom("SukhumvitSet-Text", size: 14))
-                            .autocorrectionDisabled()
+                TextField("ค้นหาห้อง, ผู้เช่า, รายการแจ้งซ่อม...", text: $searchText)
+                    .font(.custom("SukhumvitSet-Text", size: 14))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
 
-                        if !searchText.isEmpty {
-                            Button {
-                                searchText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                if !searchText.isEmpty {
+                    Button {
+                        searchText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.custom("SukhumvitSet-Medium", size: 14))
+                            .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.03))
-                    )
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("ล้างคำค้นหา")
+                }
 
-                    // Sleek Room Filter Menu (Handles 100+ rooms effortlessly without clutter)
-                    Menu {
+                Divider()
+                    .frame(height: 24)
+                    .opacity(colorScheme == .dark ? 0.35 : 0.16)
+
+                // Room Filter Menu
+                Menu {
+                    Button {
+                        triggerLightHaptic()
+                        selectedRoom = "all"
+                    } label: {
+                        Label("ทุกห้องพัก", systemImage: selectedRoom == "all" ? "checkmark" : "building.2")
+                    }
+
+                    Divider()
+
+                    ForEach(availableRoomNumbers, id: \.self) { room in
                         Button {
                             triggerLightHaptic()
-                            selectedRoom = "all"
+                            selectedRoom = room
                         } label: {
-                            Label("ทุกห้องพัก", systemImage: selectedRoom == "all" ? "checkmark" : "building.2")
+                            Label("ห้อง \(room)", systemImage: selectedRoom == room ? "checkmark" : "door.left.hand.closed")
                         }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: selectedRoom == "all" ? "door.left.hand.open" : "door.left.hand.closed")
+                            .font(.custom("SukhumvitSet-SemiBold", size: 13))
+                            .foregroundColor(selectedRoom == "all" ? .secondary : .primary)
 
-                        Divider()
+                        Text(selectedRoom == "all" ? "ทุกห้อง" : "ห้อง \(selectedRoom)")
+                            .font(.custom("SukhumvitSet-Bold", size: 13))
+                            .foregroundColor(selectedRoom == "all" ? .secondary : .primary)
+                            .lineLimit(1)
 
-                        ForEach(availableRoomNumbers, id: \.self) { room in
-                            Button {
-                                triggerLightHaptic()
-                                selectedRoom = room
-                            } label: {
-                                Label("ห้อง \(room)", systemImage: selectedRoom == room ? "checkmark" : "door.left.hand.closed")
-                            }
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .frame(height: 38)
+                    .background(
+                        selectedRoom == "all"
+                            ? Color.clear
+                            : (colorScheme == .dark ? Color.white.opacity(0.10) : Color.black.opacity(0.05)),
+                        in: Capsule()
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 48)
+
+            Divider()
+                .opacity(colorScheme == .dark ? 0.35 : 0.12)
+                .padding(.horizontal, 12)
+
+            // Row 2: Category Filter Tabs (สไตล์เดียวกับหน้าทะเบียนลูกบ้านและการเงิน)
+            HStack(spacing: 0) {
+                ForEach(EvidenceCategory.allCases) { cat in
+                    let isSelected = selectedCategory == cat
+                    let count = countForCategory(cat)
+
+                    Button {
+                        triggerLightHaptic()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75, blendDuration: 0.1)) {
+                            selectedCategory = cat
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Text(selectedRoom == "all" ? "ทุกห้อง" : "ห้อง \(selectedRoom)")
-                                .font(.custom("SukhumvitSet-Bold", size: 12))
-                                .lineLimit(1)
-
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 9, weight: .bold))
-                        }
-                        .foregroundStyle(selectedRoom == "all" ? Color.primary : selectedCategory.accentColor)
-                        .padding(.horizontal, 10)
-                        .frame(height: 36)
-                        .background(
-                            selectedRoom == "all"
-                                ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
-                                : selectedCategory.accentColor.opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        EvidenceFilterTab(
+                            title: cat.rawValue,
+                            count: count,
+                            isActive: isSelected
                         )
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)
                 }
-
-                // Row 2: Category Filter Glow Pills (Pure Category-Centric Architecture)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(EvidenceCategory.allCases) { cat in
-                            let isSelected = selectedCategory == cat
-                            let count = countForCategory(cat)
-
-                            Button {
-                                triggerLightHaptic()
-                                withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
-                                    selectedCategory = cat
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: cat.icon)
-                                        .font(.system(size: 11, weight: .bold))
-
-                                    Text(cat.rawValue)
-                                        .font(.custom("SukhumvitSet-Bold", size: 12))
-
-                                    Text("\(count)")
-                                        .font(.custom("SukhumvitSet-Bold", size: 10))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 1.5)
-                                        .background(
-                                            isSelected
-                                                ? Color.white.opacity(0.28)
-                                                : Color.primary.opacity(0.08),
-                                            in: Capsule()
-                                        )
-                                }
-                                .foregroundStyle(isSelected ? Color.white : Color.primary.opacity(0.75))
-                                .padding(.horizontal, 12)
-                                .frame(height: 32)
-                                .background(
-                                    isSelected
-                                        ? cat.accentColor
-                                        : (colorScheme == .dark ? Color.white.opacity(0.06) : Color.white.opacity(0.55)),
-                                    in: Capsule()
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(
-                                            isSelected ? Color.white.opacity(0.35) : Color.primary.opacity(0.08),
-                                            lineWidth: 1
-                                        )
-                                )
-                            }
-                            .buttonStyle(PressableButtonStyle())
-                        }
-                    }
-                    .padding(.horizontal, 2)
-                    .padding(.bottom, 2)
-                }
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(colorScheme == .dark ? Color(white: 0.12) : Color.white.opacity(0.85))
-                    .shadow(
-                        color: Color.black.opacity(colorScheme == .dark ? 0.16 : 0.04),
-                        radius: 8,
-                        x: 0,
-                        y: 3
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(colorScheme == .dark ? 0.20 : 0.45),
-                                Color.white.opacity(colorScheme == .dark ? 0.05 : 0.15)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .frame(height: 52)
         }
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(controlFillColor)
+                .shadow(color: colorScheme == .dark ? .black.opacity(0.08) : .clear, radius: 18, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(controlBorderColor, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var controlBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.18)
+    }
+
+    private var controlFillColor: Color {
+        colorScheme == .dark ? Color.white.opacity(0.045) : Color.white.opacity(0.34)
     }
 
     // MARK: - Evidence Grid (2-Column Pure Minimalist Grid)
@@ -560,6 +531,62 @@ private func parseMediaPathsStatic(_ raw: String) -> [String] {
 private func isVideoFileStatic(_ path: String) -> Bool {
     let lower = path.lowercased()
     return lower.hasSuffix(".mp4") || lower.hasSuffix(".mov") || lower.hasSuffix(".m4v") || lower.hasSuffix(".webm")
+}
+
+// MARK: - Evidence Filter Tab (ตรงตามโมเดล LiquidFilterTab ของหน้าลูกบ้านและการเงิน)
+private struct EvidenceFilterTab: View {
+    let title: String
+    let count: Int
+    let isActive: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(LocalizedStringKey(title))
+                .font(.custom("SukhumvitSet-Bold", size: 13))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Text("\(count)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(
+                    Capsule()
+                        .fill(isActive ? countActiveFill : countInactiveFill)
+                )
+        }
+        .foregroundColor(isActive ? .primary : .secondary)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(
+            Capsule()
+                .fill(isActive ? tabActiveFill : Color.clear)
+        )
+        .overlay(
+            Capsule()
+                .stroke(isActive ? activeBorderColor : Color.clear, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .animation(.easeInOut(duration: 0.22), value: isActive)
+    }
+
+    private var activeBorderColor: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.white.opacity(0.14)
+    }
+
+    private var tabActiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.08) : Color.white.opacity(0.46)
+    }
+
+    private var countActiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.12) : Color.black.opacity(0.045)
+    }
+
+    private var countInactiveFill: Color {
+        colorScheme == .dark ? Color.primary.opacity(0.07) : Color.black.opacity(0.028)
+    }
 }
 
 // MARK: - Redesigned Minimalist Room Evidence Card (Optimized for 60/120 FPS Fluidity)

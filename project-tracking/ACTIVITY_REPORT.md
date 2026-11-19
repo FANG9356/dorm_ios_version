@@ -5791,3 +5791,41 @@
   - Zero Emojis Policy: ผ่านเกณฑ์ 100% (0 emojis)
 - สถานะ deploy/UAT:
   - แก้ไขคำเตือนทุกรายการสำเร็จ ผลการคอมไพล์ใน Xcode สะอาด 100% ไม่มี Warning แจ้งเตือนหลงเหลือ
+
+
+---
+
+## 2026-11-19 09:02 ICT: ปรับปรุงช่องค้นหาและ Filter ในหน้าหลักฐานการโอนให้ตรงตามโมเดลมาตรฐานของระบบ
+
+- ผู้ดำเนินการ: Assistant
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานแจ้ง: "แก้ไขให้ช่องค้นหาและ fitlter ใส่ เหมือนหน้าอื่นๆเป็นโมเดลเดียวกัน"
+- สิ่งที่ดำเนินการ:
+  1. **สืบค้นและวิเคราะห์โมเดลมาตรฐานในระบบ (Standard Filter & Search Pattern):**
+     - ตรวจสอบหน้า `TenantsTabView` (ทะเบียนลูกบ้าน) และ `FinanceTabView` (สรุปการเงิน)
+     - พบว่าทุกหน้าใช้โครงสร้าง Glass Panel เดียวกัน:
+       - กรอบบัตรแก้วมน `RoundedRectangle(cornerRadius: 20)`
+       - สีพื้นหลังและขอบปรับตามธีม (`Color.white.opacity(0.045)` ใน Dark Mode และ `0.34` ใน Light Mode)
+       - แถวบน (ความสูง 48): ช่องค้นหา `magnifyingglass` + `TextField` + ปุ่มล้างคำค้นหา `xmark.circle.fill` + เส้นคั่นแนวตั้ง + เมนูฟิลเตอร์/จัดเรียง
+       - เส้นคั่นแนวนอน `Divider()`
+       - แถวล่าง (ความสูง 52): แท็บตัวกรองแบบ Segmented Tabs (`LiquidFilterTab`) พร้อมป้ายนับจำนวน (Count Badge) แบบแคปซูล และแอนิเมชัน Spring เมื่อกดสลับแท็บ
+  2. **ปรับปรุง `TransfersTabView.swift` สู่โมเดลมาตรฐาน:**
+     - เพิ่ม Header ชื่อหน้า "คลังหลักฐานประจำห้อง" และคำบรรยายตามมาตรฐานหน้าอื่นๆ
+     - เปลี่ยนชุดค้นหาและตัวกรองจากแบบเดิม (Floating Ribbon & Radial Gradient) มาเป็น `filterPanel` ตามโครงสร้างมาตรฐาน:
+       - แถวบน: ช่องค้นหา `TextField` พร้อมปุ่มล้างคำค้นหา และปุ่มเลือกห้องแบบ Dropdown Menu ที่ขวาของช่องค้นหา
+       - แถวล่าง: `EvidenceFilterTab` แสดงหมวดหมู่ 4 ประเภท (ทั้งหมด, สลิปค่าเช่า, งานแจ้งซ่อม, เงินมัดจำ) ในแถวเดียว ไม่ต้องเลื่อนแนวนอน และมีตัวเลขนับจำนวนกำกับทุกแท็บ
+     - รองรับทั้ง Light Mode และ Dark Mode อย่างกลมกลืนเป็นหนึ่งเดียวกับหน้าจออื่นๆ ของแอป
+  3. **ตรวจสอบการคอมไพล์และทดสอบระบบ:**
+     - รัน `xcodebuild build` สถาปัตยกรรม ARM64: ผ่านสมบูรณ์ (`** BUILD SUCCEEDED **`)
+     - รัน `xcodebuild build-for-testing`: ผ่านสมบูรณ์ (`** TEST BUILD SUCCEEDED **`) โดยมีคำเตือนเป็น 0
+     - รันชุดทดสอบ Backend Go Tests: ผ่าน 100%
+     - ปฏิบัติตาม Zero Emojis Policy อย่างเคร่งครัด
+- ไฟล์หรือระบบที่กระทบ:
+  - `DormAppSwift_Sources/DormiNetX/DormiNetX/Views/TransfersTabView.swift`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การตรวจสอบและหลักฐาน:
+  - Xcode Build: สำเร็จ รหัสออก 0 (0 warnings)
+  - Xcode Build for Testing: สำเร็จ รหัสออก 0 (0 warnings)
+  - Go Test: ผ่าน 100%
+- สถานะ deploy/UAT:
+  - ปรับปรุงโค้ด UI ในหน้าหลักฐานการโอนเรียบร้อย คอมไพล์ผ่านฉลุยพร้อมใช้งาน
