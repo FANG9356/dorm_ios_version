@@ -97,6 +97,17 @@ func HandleTenantMedia(master *sql.DB) http.HandlerFunc {
 			http.Error(w, "Tenant unavailable", http.StatusForbidden)
 			return
 		}
+		if _, accountID, _, accErr := resolveSyncAccount(master, r); accErr == nil && accountID > 0 {
+			ownedByOther, ownerErr := mediaOwnedByOtherTenant(master, fileName, accountID)
+			if ownerErr != nil {
+				http.Error(w, "Media lookup failed", http.StatusInternalServerError)
+				return
+			}
+			if ownedByOther {
+				http.Error(w, "Media not found", http.StatusNotFound)
+				return
+			}
+		}
 		allowed, err := tenantReferencesMedia(tenantDB, fileName)
 		if err != nil {
 			http.Error(w, "Media lookup failed", http.StatusInternalServerError)
@@ -137,6 +148,55 @@ func servePrivateUpload(w http.ResponseWriter, r *http.Request, fileName, cacheC
 	http.ServeContent(w, r, fileName, info.ModTime(), file)
 }
 
+func ensureMediaObjectsTable(master *sql.DB) error {
+	if master == nil {
+		return nil
+	}
+	_, err := master.Exec(`CREATE TABLE IF NOT EXISTS media_objects (
+		filename TEXT PRIMARY KEY,
+		account_id INTEGER NOT NULL,
+		created_at TEXT NOT NULL
+	)`)
+	return err
+}
+
+// RecordMediaOwner binds an uploaded filename to its owning tenant account_id
+// so another tenant cannot read or delete it by injecting the filename.
+func RecordMediaOwner(master *sql.DB, storedPath string, accountID int) {
+	if master == nil || accountID <= 0 {
+		return
+	}
+	fileName := mediaFileName(storedPath)
+	if fileName == "" {
+		return
+	}
+	if ensureMediaObjectsTable(master) != nil {
+		return
+	}
+	_, _ = master.Exec(
+		`INSERT OR IGNORE INTO media_objects (filename, account_id, created_at) VALUES (?, ?, ?)`,
+		fileName, accountID, time.Now().UTC().Format(time.RFC3339),
+	)
+}
+
+func mediaOwnedByOtherTenant(master *sql.DB, fileName string, accountID int) (bool, error) {
+	if master == nil || accountID <= 0 {
+		return false, nil
+	}
+	var ownerID int
+	err := master.QueryRow(`SELECT account_id FROM media_objects WHERE filename = ?`, fileName).Scan(&ownerID)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") {
+			return false, nil
+		}
+		return false, err
+	}
+	return ownerID != accountID, nil
+}
+
 func tenantReferencesMedia(db *sql.DB, fileName string) (bool, error) {
 	withUploadPrefix := "/uploads/" + fileName
 	var allowed bool
@@ -159,5 +219,14 @@ func tenantReferencesMedia(db *sql.DB, fileName string) (bool, error) {
 	)`, fileName, withUploadPrefix, fileName, withUploadPrefix,
 		fileName, withUploadPrefix, fileName, fileName, withUploadPrefix,
 		fileName, withUploadPrefix).Scan(&allowed)
-	return allowed, err
+	if err != nil || allowed {
+		return allowed, err
+	}
+	// Also check deposit_refunds.slip_path if present in schema so refund slips are never orphaned/deleted.
+	var refundRef bool
+	refundErr := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM deposit_refunds d WHERE d.slip_path IN (?, ?))`, fileName, withUploadPrefix).Scan(&refundRef)
+	if refundErr == nil && refundRef {
+		return true, nil
+	}
+	return false, nil
 }

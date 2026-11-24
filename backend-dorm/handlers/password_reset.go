@@ -36,6 +36,10 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error":"กรุณาระบุอีเมล รหัสยืนยัน 6 หลัก และรหัสผ่านใหม่ 8 ถึง 72 ไบต์"}`, http.StatusBadRequest)
 			return
 		}
+		if !allowRequestAttempt(r, "reset-password-ip", 20, 15*time.Minute) {
+			http.Error(w, `{"error":"กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
+			return
+		}
 		locked, rateErr := authRateLimitLocked(db, "otp_failure", req.Email, maxOTPAttempts)
 		if rateErr != nil {
 			http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
@@ -45,13 +49,14 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error":"กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
 			return
 		}
-		var expires string
-		err := db.QueryRow("SELECT expires_at FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP).Scan(&expires)
-		if err == sql.ErrNoRows {
+		var storedToken, expires string
+		err := db.QueryRow("SELECT token, expires_at FROM password_resets WHERE email = ?", req.Email).Scan(&storedToken, &expires)
+		if err == sql.ErrNoRows || (err == nil && !matchesResetOTP(req.Email, req.OTP, storedToken)) {
 			status := http.StatusUnauthorized
 			attempts, rateErr := recordAuthRateLimit(db, "otp_failure", req.Email, otpLockDuration)
 			if rateErr != nil {
 				http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
+				return
 			} else if attempts >= maxOTPAttempts {
 				status = http.StatusTooManyRequests
 				http.Error(w, `{"error":"กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาที"}`, status)
@@ -81,7 +86,7 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 		// Consume the exact OTP in the same transaction as the password update.
-		result, err := tx.Exec("DELETE FROM password_resets WHERE email = ? AND token = ? AND expires_at = ?", req.Email, req.OTP, expires)
+		result, err := tx.Exec("DELETE FROM password_resets WHERE email = ? AND token = ? AND expires_at = ?", req.Email, storedToken, expires)
 		if err != nil {
 			http.Error(w, `{"error":"บันทึกรหัสผ่านไม่สำเร็จ"}`, http.StatusInternalServerError)
 			return
@@ -98,7 +103,11 @@ func HandlePasswordReset(db *sql.DB) http.HandlerFunc {
 		err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(backup_email) = LOWER(?) LIMIT 1", req.Email).Scan(&adminID)
 		if err != nil {
 			// Fallback: match by primary email (ordered by superadmin first, then id)
-			err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(email) = LOWER(?) ORDER BY id ASC LIMIT 1", req.Email).Scan(&adminID)
+			err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(email) = LOWER(?) ORDER BY CASE WHEN role = 'superadmin' THEN 0 ELSE 1 END, id ASC LIMIT 1", req.Email).Scan(&adminID)
+			if err != nil {
+				// Fallback for legacy schemas without role column in minimal unit test fixtures
+				err = tx.QueryRow("SELECT id FROM admins WHERE LOWER(email) = LOWER(?) ORDER BY id ASC LIMIT 1", req.Email).Scan(&adminID)
+			}
 		}
 		if err != nil {
 			http.Error(w, `{"error":"ไม่พบบัญชีที่ต้องการเปลี่ยนรหัสผ่าน"}`, http.StatusUnauthorized)

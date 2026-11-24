@@ -274,6 +274,7 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			Password string `json:"password"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
@@ -294,13 +295,25 @@ func LoginHandler(db *sql.DB) http.HandlerFunc {
 			loginIdentifier = creds.Email
 		}
 		loginIdentifier = strings.TrimSpace(loginIdentifier)
+		loginLower := strings.ToLower(loginIdentifier)
 		if !allowRequestAttempt(r, "login-ip", 30, 15*time.Minute) ||
-			!allowRequestAttempt(r, "login-account:"+strings.ToLower(loginIdentifier), 10, 15*time.Minute) {
+			!allowRequestAttempt(r, "login-account:"+loginLower, 10, 15*time.Minute) {
 			http.Error(w, `{"error": "เข้าสู่ระบบบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
 			return
 		}
 
-		err := db.QueryRow("SELECT id, username, password, COALESCE(role, 'services'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(must_change_password, 0) FROM admins WHERE username = ? OR email = ? OR backup_email = ?", loginIdentifier, loginIdentifier, loginIdentifier).Scan(&admin.ID, &admin.Username, &admin.Password, &admin.Role, &admin.Email, &admin.ProfileImage, &admin.MustChangePassword)
+		err := db.QueryRow(`
+			SELECT id, username, password, COALESCE(role, 'services'), COALESCE(email, ''), COALESCE(profile_image, ''), COALESCE(must_change_password, 0)
+			FROM admins
+			WHERE LOWER(username) = ? OR LOWER(backup_email) = ? OR LOWER(email) = ?
+			ORDER BY CASE
+				WHEN LOWER(username) = ? THEN 0
+				WHEN LOWER(backup_email) = ? THEN 1
+				WHEN role = 'superadmin' THEN 2
+				ELSE 3
+			END, id ASC
+			LIMIT 1
+		`, loginLower, loginLower, loginLower, loginLower, loginLower).Scan(&admin.ID, &admin.Username, &admin.Password, &admin.Role, &admin.Email, &admin.ProfileImage, &admin.MustChangePassword)
 		if err != nil || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(creds.Password)) != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte(`{"error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"}`))
@@ -364,7 +377,7 @@ func AuthMiddleware(db *sql.DB, next http.Handler) http.Handler {
 		// ป้องกันเซิร์ฟเวอร์ล่มจากการยิงไฟล์ขนาดใหญ่ (DoS Disk Exhaustion)
 		r.Body = http.MaxBytesReader(w, r.Body, 50<<20) // จำกัดขนาดที่ 50MB ต่อ 1 Request
 
-		if path == "/api/login" || path == "/api/login/qr" || path == "/api/register" || path == "/api/change-password" || path == "/api/forgot-password" || path == "/api/verify-otp" || path == "/api/reset-password" || path == "/api/webhook/line" || path == "/api/liff/link" || path == "/api/liff/rooms" || path == "/api/liff/status" || path == "/api/liff/verify-tenant" || path == "/api/setup/status" || path == "/api/setup" || path == "/api/system/ping" || path == "/api/auth/register" || path == "/api/auth/login" {
+		if path == "/api/login" || path == "/api/login/qr" || path == "/api/register" || path == "/api/admins/invite/register" || path == "/api/change-password" || path == "/api/forgot-password" || path == "/api/verify-otp" || path == "/api/reset-password" || path == "/api/webhook/line" || path == "/api/liff/link" || path == "/api/liff/rooms" || path == "/api/liff/status" || path == "/api/liff/verify-tenant" || path == "/api/setup/status" || path == "/api/setup" || path == "/api/system/ping" || path == "/api/auth/register" || path == "/api/auth/login" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -463,47 +476,25 @@ func ChangePasswordHandler(db *sql.DB) http.HandlerFunc {
 			NewPassword string `json:"new_password"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
-		if !allowRequestAttempt(r, "change-password:"+strings.ToLower(strings.TrimSpace(req.Username)), 10, 15*time.Minute) {
+		req.Username = strings.TrimSpace(req.Username)
+		req.NewUsername = strings.TrimSpace(req.NewUsername)
+		if !allowRequestAttempt(r, "change-password-ip", 30, 15*time.Minute) ||
+			!allowRequestAttempt(r, "change-password:"+strings.ToLower(req.Username), 10, 15*time.Minute) {
 			http.Error(w, `{"error": "ลองเปลี่ยนรหัสผ่านบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
 			return
 		}
 
 		var admin Admin
-		err := db.QueryRow("SELECT id, username, password FROM admins WHERE username = ?", req.Username).Scan(&admin.ID, &admin.Username, &admin.Password)
-		if err != nil {
+		err := db.QueryRow("SELECT id, username, password FROM admins WHERE LOWER(username) = LOWER(?)", req.Username).Scan(&admin.ID, &admin.Username, &admin.Password)
+		if err != nil || req.OldPassword == "" || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.OldPassword)) != nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error": "ไม่พบผู้ใช้นี้"}`))
+			w.Write([]byte(`{"error": "ชื่อผู้ใช้หรือรหัสผ่านเดิมไม่ถูกต้อง"}`))
 			return
-		}
-
-		// Check if authenticated via token (e.g., from QR login) or via old password
-		authHeader := r.Header.Get("Authorization")
-		tokenStr := ""
-		if authHeader != "" {
-			parts := strings.Split(authHeader, " ")
-			if len(parts) == 2 && parts[0] == "Bearer" {
-				tokenStr = parts[1]
-			}
-		}
-
-		authenticated := false
-		if tokenStr != "" {
-			claims, _, err := authenticateSession(db, tokenStr)
-			if err == nil && claims.Username == req.Username {
-				authenticated = true
-			}
-		}
-
-		if !authenticated {
-			if req.OldPassword == "" || bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.OldPassword)) != nil {
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error": "ชื่อผู้ใช้หรือรหัสผ่านเดิมไม่ถูกต้อง"}`))
-				return
-			}
 		}
 
 		if !isValidPassword(req.NewPassword) {
@@ -846,7 +837,7 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			NewPassword string  `json:"new_password"`
 			Role        string  `json:"role"`
 			Email       string  `json:"email"`
-			BackupEmail string  `json:"backup_email"`
+			BackupEmail *string `json:"backup_email"`
 			PromptPayID *string `json:"promptpay_id"`
 			PaymentType *string `json:"payment_type"`
 			BankAccount *string `json:"bank_account"`
@@ -857,27 +848,36 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
-		if req.Email != "" && req.BackupEmail != "" && strings.EqualFold(strings.TrimSpace(req.Email), strings.TrimSpace(req.BackupEmail)) {
-			http.Error(w, `{"error": "อีเมลสำรองต้องไม่ตรงกับอีเมลหลัก"}`, http.StatusBadRequest)
-			return
-		}
+		req.Username = strings.TrimSpace(req.Username)
 		if req.Email != "" && !strings.EqualFold(strings.TrimSpace(req.Email), targetEmail) {
 			http.Error(w, `{"error": "การเปลี่ยนอีเมลหลักต้องใช้ขั้นตอนย้าย account โดยเฉพาะ"}`, http.StatusBadRequest)
 			return
+		}
+		var normalizedBackupEmail *string
+		if req.BackupEmail != nil {
+			be := strings.ToLower(strings.TrimSpace(*req.BackupEmail))
+			if be != "" {
+				if !isValidEmail(be) {
+					http.Error(w, `{"error": "รูปแบบอีเมลสำรองไม่ถูกต้อง"}`, http.StatusBadRequest)
+					return
+				}
+				if strings.EqualFold(be, targetEmail) {
+					http.Error(w, `{"error": "อีเมลสำรองต้องไม่ตรงกับอีเมลหลัก"}`, http.StatusBadRequest)
+					return
+				}
+				var count int
+				err := db.QueryRow("SELECT COUNT(*) FROM admins WHERE (LOWER(backup_email) = LOWER(?) OR LOWER(email) = LOWER(?)) AND id != ?", be, be, id).Scan(&count)
+				if err == nil && count > 0 {
+					http.Error(w, `{"error": "อีเมลสำรองนี้ถูกใช้งานโดยบัญชีอื่นแล้ว"}`, http.StatusBadRequest)
+					return
+				}
+			}
+			normalizedBackupEmail = &be
 		}
 		if req.Role != "" {
 			req.Role = strings.ToLower(strings.TrimSpace(req.Role))
 			if requesterRole != "superadmin" || targetRole == "superadmin" || !validStaffRole(req.Role) {
 				http.Error(w, `{"error": "ไม่อนุญาตให้เปลี่ยนสิทธิ์นี้"}`, http.StatusForbidden)
-				return
-			}
-		}
-
-		if req.BackupEmail != "" {
-			var count int
-			err := db.QueryRow("SELECT COUNT(*) FROM admins WHERE LOWER(backup_email) = LOWER(?) AND id != ?", req.BackupEmail, id).Scan(&count)
-			if err == nil && count > 0 {
-				http.Error(w, `{"error": "อีเมลสำรองนี้ถูกใช้งานโดยพนักงานอื่นแล้ว"}`, http.StatusBadRequest)
 				return
 			}
 		}
@@ -926,17 +926,10 @@ func UpdateAdminHandler(db *sql.DB) http.HandlerFunc {
 			args = append(args, req.Role)
 		}
 
-		// Let's use a map to decode instead to know exactly what was sent
-		// json.NewDecoder(r.Body) // Oops, we already decoded.
-		// Just rely on the struct fields and update them if they are not empty.
-		// Wait! If they want to remove their email, req.Email is "". We can't tell if it was sent as "" or omitted.
-		// Let's just update email if it was sent. But since we already decoded into `req`, we can just check if Username is present (rename request), we also update Email.
-
-		if req.Username != "" {
-			query += "email = ?, "
-			args = append(args, req.Email)
+		// Never overwrite primary email in UpdateAdminHandler; only update backup_email when explicitly provided.
+		if normalizedBackupEmail != nil {
 			query += "backup_email = ?, "
-			args = append(args, req.BackupEmail)
+			args = append(args, *normalizedBackupEmail)
 		}
 		if req.PromptPayID != nil {
 			query += "promptpay_id = ?, "
@@ -1163,7 +1156,7 @@ func UpdateProfileImageHandler(db *sql.DB) http.HandlerFunc {
 
 func generateUniqueDormCode(db *sql.DB) string {
 	max := big.NewInt(1000000)
-	for {
+	for attempts := 0; attempts < 100; attempts++ {
 		n, err := rand.Int(rand.Reader, max)
 		if err != nil {
 			continue
@@ -1174,6 +1167,7 @@ func generateUniqueDormCode(db *sql.DB) string {
 			return code
 		}
 	}
+	return fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
 }
 
 func RegisterHandler(db *sql.DB) http.HandlerFunc {
@@ -1210,9 +1204,9 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Check if email already exists
+		// Check if email already exists (across both primary email and backup_email)
 		var exists bool
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE email = ?)", req.Email).Scan(&exists)
+		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE LOWER(email) = LOWER(?) OR LOWER(backup_email) = LOWER(?))", req.Email, req.Email).Scan(&exists)
 		if err != nil {
 			http.Error(w, `{"status": "error", "message": "เกิดข้อผิดพลาดกับฐานข้อมูล"}`, http.StatusInternalServerError)
 			return
@@ -1222,8 +1216,8 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Check if username (name) already exists just in case
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE username = ?)", req.Name).Scan(&exists)
+		// Check if username (name) already exists (case-insensitive)
+		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE LOWER(username) = LOWER(?))", req.Name).Scan(&exists)
 		if err != nil {
 			http.Error(w, `{"status": "error", "message": "เกิดข้อผิดพลาดกับฐานข้อมูล"}`, http.StatusInternalServerError)
 			return
@@ -1242,7 +1236,7 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 
 		// Create as superadmin for their own new dorm
 		dormCode := generateUniqueDormCode(db)
-		result, err := db.Exec("INSERT INTO admins (username, password, role, email, dorm_code) VALUES (?, ?, 'superadmin', ?, ?)", req.Name, hashedPassword, req.Email, dormCode)
+		result, err := db.Exec("INSERT INTO admins (username, password, role, email, dorm_code) VALUES (?, ?, 'superadmin', ?, ?)", req.Name, string(hashedPassword), req.Email, dormCode)
 		if err != nil {
 			http.Error(w, `{"status": "error", "message": "ไม่สามารถสร้างบัญชีได้"}`, http.StatusInternalServerError)
 			return
@@ -1276,6 +1270,49 @@ func RegisterHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func ensureOneTimeTokensTable(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS one_time_tokens (
+		jti TEXT PRIMARY KEY,
+		purpose TEXT NOT NULL,
+		admin_id INTEGER NOT NULL,
+		expires_at TEXT NOT NULL,
+		consumed_at TEXT
+	)`)
+	return err
+}
+
+func storeOneTimeToken(db *sql.DB, jti, purpose string, adminID int, expiresAt time.Time) error {
+	if err := ensureOneTimeTokensTable(db); err != nil {
+		return err
+	}
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+	_, _ = db.Exec("DELETE FROM one_time_tokens WHERE expires_at <= ?", now)
+	_, err := db.Exec(
+		"INSERT INTO one_time_tokens (jti, purpose, admin_id, expires_at) VALUES (?, ?, ?, ?)",
+		jti, purpose, adminID, expiresAt.UTC().Format("2006-01-02T15:04:05.000000000Z"),
+	)
+	return err
+}
+
+func consumeOneTimeToken(db *sql.DB, jti, purpose string) bool {
+	if jti == "" {
+		return false
+	}
+	if err := ensureOneTimeTokensTable(db); err != nil {
+		return false
+	}
+	now := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+	res, err := db.Exec(
+		"UPDATE one_time_tokens SET consumed_at = ? WHERE jti = ? AND purpose = ? AND consumed_at IS NULL AND expires_at > ?",
+		now, jti, purpose, now,
+	)
+	if err != nil {
+		return false
+	}
+	n, _ := res.RowsAffected()
+	return n == 1
+}
+
 func GenerateInviteTokenHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
@@ -1288,18 +1325,32 @@ func GenerateInviteTokenHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Ensure the user requesting this has services (admin) role
-		if !IsServicesRole(r) {
+		// Only superadmin can invite new staff into their own dormitory tenant
+		requesterID, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil || requesterRole != "superadmin" {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusForbidden)
 			return
 		}
 
-		// Generate a token valid for 5 minutes
+		nonce := make([]byte, 16)
+		if _, err := rand.Read(nonce); err != nil {
+			http.Error(w, `{"error": "Could not generate token"}`, http.StatusInternalServerError)
+			return
+		}
+		jti := hex.EncodeToString(nonce)
 		expirationTime := time.Now().Add(5 * time.Minute)
+		if err := storeOneTimeToken(db, jti, "invite", requesterID, expirationTime); err != nil {
+			http.Error(w, `{"error": "Could not store invite token"}`, http.StatusInternalServerError)
+			return
+		}
+
 		claims := jwt.MapClaims{
-			"username": "invite",
-			"role":     "invite",
-			"exp":      expirationTime.Unix(),
+			"username":    "invite",
+			"role":        "invite",
+			"jti":         jti,
+			"owner_id":    requesterID,
+			"owner_email": requesterEmail,
+			"exp":         expirationTime.Unix(),
 		}
 
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -1405,23 +1456,42 @@ func RegisterWithInviteHandler(db *sql.DB) http.HandlerFunc {
 			Password    string `json:"password"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 8192)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
+		if !allowRequestAttempt(r, "invite-register-ip", 10, 15*time.Minute) {
+			http.Error(w, `{"error": "ทำรายการบ่อยเกินไป กรุณารอ 15 นาที"}`, http.StatusTooManyRequests)
+			return
+		}
 
-		if _, err := parsePurposeToken(req.InviteToken, "invite"); err != nil {
+		claims, err := parsePurposeToken(req.InviteToken, "invite")
+		if err != nil {
 			http.Error(w, `{"error": "QR Code หมดอายุหรือไม่ถูกต้อง กรุณาให้เครื่องแม่สร้างใหม่"}`, http.StatusUnauthorized)
+			return
+		}
+		jti, _ := claims["jti"].(string)
+		ownerEmail, _ := claims["owner_email"].(string)
+		ownerEmail = strings.ToLower(strings.TrimSpace(ownerEmail))
+		if ownerEmail == "" {
+			http.Error(w, `{"error": "QR Code ไม่ระบุขอบเขตหอพัก กรุณาสร้างใหม่"}`, http.StatusUnauthorized)
 			return
 		}
 
 		// Basic Validation
+		req.Username = strings.TrimSpace(req.Username)
 		if req.Username == "" || req.Password == "" {
 			http.Error(w, `{"error": "กรุณากรอกข้อมูลให้ครบถ้วน"}`, http.StatusBadRequest)
 			return
 		}
 		if !isValidPassword(req.Password) {
 			http.Error(w, `{"error": "รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร และประกอบด้วยตัวอักษรและตัวเลข"}`, http.StatusBadRequest)
+			return
+		}
+
+		if !consumeOneTimeToken(db, jti, "invite") {
+			http.Error(w, `{"error": "QR Code ถูกใช้งานไปแล้วหรือหมดอายุ กรุณาสร้างใหม่"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -1432,8 +1502,8 @@ func RegisterWithInviteHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Insert into DB with default role 'dorm'
-		_, err = db.Exec("INSERT INTO admins (username, password, role) VALUES (?, ?, ?)", req.Username, string(hashedPassword), "dorm")
+		// Insert into DB scoped to the inviting superadmin's email with default role 'dorm'
+		_, err = db.Exec("INSERT INTO admins (username, email, password, role) VALUES (?, ?, ?, ?)", req.Username, ownerEmail, string(hashedPassword), "dorm")
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 				http.Error(w, `{"error": "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว"}`, http.StatusConflict)
@@ -1463,8 +1533,9 @@ func GenerateLoginTokenHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Only admins can generate login tokens for others
-		if !IsServicesRole(r) {
+		// Only superadmin can generate one-time QR login tokens for staff within the SAME tenant
+		requesterID, requesterRole, requesterEmail, err := currentAdminScope(db, r)
+		if err != nil || requesterRole != "superadmin" {
 			http.Error(w, `{"error": "Unauthorized"}`, http.StatusForbidden)
 			return
 		}
@@ -1473,29 +1544,48 @@ func GenerateLoginTokenHandler(db *sql.DB) http.HandlerFunc {
 			TargetUsername string `json:"target_username"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
 		}
 
+		req.TargetUsername = strings.TrimSpace(req.TargetUsername)
 		if req.TargetUsername == "" {
 			http.Error(w, `{"error": "Target username is required"}`, http.StatusBadRequest)
 			return
 		}
 
-		// Verify that the user exists
-		var exists bool
-		err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM admins WHERE username = ?)", req.TargetUsername).Scan(&exists)
-		if err != nil || !exists {
+		// Verify target user exists and belongs to the same tenant (and is not another superadmin)
+		var targetID int
+		var targetRole, targetEmail string
+		err = db.QueryRow("SELECT id, COALESCE(role, 'services'), COALESCE(email, '') FROM admins WHERE username = ?", req.TargetUsername).Scan(&targetID, &targetRole, &targetEmail)
+		if err != nil {
 			http.Error(w, `{"error": "User not found"}`, http.StatusNotFound)
 			return
 		}
+		targetEmail = strings.ToLower(strings.TrimSpace(targetEmail))
+		if targetEmail == "" || targetEmail != requesterEmail || (targetRole == "superadmin" && targetID != requesterID) {
+			http.Error(w, `{"error": "Forbidden: Cannot generate login token outside your dormitory scope"}`, http.StatusForbidden)
+			return
+		}
 
-		// Generate a token valid for 1 minute
+		nonce := make([]byte, 16)
+		if _, err := rand.Read(nonce); err != nil {
+			http.Error(w, `{"error": "Could not generate token"}`, http.StatusInternalServerError)
+			return
+		}
+		jti := hex.EncodeToString(nonce)
 		expirationTime := time.Now().Add(1 * time.Minute)
+		if err := storeOneTimeToken(db, jti, "login_qr", targetID, expirationTime); err != nil {
+			http.Error(w, `{"error": "Could not store login token"}`, http.StatusInternalServerError)
+			return
+		}
+
 		claims := jwt.MapClaims{
 			"username": req.TargetUsername,
 			"role":     "login_qr", // specific role for QR login
+			"jti":      jti,
 			"exp":      expirationTime.Unix(),
 		}
 
@@ -1514,7 +1604,7 @@ func GenerateLoginTokenHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// LoginWithQRHandler logs a user in using a valid login_token
+// LoginWithQRHandler logs a user in using a valid single-use login_token
 func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		utils.EnableCORS(w)
@@ -1531,6 +1621,7 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 			LoginToken string `json:"login_token"`
 		}
 
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, `{"error": "Invalid request"}`, http.StatusBadRequest)
 			return
@@ -1547,8 +1638,13 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		username, _ := claims["username"].(string)
-		if username == "" {
+		jti, _ := claims["jti"].(string)
+		if username == "" || jti == "" {
 			http.Error(w, `{"error": "QR Code ไม่สมบูรณ์"}`, http.StatusBadRequest)
+			return
+		}
+		if !consumeOneTimeToken(db, jti, "login_qr") {
+			http.Error(w, `{"error": "QR Code ถูกใช้งานไปแล้วหรือหมดอายุ กรุณาสร้างใหม่"}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -1559,6 +1655,18 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 		err = db.QueryRow("SELECT id, role, COALESCE(profile_image, ''), COALESCE(must_change_password, 0) FROM admins WHERE username = ?", username).Scan(&id, &userRole, &profileImage, &mustChangePassword)
 		if err != nil {
 			http.Error(w, `{"error": "ไม่พบบัญชีผู้ใช้นี้ในระบบ"}`, http.StatusUnauthorized)
+			return
+		}
+		if mustChangePassword == 1 {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"id":                      id,
+				"require_password_change": true,
+				"username":                username,
+				"role":                    userRole,
+				"profile_image":           profileImage,
+				"must_change_password":    true,
+			})
 			return
 		}
 
@@ -1578,7 +1686,7 @@ func LoginWithQRHandler(db *sql.DB) http.HandlerFunc {
 			"username":             username,
 			"role":                 userRole,
 			"profile_image":        profileImage,
-			"must_change_password": mustChangePassword == 1,
+			"must_change_password": false,
 		})
 	}
 }

@@ -57,7 +57,9 @@ func VerifySlip(filePath string, expectedAmount float64, expectedReceiver string
 			}
 		}
 	}
-	file.Seek(0, 0) // Reset file pointer
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return false, "Could not rewind slip image", ""
+	}
 
 	// Fail closed if no QR code is found on the slip (Replay protection requires QR)
 	if payload == "" {
@@ -107,12 +109,12 @@ func verifyWithSlipOK(file *os.File, apiUrl, apiKey string, expectedAmount float
 	defer resp.Body.Close()
 
 	var result SlipOkResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&result); err != nil {
 		return false, "Invalid API response"
 	}
 
-	// 400 Bad Request or API business logic failure
-	if !result.Success {
+	// Non-200 HTTP status or API business logic failure
+	if resp.StatusCode != http.StatusOK || !result.Success {
 		if result.Message != "" {
 			return false, fmt.Sprintf("ตรวจสอบสลิปไม่ผ่าน: %s", result.Message)
 		}
@@ -128,36 +130,58 @@ func verifyWithSlipOK(file *os.File, apiUrl, apiKey string, expectedAmount float
 		return false, fmt.Sprintf("ยอดเงินในสลิป (%.2f) ไม่ตรงกับยอดที่เรียกเก็บ (%.2f)", result.Data.Amount, expectedAmount)
 	}
 
-	// Check receiver if expectedReceiver is provided
-	if expectedReceiver != "" {
-		var accountStr string
-		if result.Data.Receiver.Proxy.Value != nil {
-			accountStr = strings.ReplaceAll(*result.Data.Receiver.Proxy.Value, "-", "")
-		} else if result.Data.Receiver.Account.Value != nil {
-			accountStr = strings.ReplaceAll(*result.Data.Receiver.Account.Value, "-", "")
+	// Check receiver if expectedReceiver is provided (fail-closed)
+	if strings.TrimSpace(expectedReceiver) != "" {
+		cleanReceiverDigits := func(raw string) string {
+			var b strings.Builder
+			for _, r := range raw {
+				if r >= '0' && r <= '9' {
+					b.WriteRune(r)
+				}
+			}
+			return b.String()
 		}
-		
-		accountStr = strings.ReplaceAll(accountStr, "x", "")
-		accountStr = strings.ReplaceAll(accountStr, "X", "")
 
-		if len(accountStr) >= 4 {
-			// support format like "0812345678_1234567890" or "0812345678/1234567890"
-			parts := strings.FieldsFunc(expectedReceiver, func(r rune) bool {
-				return r == '_' || r == '/' || r == '|' || r == ' '
-			})
-			
-			matched := false
-			for _, p := range parts {
-				expectedStr := strings.ReplaceAll(p, "-", "")
-				if len(expectedStr) >= 4 && strings.HasSuffix(accountStr, expectedStr[len(expectedStr)-4:]) {
+		var candidates []string
+		if result.Data.Receiver.Proxy.Value != nil {
+			if digits := cleanReceiverDigits(*result.Data.Receiver.Proxy.Value); len(digits) >= 4 {
+				candidates = append(candidates, digits)
+			}
+		}
+		if result.Data.Receiver.Account.Value != nil {
+			if digits := cleanReceiverDigits(*result.Data.Receiver.Account.Value); len(digits) >= 4 {
+				candidates = append(candidates, digits)
+			}
+		}
+		if len(candidates) == 0 {
+			return false, "ไม่สามารถยืนยันบัญชีผู้รับโอนจากสลิปได้ กรุณารอแอดมินตรวจสอบ"
+		}
+
+		// support format like "0812345678_1234567890" or "0812345678/1234567890"
+		parts := strings.FieldsFunc(expectedReceiver, func(r rune) bool {
+			return r == '_' || r == '/' || r == '|' || r == ' '
+		})
+
+		matched := false
+		for _, p := range parts {
+			expectedStr := cleanReceiverDigits(p)
+			if len(expectedStr) < 4 {
+				continue
+			}
+			suffix := expectedStr[len(expectedStr)-4:]
+			for _, candidate := range candidates {
+				if strings.HasSuffix(candidate, suffix) {
 					matched = true
 					break
 				}
 			}
-			
-			if !matched {
-				return false, "ชื่อหรือบัญชีผู้รับโอนเงินไม่ถูกต้อง กรุณาโอนเงินเข้าบัญชีหอพักเท่านั้น"
+			if matched {
+				break
 			}
+		}
+
+		if !matched {
+			return false, "ชื่อหรือบัญชีผู้รับโอนเงินไม่ถูกต้อง กรุณาโอนเงินเข้าบัญชีหอพักเท่านั้น"
 		}
 	}
 

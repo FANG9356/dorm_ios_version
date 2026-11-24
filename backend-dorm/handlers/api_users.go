@@ -300,12 +300,21 @@ func SetupUserRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/move-out", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
+		masterDB := db
+		tenantDB, tenantErr := RequestTenantDB(r, masterDB)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
 		}
+		if tenantErr != nil {
+			http.Error(w, "Tenant unavailable", http.StatusForbidden)
+			return
+		}
 		if r.Method == "POST" {
+			if !IsServicesRole(r) {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
 			var req struct {
 				UserID          int     `json:"user_id"`
 				RoomNumber      string  `json:"room_number"`
@@ -318,77 +327,117 @@ func SetupUserRoutes(db *sql.DB) {
 				http.Error(w, "ข้อมูลไม่ถูกต้อง", http.StatusBadRequest)
 				return
 			}
-			if req.CleaningFee < 0 || req.DamageFee < 0 || req.OriginalDeposit < 0 {
+			if req.UserID <= 0 || req.CleaningFee < 0 || req.DamageFee < 0 || req.OriginalDeposit < 0 {
 				http.Error(w, "จำนวนเงินห้ามติดลบ", http.StatusBadRequest)
 				return
 			}
-			tx, err := db.Begin()
+			tx, err := tenantDB.Begin()
 			if err != nil {
 				http.Error(w, "ไม่สามารถเริ่ม Transaction ได้", http.StatusInternalServerError)
 				return
 			}
+			defer tx.Rollback()
+
+			var storedDeposit float64
+			var currentStatus, storedRoom, externalID string
+			if err := tx.QueryRow("SELECT COALESCE(deposit, 0), COALESCE(status, ''), COALESCE(room_number, ''), COALESCE(external_id, '') FROM users WHERE user_id = ?", req.UserID).Scan(&storedDeposit, &currentStatus, &storedRoom, &externalID); err != nil {
+				http.Error(w, "ไม่พบข้อมูลลูกบ้าน", http.StatusNotFound)
+				return
+			}
+			if currentStatus == "ย้ายออกแล้ว" || currentStatus == "ย้ายออก" {
+				http.Error(w, "ลูกบ้านรายนี้ย้ายออกไปแล้ว", http.StatusConflict)
+				return
+			}
+			origDeposit := storedDeposit
+			if origDeposit <= 0 && req.OriginalDeposit > 0 {
+				origDeposit = req.OriginalDeposit
+			}
+			computedRefund := origDeposit - req.CleaningFee - req.DamageFee
+			if computedRefund < 0 {
+				computedRefund = 0
+			}
+			roomNum := strings.TrimSpace(req.RoomNumber)
+			if roomNum == "" {
+				roomNum = storedRoom
+			}
+
 			refundDate := time.Now().Format("2006-01-02 15:04:05")
-			_, err = tx.Exec("INSERT INTO deposit_refunds (user_id, room_number, original_deposit, cleaning_fee, damage_fee, net_refund, refund_date) VALUES (?, ?, ?, ?, ?, ?, ?)", req.UserID, req.RoomNumber, req.OriginalDeposit, req.CleaningFee, req.DamageFee, req.NetRefund, refundDate)
+			_, err = tx.Exec("INSERT INTO deposit_refunds (user_id, room_number, original_deposit, cleaning_fee, damage_fee, net_refund, refund_date) VALUES (?, ?, ?, ?, ?, ?, ?)", req.UserID, roomNum, origDeposit, req.CleaningFee, req.DamageFee, computedRefund, refundDate)
 			if err != nil {
-				tx.Rollback()
 				http.Error(w, "บันทึกยอดเงินคืนไม่สำเร็จ", http.StatusInternalServerError)
 				return
 			}
 			_, err = tx.Exec("UPDATE users SET status = 'ย้ายออกแล้ว', line_user_id = '', bot_state = 'none' WHERE user_id = ?", req.UserID)
 			if err != nil {
-				tx.Rollback()
 				http.Error(w, "อัปเดตสถานะลูกบ้านไม่สำเร็จ", http.StatusInternalServerError)
 				return
 			}
-			tx.Commit()
+			if err := tx.Commit(); err != nil {
+				http.Error(w, "บันทึกการย้ายออกไม่สำเร็จ", http.StatusInternalServerError)
+				return
+			}
+			if externalID != "" {
+				if _, accountID, _, accErr := resolveSyncAccount(masterDB, r); accErr == nil && accountID > 0 {
+					_, _ = masterDB.Exec("UPDATE line_links SET status = 'unlinked', updated_at = ? WHERE account_id = ? AND tenant_id = ?", time.Now().UTC().Format(time.RFC3339), accountID, externalID)
+				}
+			}
 			w.WriteHeader(http.StatusOK)
 		}
 	})
 
 	http.HandleFunc("/api/users/unmask-id", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
+		masterDB := db
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
 		}
 		if r.Method == "POST" {
+			if !IsServicesRole(r) {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+			if !allowRequestAttempt(r, "unmask-id", 10, 15*time.Minute) {
+				http.Error(w, "ทำรายการบ่อยเกินไป กรุณารอสักครู่", http.StatusTooManyRequests)
+				return
+			}
+			adminID, ok := r.Context().Value("admin_id").(int)
+			if !ok || adminID <= 0 {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			tenantDB, tenantErr := RequestTenantDB(r, masterDB)
+			if tenantErr != nil {
+				http.Error(w, "Tenant unavailable", http.StatusForbidden)
+				return
+			}
 			var req struct {
 				UserID   int    `json:"user_id"`
 				Password string `json:"password"`
 			}
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, 4096)
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID <= 0 || req.Password == "" {
 				http.Error(w, "ข้อมูลไม่ถูกต้อง", http.StatusBadRequest)
 				return
 			}
 
-			rows, err := db.Query("SELECT password FROM admins")
-			if err != nil {
-				http.Error(w, "เกิดข้อผิดพลาดของฐานข้อมูล", http.StatusInternalServerError)
-				return
-			}
-			defer rows.Close()
-
-			valid := false
-			for rows.Next() {
-				var hash string
-				rows.Scan(&hash)
-				if bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) == nil {
-					valid = true
-					break
-				}
-			}
-
-			if !valid {
+			var hash, actorUsername string
+			err := masterDB.QueryRow("SELECT password, COALESCE(username, '') FROM admins WHERE id = ?", adminID).Scan(&hash, &actorUsername)
+			if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password)) != nil {
 				http.Error(w, "รหัสผ่านไม่ถูกต้อง", http.StatusUnauthorized)
 				return
 			}
 
 			var realID string
-			err = db.QueryRow("SELECT national_id FROM users WHERE user_id = ?", req.UserID).Scan(&realID)
+			err = tenantDB.QueryRow("SELECT COALESCE(national_id, '') FROM users WHERE user_id = ?", req.UserID).Scan(&realID)
 			if err != nil {
 				http.Error(w, "ไม่พบข้อมูลลูกบ้าน", http.StatusNotFound)
 				return
 			}
+			_, _ = tenantDB.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES (?, ?, ?)",
+				"Unmask National ID",
+				fmt.Sprintf("แอดมิน %s เปิดดูเลขบัตรประชาชนของ user_id=%d", actorUsername, req.UserID),
+				time.Now().Format("2006-01-02 15:04:05"),
+			)
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"national_id": realID})

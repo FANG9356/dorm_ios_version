@@ -41,26 +41,18 @@ func RequestTenantDB(r *http.Request, master *sql.DB) (*sql.DB, error) {
 
 			var superadminID int
 			email = strings.ToLower(strings.TrimSpace(email))
-			if email != "" {
-				err = master.QueryRow(`
-					SELECT id 
-					FROM admins 
-					WHERE LOWER(email) = ? AND role = 'superadmin' 
-					ORDER BY id ASC
-					LIMIT 1
-				`, email).Scan(&superadminID)
+			if email == "" {
+				return nil, fmt.Errorf("staff account %d has no owner email scope", id)
 			}
-
+			err = master.QueryRow(`
+				SELECT id
+				FROM admins
+				WHERE LOWER(TRIM(email)) = ? AND role = 'superadmin'
+				ORDER BY id ASC
+				LIMIT 1
+			`, email).Scan(&superadminID)
 			if err != nil || superadminID <= 0 {
-				// Fallback to primary owner (superadmin) in single-dorm deployment
-				var defaultOwnerID int
-				if fallbackErr := master.QueryRow(`
-					SELECT id FROM admins WHERE role = 'superadmin' ORDER BY id ASC LIMIT 1
-				`).Scan(&defaultOwnerID); fallbackErr == nil && defaultOwnerID > 0 {
-					superadminID = defaultOwnerID
-				} else {
-					return nil, fmt.Errorf("resolve tenant owner: %w", err)
-				}
+				return nil, fmt.Errorf("resolve tenant owner: %w", err)
 			}
 
 			return GetTenantDB(superadminID)

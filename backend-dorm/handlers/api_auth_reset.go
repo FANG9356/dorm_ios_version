@@ -1,11 +1,16 @@
 package handlers
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"dorm_os/utils"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html"
 	"math/big"
 	"net/http"
 	"os"
@@ -14,6 +19,26 @@ import (
 
 	"github.com/resend/resend-go/v3"
 )
+
+const rateLimitTimeFormat = "2006-01-02T15:04:05.000000000Z"
+
+func hashResetOTP(email, otp string) string {
+	secret := []byte(strings.TrimSpace(os.Getenv("JWT_SECRET")))
+	if len(secret) == 0 {
+		secret = []byte("dorminet-reset-otp-fallback-key")
+	}
+	mac := hmac.New(sha256.New, secret)
+	_, _ = fmt.Fprintf(mac, "dorminet-reset-otp-v1\n%s\n%s", strings.ToLower(strings.TrimSpace(email)), strings.TrimSpace(otp))
+	return "sha256:" + hex.EncodeToString(mac.Sum(nil))
+}
+
+func matchesResetOTP(email, providedOTP, storedToken string) bool {
+	if strings.HasPrefix(storedToken, "sha256:") {
+		expected := hashResetOTP(email, providedOTP)
+		return subtle.ConstantTimeCompare([]byte(expected), []byte(storedToken)) == 1
+	}
+	return subtle.ConstantTimeCompare([]byte(providedOTP), []byte(storedToken)) == 1
+}
 
 const maxOTPAttempts = 5
 const otpLockDuration = 15 * time.Minute
@@ -37,8 +62,8 @@ func recordAuthRateLimit(db *sql.DB, scope, identifier string, window time.Durat
 	if err := ensureAuthRateLimitTable(db); err != nil {
 		return 0, err
 	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	expiresAt := time.Now().UTC().Add(window).Format(time.RFC3339Nano)
+	now := time.Now().UTC().Format(rateLimitTimeFormat)
+	expiresAt := time.Now().UTC().Add(window).Format(rateLimitTimeFormat)
 	if _, err := db.Exec("DELETE FROM auth_rate_limits WHERE expires_at <= ?", now); err != nil {
 		return 0, err
 	}
@@ -62,7 +87,7 @@ func authRateLimitLocked(db *sql.DB, scope, identifier string, threshold int) (b
 	err := db.QueryRow(`
 		SELECT attempts FROM auth_rate_limits
 		WHERE scope = ? AND identifier = ? AND expires_at > ?
-	`, scope, identifier, time.Now().UTC().Format(time.RFC3339Nano)).Scan(&attempts)
+	`, scope, identifier, time.Now().UTC().Format(rateLimitTimeFormat)).Scan(&attempts)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
@@ -266,7 +291,7 @@ func sendEmailOTP(toEmail string, otp string, refCode string) error {
 			</table>
 		</body>
 		</html>
-	`, toEmail, otp, refCode, toEmail, timeStr)
+	`, html.EscapeString(toEmail), html.EscapeString(otp), html.EscapeString(refCode), html.EscapeString(toEmail), html.EscapeString(timeStr))
 
 	params := &resend.SendEmailRequest{
 		From:    "DormiNet <noreply@dorminet.studio>",
@@ -354,8 +379,8 @@ func HandleForgotPassword(db *sql.DB) http.HandlerFunc {
 		expiresAt := time.Now().Add(15 * time.Minute).Format(time.RFC3339)
 
 		// The unique email index plus one statement guarantees that concurrent
-		// requests leave exactly one active OTP for the account.
-		_, err = db.Exec("INSERT OR REPLACE INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)", req.Email, otp, expiresAt)
+		// requests leave exactly one active OTP for the account (stored hashed).
+		_, err = db.Exec("INSERT OR REPLACE INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)", req.Email, hashResetOTP(req.Email, otp), expiresAt)
 		if err != nil {
 			http.Error(w, `{"error": "ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
 			return
@@ -398,6 +423,10 @@ func HandleVerifyOTP(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		if !allowRequestAttempt(r, "verify-otp-ip", 20, 15*time.Minute) {
+			http.Error(w, `{"error": "กรอกผิดเกินจำนวนครั้งที่กำหนด กรุณารอ 15 นาทีแล้วลองใหม่"}`, http.StatusTooManyRequests)
+			return
+		}
 		// Rate limit check
 		locked, err := authRateLimitLocked(db, "otp_failure", req.Email, maxOTPAttempts)
 		if err != nil {
@@ -409,10 +438,10 @@ func HandleVerifyOTP(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Verify OTP
-		var expiresAtStr string
-		err = db.QueryRow("SELECT expires_at FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP).Scan(&expiresAtStr)
-		if err != nil {
+		// Verify OTP (constant-time hashed comparison)
+		var storedToken, expiresAtStr string
+		err = db.QueryRow("SELECT token, expires_at FROM password_resets WHERE email = ?", req.Email).Scan(&storedToken, &expiresAtStr)
+		if err != nil || !matchesResetOTP(req.Email, req.OTP, storedToken) {
 			attempts, rateErr := recordAuthRateLimit(db, "otp_failure", req.Email, otpLockDuration)
 			if rateErr != nil {
 				http.Error(w, `{"error":"ระบบขัดข้อง กรุณาลองใหม่"}`, http.StatusInternalServerError)
@@ -427,7 +456,7 @@ func HandleVerifyOTP(db *sql.DB) http.HandlerFunc {
 		expiresAt, _ := time.Parse(time.RFC3339, expiresAtStr)
 
 		if time.Now().After(expiresAt) {
-			db.Exec("DELETE FROM password_resets WHERE email = ? AND token = ?", req.Email, req.OTP)
+			db.Exec("DELETE FROM password_resets WHERE email = ? AND token = ?", req.Email, storedToken)
 			http.Error(w, `{"error": "รหัส OTP หมดอายุแล้ว กรุณาขอใหม่"}`, http.StatusUnauthorized)
 			return
 		}

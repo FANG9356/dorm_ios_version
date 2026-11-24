@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ func requestClientIP(r *http.Request) string {
 		host = r.RemoteAddr
 	}
 	remote := net.ParseIP(strings.TrimSpace(host))
-	if remote != nil && (remote.IsLoopback() || remote.IsPrivate()) {
+	if remote != nil && (remote.IsLoopback() || (remote.IsPrivate() && strings.EqualFold(strings.TrimSpace(os.Getenv("TRUST_CLOUDFLARE_PROXY")), "true"))) {
 		if forwarded := net.ParseIP(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); forwarded != nil {
 			return forwarded.String()
 		}
@@ -145,18 +144,10 @@ func resolveTenantDBFromCode(master *sql.DB, code string) (*sql.DB, int, error) 
 	var ownerID int
 	if err := master.QueryRow(`SELECT id FROM admins WHERE dorm_code = ? AND role = 'superadmin'`, code).Scan(&ownerID); err != nil {
 		if err == sql.ErrNoRows {
-			// Fallback for legacy numerical ID in case it hasn't migrated or users are still using it during transition
-			accountID, errAtoi := strconv.Atoi(code)
-			if errAtoi == nil {
-				if err := master.QueryRow(`SELECT id FROM admins WHERE id = ? AND role = 'superadmin'`, accountID).Scan(&ownerID); err == nil {
-					goto found
-				}
-			}
 			return nil, 0, fmt.Errorf("ไม่พบข้อมูลหอพักรหัสนี้")
 		}
 		return nil, 0, fmt.Errorf("ตรวจสอบรหัสหอพักไม่สำเร็จ")
 	}
-found:
 
 	tenantDB, err := GetTenantDB(ownerID)
 	if err != nil {
@@ -269,7 +260,7 @@ func lookupLinkedResident(master *sql.DB, openTenantDB liffTenantDBOpener, lineU
 
 	if err := tenantDB.QueryRow(`SELECT COUNT(*), COALESCE(SUM(
 		CASE WHEN amount > COALESCE(paid_amount, 0) THEN amount - COALESCE(paid_amount, 0) ELSE 0 END
-	), 0) FROM payments WHERE user_id = ? AND COALESCE(payment_status, 'pending') != 'paid'
+	), 0) FROM payments WHERE user_id = ? AND COALESCE(payment_status, 'pending') NOT IN ('paid', 'voided', 'refunded')
 	AND amount > COALESCE(paid_amount, 0)`, userID).Scan(
 		&summary.Billing.OutstandingCount, &summary.Billing.OutstandingAmount,
 	); err != nil {
@@ -318,7 +309,7 @@ func loadLiffInvoices(db *sql.DB, userID int) ([]LiffInvoiceSummary, error) {
 		}
 		invoice.InvoiceNumber = fmt.Sprintf("INV-%05d", paymentID)
 		invoice.Balance = math.Max(invoice.Amount-invoice.PaidAmount, 0)
-		invoice.Outstanding = invoice.Status != "paid" && invoice.Balance > 0
+		invoice.Outstanding = invoice.Status != "paid" && invoice.Status != "voided" && invoice.Status != "refunded" && invoice.Balance > 0
 		knownTotal := invoice.RentFee + invoice.DepositFee + invoice.WaterFee + invoice.ElectricFee +
 			invoice.CommonFee + invoice.ApplianceFee + invoice.LateFee
 		if difference := invoice.Amount - knownTotal; math.Abs(difference) >= 0.01 {
@@ -451,7 +442,7 @@ func HandleLiffLink(master *sql.DB) http.HandlerFunc {
 			return
 		}
 		if _, err := tenantDB.Exec(`UPDATE users SET line_user_id = CASE WHEN external_id = ? THEN ? ELSE '' END
-			WHERE external_id != ''`, tenantID, lineUserID); err != nil {
+			WHERE external_id = ? OR line_user_id = ?`, tenantID, lineUserID, tenantID, lineUserID); err != nil {
 			master.Exec(`UPDATE line_links SET status = 'pending_relink', updated_at = ? WHERE line_user_id = ?`, now, lineUserID)
 			http.Error(w, `{"error":"เชื่อม LINE แล้วแต่ปรับข้อมูลห้องไม่สำเร็จ กรุณาลองใหม่"}`, http.StatusInternalServerError)
 			return
@@ -539,11 +530,15 @@ func verifiedLineUserID(accessToken string) (string, error) {
 	verifyURL := "https://api.line.me/oauth2/v2.1/verify?access_token=" + url.QueryEscape(accessToken)
 	response, err := client.Get(verifyURL)
 	if err != nil {
+		if urlErr, ok := err.(*url.Error); ok {
+			log.Printf("[LIFF Verify Error] GET verifyURL failed: %v", urlErr.Err)
+			return "", fmt.Errorf("LINE verify network error: %w", urlErr.Err)
+		}
 		log.Printf("[LIFF Verify Error] GET verifyURL failed: %v", err)
 		return "", err
 	}
 	if response.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(response.Body)
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
 		response.Body.Close()
 		log.Printf("[LIFF Verify Error] status=%d body=%s", response.StatusCode, string(body))
 		return "", fmt.Errorf("LINE verify status %d: %s", response.StatusCode, string(body))

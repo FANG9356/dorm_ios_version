@@ -166,9 +166,13 @@ func TestGetAdminsRequiresAccountScopeAndDoesNotFallBackToAllAdmins(t *testing.T
 
 func TestQRLoginIssuesRevocableSession(t *testing.T) {
 	db := securityTestDB(t)
+	if err := storeOneTimeToken(db, "test-qr-jti-1", "login_qr", 1, time.Now().Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
 	qrToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"username": "owner",
 		"role":     "login_qr",
+		"jti":      "test-qr-jti-1",
 		"exp":      time.Now().Add(time.Minute).Unix(),
 	}).SignedString(getJWTSecret())
 	if err != nil {

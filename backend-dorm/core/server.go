@@ -441,8 +441,17 @@ func RunServer() {
 	// [เพิ่มใหม่] Reverse Proxy สำหรับส่งต่อคำสั่งเกี่ยวกับ WiFi ไปยัง backend-network (Port 8911) แบบซ่อนหลังบ้าน
 	targetUrl, _ := url.Parse("http://127.0.0.1:8911")
 	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
+	proxy.Transport = &http.Transport{
+		ResponseHeaderTimeout: 10 * time.Second,
+	}
 	http.HandleFunc("/api/wifi/", func(w http.ResponseWriter, r *http.Request) {
-		proxy.ServeHTTP(w, r)
+		if !handlers.IsSuperadmin(r) {
+			http.Error(w, `{"error": "Forbidden: Superadmin access required"}`, http.StatusForbidden)
+			return
+		}
+		outReq := r.Clone(r.Context())
+		outReq.Header.Del("Authorization")
+		proxy.ServeHTTP(w, outReq)
 	})
 
 	port := os.Getenv("PORT")
@@ -594,4 +603,16 @@ func InitializeDatabase(db *sql.DB) {
 		UNIQUE(account_id, version)
 	)`)
 	db.Exec(`CREATE INDEX IF NOT EXISTS idx_sync_snapshots_latest ON sync_snapshots (account_id, version DESC)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS one_time_tokens (
+		jti TEXT PRIMARY KEY,
+		purpose TEXT NOT NULL,
+		admin_id INTEGER NOT NULL,
+		expires_at TEXT NOT NULL,
+		consumed_at TEXT
+	)`)
+	db.Exec(`CREATE TABLE IF NOT EXISTS media_objects (
+		filename TEXT PRIMARY KEY,
+		account_id INTEGER NOT NULL,
+		created_at TEXT NOT NULL
+	)`)
 }

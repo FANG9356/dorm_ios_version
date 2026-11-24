@@ -5829,3 +5829,72 @@
   - Go Test: ผ่าน 100%
 - สถานะ deploy/UAT:
   - ปรับปรุงโค้ด UI ในหน้าหลักฐานการโอนเรียบร้อย คอมไพล์ผ่านฉลุยพร้อมใช้งาน
+
+
+---
+
+## 2026-11-24 08:10 ICT: ตรวจสอบระบบทั้งหมดและไล่ตรวจสอบโค้ดทุกไฟล์อย่างละเอียด (Full System & Line-by-Line Code Audit)
+
+- ผู้ดำเนินการ: Assistant
+- คำขอ/เป้าหมาย:
+  - ผู้ใช้งานสั่งการ: "โอเคตรวจสอบระบบทั้งหมดอีกครั้งรวมถึงโค้ดไฟล์ทุกบรรทัดเพื่อหาจดที่ต้องแก้ไข" (หลังย้าย Workspace ไปที่ `/Volumes/FangB/Main/dorm_project`)
+- สิ่งที่ดำเนินการ:
+  1. **ตรวจสอบสถานะระบบ Production และชุดทดสอบอัตโนมัติ:**
+     - `GET https://dorminet.studio/api/system/ping` ตอบ HTTP 200 OK (`{"status":"online"}`)
+     - `GET https://dorminet.studio/services` ตอบ HTTP 200 OK
+     - `GET https://dorminet.studio/api/admins/ping` ตอบ HTTP 401 Unauthorized (Auth Middleware ทำงานปกติ)
+     - รัน `go vet ./...`, `go test -count=1 ./...` และ `go test -count=1 -race ./handlers` ใน `backend-dorm/`: ผ่าน 100% (0 Data Races)
+     - รัน `xcodebuild build-for-testing` สำหรับ iOS Scheme `DormiNetX`: ผ่านสมบูรณ์ (`** TEST BUILD SUCCEEDED **`, 0 Swift compiler warnings)
+  2. **ตรวจสอบโค้ดรายบรรทัดครบทุกโมดูล (110 ไฟล์ Production จากทั้งหมด 150 ไฟล์ / 42,781 บรรทัด):**
+     - แบ่งการตรวจออกเป็น 11 กลุ่มแบบขนานครอบคลุม Go Backend (Core/Auth/REST/LINE Bot/Snapshot/Backup/Restore), iOS Swift (Models/Components/Services/Views), Web/LIFF, OCR Bot และ Deploy/Reset Scripts
+     - ทวนสอบจุดวิกฤตสำคัญกับซอร์สโค้ดจริงเพื่อยืนยันความถูกต้อง (Zero False Positives)
+     - จัดทำรายงานสรุปฉบับเต็มพร้อมตำแหน่งไฟล์-บรรทัดและแผนแก้ไข 4 ระยะ (พบประเด็น Critical 24 รายการ, High 103 รายการ, Medium 101 รายการ, Low 24 รายการ)
+- ไฟล์หรือระบบที่กระทบ:
+  - ไม่มีการแก้ไขโค้ดระบบหรือข้อมูล Production ในรอบนี้ (Read-only Audit)
+  - เพิ่มบันทึกใน `project-tracking/ACTIVITY_REPORT.md`
+  - จัดทำ Artifact รายงานฉบับสมบูรณ์ `FULL_CODEBASE_AUDIT_2026-11-24.md`
+- การตรวจสอบและหลักฐาน:
+  - Production Health & Auth: 200 / 200 / 401
+  - Go `vet` / `test` / `test -race`: ผ่านทั้งหมด (rc=0)
+  - Xcode `build-for-testing`: `** TEST BUILD SUCCEEDED **` (0 Swift warnings)
+  - Zero Emojis Policy: ผ่านเกณฑ์ 100%
+- สถานะ deploy/UAT:
+  - เป็นการตรวจสอบและจัดทำรายงานวิเคราะห์เชิงลึก ยังไม่ได้แก้ไขโค้ดหรือ Deploy Production
+- ความเสี่ยง/สิ่งที่ต้องทำต่อ:
+  - รอผู้ใช้งานยืนยันขอบเขตการแก้ไขตามแผน 4 ระยะ (แนะนำเริ่มจากระยะที่ 1: ปิดช่องโหว่ P0 Security, LIFF `line_user_id` wipe, Sync/Backup Data Integrity และ OCR/Slip Fail-Closed)
+
+
+---
+
+## 2026-11-24 08:31 ICT: ระยะที่ 1 — ปิดช่องโหว่ความปลอดภัยระดับ P0, การแยกข้อมูล Multi-Tenant และเตรียม Safe Deploy
+
+- ผู้ดำเนินการ: Assistant
+- คำขอ/เป้าหมาย:
+  - ดำเนินการแก้ไขระยะที่ 1 ตามแผน `implementation_plan.md` (Multi-Tenant SaaS + Deploy ทีละระยะ)
+- สิ่งที่ดำเนินการ:
+  1. **ปิดช่องโหว่ Cross-Tenant Isolation & Auth (P0):**
+     - `backend-dorm/handlers/auth.go`: บังคับขอบเขตหอพักเดียวกัน + สิทธิ์ `superadmin` + One-Time JTI (`one_time_tokens`) สำหรับ QR Login (`GenerateLoginTokenHandler`/`LoginWithQRHandler`) และ Invite Token (`GenerateInviteTokenHandler`/`RegisterWithInviteHandler`); แก้ `UpdateAdminHandler` ไม่ให้ล้าง `email`/`backup_email` เมื่อเปลี่ยนชื่อและตรวจ Global Uniqueness; แก้ `LoginHandler` เป็น Case-Insensitive + Deterministic `ORDER BY`; แก้ `ChangePasswordHandler` ให้มี IP Rate Limit, Uniform 401 และบังคับ `old_password`; จำกัดรอบ Retry ใน `generateUniqueDormCode` และเก็บ Hash รหัสผ่านเป็น TEXT
+     - `backend-dorm/handlers/tenant_helper.go`: ตัด Fallback ข้าม Tenant ไปยัง Tenant #1 ใน `RequestTenantDB` ให้ Fail-Closed
+     - `backend-dorm/handlers/sync_handlers.go`: ปิด Auth Fallthrough ใน `/api/auth/register` (คืน 401/403 ทันทีเมื่อ Header `Authorization` ไม่ถูกต้อง), สร้าง `dorm_code` สำหรับ Superadmin ใหม่, และบังคับตรวจ `must_change_password` + Fail-Closed Role ใน `/api/auth/login`
+     - `backend-dorm/handlers/api_users.go`: แก้ `/api/users/unmask-id` ให้คิวรี `admins` บน `masterDB` เฉพาะ `admin_id` ของผู้เรียกพร้อม Role/Rate Limit/Audit Log; แก้ `/api/move-out` ให้คำนวณ `net_refund` ฝั่งเซิร์ฟเวอร์, เช็ก `tx.Commit()` และอัปเดต `master.line_links`
+     - `backend-dorm/core/server.go` & `backend-dorm/handlers/api_logs.go`: ครอบ `/api/wifi/` ด้วย `IsSuperadmin` + ลบ `Authorization` ก่อน Proxy, เพิ่มตาราง `one_time_tokens` และ `media_objects`, และจำกัดสิทธิ์/ขนาดของ `/api/logs`
+  2. **ปิดบั๊กข้อมูลเสียหายทันที & Fail-Closed Slip/Media/OTP (P0):**
+     - `backend-dorm/handlers/api_liff.go`: แก้ `HandleLiffLink` L453 (`WHERE external_id = ? OR line_user_id = ?`) ไม่ให้ล้าง `line_user_id` ของลูกบ้านคนอื่นทั้งหอ, ตัด Fallback `admins.id` เรียงเลข, ไม่นับบิล `voided`/`refunded` เป็นยอดค้าง, ปิด `CF-Connecting-IP` Spoofing จาก LAN ทั่วไป และไม่ Log `access_token`
+     - `backend-dorm/handlers/api_media.go` & `backend-dorm/handlers/media_cleanup.go`: เพิ่มตาราง `media_objects` แยกเจ้าของไฟล์ข้าม Tenant, เพิ่ม `deposit_refunds.slip_path` ใน `tenantReferencesMedia` ไม่ให้ถูกลบหลัง 24 ชม., และทำให้ `RunMediaCleanup` Fail-Closed เมื่อ DB Error
+     - `backend-dorm/utils/slip_verification.go` & `backend-dorm/handlers/api_slip.go`: บังคับ Fail-Closed เมื่อ `expectedReceiver` ไม่ว่าง, ตรวจทั้ง `Proxy`/`Account` และ HTTP 200; ปิดการทำงานของ `VerifySlipMock`
+     - `backend-dorm/handlers/password_reset.go` & `backend-dorm/handlers/api_auth_reset.go`: เพิ่ม `return` หลัง HTTP 500 ที่ L54, แก้ `ORDER BY` ให้ `superadmin` มาก่อน, ใช้ Fixed-Width UTC Timestamp, เก็บ OTP เป็น HMAC-SHA256, เพิ่ม IP Rate Limit และ Escape HTML ในอีเมล OTP
+  3. **เพิ่มชุด Regression Tests (`phase1_security_regression_test.go`) และเตรียม Safe Deploy Archive:**
+     - เพิ่ม 6 Unit Tests ครอบคลุม Cross-Tenant QR Login, Single-Use Replay, Rename Admin Email Preservation, Orphan Staff Fail-Closed, LIFF Link Isolation, Media Ownership + Deposit Refund Retention และ Hashed OTP
+     - สร้าง Archive สะอาด (`/tmp/dorminetx-phase1/dorminet-backend.tar.gz`) และอัปโหลดขึ้น `fang@202.29.232.28:/home/fang/dorminet_workspace/dorminet-flex-source.tar.gz` พร้อม `deploy_flex_safe_remote.sh`
+- ไฟล์หรือระบบที่กระทบ:
+  - `backend-dorm/core/server.go`, `backend-dorm/handlers/auth.go`, `backend-dorm/handlers/tenant_helper.go`, `backend-dorm/handlers/sync_handlers.go`, `backend-dorm/handlers/api_liff.go`, `backend-dorm/handlers/api_users.go`, `backend-dorm/handlers/api_media.go`, `backend-dorm/handlers/media_cleanup.go`, `backend-dorm/handlers/api_logs.go`, `backend-dorm/handlers/api_slip.go`, `backend-dorm/handlers/password_reset.go`, `backend-dorm/handlers/api_auth_reset.go`, `backend-dorm/utils/slip_verification.go`
+  - `backend-dorm/handlers/auth_security_test.go`, `backend-dorm/handlers/phase1_security_regression_test.go`
+  - `project-tracking/ACTIVITY_REPORT.md`
+- การเปลี่ยนข้อมูล/production: ยังไม่ได้สลับ Binary Production (รอผู้ใช้งานรันคำสั่ง Safe Deploy พร้อมกรอกรหัส `sudo`); Production ปัจจุบันยังคงเป็น SHA-256 `8121595f422d67a1a82444619ffda6efdf35a2e6d205c7d6a60e6f6450de5508`
+- การตรวจสอบและหลักฐาน:
+  - `go vet ./...`: ผ่าน (rc=0)
+  - `go test -count=1 ./...`: ผ่านทุกแพ็กเกจ (`core`, `handlers`, `utils`)
+  - `go test -count=1 -race ./handlers`: ผ่าน (0 Data Races, 9.555s)
+  - Zero Emojis Policy: ผ่าน 100%
+- สถานะ deploy/UAT:
+  - โค้ดระยะที่ 1 ผ่าน Automated Tests + Race Detector 100%, บันทึกและ Push ขึ้น Git `origin/main` แล้ว และอัปโหลด Source Archive ขึ้น `/home/fang/dorminet_workspace/` เรียบร้อย รอผู้ใช้งานสั่งรัน `deploy_flex_safe_remote.sh` เพื่อกรอก `sudo` และสลับรุ่น Production

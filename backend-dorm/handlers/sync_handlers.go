@@ -221,18 +221,27 @@ func SetupSyncRoutes(db *sql.DB) {
 		var superadminID int
 
 		if authHeader != "" {
-			// Internal staff creation!
+			// Internal staff creation: fail closed on invalid/expired/non-superadmin token
 			parts := strings.Fields(authHeader)
-			if len(parts) == 2 && parts[0] == "Bearer" {
-				claims, currentRole, authErr := authenticateSession(db, parts[1])
-				if authErr == nil && currentRole == "superadmin" {
-					superadminID = claims.AdminID
-					err = db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", superadminID).Scan(&superadminEmail)
-					if err == nil && strings.TrimSpace(superadminEmail) != "" {
-						isInternalCreation = true
-					}
-				}
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				http.Error(w, `{"status":"error","message":"Unauthorized: Invalid Authorization header"}`, http.StatusUnauthorized)
+				return
 			}
+			claims, currentRole, authErr := authenticateSession(db, parts[1])
+			if authErr != nil {
+				http.Error(w, `{"status":"error","message":"Unauthorized: Invalid or Expired Token"}`, http.StatusUnauthorized)
+				return
+			}
+			if currentRole != "superadmin" {
+				http.Error(w, `{"status":"error","message":"Forbidden: Superadmin access required"}`, http.StatusForbidden)
+				return
+			}
+			superadminID = claims.AdminID
+			if scanErr := db.QueryRow("SELECT COALESCE(email, '') FROM admins WHERE id = ?", superadminID).Scan(&superadminEmail); scanErr != nil || strings.TrimSpace(superadminEmail) == "" {
+				http.Error(w, `{"status":"error","message":"Forbidden: Superadmin account scope unavailable"}`, http.StatusForbidden)
+				return
+			}
+			isInternalCreation = true
 		}
 
 		var roleToInsert string
@@ -296,14 +305,18 @@ func SetupSyncRoutes(db *sql.DB) {
 			}
 		}
 
-		result, err := db.Exec("INSERT INTO admins (username, email, backup_email, password, role) VALUES (?, ?, ?, ?, ?)", req.Name, primaryEmail, backupEmail, string(hashedPassword), roleToInsert)
+		dormCode := ""
+		if !isInternalCreation {
+			dormCode = generateUniqueDormCode(db)
+		}
+		result, err := db.Exec("INSERT INTO admins (username, email, backup_email, password, role, dorm_code) VALUES (?, ?, ?, ?, ?, ?)", req.Name, primaryEmail, backupEmail, string(hashedPassword), roleToInsert, dormCode)
 		if err != nil {
 			log.Printf("Registration INSERT error: %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"status":  "error",
-				"message": "ไม่สามารถสร้างบัญชีได้ หรือข้อมูลซ้ำซ้อน: " + err.Error(),
+				"message": "ไม่สามารถสร้างบัญชีได้ หรือข้อมูลซ้ำซ้อน",
 			})
 			return
 		}
@@ -360,7 +373,19 @@ func SetupSyncRoutes(db *sql.DB) {
 		var dbPassword string
 		var username string
 		var role string
-		err := db.QueryRow("SELECT id, password, username, COALESCE(NULLIF(role, ''), 'superadmin') FROM admins WHERE email = ? OR username = ? OR backup_email = ?", req.Email, req.Email, req.Email).Scan(&adminID, &dbPassword, &username, &role)
+		var mustChangePassword int
+		err := db.QueryRow(`
+			SELECT id, password, username, COALESCE(NULLIF(role, ''), 'dorm'), COALESCE(must_change_password, 0)
+			FROM admins
+			WHERE LOWER(username) = ? OR LOWER(backup_email) = ? OR LOWER(email) = ?
+			ORDER BY CASE
+				WHEN LOWER(username) = ? THEN 0
+				WHEN LOWER(backup_email) = ? THEN 1
+				WHEN role = 'superadmin' THEN 2
+				ELSE 3
+			END, id ASC
+			LIMIT 1
+		`, loginIdentifier, loginIdentifier, loginIdentifier, loginIdentifier, loginIdentifier).Scan(&adminID, &dbPassword, &username, &role, &mustChangePassword)
 
 		if err != nil {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
@@ -369,6 +394,19 @@ func SetupSyncRoutes(db *sql.DB) {
 
 		if bcrypt.CompareHashAndPassword([]byte(dbPassword), []byte(req.Password)) != nil {
 			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+			return
+		}
+
+		if mustChangePassword == 1 || req.Password == "admin" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":                  "require_password_change",
+				"require_password_change": true,
+				"admin_id":                adminID,
+				"name":                    username,
+				"role":                    role,
+				"email":                   req.Email,
+			})
 			return
 		}
 

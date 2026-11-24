@@ -66,14 +66,17 @@ func RunMediaCleanup(masterDB *sql.DB, uploadsDir string) {
 			for rows.Next() {
 				var adminID int
 				if err := rows.Scan(&adminID); err != nil {
-					continue
+					referenced = true
+					break
 				}
-				
+
 				tenantDB, err := GetTenantDB(adminID)
 				if err != nil {
-					continue
+					// Fail closed: if any tenant DB cannot be inspected, do not delete the file.
+					referenced = true
+					break
 				}
-				
+
 				ref, err := tenantReferencesMedia(tenantDB, fileName)
 				if err != nil {
 					// Assume error means we can't be sure, so don't delete
@@ -84,6 +87,9 @@ func RunMediaCleanup(masterDB *sql.DB, uploadsDir string) {
 					referenced = true
 					break
 				}
+			}
+			if rowsErr := rows.Err(); rowsErr != nil {
+				referenced = true
 			}
 			rows.Close()
 		}
