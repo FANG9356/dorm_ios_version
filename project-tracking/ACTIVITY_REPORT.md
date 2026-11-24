@@ -5898,3 +5898,35 @@
   - Zero Emojis Policy: ผ่าน 100%
 - สถานะ deploy/UAT:
   - โค้ดระยะที่ 1 ผ่าน Automated Tests + Race Detector 100%, บันทึกและ Push ขึ้น Git `origin/main` แล้ว และอัปโหลด Source Archive ขึ้น `/home/fang/dorminet_workspace/` เรียบร้อย รอผู้ใช้งานสั่งรัน `deploy_flex_safe_remote.sh` เพื่อกรอก `sudo` และสลับรุ่น Production
+
+---
+
+## [2026-11-24] Phase 1 Production Deploy Verification & Phase 2 Remediation Complete (Sync, LINE Bot, Payments & Restore)
+
+### 1. Phase 1 Production Deploy Verification
+- **Server:** `fang@202.29.232.28` (`/opt/dormitory/server_debian`)
+- **Commit Deployed:** `732e75a`
+- **Remote Binary SHA-256:** `f2bf263a270a21b2b471ca83fe2506dcb1d486b19db7a5a12b85ce164da735de`
+- **Backup Directory:** `/home/fang/dorminet_workspace/backups/20261123-174407-pre-flex-ui`
+- **Health Checks:**
+  - `https://dorminet.studio/api/system/ping` -> HTTP 200 (`{"status":"online"}`)
+  - `https://dorminet.studio/services` -> HTTP 200
+  - `https://dorminet.studio/api/admins/ping` -> HTTP 401
+  - Services: `dormitory.service` (`active`), `dormitory-ocr.service` (`active`)
+
+### 2. Phase 2 Remediation Summary (Data Integrity, Sync Engine, LINE Bot, Payments & Restore)
+- **`backend-dorm/handlers/tenant_db.go`**: Consolidated current payment columns into `CREATE TABLE payments`, moved `idx_payments_unique` creation after `ALTER TABLE` migrations, switched to `COALESCE(installment_phase, 0)` (integer), and removed unconditional `DROP INDEX`.
+- **`backend-dorm/handlers/line_snapshot.go` & `backend-dorm/handlers/sync_push.go`**: Added per-account `accountSyncLock` mutex across push validation/insert/materialization and `PublishLineTenantChanges`; guarded `ensureLineTenantSchema` with `sync.Map`; rejected empty `snapshotID` on operational payloads and enforced `snapshot.AccountID == accountID`; restricted `line_links` re-link updates to active/booking residents; added `last_updated` freshness comparison in `mergeTenantOperationalState`.
+- **`backend-dorm/handlers/line_bot.go`**: Added 1MB `http.MaxBytesReader` on LINE webhook; hardened image download (body close on non-200, filename sanitization, 20MB `io.LimitReader`, `0600` permissions, `RecordMediaOwner`, orphan cleanup on replay/error); fixed rent slip remaining-balance calculation, `paid_amount = amount`, JSON-marshaled `slip_path_array`, and `WHERE payment_status IN ('pending','partial')`; fixed maintenance slip status transition (`กำลังซ่อม`) and `RowsAffected()` guard; removed cross-tenant PromptPay fallback; failed closed in `HandlePushInvoices`; converted all 5 raw `fmt.Sprintf` Flex JSON templates to structured Go maps to eliminate JSON injection.
+- **`backend-dorm/handlers/line_webhook_helper.go`**: Added `sync.RWMutex`, HTTP 200 check, JSON decode validation, and URL scheme/host validation.
+- **`backend-dorm/handlers/line_notification_outbox.go`**: Added panic `recover()` in worker loop, stale `'processing'` lease reclamation (>2 min), and `COALESCE(o.attempts, 0)` fetch on claim.
+- **`backend-dorm/handlers/maintenance_cleanup.go`**: Guarded rejected-quote deletion with `AND last_updated != ''`.
+- **`backend-dorm/handlers/api_payments.go`**: Switched to fail-closed `RequestTenantDB`; guarded `PATCH` against mutating `voided`/`refunded` bills; set `paid_amount = amount` on `paid`; cleared `slip_path = ''`, `slip_path_array = '[]'`, and `slip_payload = ''` on `rejected`; preserved `masterDB` in `/void`, `/refund`, and `/adjust` so `financial_audits.actor` queries `masterDB.admins`, added `IsServicesRole(r)` check, and verified `tx.Commit()`.
+- **`backend-dorm/handlers/backup.go`**: Switched `payments.slip_path_array` backup/restore serialization from comma-join/split to `json.Marshal` / `json.Unmarshal` (with legacy comma fallback).
+- **`backend-dorm/handlers/server_restore.go`**: Preserved `target.staged` in `rollbackRestoreTargets` via `os.Rename(target.live, target.staged)` instead of `os.RemoveAll(target.live)`; rejected `-journal` and zero-byte `-wal`/`-shm` sidecars in `rejectActiveSQLiteSidecars`.
+- **`backend-dorm/handlers/phase2_sync_line_regression_test.go`**: Added 5 regression tests covering snapshot validation, Flex JSON escaping, sidecar rejection, rollback preservation, and stale outbox lease reclamation.
+
+### 3. Automated Verification Results
+- `go vet ./...`: PASS (0 warnings)
+- `go test -count=1 ./...`: PASS (`core`, `handlers`, `utils`)
+- `go test -count=1 -race ./handlers`: PASS (0 data races)

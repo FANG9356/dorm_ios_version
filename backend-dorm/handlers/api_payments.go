@@ -26,11 +26,15 @@ func isNegative(s string) bool {
 	return v < 0
 }
 
-func SetupPaymentRoutes(db *sql.DB) {
+func SetupPaymentRoutes(masterDB *sql.DB) {
 	http.HandleFunc("/api/payments", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
+			return
+		}
+		db, err := RequestTenantDB(r, masterDB)
+		if err != nil {
+			http.Error(w, "Tenant unavailable", http.StatusForbidden)
 			return
 		}
 		if r.Method == "POST" {
@@ -371,9 +375,20 @@ func SetupPaymentRoutes(db *sql.DB) {
 				return
 			}
 
+			var currentStatus string
+			if err := db.QueryRow("SELECT COALESCE(payment_status, 'pending') FROM payments WHERE payment_id = ?", payload.PaymentID).Scan(&currentStatus); err != nil {
+				http.Error(w, "Payment not found", http.StatusNotFound)
+				return
+			}
+			if currentStatus == "voided" || currentStatus == "refunded" {
+				http.Error(w, "Cannot modify voided or refunded payment", http.StatusBadRequest)
+				return
+			}
+
+			nowUTC := time.Now().UTC().Format(time.RFC3339Nano)
 			if payload.PaymentStatus == "paid" {
 				currentDate := time.Now().Format("2006-01-02")
-				_, err := db.Exec("UPDATE payments SET payment_status = 'paid', payment_date = ? WHERE payment_id = ?", currentDate, payload.PaymentID)
+				_, err := db.Exec("UPDATE payments SET payment_status = 'paid', paid_amount = amount, payment_date = ?, last_updated = ? WHERE payment_id = ?", currentDate, nowUTC, payload.PaymentID)
 				if err != nil {
 					http.Error(w, "Update failed", http.StatusInternalServerError)
 					return
@@ -398,8 +413,8 @@ func SetupPaymentRoutes(db *sql.DB) {
 				}
 				db.Exec("INSERT INTO system_logs (action_type, details, timestamp) VALUES ('Confirm Payment', 'ยืนยันรับชำระเงินบิล ' || ?, ?)", payload.PaymentID, time.Now().Format("2006-01-02 15:04:05"))
 			} else if payload.PaymentStatus == "rejected" {
-				// Change status back to pending, remove slip_path
-				_, err := db.Exec("UPDATE payments SET payment_status = 'pending', slip_path = NULL WHERE payment_id = ?", payload.PaymentID)
+				// Change status back to pending, clear slip fields and replay payload so resident can re-upload
+				_, err := db.Exec("UPDATE payments SET payment_status = 'pending', slip_path = '', slip_path_array = '[]', slip_payload = '', last_updated = ? WHERE payment_id = ?", nowUTC, payload.PaymentID)
 				if err != nil {
 					http.Error(w, "Update failed", http.StatusInternalServerError)
 					return
@@ -419,7 +434,7 @@ func SetupPaymentRoutes(db *sql.DB) {
 					http.Error(w, "จำนวนเงินห้ามติดลบ", http.StatusBadRequest)
 					return
 				}
-				_, err := db.Exec("UPDATE payments SET amount = ? WHERE payment_id = ?", payload.Amount, payload.PaymentID)
+				_, err := db.Exec("UPDATE payments SET amount = ?, last_updated = ? WHERE payment_id = ?", payload.Amount, nowUTC, payload.PaymentID)
 				if err != nil {
 					http.Error(w, "Update failed", http.StatusInternalServerError)
 					return
@@ -431,7 +446,6 @@ func SetupPaymentRoutes(db *sql.DB) {
 	})
 
 	http.HandleFunc("/api/payments/void", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -440,10 +454,19 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if !IsServicesRole(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 
 		adminID, ok := r.Context().Value("admin_id").(int)
 		if !ok || adminID <= 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		db, err := RequestTenantDB(r, masterDB)
+		if err != nil {
+			http.Error(w, "Tenant unavailable", http.StatusForbidden)
 			return
 		}
 
@@ -470,24 +493,24 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Payment not found", http.StatusNotFound)
 			return
 		}
-		
+
 		if currentStatus == "voided" {
 			tx.Rollback()
 			http.Error(w, "Payment already voided", http.StatusBadRequest)
 			return
 		}
 
-		_, err = tx.Exec("UPDATE payments SET payment_status = 'voided' WHERE payment_id = ?", payload.PaymentID)
+		_, err = tx.Exec("UPDATE payments SET payment_status = 'voided', last_updated = ? WHERE payment_id = ?", time.Now().UTC().Format(time.RFC3339Nano), payload.PaymentID)
 		if err != nil {
 			tx.Rollback()
 			http.Error(w, "Update failed", http.StatusInternalServerError)
 			return
 		}
 
-		// Audit Log
-		var adminName string
-		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
-		
+		// Audit Log (look up actor from masterDB where admins table lives)
+		adminName := "unknown"
+		_ = masterDB.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+
 		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "VOID", adminName, payload.Reason, currentAmount, currentAmount, currentStatus, "voided", time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			tx.Rollback()
@@ -495,13 +518,15 @@ func SetupPaymentRoutes(db *sql.DB) {
 			return
 		}
 
-		tx.Commit()
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Commit failed", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Void successful"})
 	})
 
 	http.HandleFunc("/api/payments/refund", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -510,10 +535,19 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if !IsServicesRole(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 
 		adminID, ok := r.Context().Value("admin_id").(int)
 		if !ok || adminID <= 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		db, err := RequestTenantDB(r, masterDB)
+		if err != nil {
+			http.Error(w, "Tenant unavailable", http.StatusForbidden)
 			return
 		}
 
@@ -540,24 +574,24 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Payment not found", http.StatusNotFound)
 			return
 		}
-		
+
 		if currentStatus != "paid" {
 			tx.Rollback()
 			http.Error(w, "Only paid bills can be refunded", http.StatusBadRequest)
 			return
 		}
 
-		_, err = tx.Exec("UPDATE payments SET payment_status = 'refunded' WHERE payment_id = ?", payload.PaymentID)
+		_, err = tx.Exec("UPDATE payments SET payment_status = 'refunded', last_updated = ? WHERE payment_id = ?", time.Now().UTC().Format(time.RFC3339Nano), payload.PaymentID)
 		if err != nil {
 			tx.Rollback()
 			http.Error(w, "Update failed", http.StatusInternalServerError)
 			return
 		}
 
-		// Audit Log
-		var adminName string
-		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
-		
+		// Audit Log (look up actor from masterDB where admins table lives)
+		adminName := "unknown"
+		_ = masterDB.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+
 		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "REFUND", adminName, payload.Reason, currentAmount, currentAmount, currentStatus, "refunded", time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			tx.Rollback()
@@ -565,12 +599,14 @@ func SetupPaymentRoutes(db *sql.DB) {
 			return
 		}
 
-		tx.Commit()
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Commit failed", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Refund successful"})
 	})
 	http.HandleFunc("/api/payments/adjust", func(w http.ResponseWriter, r *http.Request) {
-		db := getTenantDB(r, db)
 		utils.EnableCORS(w)
 		if r.Method == "OPTIONS" {
 			return
@@ -579,10 +615,19 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if !IsServicesRole(r) {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
 
 		adminID, ok := r.Context().Value("admin_id").(int)
 		if !ok || adminID <= 0 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		db, err := RequestTenantDB(r, masterDB)
+		if err != nil {
+			http.Error(w, "Tenant unavailable", http.StatusForbidden)
 			return
 		}
 
@@ -614,24 +659,24 @@ func SetupPaymentRoutes(db *sql.DB) {
 			http.Error(w, "Payment not found", http.StatusNotFound)
 			return
 		}
-		
+
 		if currentStatus == "paid" || currentStatus == "voided" || currentStatus == "refunded" {
 			tx.Rollback()
 			http.Error(w, "Cannot adjust paid, voided, or refunded bills", http.StatusBadRequest)
 			return
 		}
 
-		_, err = tx.Exec("UPDATE payments SET amount = ? WHERE payment_id = ?", payload.NewAmount, payload.PaymentID)
+		_, err = tx.Exec("UPDATE payments SET amount = ?, last_updated = ? WHERE payment_id = ?", payload.NewAmount, time.Now().UTC().Format(time.RFC3339Nano), payload.PaymentID)
 		if err != nil {
 			tx.Rollback()
 			http.Error(w, "Update failed", http.StatusInternalServerError)
 			return
 		}
 
-		// Audit Log
-		var adminName string
-		_ = db.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
-		
+		// Audit Log (look up actor from masterDB where admins table lives)
+		adminName := "unknown"
+		_ = masterDB.QueryRow("SELECT COALESCE(username, 'unknown') FROM admins WHERE id = ?", adminID).Scan(&adminName)
+
 		_, err = tx.Exec("INSERT INTO financial_audits (payment_id, action_type, actor, reason, previous_amount, new_amount, previous_status, new_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", payload.PaymentID, "ADJUST", adminName, payload.Reason, currentAmount, payload.NewAmount, currentStatus, currentStatus, time.Now().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			tx.Rollback()
@@ -639,7 +684,10 @@ func SetupPaymentRoutes(db *sql.DB) {
 			return
 		}
 
-		tx.Commit()
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "Commit failed", http.StatusInternalServerError)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"message": "Adjustment successful"})
 	})

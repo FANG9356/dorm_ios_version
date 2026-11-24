@@ -35,8 +35,8 @@ func RunMaintenanceCleanup(masterDB *sql.DB) {
 			continue
 		}
 
-		// Delete maintenances older than cutoff
-		result, err := tenantDB.Exec("DELETE FROM maintenances WHERE status = 'ปฏิเสธค่าใช้จ่าย' AND last_updated < ?", cutoff)
+		// Delete maintenances older than cutoff (never delete rows with empty last_updated)
+		result, err := tenantDB.Exec("DELETE FROM maintenances WHERE status = 'ปฏิเสธค่าใช้จ่าย' AND last_updated != '' AND last_updated < ?", cutoff)
 		if err != nil {
 			log.Printf("[Maintenance Cleanup] Error deleting from tenant %d: %v", adminID, err)
 			totalErrors++

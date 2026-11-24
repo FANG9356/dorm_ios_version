@@ -71,6 +71,11 @@ func HandleSyncPush(db *sql.DB) http.HandlerFunc {
 				}
 			}
 		}
+		// Serialize per-account snapshot pushes and LINE materialization to prevent TOCTOU races.
+		mu := accountSyncLock(accountID)
+		mu.Lock()
+		defer mu.Unlock()
+
 		// Reject workflow-invalid snapshots before the immutable snapshot is
 		// inserted. Otherwise a stale local maintenance record can become the
 		// latest snapshot even though tenant materialization rejects it, leaving

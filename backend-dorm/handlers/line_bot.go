@@ -117,7 +117,8 @@ func HandleLineWebhook(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// Read body for signature verification
+		// Read body for signature verification (bounded to 1MB to prevent unauthenticated OOM DoS)
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "Error reading body", http.StatusBadRequest)
@@ -448,69 +449,112 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		return
 	}
 
-	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api-data.line.me/v2/bot/message/%s/content", messageID), nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api-data.line.me/v2/bot/message/%s/content", url.PathEscape(messageID)), nil)
+	if err != nil {
 		replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้งค่ะ")
 		return
 	}
-	defer resp.Body.Close()
+	req.Header.Set("Authorization", "Bearer "+token)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil || resp == nil || resp.StatusCode != 200 {
+		replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้งค่ะ")
+		return
+	}
 
-	newFileName := fmt.Sprintf("%d_%s_img_%s.jpg", time.Now().Unix(), roomNumber, messageID)
-	filepath := "./uploads/" + newFileName
-	outFile, err := os.Create(filepath)
+	safeRoom := strings.Map(func(r rune) rune {
+		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '-' || r == '_' {
+			return r
+		}
+		return '_'
+	}, roomNumber)
+	safeMsgID := strings.Map(func(r rune) rune {
+		if (r >= '0' && r <= '9') || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+			return r
+		}
+		return '_'
+	}, messageID)
+	newFileName := fmt.Sprintf("%d_%s_img_%s.jpg", time.Now().Unix(), safeRoom, safeMsgID)
+	filePath := "./uploads/" + newFileName
+	outFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		replyToLine(replyToken, "เกิดข้อผิดพลาดในระบบเซิร์ฟเวอร์")
 		return
 	}
-	io.Copy(outFile, resp.Body)
-	outFile.Close()
+	_, copyErr := io.Copy(outFile, io.LimitReader(resp.Body, 20<<20))
+	closeErr := outFile.Close()
+	if copyErr != nil || closeErr != nil {
+		_ = os.Remove(filePath)
+		replyToLine(replyToken, "เกิดข้อผิดพลาดในการบันทึกรูปภาพ กรุณาลองใหม่อีกครั้งค่ะ")
+		return
+	}
+	RecordMediaOwner(master, newFileName, accountID)
 
 	if botState == "slip" {
 		var paymentID int
-		var amount float64
-		err = db.QueryRow("SELECT payment_id, amount FROM payments WHERE user_id = ? AND payment_status IN ('pending', 'partial') ORDER BY month DESC, installment_phase DESC, payment_id DESC LIMIT 1", userID).Scan(&paymentID, &amount)
+		var amount, paidAmount float64
+		var existingSlipArrayJSON string
+		err = db.QueryRow("SELECT payment_id, amount, COALESCE(paid_amount, 0), COALESCE(slip_path_array, '[]') FROM payments WHERE user_id = ? AND payment_status IN ('pending', 'partial') ORDER BY month DESC, installment_phase DESC, payment_id DESC LIMIT 1", userID).Scan(&paymentID, &amount, &paidAmount, &existingSlipArrayJSON)
 		if err != nil {
+			_ = os.Remove(filePath)
 			replyToLine(replyToken, "คุณไม่มียอดค้างชำระในขณะนี้ หรือบิลได้รับการชำระเรียบร้อยแล้วค่ะ")
-			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
+			db.Exec("UPDATE users SET bot_state = 'none' WHERE user_id = ?", userID)
+			return
+		}
+		remaining := amount - paidAmount
+		if remaining <= 0 {
+			_ = os.Remove(filePath)
+			replyToLine(replyToken, "บิลนี้ได้รับการชำระครบเรียบร้อยแล้วค่ะ")
+			db.Exec("UPDATE users SET bot_state = 'none' WHERE user_id = ?", userID)
 			return
 		}
 
 		var promptpayID, bankAccount string
 		_ = master.QueryRow("SELECT COALESCE(promptpay_id, ''), COALESCE(bank_account, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&promptpayID, &bankAccount)
-		expectedReceiver := promptpayID + "_" + bankAccount
+		expectedReceiver := strings.Trim(promptpayID+"_"+bankAccount, "_")
 
-		isValid, verifyReason, payload := utils.VerifySlip(filepath, amount, expectedReceiver)
-		
+		isValid, verifyReason, payload := utils.VerifySlip(filePath, remaining, expectedReceiver)
+
 		// Replay Protection Check
 		if payload != "" {
 			var existingID int
 			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheck == nil {
+				_ = os.Remove(filePath)
 				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
 				return
 			}
 			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheckMaint == nil {
+				_ = os.Remove(filePath)
 				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในงานแจ้งซ่อม")
 				return
 			}
 		}
 
 		newStatus := "checking"
+		newPaidAmount := paidAmount
 		var replyMessage string
 
 		if isValid {
 			newStatus = "paid"
-			replyMessage = fmt.Sprintf("ยืนยันการชำระเงินเรียบร้อย ระบบตรวจสอบสลิปอัตโนมัติพบยอดเงิน %.2f บาทเข้าบัญชีแล้วค่ะ", amount)
+			newPaidAmount = amount
+			replyMessage = fmt.Sprintf("ยืนยันการชำระเงินเรียบร้อย ระบบตรวจสอบสลิปอัตโนมัติพบยอดเงิน %.2f บาทเข้าบัญชีแล้วค่ะ", remaining)
 		} else {
 			replyMessage = "ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ ระบบได้รับสลิปแล้ว แอดมินจะตรวจสอบให้อีกครั้งนะคะ"
 		}
 
-		slipArrayJSON := fmt.Sprintf(`["%s"]`, newFileName)
-		res, err := db.Exec("UPDATE payments SET payment_status = ?, slip_path = ?, slip_path_array = ?, slip_payload = ?, payment_date = ?, last_updated = ? WHERE payment_id = ? AND payment_status != 'paid'", newStatus, newFileName, slipArrayJSON, payload, time.Now().Format("2006-01-02"), time.Now().UTC().Format(time.RFC3339Nano), paymentID)
+		var slips []string
+		_ = json.Unmarshal([]byte(existingSlipArrayJSON), &slips)
+		slips = append(slips, newFileName)
+		encodedSlips, err := json.Marshal(slips)
+		if err != nil {
+			encodedSlips = []byte("[]")
+		}
+		res, err := db.Exec("UPDATE payments SET payment_status = ?, paid_amount = ?, slip_path = ?, slip_path_array = ?, slip_payload = ?, payment_date = ?, last_updated = ? WHERE payment_id = ? AND payment_status IN ('pending', 'partial')", newStatus, newPaidAmount, newFileName, string(encodedSlips), payload, time.Now().Format("2006-01-02"), time.Now().UTC().Format(time.RFC3339Nano), paymentID)
 		if err != nil {
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
@@ -518,7 +562,7 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		affected, _ := res.RowsAffected()
 		if affected == 0 {
 			replyToLine(replyToken, "บิลนี้ได้รับการชำระเรียบร้อยแล้ว หรือมีผู้อื่นกำลังทำรายการค่ะ")
-			db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
+			db.Exec("UPDATE users SET bot_state = 'none' WHERE user_id = ?", userID)
 			return
 		}
 		
@@ -531,40 +575,16 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 
 		dateStr := time.Now().Format("02/01/2006 15:04")
 		receiptNo := fmt.Sprintf("REC-%05d", paymentID)
-
-		flexJSON := fmt.Sprintf(`{
-			"type": "bubble",
-			"header": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "ใบเสร็จรับเงิน", "weight": "bold", "color": "#4F46E5", "size": "xl" }, { "type": "text", "text": "RECEIPT", "size": "sm", "color": "#818CF8", "margin": "sm" } ] },
-			"body": {
-				"type": "box", "layout": "vertical",
-				"contents": [
-					{
-						"type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
-						"contents": [
-							{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-							{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-							{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] }
-						]
-					},
-					{ "type": "separator", "margin": "lg" },
-					{
-						"type": "box", "layout": "vertical", "margin": "lg",
-						"contents": [
-							{ "type": "box", "layout": "horizontal", "contents": [ {"type": "text", "text": "ยอดรับชำระ", "size": "md", "color": "#111111", "flex": 2, "weight": "bold"}, {"type": "text", "text": "%.2f บาท", "size": "md", "color": "#4F46E5", "align": "end", "flex": 2, "weight": "bold"} ] }
-						]
-					},
-					{
-						"type": "box", "layout": "vertical", "margin": "lg",
-						"contents": [
-							{ "type": "text", "text": "%s", "size": "xs", "color": "#888888", "align": "center", "wrap": true }
-						]
-					}
-				]
-			}
-		}`, receiptNo, roomNumber, dateStr, amount, replyMessage)
-
-		var contents map[string]interface{}
-		json.Unmarshal([]byte(flexJSON), &contents)
+		contents := buildSimpleReceiptFlexBubble(
+			"ใบเสร็จรับเงิน",
+			"RECEIPT",
+			receiptNo,
+			roomNumber,
+			dateStr,
+			fmt.Sprintf("%.2f บาท", amount),
+			replyMessage,
+			"#888888",
+		)
 		replyToLineWithFlexMessage(replyToken, replyMessage, contents)
 
 		db.Exec("UPDATE users SET bot_state = 'none' WHERE line_user_id = ?", lineUserID)
@@ -632,20 +652,22 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 
 		var promptpayID, bankAccount string
 		_ = master.QueryRow("SELECT COALESCE(promptpay_id, ''), COALESCE(bank_account, '') FROM admins WHERE id = ? AND role = 'superadmin'", accountID).Scan(&promptpayID, &bankAccount)
-		expectedReceiver := promptpayID + "_" + bankAccount
+		expectedReceiver := strings.Trim(promptpayID+"_"+bankAccount, "_")
 
-		isValid, verifyReason, payload := utils.VerifySlip(filepath, cost, expectedReceiver)
-		
+		isValid, verifyReason, payload := utils.VerifySlip(filePath, cost, expectedReceiver)
+
 		// Replay Protection Check
 		if payload != "" {
 			var existingID int
 			errCheck := db.QueryRow("SELECT payment_id FROM payments WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheck == nil {
+				_ = os.Remove(filePath)
 				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้วในบิลค่าเช่า")
 				return
 			}
 			errCheckMaint := db.QueryRow("SELECT id FROM maintenances WHERE slip_payload = ?", payload).Scan(&existingID)
 			if errCheckMaint == nil {
+				_ = os.Remove(filePath)
 				replyToLine(replyToken, "สลิปนี้ถูกใช้งานไปแล้ว หากมีข้อสงสัยกรุณาติดต่อแอดมินค่ะ")
 				return
 			}
@@ -654,18 +676,25 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		newStatus := "รอตรวจสอบชำระเงิน"
 		var replyMsg string
 		if isValid {
-			newStatus = "รอตรวจสอบชำระเงิน"
+			newStatus = "กำลังซ่อม"
 			replyMsg = fmt.Sprintf("ระบบตรวจสอบสลิปอัตโนมัติ: ยืนยันการชำระเงินค่าซ่อมแซมสำเร็จ ยอด %.2f บาท เรียบร้อยแล้วค่ะ", cost)
 		} else {
 			replyMsg = "ไม่สามารถตรวจสอบสลิปอัตโนมัติได้ ระบบได้รับสลิปค่าซ่อมแซมเรียบร้อยแล้ว แอดมินจะตรวจสอบและยืนยันให้อีกครั้งค่ะ"
 		}
 
-		_, err = db.Exec("UPDATE maintenances SET slip_path = ?, slip_payload = ?, status = ?, last_updated = ? WHERE id = ?", newFileName, payload, newStatus, time.Now().UTC().Format(time.RFC3339Nano), maintID)
+		res, err := db.Exec("UPDATE maintenances SET slip_path = ?, slip_payload = ?, status = ?, last_updated = ? WHERE id = ? AND status = 'รอตรวจสอบชำระเงิน'", newFileName, payload, newStatus, time.Now().UTC().Format(time.RFC3339Nano), maintID)
 		if err != nil {
+			_ = os.Remove(filePath)
 			replyToLine(replyToken, "เกิดข้อผิดพลาดในการอัปเดตข้อมูล")
 			return
 		}
-		
+		if affected, _ := res.RowsAffected(); affected == 0 {
+			_ = os.Remove(filePath)
+			replyToLine(replyToken, "รายการซ่อมนี้ไม่อยู่ในสถานะรอชำระเงินแล้วค่ะ")
+			db.Exec("UPDATE users SET bot_state = 'none' WHERE user_id = ?", userID)
+			return
+		}
+
 		logAction := "Auto Slip Check Failed"
 		if isValid {
 			logAction = "Auto Slip Verified"
@@ -678,40 +707,16 @@ func handleImageMessage(master, db *sql.DB, accountID int, replyToken, lineUserI
 		if isValid {
 			dateStr := time.Now().Format("02/01/2006 15:04")
 			receiptNo := fmt.Sprintf("M-REC-%05s", maintID)
-			
-			flexJSON := fmt.Sprintf(`{
-				"type": "bubble",
-				"header": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "ใบเสร็จรับเงิน (ค่าซ่อมแซม)", "weight": "bold", "color": "#4F46E5", "size": "xl" }, { "type": "text", "text": "MAINTENANCE RECEIPT", "size": "sm", "color": "#818CF8", "margin": "sm" } ] },
-				"body": {
-					"type": "box", "layout": "vertical",
-					"contents": [
-						{
-							"type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
-							"contents": [
-								{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-								{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-								{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] }
-							]
-						},
-						{ "type": "separator", "margin": "lg" },
-						{
-							"type": "box", "layout": "vertical", "margin": "lg",
-							"contents": [
-								{ "type": "box", "layout": "horizontal", "contents": [ {"type": "text", "text": "ยอดรับชำระ", "size": "md", "color": "#111111", "flex": 2, "weight": "bold"}, {"type": "text", "text": "%.2f บาท", "size": "md", "color": "#4F46E5", "align": "end", "flex": 2, "weight": "bold"} ] }
-							]
-						},
-						{
-							"type": "box", "layout": "vertical", "margin": "lg",
-							"contents": [
-								{ "type": "text", "text": "%s", "size": "xs", "color": "#888888", "align": "center", "wrap": true }
-							]
-						}
-					]
-				}
-			}`, receiptNo, roomNumber, dateStr, cost, replyMsg)
-	
-			var contents map[string]interface{}
-			json.Unmarshal([]byte(flexJSON), &contents)
+			contents := buildSimpleReceiptFlexBubble(
+				"ใบเสร็จรับเงิน (ค่าซ่อมแซม)",
+				"MAINTENANCE RECEIPT",
+				receiptNo,
+				roomNumber,
+				dateStr,
+				fmt.Sprintf("%.2f บาท", cost),
+				replyMsg,
+				"#888888",
+			)
 			replyToLineWithFlexMessage(replyToken, replyMsg, contents)
 		} else {
 			replyToLine(replyToken, replyMsg)
@@ -1003,147 +1008,140 @@ func lineInvoiceMoneyRow(label string, value float64) map[string]interface{} {
 	}}
 }
 
-func buildNoOutstandingBalanceFlexMessage(roomNumber string) map[string]interface{} {
-	updatedAt := formatLineDateTime(time.Now().UTC().Format(time.RFC3339))
-	flexJSON := fmt.Sprintf(`{
+func buildSimpleReceiptFlexBubble(title, subtitle, receiptNo, roomNumber, dateStr, amountText, footerText, footerColor string) map[string]interface{} {
+	return map[string]interface{}{
 		"type": "bubble",
-		"size": "mega",
-		"header": {
-			"type": "box",
+		"header": map[string]interface{}{
+			"type":   "box",
 			"layout": "vertical",
-			"paddingBottom": "10px",
-			"contents": [
-				{
-					"type": "text",
-					"text": "สถานะการเงิน",
-					"weight": "bold",
-					"size": "lg",
-					"color": "#111827"
-				},
-				{
-					"type": "text",
-					"text": "อัปเดตล่าสุด %s",
-					"size": "xs",
-					"color": "#6B7280",
-					"margin": "xs"
-				}
-			]
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": title, "weight": "bold", "color": "#4F46E5", "size": "xl"},
+				map[string]interface{}{"type": "text", "text": subtitle, "size": "sm", "color": "#818CF8", "margin": "sm"},
+			},
 		},
-		"body": {
-			"type": "box",
+		"body": map[string]interface{}{
+			"type":   "box",
 			"layout": "vertical",
-			"paddingTop": "10px",
-			"spacing": "sm",
-			"contents": [
-				{
-					"type": "text",
-					"text": "ยอดคงเหลือ",
-					"size": "xs",
-					"color": "#6B7280"
+			"contents": []interface{}{
+				map[string]interface{}{
+					"type":    "box",
+					"layout":  "vertical",
+					"margin":  "md",
+					"spacing": "sm",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": receiptNo, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": roomNumber, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": dateStr, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+					},
 				},
-				{
-					"type": "text",
-					"text": "0.00 ฿",
-					"size": "xxl",
-					"weight": "bold",
-					"color": "#111827",
-					"margin": "xs",
-					"wrap": true
-				},
-				{
-					"type": "box",
-					"layout": "horizontal",
-					"margin": "lg",
-					"contents": [
-						{
-							"type": "box",
-							"layout": "vertical",
-							"flex": 3,
-							"contents": [
-								{
-									"type": "text",
-									"text": "ห้อง",
-									"size": "xs",
-									"color": "#9CA3AF"
-								},
-								{
-									"type": "text",
-									"text": "%s",
-									"size": "sm",
-									"weight": "bold",
-									"color": "#374151",
-									"margin": "xs",
-									"wrap": true
-								}
-							]
-						},
-						{
-							"type": "box",
-							"layout": "vertical",
-							"flex": 2,
-							"alignItems": "flex-end",
-							"contents": [
-								{
-									"type": "text",
-									"text": "สถานะ",
-									"size": "xs",
-									"color": "#9CA3AF",
-									"align": "end"
-								},
-								{
-									"type": "text",
-									"text": "ปกติ",
-									"size": "sm",
-									"weight": "bold",
-									"color": "#10B981",
-									"margin": "xs",
-									"align": "end",
-									"wrap": true
-								}
-							]
-						}
-					]
-				},
-				{
-					"type": "separator",
-					"margin": "lg"
-				},
-				{
-					"type": "box",
+				map[string]interface{}{"type": "separator", "margin": "lg"},
+				map[string]interface{}{
+					"type":   "box",
 					"layout": "vertical",
 					"margin": "lg",
-					"contents": [
-						{
-							"type": "text",
-							"text": "คุณไม่มียอดค้างชำระในขณะนี้ หรือบิลล่าสุดได้รับการตรวจสอบและชำระเรียบร้อยแล้ว",
-							"size": "sm",
-							"color": "#374151",
-							"wrap": true,
-							"margin": "md"
-						}
-					]
-				}
-			]
+					"contents": []interface{}{
+						map[string]interface{}{"type": "box", "layout": "horizontal", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "ยอดรับชำระ", "size": "md", "color": "#111111", "flex": 2, "weight": "bold"},
+							map[string]interface{}{"type": "text", "text": amountText, "size": "md", "color": "#4F46E5", "align": "end", "flex": 2, "weight": "bold", "wrap": true},
+						}},
+					},
+				},
+				map[string]interface{}{
+					"type":   "box",
+					"layout": "vertical",
+					"margin": "lg",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "text", "text": footerText, "size": "xs", "color": footerColor, "align": "center", "wrap": true},
+					},
+				},
+			},
 		},
-		"footer": {
-			"type": "box",
-			"layout": "vertical",
-			"contents": [
-				{
-					"type": "text",
-					"text": "ขอบคุณที่ใช้บริการค่ะ",
-					"size": "xs",
-					"color": "#6B7280",
-					"align": "center",
-					"wrap": true
-				}
-			]
-		}
-	}`, updatedAt, roomNumber)
+	}
+}
 
-	var contents map[string]interface{}
-	json.Unmarshal([]byte(flexJSON), &contents)
-	return contents
+func buildNoOutstandingBalanceFlexMessage(roomNumber string) map[string]interface{} {
+	updatedAt := formatLineDateTime(time.Now().UTC().Format(time.RFC3339))
+	return map[string]interface{}{
+		"type": "bubble",
+		"size": "mega",
+		"header": map[string]interface{}{
+			"type":          "box",
+			"layout":        "vertical",
+			"paddingBottom": "10px",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "สถานะการเงิน", "weight": "bold", "size": "lg", "color": "#111827"},
+				map[string]interface{}{"type": "text", "text": "อัปเดตล่าสุด " + updatedAt, "size": "xs", "color": "#6B7280", "margin": "xs"},
+			},
+		},
+		"body": map[string]interface{}{
+			"type":       "box",
+			"layout":     "vertical",
+			"paddingTop": "10px",
+			"spacing":    "sm",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ยอดคงเหลือ", "size": "xs", "color": "#6B7280"},
+				map[string]interface{}{"type": "text", "text": "0.00 ฿", "size": "xxl", "weight": "bold", "color": "#111827", "margin": "xs", "wrap": true},
+				map[string]interface{}{
+					"type":   "box",
+					"layout": "horizontal",
+					"margin": "lg",
+					"contents": []interface{}{
+						map[string]interface{}{
+							"type":   "box",
+							"layout": "vertical",
+							"flex":   3,
+							"contents": []interface{}{
+								map[string]interface{}{"type": "text", "text": "ห้อง", "size": "xs", "color": "#9CA3AF"},
+								map[string]interface{}{"type": "text", "text": roomNumber, "size": "sm", "weight": "bold", "color": "#374151", "margin": "xs", "wrap": true},
+							},
+						},
+						map[string]interface{}{
+							"type":       "box",
+							"layout":     "vertical",
+							"flex":       2,
+							"alignItems": "flex-end",
+							"contents": []interface{}{
+								map[string]interface{}{"type": "text", "text": "สถานะ", "size": "xs", "color": "#9CA3AF", "align": "end"},
+								map[string]interface{}{"type": "text", "text": "ปกติ", "size": "sm", "weight": "bold", "color": "#10B981", "margin": "xs", "align": "end", "wrap": true},
+							},
+						},
+					},
+				},
+				map[string]interface{}{"type": "separator", "margin": "lg"},
+				map[string]interface{}{
+					"type":   "box",
+					"layout": "vertical",
+					"margin": "lg",
+					"contents": []interface{}{
+						map[string]interface{}{
+							"type":   "text",
+							"text":   "คุณไม่มียอดค้างชำระในขณะนี้ หรือบิลล่าสุดได้รับการตรวจสอบและชำระเรียบร้อยแล้ว",
+							"size":   "sm",
+							"color":  "#374151",
+							"wrap":   true,
+							"margin": "md",
+						},
+					},
+				},
+			},
+		},
+		"footer": map[string]interface{}{
+			"type":   "box",
+			"layout": "vertical",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ขอบคุณที่ใช้บริการค่ะ", "size": "xs", "color": "#6B7280", "align": "center", "wrap": true},
+			},
+		},
+	}
 }
 
 func buildLineInvoiceBubble(invoice lineInvoiceFlexData) map[string]interface{} {
@@ -1415,13 +1413,6 @@ func buildLineInvoiceFlexMessage(master *sql.DB, accountID int, invoice lineInvo
 			&promptPayID, &accountName, &paymentType, &bankAccount,
 		)
 	}
-	if master != nil && promptPayID == "" {
-		_ = master.QueryRow(`SELECT COALESCE(promptpay_id, ''), COALESCE(account_name, ''),
-			COALESCE(payment_type, 'promptpay'), COALESCE(bank_account, '')
-			FROM admins WHERE role = 'superadmin' AND promptpay_id != '' ORDER BY id ASC LIMIT 1`).Scan(
-			&promptPayID, &accountName, &paymentType, &bankAccount,
-		)
-	}
 
 	balance := invoiceBalance(invoice)
 	if promptPayID == "" || balance <= 0 {
@@ -1463,11 +1454,16 @@ func HandlePushInvoices(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		adminID, _ := r.Context().Value("admin_id").(int)
-		accountID, _, _ := resolveAdminAccount(db, adminID)
-		if accountID <= 0 {
-			accountID = 1
+		accountID, _, err := resolveAdminAccount(db, adminID)
+		if err != nil || accountID <= 0 {
+			http.Error(w, `{"error": "Unauthorized"}`, http.StatusUnauthorized)
+			return
 		}
-		tenantDB := getTenantDB(r, db)
+		tenantDB, err := RequestTenantDB(r, db)
+		if err != nil {
+			http.Error(w, `{"error": "Tenant unavailable"}`, http.StatusForbidden)
+			return
+		}
 
 		// ค้นหาบิลทั้งหมดที่ค้างชำระ (pending) และห้องนั้นมีการผูก LINE (line_user_id) แล้ว
 		rows, err := tenantDB.Query(`
@@ -1522,109 +1518,17 @@ func PushReceiptFlexMessage(lineUserID, paymentIDStr, roomNumber, dateStr string
 	}
 
 	receiptNo := fmt.Sprintf("REC-%05s", paymentIDStr)
-
-	flexJSON := fmt.Sprintf(`{
-		"type": "bubble",
-		"size": "kilo",
-		"header": {
-			"type": "box",
-			"layout": "vertical",
-			"contents": [
-				{
-					"type": "text",
-					"text": "ใบเสร็จรับเงิน",
-					"weight": "bold",
-					"color": "#4F46E5",
-					"size": "xl"
-				},
-				{
-					"type": "text",
-					"text": "RECEIPT",
-					"size": "sm",
-					"color": "#818CF8",
-					"margin": "sm"
-				}
-			]
-		},
-		"body": {
-			"type": "box",
-			"layout": "vertical",
-			"contents": [
-				{
-					"type": "box",
-					"layout": "vertical",
-					"margin": "md",
-					"spacing": "sm",
-					"contents": [
-						{
-							"type": "box",
-							"layout": "baseline",
-							"spacing": "sm",
-							"contents": [
-								{"type": "text", "text": "เลขที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
-								{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-							]
-						},
-						{
-							"type": "box",
-							"layout": "baseline",
-							"spacing": "sm",
-							"contents": [
-								{"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1},
-								{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-							]
-						},
-						{
-							"type": "box",
-							"layout": "baseline",
-							"spacing": "sm",
-							"contents": [
-								{"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
-								{"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3}
-							]
-						}
-					]
-				},
-				{
-					"type": "separator",
-					"margin": "lg"
-				},
-				{
-					"type": "box",
-					"layout": "vertical",
-					"margin": "lg",
-					"contents": [
-						{
-							"type": "box",
-							"layout": "horizontal",
-							"contents": [
-								{"type": "text", "text": "ยอดรับชำระ", "size": "md", "color": "#111111", "flex": 1, "weight": "bold"},
-								{"type": "text", "text": "฿%.2f", "size": "md", "color": "#4F46E5", "align": "end", "flex": 0, "weight": "bold", "wrap": true}
-							]
-						}
-					]
-				},
-				{
-					"type": "box",
-					"layout": "vertical",
-					"margin": "lg",
-					"contents": [
-						{
-							"type": "text",
-							"text": "สถานะ: การชำระเงินเสร็จสิ้น",
-							"size": "xs",
-							"color": "#10B981",
-							"align": "center",
-							"wrap": true
-						}
-					]
-				}
-			]
-		}
-	}`, receiptNo, roomNumber, dateStr, amount)
-
-	var contents map[string]interface{}
-	json.Unmarshal([]byte(flexJSON), &contents)
+	contents := buildSimpleReceiptFlexBubble(
+		"ใบเสร็จรับเงิน",
+		"RECEIPT",
+		receiptNo,
+		roomNumber,
+		dateStr,
+		fmt.Sprintf("฿%.2f", amount),
+		"สถานะ: การชำระเงินเสร็จสิ้น",
+		"#10B981",
+	)
+	contents["size"] = "kilo"
 
 	if imageURL != "" && strings.HasPrefix(imageURL, "https://") {
 		if body, ok := contents["body"].(map[string]interface{}); ok {
@@ -1817,48 +1721,72 @@ func PushMaintenanceBillFlexMessage(lineUserID, maintID, roomNumber, issue strin
 		amountColor = "#4338CA"
 	}
 
-	flexJSON := fmt.Sprintf(`{
+	contents := map[string]interface{}{
 		"type": "bubble",
-		"header": { "type": "box", "layout": "vertical", "contents": [ { "type": "text", "text": "ใบแจ้งหนี้ค่าซ่อมแซม", "weight": "bold", "color": "%s", "size": "xl" }, { "type": "text", "text": "MAINTENANCE BILL", "size": "sm", "color": "%s", "margin": "sm" } ] },
-		"body": {
-			"type": "box", "layout": "vertical",
-			"contents": [
-				{
-					"type": "box", "layout": "vertical", "margin": "md", "spacing": "sm",
-					"contents": [
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] },
-						{ "type": "box", "layout": "baseline", "spacing": "sm", "contents": [ {"type": "text", "text": "รายการ", "color": "#aaaaaa", "size": "sm", "flex": 1}, {"type": "text", "text": "%s", "wrap": true, "color": "#666666", "size": "sm", "flex": 3} ] }
-					]
-				},
-				{ "type": "separator", "margin": "lg" },
-				{
-					"type": "box", "layout": "vertical", "margin": "lg",
-					"contents": [
-						{ "type": "box", "layout": "horizontal", "contents": [ {"type": "text", "text": "ยอดรวม", "size": "md", "color": "#111111", "flex": 2, "weight": "bold"}, {"type": "text", "text": "฿%.2f", "size": "md", "color": "%s", "align": "end", "flex": 1, "weight": "bold"} ] }
-					]
-				}
-			]
+		"header": map[string]interface{}{
+			"type":   "box",
+			"layout": "vertical",
+			"contents": []interface{}{
+				map[string]interface{}{"type": "text", "text": "ใบแจ้งหนี้ค่าซ่อมแซม", "weight": "bold", "color": headerColor, "size": "xl"},
+				map[string]interface{}{"type": "text", "text": "MAINTENANCE BILL", "size": "sm", "color": subHeaderColor, "margin": "sm"},
+			},
 		},
-		"footer": {
-			"type": "box", "layout": "vertical", "spacing": "sm",
-			"contents": [
-				{
-					"type": "button",
+		"body": map[string]interface{}{
+			"type":   "box",
+			"layout": "vertical",
+			"contents": []interface{}{
+				map[string]interface{}{
+					"type":    "box",
+					"layout":  "vertical",
+					"margin":  "md",
+					"spacing": "sm",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "ห้อง", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": roomNumber, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "วันที่", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": dateStr, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+						map[string]interface{}{"type": "box", "layout": "baseline", "spacing": "sm", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "รายการ", "color": "#aaaaaa", "size": "sm", "flex": 1},
+							map[string]interface{}{"type": "text", "text": issue, "wrap": true, "color": "#666666", "size": "sm", "flex": 3},
+						}},
+					},
+				},
+				map[string]interface{}{"type": "separator", "margin": "lg"},
+				map[string]interface{}{
+					"type":   "box",
+					"layout": "vertical",
+					"margin": "lg",
+					"contents": []interface{}{
+						map[string]interface{}{"type": "box", "layout": "horizontal", "contents": []interface{}{
+							map[string]interface{}{"type": "text", "text": "ยอดรวม", "size": "md", "color": "#111111", "flex": 2, "weight": "bold"},
+							map[string]interface{}{"type": "text", "text": fmt.Sprintf("฿%.2f", cost), "size": "md", "color": amountColor, "align": "end", "flex": 1, "weight": "bold"},
+						}},
+					},
+				},
+			},
+		},
+		"footer": map[string]interface{}{
+			"type":    "box",
+			"layout":  "vertical",
+			"spacing": "sm",
+			"contents": []interface{}{
+				map[string]interface{}{
+					"type":  "button",
 					"style": "primary",
-					"color": "%s",
-					"action": {
-						"type": "postback",
-						"label": "%s",
-						"data": "%s"
-					}
-				}
-			]
-		}
-	}`, headerColor, subHeaderColor, roomNumber, dateStr, issue, cost, amountColor, buttonColor, buttonLabel, actionData)
-
-	var contents map[string]interface{}
-	json.Unmarshal([]byte(flexJSON), &contents)
+					"color": buttonColor,
+					"action": map[string]interface{}{
+						"type":  "postback",
+						"label": buttonLabel,
+						"data":  actionData,
+					},
+				},
+			},
+		},
+	}
 
 	url := "https://api.line.me/v2/bot/message/push"
 	body := map[string]interface{}{

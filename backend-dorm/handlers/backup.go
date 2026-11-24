@@ -149,8 +149,14 @@ func PerformRestore(db *sql.DB, filePath string) error {
 		}
 	}
 	for _, p := range data.Payments {
+		slipArrayJSON := "[]"
+		if len(p.SlipPathArray) > 0 {
+			if encoded, mErr := json.Marshal(p.SlipPathArray); mErr == nil {
+				slipArrayJSON = string(encoded)
+			}
+		}
 		if _, err = tx.Exec("INSERT INTO payments (payment_id, user_id, room_number, rent_fee, water_fee, electric_fee, common_fee, late_fee, appliance_fee, amount, month, payment_date, method, slip_path, water_meter_prev, water_meter_curr, electric_meter_prev, electric_meter_curr, payment_plan, installment_phase, due_date, payment_status, slip_path_array, paid_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			p.ID, p.UserID, p.RoomNumber, p.RentFee, p.WaterFee, p.ElectricFee, p.CommonFee, p.LateFee, p.ApplianceFee, p.Amount, p.Month, p.PaymentDate, p.Method, p.SlipPath, p.WaterMeterPrev, p.WaterMeterCurr, p.ElectricMeterPrev, p.ElectricMeterCurr, p.PaymentPlan, p.InstallmentPhase, p.DueDate, p.PaymentStatus, strings.Join(p.SlipPathArray, ","), p.PaidAmount); err != nil {
+			p.ID, p.UserID, p.RoomNumber, p.RentFee, p.WaterFee, p.ElectricFee, p.CommonFee, p.LateFee, p.ApplianceFee, p.Amount, p.Month, p.PaymentDate, p.Method, p.SlipPath, p.WaterMeterPrev, p.WaterMeterCurr, p.ElectricMeterPrev, p.ElectricMeterCurr, p.PaymentPlan, p.InstallmentPhase, p.DueDate, p.PaymentStatus, slipArrayJSON, p.PaidAmount); err != nil {
 			return fmt.Errorf("Restore payments insert failed: %v", err)
 		}
 	}
@@ -487,8 +493,15 @@ func GenerateZipBackupData(db *sql.DB) ([]byte, error) {
 			var p models.Payment
 			var slipPathArrayStr string
 			rowsP.Scan(&p.ID, &p.UserID, &p.RoomNumber, &p.RentFee, &p.WaterFee, &p.ElectricFee, &p.CommonFee, &p.LateFee, &p.ApplianceFee, &p.Amount, &p.Month, &p.PaymentDate, &p.Method, &p.SlipPath, &p.WaterMeterPrev, &p.WaterMeterCurr, &p.ElectricMeterPrev, &p.ElectricMeterCurr, &p.PaymentPlan, &p.InstallmentPhase, &p.DueDate, &p.PaymentStatus, &slipPathArrayStr, &p.PaidAmount)
-			if slipPathArrayStr != "" {
-				p.SlipPathArray = strings.Split(slipPathArrayStr, ",")
+			if trimmedSlips := strings.TrimSpace(slipPathArrayStr); trimmedSlips != "" && trimmedSlips != "[]" {
+				if err := json.Unmarshal([]byte(trimmedSlips), &p.SlipPathArray); err != nil {
+					// Legacy fallback for comma-separated slip lists
+					for _, item := range strings.Split(trimmedSlips, ",") {
+						if cleaned := strings.TrimSpace(item); cleaned != "" {
+							p.SlipPathArray = append(p.SlipPathArray, cleaned)
+						}
+					}
+				}
 			}
 			data.Payments = append(data.Payments, p)
 			if p.SlipPath != "" {

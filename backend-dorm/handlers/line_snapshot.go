@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -189,21 +190,24 @@ func InitializeLineIntegration(db *sql.DB) {
 	db.Exec(`UPDATE line_notification_outbox SET status = 'pending' WHERE status = 'processing'`)
 }
 
+var (
+	lineTenantSchemaOnce sync.Map
+	accountSyncLocks     sync.Map
+)
+
+func accountSyncLock(accountID int) *sync.Mutex {
+	val, _ := accountSyncLocks.LoadOrStore(accountID, &sync.Mutex{})
+	return val.(*sync.Mutex)
+}
+
 func ensureLineTenantSchema(db *sql.DB) {
+	if db == nil {
+		return
+	}
+	if _, loaded := lineTenantSchemaOnce.LoadOrStore(db, struct{}{}); loaded {
+		return
+	}
 	InitializeTenantDatabase(db)
-	db.Exec(`DROP INDEX IF EXISTS idx_payments_unique`)
-	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_unique ON payments (user_id, month, COALESCE(installment_phase, '0')) WHERE user_id > 0`)
-	db.Exec(`ALTER TABLE users ADD COLUMN external_id TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE payments ADD COLUMN external_id TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE payments ADD COLUMN deposit_fee REAL DEFAULT 0`)
-	db.Exec(`ALTER TABLE maintenances ADD COLUMN external_id TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE maintenances ADD COLUMN last_updated TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE maintenances ADD COLUMN quote_approved_at TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE rooms ADD COLUMN external_id TEXT DEFAULT ''`)
-	db.Exec(`ALTER TABLE room_types ADD COLUMN external_id TEXT DEFAULT ''`)
-	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_external_id ON users(external_id) WHERE external_id != ''`)
-	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_external_id ON payments(external_id) WHERE external_id != ''`)
-	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_external_id ON maintenances(external_id) WHERE external_id != ''`)
 }
 
 func MaterializeLatestLineSnapshots(master *sql.DB) error {
@@ -250,6 +254,10 @@ func MaterializeLineSnapshotAndNotify(master *sql.DB, accountID int, payload []b
 	return err
 }
 
+func (s lineSyncEnvelope) hasOperationalData() bool {
+	return len(s.Rooms) > 0 || len(s.Tenants) > 0 || len(s.Payments) > 0 || len(s.Maintenance) > 0 || len(s.RoomTypes) > 0
+}
+
 // validateLineSnapshotForPush applies the workflow checks that can be decided
 // without mutating tenant data. It must run before sync_snapshots INSERT so an
 // invalid stale app state cannot become the latest immutable snapshot.
@@ -258,11 +266,14 @@ func validateLineSnapshotForPush(accountID int, payload []byte) error {
 	if err := json.Unmarshal(payload, &snapshot); err != nil {
 		return err
 	}
-	if snapshot.SnapshotID == "" {
-		return nil
-	}
-	if snapshot.AccountID <= 0 {
+	if snapshot.AccountID <= 0 || snapshot.AccountID != accountID {
 		return errors.New("snapshot account mismatch")
+	}
+	if strings.TrimSpace(snapshot.SnapshotID) == "" {
+		if snapshot.hasOperationalData() {
+			return errors.New("missing snapshotID")
+		}
+		return nil
 	}
 	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
 	tenantDB, err := GetTenantDB(accountID)
@@ -318,11 +329,14 @@ func materializeLineSnapshotPayload(master *sql.DB, accountID int, payload []byt
 	}
 	snapshot.Maintenance = normalizeMaintenanceSnapshots(snapshot.Maintenance)
 	snapshot.Payments = normalizePaymentSnapshots(snapshot.Payments)
-	if snapshot.SnapshotID == "" {
-		return nil
-	}
-	if snapshot.AccountID <= 0 {
+	if snapshot.AccountID <= 0 || snapshot.AccountID != accountID {
 		return errors.New("snapshot account mismatch")
+	}
+	if strings.TrimSpace(snapshot.SnapshotID) == "" {
+		if snapshot.hasOperationalData() {
+			return errors.New("missing snapshotID")
+		}
+		return nil
 	}
 	tenantDB, err := GetTenantDB(accountID)
 	if err != nil {
@@ -585,9 +599,12 @@ func materializeLineSnapshotIntoWithNotifier(master, tenantDB *sql.DB, accountID
 		if err := links.Scan(&lineUserID, &tenantID); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(`UPDATE users SET line_user_id = ? WHERE external_id = ?`, lineUserID, tenantID); err != nil {
+		if _, err := tx.Exec(`UPDATE users SET line_user_id = ? WHERE external_id = ? AND status IN ('กำลังพักอาศัย', 'จอง')`, lineUserID, tenantID); err != nil {
 			return err
 		}
+	}
+	if err := links.Err(); err != nil {
+		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
@@ -770,6 +787,9 @@ func PublishLineTenantChanges(master, tenantDB *sql.DB, accountID int) error {
 	if accountID <= 0 {
 		return errors.New("invalid account id")
 	}
+	mu := accountSyncLock(accountID)
+	mu.Lock()
+	defer mu.Unlock()
 	ensureLineTenantSchema(tenantDB)
 	if err := ensureMaintenanceExternalIDs(tenantDB); err != nil {
 		return err
@@ -871,12 +891,20 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 			rows.Close()
 			return false, err
 		}
-		item := paymentObjects[id]
+		item := paymentObjects[strings.ToLower(strings.TrimSpace(id))]
+		if item == nil {
+			item = paymentObjects[id]
+		}
 		if item == nil {
 			continue
 		}
+		// Only merge from tenantDB when tenantDB row is strictly newer than snapshot item.
+		existingUpdated, _ := item["lastUpdated"].(string)
+		if existingUpdated != "" && lastUpdated != "" && !maintenanceTimestamp(lastUpdated).After(maintenanceTimestamp(existingUpdated)) {
+			continue
+		}
 		var slips []interface{}
-		if json.Unmarshal([]byte(slipJSON), &slips) != nil {
+		if json.Unmarshal([]byte(slipJSON), &slips) != nil || slips == nil {
 			slips = []interface{}{}
 		}
 		changed = setSnapshotField(item, "paymentDate", paymentDate) || changed
@@ -888,6 +916,10 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 		if lastUpdated != "" {
 			changed = setSnapshotField(item, "lastUpdated", lastUpdated) || changed
 		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return false, err
 	}
 	rows.Close()
 
@@ -912,7 +944,12 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 		}
 		id = strings.ToLower(strings.TrimSpace(id))
 		item := maintenanceObjects[id]
-		if item == nil {
+		if item != nil {
+			existingUpdated, _ := item["lastUpdated"].(string)
+			if existingUpdated != "" && lastUpdated != "" && !maintenanceTimestamp(lastUpdated).After(maintenanceTimestamp(existingUpdated)) {
+				continue
+			}
+		} else {
 			item = map[string]interface{}{"id": id}
 			maintenance = append(maintenance, item)
 			maintenanceObjects[id] = item
@@ -926,6 +963,10 @@ func mergeTenantOperationalState(db *sql.DB, payload map[string]interface{}) (bo
 		for key, value := range fields {
 			changed = setSnapshotField(item, key, value) || changed
 		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return false, err
 	}
 	rows.Close()
 	payload["maintenance"] = maintenance

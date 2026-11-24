@@ -248,12 +248,12 @@ func rejectActiveSQLiteSidecars(masterPath, tenantDir string) error {
 		}
 	}
 	for _, databasePath := range databasePaths {
-		for _, suffix := range []string{"-wal", "-shm"} {
-			info, statErr := os.Stat(databasePath + suffix)
-			if statErr == nil && info.Size() > 0 {
+		for _, suffix := range []string{"-wal", "-shm", "-journal"} {
+			_, statErr := os.Stat(databasePath + suffix)
+			if statErr == nil {
 				return fmt.Errorf("active SQLite sidecar %s found; stop the server and checkpoint the database first", filepath.Base(databasePath+suffix))
 			}
-			if statErr != nil && !os.IsNotExist(statErr) {
+			if !os.IsNotExist(statErr) {
 				return fmt.Errorf("inspect SQLite sidecar: %w", statErr)
 			}
 		}
@@ -496,7 +496,7 @@ func rollbackRestoreTargets(targets []*restoreTarget) error {
 	for index := len(targets) - 1; index >= 0; index-- {
 		target := targets[index]
 		if target.movedNew {
-			if err := os.RemoveAll(target.live); err != nil {
+			if err := os.Rename(target.live, target.staged); err != nil {
 				failures = append(failures, err.Error())
 				continue
 			}

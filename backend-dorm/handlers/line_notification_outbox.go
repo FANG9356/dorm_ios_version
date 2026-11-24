@@ -38,11 +38,19 @@ func EnqueueMaintenanceStatusNotification(db *sql.DB, accountID int, notificatio
 // immediate call handles normal updates quickly; the ticker recovers outages.
 func StartLineNotificationWorker(db *sql.DB) {
 	go func() {
-		ProcessPendingLineNotifications(db)
+		safeRun := func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("LINE notification worker recovered from panic: %v", r)
+				}
+			}()
+			ProcessPendingLineNotifications(db)
+		}
+		safeRun()
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
-			ProcessPendingLineNotifications(db)
+			safeRun()
 		}
 	}()
 }
@@ -55,17 +63,23 @@ func processPendingLineNotifications(db *sql.DB, sender func(notification mainte
 	lineNotificationWorkerMu.Lock()
 	defer lineNotificationWorkerMu.Unlock()
 
+	// Reclaim any rows left stranded in 'processing' for > 2 minutes (e.g. crash/timeout).
+	staleCutoff := time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339Nano)
+	_, _ = db.Exec(`UPDATE line_notification_outbox SET status = 'pending'
+		WHERE status = 'processing' AND julianday(next_attempt_at) <= julianday(?)`, staleCutoff)
+
 	for processed := 0; processed < 20; processed++ {
 		var id int64
+		var attempts int
 		var notification maintenanceStatusNotification
 		now := time.Now().UTC().Format(time.RFC3339Nano)
-		err := db.QueryRow(`SELECT o.id, o.event_key, o.maintenance_record_id, o.line_user_id, o.room_number, o.issue, o.maintenance_status,
+		err := db.QueryRow(`SELECT o.id, COALESCE(o.attempts, 0), o.event_key, o.maintenance_record_id, o.line_user_id, o.room_number, o.issue, o.maintenance_status,
 			o.cost, o.reported_at, o.resolved_at, o.payment_method, o.maintenance_updated_at, COALESCE(a.promptpay_id, '')
 			FROM line_notification_outbox o
 			LEFT JOIN admins a ON o.account_id = a.id
 			WHERE o.status = 'pending' AND julianday(o.next_attempt_at) <= julianday(?)
 			ORDER BY o.id LIMIT 1`, now).Scan(
-			&id, &notification.EventKey, &notification.MaintenanceID,
+			&id, &attempts, &notification.EventKey, &notification.MaintenanceID,
 			&notification.LineUserID, &notification.RoomNumber,
 			&notification.Issue, &notification.Status, &notification.Cost, &notification.ReportedAt,
 			&notification.ResolvedAt, &notification.PaymentMethod, &notification.LastUpdated,
@@ -78,8 +92,8 @@ func processPendingLineNotifications(db *sql.DB, sender func(notification mainte
 			log.Printf("LINE notification outbox read failed: %v", err)
 			return
 		}
-		result, err := db.Exec(`UPDATE line_notification_outbox SET status = 'processing'
-			WHERE id = ? AND status = 'pending'`, id)
+		result, err := db.Exec(`UPDATE line_notification_outbox SET status = 'processing', next_attempt_at = ?
+			WHERE id = ? AND status = 'pending'`, now, id)
 		if err != nil {
 			log.Printf("LINE notification outbox claim failed: %v", err)
 			return
@@ -99,8 +113,6 @@ func processPendingLineNotifications(db *sql.DB, sender func(notification mainte
 			continue
 		}
 
-		var attempts int
-		_ = db.QueryRow(`SELECT attempts FROM line_notification_outbox WHERE id = ?`, id).Scan(&attempts)
 		attempts++
 		delayMinutes := 1 << min(attempts-1, 6)
 		nextAttempt := time.Now().UTC().Add(time.Duration(delayMinutes) * time.Minute).Format(time.RFC3339Nano)
