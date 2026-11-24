@@ -5964,3 +5964,19 @@
 - Backend: `go vet ./...` PASS, `go test -count=1 ./...` PASS, `go test -count=1 -race ./handlers` PASS (0 data races)
 - Ops & OCR: `bash -n` PASS on both scripts, `python3 -m py_compile ocr-bot/app.py` PASS
 - iOS: `xcodebuild -project DormiNetX.xcodeproj -scheme DormiNetX -destination "generic/platform=iOS Simulator" build-for-testing CODE_SIGNING_ALLOWED=NO` PASS (0 errors, 0 Swift compiler warnings)
+
+---
+
+## [2026-11-24] Phase 4 Production Deploy Verification (Final Sign-Off)
+
+- **Server:** `fang@202.29.232.28` (`/opt/dormitory/server_debian`)
+- **Commit Deployed:** `7297732`
+- **Remote Binary SHA-256:** `fd963afeb973d597b43696c4666e8638771b254ff33f116e1d594c377c54a39a`
+- **OCR Bot Permissions:** `root:www-data 750 /opt/dormitory/ocr-bot`
+- **Backup Directory:** `/home/fang/dorminet_workspace/backups/20261124-032701-pre-flex-ui`
+- **Health Checks:**
+  - `https://dorminet.studio/api/system/ping` -> HTTP 200 (`{"status":"online"}`)
+  - `https://dorminet.studio/services` -> HTTP 200
+  - `https://dorminet.studio/api/admins/ping` -> HTTP 401
+  - Services: `dormitory.service` (`active`), `dormitory-ocr.service` (`active`)
+- **Status:** All 4 remediation phases deployed, verified, and signed off.
