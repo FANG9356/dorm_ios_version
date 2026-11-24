@@ -682,20 +682,7 @@ struct LoginView: View {
     private func loadSavedAccounts() {
         do {
             if let data = try credentials.savedAccountsData() {
-                var loaded = try JSONDecoder().decode([SavedAccount].self, from: data)
-                var didMigrate = false
-                for i in 0..<loaded.count {
-                    if loaded[i].role != "superadmin" {
-                        if loaded[i].adminID != 1 {
-                            loaded[i].adminID = 1
-                            didMigrate = true
-                        }
-                    }
-                }
-                if didMigrate {
-                    try? credentials.setSavedAccountsData(JSONEncoder().encode(loaded))
-                }
-                savedAccounts = loaded
+                savedAccounts = try JSONDecoder().decode([SavedAccount].self, from: data)
             }
         } catch { showError(error.localizedDescription) }
     }
@@ -706,7 +693,7 @@ struct LoginView: View {
         let currentToken = APIService.shared.authToken ?? ""
         let currentRole = APIService.shared.userRole
         let currentAdminID = UserDefaults.standard.integer(forKey: "adminID")
-        let targetAdminID = (currentRole == "superadmin") ? (currentAdminID > 0 ? currentAdminID : 1) : 1
+        let targetAdminID: Int? = currentAdminID > 0 ? currentAdminID : nil
         accounts.insert(
             SavedAccount(
                 name: userName,
@@ -774,10 +761,13 @@ struct LoginView: View {
     }
 
     private func restoreSavedAccount(_ account: SavedAccount, token: String) throws {
-        let targetAccountID = (account.role == "superadmin") ? (account.adminID ?? 1) : 1
+        let targetAccountID = account.adminID
         try APIService.shared.restoreSession(token: token, email: account.email, fallbackRole: account.role, fallbackAccountID: targetAccountID)
-        let resolvedAccountID = APIService.shared.localSessionAccountID(token: token) ?? targetAccountID
-        UserDefaults.standard.set(resolvedAccountID > 0 ? resolvedAccountID : targetAccountID, forKey: "adminID")
+        if let resolvedAccountID = APIService.shared.localSessionAccountID(token: token), resolvedAccountID > 0 {
+            UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
+        } else if let targetAccountID, targetAccountID > 0 {
+            UserDefaults.standard.set(targetAccountID, forKey: "adminID")
+        }
         userEmail = account.email
         userName = account.name.isEmpty ? String(account.email.split(separator: "@").first ?? "ผู้ใช้") : account.name
     }

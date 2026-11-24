@@ -127,6 +127,7 @@ enum AppDate {
 
         let legacyFormatter = DateFormatter()
         legacyFormatter.locale = Locale(identifier: "en_US_POSIX")
+        legacyFormatter.calendar = gregorianCalendar
         legacyFormatter.timeZone = timeZone
         legacyFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         if let date = legacyFormatter.date(from: value) {

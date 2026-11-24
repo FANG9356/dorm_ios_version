@@ -42,15 +42,19 @@ func RunServer() {
 		dbPath = "./dormitory.db"
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	dsnSep := "?"
+	if strings.Contains(dbPath, "?") {
+		dsnSep = "&"
+	}
+	db, err := sql.Open("sqlite3", dbPath+dsnSep+"_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// เปิด WAL mode และ Busy Timeout
+	// Ensure WAL mode and pool settings
 	db.Exec("PRAGMA journal_mode=WAL;")
 	db.Exec("PRAGMA busy_timeout=5000;")
-	db.SetMaxOpenConns(25) // อนุญาตให้เชื่อมต่อหลายครั้งพร้อมกัน
+	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 	defer db.Close()
@@ -95,8 +99,8 @@ func RunServer() {
 	})
 	http.HandleFunc("/api/change-password", handlers.ChangePasswordHandler(db))
 	http.HandleFunc("/api/webhook/line", handlers.HandleLineWebhook(db))
-	http.Handle("/api/admin/push-invoices", handlers.AuthMiddleware(db, handlers.HandlePushInvoices(db)))
-	http.Handle("/api/line/invoices/send", handlers.AuthMiddleware(db, handlers.HandleSendLineInvoice(db)))
+	http.HandleFunc("/api/admin/push-invoices", handlers.HandlePushInvoices(db))
+	http.HandleFunc("/api/line/invoices/send", handlers.HandleSendLineInvoice(db))
 	http.HandleFunc("/api/media/", handlers.HandleTenantMedia(db))
 	http.HandleFunc("/api/liff/rooms", handlers.HandleLiffRooms(db))
 	http.HandleFunc("/api/liff/status", handlers.HandleLiffStatus(db))
@@ -113,7 +117,7 @@ func RunServer() {
 		}
 	})
 	http.HandleFunc("/api/admins/profile-image", handlers.UpdateProfileImageHandler(db))
-	http.Handle("/api/device-token", handlers.AuthMiddleware(db, handlers.RegisterDeviceTokenHandler(db)))
+	http.HandleFunc("/api/device-token", handlers.RegisterDeviceTokenHandler(db))
 	http.HandleFunc("/api/admins/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "DELETE" || r.Method == "OPTIONS" {
 			handlers.DeleteAdminHandler(db)(w, r)
@@ -126,12 +130,12 @@ func RunServer() {
 	http.HandleFunc("/api/admins/ping", handlers.PingAdminHandler(db))
 	http.HandleFunc("/api/logout", handlers.LogoutAdminHandler(db))
 
-	http.Handle("/api/admins/invite/generate", handlers.AuthMiddleware(db, handlers.GenerateInviteTokenHandler(db)))
+	http.HandleFunc("/api/admins/invite/generate", handlers.GenerateInviteTokenHandler(db))
 	http.HandleFunc("/api/admins/invite/register", handlers.RegisterWithInviteHandler(db))
 
 	http.HandleFunc("/api/register", handlers.RegisterHandler(db))
 
-	http.Handle("/api/admins/login-qr/generate", handlers.AuthMiddleware(db, handlers.GenerateLoginTokenHandler(db)))
+	http.HandleFunc("/api/admins/login-qr/generate", handlers.GenerateLoginTokenHandler(db))
 	http.HandleFunc("/api/login/qr", handlers.LoginWithQRHandler(db))
 
 	// [NEW] Setup Forgot Password routes
@@ -284,6 +288,7 @@ func RunServer() {
 				http.Error(w, "Failed to open folder: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
+			go func() { _ = cmd.Wait() }()
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(map[string]string{"status": "ok", "path": absPath})
@@ -463,7 +468,14 @@ func RunServer() {
 
 	handler := handlers.AuthMiddleware(db, http.DefaultServeMux)
 
-	srv := &http.Server{Addr: ":" + port, Handler: handler, ReadTimeout: 15 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second}
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
 
 	if os.Getenv("ENABLE_HTTPS") == "true" {
 		fmt.Println("[SECURITY] HTTPS is ENABLED. Booting secure server...")

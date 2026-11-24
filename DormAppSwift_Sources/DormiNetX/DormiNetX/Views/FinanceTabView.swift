@@ -180,9 +180,13 @@ struct FinanceTabView: View {
     }
 
     private var summaryGrid: some View {
-        let monthPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == monthKey }
+        let monthPayments = payments.filter {
+            BillingCycle.normalizedMonthKey($0.month) == monthKey &&
+            $0.paymentStatus != "voided" &&
+            $0.paymentStatus != "refunded"
+        }
         let received = monthPayments.filter { $0.paymentStatus == "paid" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
-        let pending = monthPayments.filter { $0.paymentStatus == "pending" }.reduce(0) { $0 + $1.amount }
+        let pending = monthPayments.filter { $0.paymentStatus == "pending" || $0.paymentStatus == "checking" }.reduce(0) { $0 + $1.amount }
         let partial = monthPayments.filter { $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
 
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -350,6 +354,9 @@ struct FinanceTabView: View {
         switch payment.paymentStatus {
         case "paid": return "ชำระแล้ว"
         case "partial": return "ชำระบางส่วน"
+        case "checking": return "รอตรวจสลิป"
+        case "voided": return "ยกเลิก"
+        case "refunded": return "คืนเงิน"
         default: return "รอชำระ"
         }
     }
@@ -471,6 +478,7 @@ struct FinanceTabView: View {
     }
 
     private func shouldCreatePayment(for user: DormUser, month: String) -> Bool {
+        guard month <= AppDate.monthKey(from: Date()) else { return false }
         guard BillingCycle.date("\(month)-01") != nil,
               BillingCycle.date(user.moveInDate) != nil else { return false }
         if user.indefiniteContract != 1, !user.contractEndDate.isEmpty,
@@ -517,9 +525,7 @@ struct FinanceTabView: View {
     }
 
     private func inferredPaymentStatus(for user: DormUser, isMoveInMonth: Bool) -> String {
-        guard isMoveInMonth else { return "pending" }
-        if user.paymentMethod == "installment" { return "partial" }
-        if user.paymentMethod == "full_payment" { return "paid" }
+        // Never auto-mark a generated invoice as paid/partial without an explicit payment recording.
         return "pending"
     }
 
@@ -887,6 +893,8 @@ private struct BillingUserCard: View {
         case "paid": return "ชำระแล้ว"
         case "partial": return "บางส่วน"
         case "checking": return "รอตรวจ"
+        case "voided": return "ยกเลิก"
+        case "refunded": return "คืนเงิน"
         default: return "รอชำระ"
         }
     }
@@ -897,6 +905,7 @@ private struct BillingUserCard: View {
         case "paid": return .green
         case "partial": return .blue
         case "checking": return .yellow
+        case "voided", "refunded": return .red
         default: return .orange
         }
     }
@@ -1098,7 +1107,7 @@ private struct BillingCycleRow: View {
     private var actionContent: some View {
         if let payment {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                if payment.paymentStatus != "paid" {
+                if payment.paymentStatus != "paid" && payment.paymentStatus != "voided" && payment.paymentStatus != "refunded" {
                     compactAction("รับชำระ", icon: "checkmark.circle.fill", color: .green) {
                         onMarkPaid(payment)
                     }
@@ -1108,19 +1117,23 @@ private struct BillingCycleRow: View {
                         showingSlipPreview = true
                     }
                 }
-                if payment.paymentStatus == "paid" {
-                    compactAction("ใบเสร็จ", icon: "doc.richtext", color: .blue) {
+                if payment.paymentStatus == "paid" || payment.serverId != nil {
+                    compactAction(payment.paymentStatus == "paid" ? "ใบเสร็จ" : "จัดการบิล", icon: "doc.richtext", color: .blue) {
                         showingReceipt = true
                     }
                 }
-                compactAction("แก้ไข", icon: "pencil", color: .blue) {
-                    onEdit(payment)
+                if payment.paymentStatus != "voided" && payment.paymentStatus != "refunded" {
+                    compactAction("แก้ไข", icon: "pencil", color: .blue) {
+                        onEdit(payment)
+                    }
                 }
                 compactAction("ลบ", icon: "trash", color: .red) {
                     onDelete(payment)
                 }
-                compactAction("LINE", icon: "paperplane.fill", color: .green) {
-                    onSendLine(payment)
+                if payment.paymentStatus != "voided" && payment.paymentStatus != "refunded" {
+                    compactAction("LINE", icon: "paperplane.fill", color: .green) {
+                        onSendLine(payment)
+                    }
                 }
             }
         } else {
@@ -1188,6 +1201,8 @@ private struct BillingCycleRow: View {
         case "paid": return "ชำระแล้ว"
         case "partial": return "ชำระบางส่วน"
         case "checking": return "รอตรวจสอบสลิป"
+        case "voided": return "ยกเลิกบิล"
+        case "refunded": return "คืนเงินแล้ว"
         default: return "รอชำระเงิน"
         }
     }
@@ -1198,6 +1213,7 @@ private struct BillingCycleRow: View {
         case "paid": return .green
         case "partial": return .blue
         case "checking": return .yellow
+        case "voided", "refunded": return .red
         default: return .orange
         }
     }
@@ -2429,9 +2445,9 @@ struct PaymentEditor: View {
 
         let item = Payment(month: clean(month), amount: totalAmount)
         item.roomNumber = clean(roomNumber)
-        if let sourcePayment, sourcePayment.userId > 0 {
+        if let sourcePayment, sourcePayment.userId > 0, clean(sourcePayment.roomNumber) == item.roomNumber {
             item.userId = sourcePayment.userId
-        } else if let tenant = users.first(where: { $0.roomNumber == item.roomNumber && $0.status != "ย้ายออกแล้ว" }) {
+        } else if let tenant = users.first(where: { clean($0.roomNumber) == item.roomNumber && $0.status != "ย้ายออกแล้ว" }) {
             item.userId = stableLocalUserID(for: tenant)
         } else {
             item.userId = 0

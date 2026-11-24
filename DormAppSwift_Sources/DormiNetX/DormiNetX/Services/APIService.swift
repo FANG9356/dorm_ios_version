@@ -32,10 +32,9 @@ class APIService {
     }
 
     func restoreSession(token: String, email: String? = nil, fallbackRole: String? = nil, fallbackAccountID: Int? = nil) throws {
-        if let fallbackAccountID, fallbackAccountID > 0 {
-            UserDefaults.standard.set(fallbackAccountID, forKey: "adminID")
+        guard let verifiedAccountID = localSessionAccountID(token: token) else {
+            throw CredentialError.expiredSession
         }
-        guard localSessionAccountID(token: token) != nil || (fallbackAccountID ?? 0) > 0 else { throw CredentialError.expiredSession }
         try CredentialStore.shared.setToken(token)
         currentEmail = email
 
@@ -47,11 +46,10 @@ class APIService {
             userRole = "admin"
         }
 
-        if let fallbackAccountID, fallbackAccountID > 0 {
-            UserDefaults.standard.set(fallbackAccountID, forKey: "adminID")
-        } else if let accountID = localSessionAccountID(token: token) {
-            UserDefaults.standard.set(accountID, forKey: "adminID")
-        }
+        let resolvedAccountID = (fallbackAccountID ?? 0) > 0 && jwtIntClaim("account_id", from: token) == nil
+            ? fallbackAccountID!
+            : verifiedAccountID
+        UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
     }
 
     var currentSessionAdminID: Int? {
@@ -83,8 +81,7 @@ class APIService {
             if persisted > 0 && persisted != jwtIntClaim("admin_id", from: token) {
                 return persisted
             }
-            // In a multi-admin dorm, staff accounts operate on the dorm owner store (account 1)
-            return 1
+            return nil
         }
         guard let account = jwtIntClaim("admin_id", from: token), account > 0 else { return nil }
         return account
@@ -149,13 +146,15 @@ class APIService {
                 self.userRole = "admin" // Default fallback
             }
             
-            var resolvedAccountID = 1
+            var resolvedAccountID: Int? = nil
             if let accountId = json["account_id"] as? Int, accountId > 0 {
                 resolvedAccountID = accountId
             } else if self.userRole == "superadmin", let adminId = json["admin_id"] as? Int, adminId > 0 {
                 resolvedAccountID = adminId
             }
-            UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
+            if let resolvedAccountID {
+                UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
+            }
 
             if let token = json["token"] as? String {
                 try CredentialStore.shared.setToken(token)
@@ -194,13 +193,15 @@ class APIService {
                 if let role = json["role"] as? String {
                     self.userRole = role
                 }
-                var resolvedAccountID = 1
+                var resolvedAccountID: Int? = nil
                 if let accountId = json["account_id"] as? Int, accountId > 0 {
                     resolvedAccountID = accountId
                 } else if self.userRole == "superadmin", let adminId = json["admin_id"] as? Int, adminId > 0 {
                     resolvedAccountID = adminId
                 }
-                UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
+                if let resolvedAccountID {
+                    UserDefaults.standard.set(resolvedAccountID, forKey: "adminID")
+                }
                 if let token = json["token"] as? String {
                     try CredentialStore.shared.setToken(token)
                     if let id = self.localSessionAccountID(token: token) {
@@ -518,11 +519,29 @@ class APIService {
         _ = try await performEmptyResponseRequest(path: "/system/backups/restore?name=\(encodedName)", method: "POST")
     }
 
+    func logout(token overrideToken: String? = nil) async {
+        let tokenToRevoke = overrideToken ?? authToken
+        guard let tokenToRevoke, !tokenToRevoke.isEmpty,
+              let url = URL(string: "\(baseURL)/logout") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(tokenToRevoke)", forHTTPHeaderField: "Authorization")
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     func downloadServerBackup(name: String) async throws -> URL {
-        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name
+        let safeName = URL(fileURLWithPath: name).lastPathComponent
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !safeName.isEmpty, safeName != ".", safeName != "..", !safeName.contains("/") else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        let encodedName = safeName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? safeName
         let data = try await performGetRequest(path: "/system/backups/download?name=\(encodedName)")
-        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-        try data.write(to: fileURL, options: .atomic)
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(safeName).standardizedFileURL
+        guard fileURL.deletingLastPathComponent().standardizedFileURL == FileManager.default.temporaryDirectory.standardizedFileURL else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
         return fileURL
     }
 

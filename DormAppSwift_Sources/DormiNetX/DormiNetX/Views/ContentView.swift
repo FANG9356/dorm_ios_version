@@ -3,6 +3,11 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("isLoggedIn") var isLoggedIn: Bool = false
     @AppStorage("adminID") var adminID: Int = 0
+    @ObservedObject private var credentials = CredentialStore.shared
+
+    private var hasValidSession: Bool {
+        isLoggedIn && !(credentials.token ?? "").isEmpty
+    }
     
     var body: some View {
         ZStack {
@@ -10,7 +15,7 @@ struct ContentView: View {
             GlassBackgroundView()
                 .ignoresSafeArea(.all)
             
-            if isLoggedIn {
+            if hasValidSession {
                 RoomListView()
                     .id("room-list-\(adminID)")
                     // ใช้แค่การเฟดเพียวๆ ไม่ต้องมีการย่อขยาย จะได้สมูทที่สุด
@@ -21,6 +26,6 @@ struct ContentView: View {
             }
         }
         // ปรับเป็น easeInOut 0.8 วินาที ให้ภาพค่อยๆ ละลายเปลี่ยนหน้าเนียนๆ
-        .animation(.easeInOut(duration: 0.8), value: isLoggedIn)
+        .animation(.easeInOut(duration: 0.8), value: hasValidSession)
     }
 }

@@ -198,11 +198,6 @@ struct AccountScopedRootView: View {
             }
             .task {
                 if UserDefaults.standard.bool(forKey: "isLoggedIn") {
-                    let role = UserDefaults.standard.string(forKey: "userRole") ?? ""
-                    if (role == "admin" || role == "services" || role == "dorm") && UserDefaults.standard.integer(forKey: "adminID") != 1 {
-                        UserDefaults.standard.set(1, forKey: "adminID")
-                        reloadContainerIfNeeded()
-                    }
                     if let serverAccountID = await APIService.shared.resolveServerAccountID(),
                        serverAccountID > 0,
                        UserDefaults.standard.integer(forKey: "adminID") != serverAccountID {
@@ -266,22 +261,16 @@ struct AccountScopedRootView: View {
         }
     }
 
-    /// Resolve the local store from the saved session, with fallback to persisted adminID if token is present.
+    /// Pure read-only resolver for the local store account ID from the saved session.
     private static func resolveAccountID() -> Int? {
-        if let token = CredentialStore.shared.token,
-           let accountID = APIService.shared.localSessionAccountID(token: token) {
-            if UserDefaults.standard.integer(forKey: "adminID") != accountID {
-                UserDefaults.standard.set(accountID, forKey: "adminID")
-            }
+        guard let token = CredentialStore.shared.token, !token.isEmpty else {
+            return nil
+        }
+        if let accountID = APIService.shared.localSessionAccountID(token: token), accountID > 0 {
             return accountID
         }
-        let role = UserDefaults.standard.string(forKey: "userRole") ?? ""
-        if (role == "admin" || role == "services" || role == "dorm") && CredentialStore.shared.token != nil {
-            UserDefaults.standard.set(1, forKey: "adminID")
-            return 1
-        }
         let storedID = UserDefaults.standard.integer(forKey: "adminID")
-        if storedID > 0 && CredentialStore.shared.token != nil {
+        if storedID > 0 {
             return storedID
         }
         return nil

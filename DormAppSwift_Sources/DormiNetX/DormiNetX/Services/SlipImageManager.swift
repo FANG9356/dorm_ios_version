@@ -8,19 +8,21 @@ enum SlipImageManager {
         let trimmedPath = storedPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedPath.isEmpty else { return nil }
 
-        if trimmedPath.hasPrefix("file://"),
-           let url = URL(string: trimmedPath) {
-            return url
+        let fileName: String
+        if trimmedPath.hasPrefix("file://"), let parsedURL = URL(string: trimmedPath) {
+            fileName = parsedURL.lastPathComponent
+        } else {
+            fileName = URL(fileURLWithPath: trimmedPath).lastPathComponent
         }
-
-        let url = URL(fileURLWithPath: trimmedPath)
-        if url.isFileURL, FileManager.default.fileExists(atPath: url.path) {
-            return url
+        guard !fileName.isEmpty, fileName != ".", fileName != "..", !fileName.contains("/") else {
+            return nil
         }
-
-        let fileName = URL(fileURLWithPath: trimmedPath).lastPathComponent
-        guard !fileName.isEmpty else { return nil }
-        return try? slipsDirectory().appendingPathComponent(fileName)
+        guard let directory = try? slipsDirectory() else { return nil }
+        let candidate = directory.appendingPathComponent(fileName).standardizedFileURL
+        guard candidate.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL else {
+            return nil
+        }
+        return candidate
     }
 
     static func saveImageData(_ data: Data) throws -> String {
@@ -30,9 +32,9 @@ enum SlipImageManager {
 
         if let image = UIImage(data: data),
            let jpegData = image.jpegData(compressionQuality: 0.88) {
-            try jpegData.write(to: url, options: .atomic)
+            try jpegData.write(to: url, options: [.atomic, .completeFileProtection])
         } else {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
         }
 
         return fileName
@@ -40,13 +42,17 @@ enum SlipImageManager {
 
     static func restoreImageData(_ data: Data, fileName: String) throws -> String {
         let safeName = URL(fileURLWithPath: fileName).lastPathComponent
-        guard !safeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !safeName.isEmpty, safeName != ".", safeName != "..", !safeName.contains("/") else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
 
         let directory = try slipsDirectory()
-        let url = directory.appendingPathComponent(safeName)
-        try data.write(to: url, options: .atomic)
+        let url = directory.appendingPathComponent(safeName).standardizedFileURL
+        guard url.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        try data.write(to: url, options: [.atomic, .completeFileProtection])
         return safeName
     }
 

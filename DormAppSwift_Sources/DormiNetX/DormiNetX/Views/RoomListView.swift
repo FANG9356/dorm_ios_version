@@ -1000,18 +1000,18 @@ struct SidebarMenu: View {
                             generator.impactOccurred()
                             
                             isOpen = false
+                            let tokenToRevoke = APIService.shared.authToken
+                            APIService.shared.authToken = nil
+                            APIService.shared.currentEmail = nil
+                            APIService.shared.userRole = nil
+                            UserDefaults.standard.removeObject(forKey: "adminID")
+                            Task { await APIService.shared.logout(token: tokenToRevoke) }
                             
                             withAnimation(.easeInOut(duration: 0.4)) {
                                 isLoggingOut = true
                             }
                             
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                                // ปรับเวลาให้เท่ากับของ ContentView (0.8 วิ) จะได้ละลายสลับหน้าแบบพอดีกัน
-                                APIService.shared.authToken = nil
-                                APIService.shared.currentEmail = nil
-                                APIService.shared.userRole = nil
-                                UserDefaults.standard.removeObject(forKey: "adminID")
-                                
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                                 withAnimation(.easeInOut(duration: 0.8)) {
                                     isLoggedIn = false
                                 }

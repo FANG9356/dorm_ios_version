@@ -586,8 +586,13 @@ struct EditAdminSheet: View {
                     }
                     if !newPassword.isEmpty {
                         // Log out automatically if they changed their own password
+                        let tokenToRevoke = APIService.shared.authToken
                         try? CredentialStore.shared.setToken(nil)
-                        NotificationCenter.default.post(name: Notification.Name("LogoutNotification"), object: nil)
+                        APIService.shared.currentEmail = nil
+                        APIService.shared.userRole = nil
+                        UserDefaults.standard.removeObject(forKey: "adminID")
+                        UserDefaults.standard.set(false, forKey: "isLoggedIn")
+                        Task { await APIService.shared.logout(token: tokenToRevoke) }
                     }
                 }
                 

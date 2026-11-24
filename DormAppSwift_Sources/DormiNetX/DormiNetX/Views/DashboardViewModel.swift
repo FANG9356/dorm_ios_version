@@ -194,14 +194,15 @@ class DashboardViewModel: ObservableObject {
         let activeUsers = users.filter { $0.status == "กำลังพักอาศัย" }
         let currentMonth = monthKey(for: Date())
         let currentPayments = payments.filter { BillingCycle.normalizedMonthKey($0.month) == currentMonth }
-        let received = currentPayments.filter { $0.paymentStatus == "paid" || $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
-        let pending = currentPayments.filter { $0.paymentStatus != "paid" }
+        let activeCurrentPayments = currentPayments.filter { $0.paymentStatus != "voided" && $0.paymentStatus != "refunded" }
+        let received = activeCurrentPayments.filter { $0.paymentStatus == "paid" || $0.paymentStatus == "partial" }.reduce(0) { $0 + ($1.paidAmount ?? 0.0) }
+        let pending = activeCurrentPayments.filter { $0.paymentStatus != "paid" }
 
         stats = APIDashboardStats(
             total_residents: activeUsers.count,
             empty_rooms: max(rooms.count - activeUsers.count, 0),
             income_this_month: received,
-            billing_cycle_income: currentPayments.reduce(0) { $0 + $1.amount },
+            billing_cycle_income: activeCurrentPayments.reduce(0) { $0 + $1.amount },
             pending_bills: pending.count
         )
         pendingUsers = activeUsers.filter { user in
@@ -275,7 +276,7 @@ class DashboardViewModel: ObservableObject {
             BillingCycle.normalizedMonthKey($0.month) ?? $0.month
         }
         return grouped.keys.sorted().suffix(6).map { month in
-            let monthPayments = grouped[month] ?? []
+            let monthPayments = (grouped[month] ?? []).filter { $0.paymentStatus != "voided" && $0.paymentStatus != "refunded" }
             return FinancialStat(
                 month: month,
                 name: AppDate.thaiShortMonth(month),
@@ -387,6 +388,7 @@ class DashboardViewModel: ObservableObject {
             }
             
             for p in payments {
+                if p.payment_status == "voided" || p.payment_status == "refunded" { continue }
                 let amt = p.amount ?? 0
                 if amt > 0 {
                     if p.payment_status == "paid" {

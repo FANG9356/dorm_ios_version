@@ -845,7 +845,7 @@ final class RoomMediaPipeline {
 
         // 3. Check base64 string
         if trimmed.hasPrefix("data:image/") || trimmed.count > 1000 {
-            let base64String = trimmed.contains(",") ? String(trimmed.split(separator: ",")[1]) : trimmed
+            let base64String = trimmed.firstIndex(of: ",").map { String(trimmed[trimmed.index(after: $0)...]) } ?? trimmed
             if let data = Data(base64Encoded: base64String) {
                 if let thumb = downsample(data: data, maxPixelSize: targetSize) {
                     ThumbnailCache.shared.set(thumb, for: cacheKey)
@@ -911,7 +911,7 @@ final class RoomMediaPipeline {
 
         // 3. Base64
         if trimmed.hasPrefix("data:image/") || trimmed.count > 1000 {
-            let base64String = trimmed.contains(",") ? String(trimmed.split(separator: ",")[1]) : trimmed
+            let base64String = trimmed.firstIndex(of: ",").map { String(trimmed[trimmed.index(after: $0)...]) } ?? trimmed
             if let data = Data(base64Encoded: base64String), let img = UIImage(data: data) {
                 fullImageCache.setObject(img, forKey: cacheKey)
                 return img
@@ -984,6 +984,7 @@ private struct RoomMediaFullscreenViewer: View {
     @Environment(\.dismiss) private var dismiss
     @State private var loadedImage: UIImage?
     @State private var isLoading = true
+    @State private var videoPlayer: AVPlayer?
 
     var body: some View {
         NavigationStack {
@@ -1077,9 +1078,18 @@ private struct RoomMediaFullscreenViewer: View {
 
     @ViewBuilder
     private var videoContentView: some View {
-        if let videoURL = resolveVideoURL(for: item.mediaPath) {
-            VideoPlayer(player: AVPlayer(url: videoURL))
+        if let player = videoPlayer {
+            VideoPlayer(player: player)
                 .ignoresSafeArea()
+                .onDisappear {
+                    player.pause()
+                }
+        } else if resolveVideoURL(for: item.mediaPath) != nil {
+            ProgressView()
+                .tint(.white)
+                .onAppear {
+                    setupVideoPlayerIfNeeded()
+                }
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "video.slash")
@@ -1089,6 +1099,20 @@ private struct RoomMediaFullscreenViewer: View {
                     .font(.custom("SukhumvitSet-Bold", size: 16))
                     .foregroundStyle(.white)
             }
+        }
+    }
+
+    private func setupVideoPlayerIfNeeded() {
+        guard videoPlayer == nil, let videoURL = resolveVideoURL(for: item.mediaPath) else { return }
+        if videoURL.isFileURL {
+            videoPlayer = AVPlayer(url: videoURL)
+        } else {
+            var headers: [String: String] = [:]
+            if let token = APIService.shared.authToken, !token.isEmpty {
+                headers["Authorization"] = "Bearer \(token)"
+            }
+            let asset = AVURLAsset(url: videoURL, options: headers.isEmpty ? nil : ["AVURLAssetHTTPHeaderFieldsKey": headers])
+            videoPlayer = AVPlayer(playerItem: AVPlayerItem(asset: asset))
         }
     }
 

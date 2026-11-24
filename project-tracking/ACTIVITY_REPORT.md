@@ -5930,3 +5930,37 @@
 - `go vet ./...`: PASS (0 warnings)
 - `go test -count=1 ./...`: PASS (`core`, `handlers`, `utils`)
 - `go test -count=1 -race ./handlers`: PASS (0 data races)
+
+---
+
+## [2026-11-24] Phase 2 Production Deploy Verification, Phase 3 (iOS App) & Phase 4 (DSN, OCR & Ops Hardening) Complete
+
+### 1. Phase 2 Production Deploy Verification
+- **Server:** `fang@202.29.232.28` (`/opt/dormitory/server_debian`)
+- **Commit Deployed:** `d664646`
+- **Remote Binary SHA-256:** `a65c77fd40cefd79dad82e24443b0cbd5f81de8b5c0b37e3f9343617846cfbcf`
+- **Backup Directory:** `/home/fang/dorminet_workspace/backups/20261124-014934-pre-flex-ui`
+- **Health Checks:**
+  - `https://dorminet.studio/api/system/ping` -> HTTP 200 (`{"status":"online"}`)
+  - `https://dorminet.studio/services` -> HTTP 200
+  - `https://dorminet.studio/api/admins/ping` -> HTTP 401
+  - Services: `dormitory.service` (`active`), `dormitory-ocr.service` (`active`)
+
+### 2. Phase 3 Remediation Summary (iOS App — Sync, Ledger, Auth, UI & Crashes)
+- **`Services/SyncManager.swift`**: Enforced strict `accountID == snapshot.accountID` on local restore and outbox push; replaced `try?` payment fetch with throwing `try`; fixed `userId == 0` payment deduplication key; ensured merged `paidAmount` is at least the sum of merged `PaymentTransaction`s; persisted `checkpoint.version` before awaiting media downloads.
+- **`Views/BackupTabView.swift`**: Deleted `PaymentTransaction` and `FinancialReceipt` in `resetLocalData()`; added `.completeFileProtection` on backup files and `isExcludedFromBackup = true` on `DormiNetBackups`.
+- **`DormApp.swift`, `Services/APIService.swift`, `Services/CredentialStore.swift`, `Services/SlipImageManager.swift`, `Services/AppDate.swift`**: Removed hardcoded `adminID = 1` multi-tenant leaks; made `resolveAccountID()` pure read-only; enforced JWT expiry in `restoreSession`; added `APIService.logout()`; sanitized `downloadServerBackup` & `SlipImageManager` against path traversal with `.completeFileProtection`; removed `"123456"` default passcode seed; fixed `AppDate.thaiDateTime(from:)` Buddhist calendar shift by pinning `gregorianCalendar`.
+- **`Views/FinanceTabView.swift`, `Views/BillsTabView.swift`, `Views/PricingTabView.swift`, `Views/DashboardViewModel.swift`**: Disabled auto-marking generated bills as paid and prevented auto-generating future-month bills; excluded `voided`/`refunded` from summaries and exposed `checking`/`voided`/`refunded` states plus Void/Adjust actions; fixed `PaymentEditor` room-change `userId` re-resolution; preserved `lateFee` and decimal satangs in `RoomTypeEditor`; cascaded `RoomType` renames to `Room` records; added duplicate room number validation.
+- **`Views/TenantsTabView.swift`, `Views/TenantsViewModel.swift`, `Views/MaintenanceTabView.swift`, `Views/TransfersTabView.swift`**: Fixed strict weak ordering in `TenantsViewModel` sorting and blocked deleting tenants with recorded payments; preserved decimal values in `TenantsTabView`; locked `hasCost` toggle when `!canEditCost` in `MaintenanceTabView`; fixed base64 `split(",")[1]` crash and moved `AVPlayer` into `@State` with Bearer auth header in `TransfersTabView`.
+- **`Views/LoginView.swift`, `Views/RoomListView.swift`, `Views/AdminManagementTabView.swift`, `Views/ContentView.swift`, `Views/SecurityTokenTabView.swift`**: Removed hardcoded `adminID = 1` in saved accounts; revoked server session immediately on logout; fixed self-password-change logout in `EditAdminSheet`; required Keychain token in `ContentView`; masked 6-digit security passcode by default with eye toggle.
+
+### 3. Phase 4 Remediation Summary (SQLite DSN, OCR Bot, Ops Scripts & iOS Polish)
+- **`backend-dorm/core/server.go` & `backend-dorm/handlers/tenant_db.go`**: Added SQLite DSN pragmas (`_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON`) on master and tenant DB pools; removed duplicate `AuthMiddleware` wrapping on 5 routes; reaped child process via `go cmd.Wait()` on `/api/system/backups/open-folder`; raised HTTP read/write timeouts to 60s with 10s `ReadHeaderTimeout`.
+- **`backend-dorm/ocr-bot/app.py`**: Removed hardcoded personal receiver name default; added optional `X-Internal-OCR-Token` HMAC verification; confined `filepath` via `os.path.realpath` inside `UPLOADS_DIR`; escaped regex decimal point with `re.escape`.
+- **`backend-dorm/scripts/deploy_flex_safe_remote.sh` & `backend-dorm/scripts/reset_test_env.sh`**: Moved `DEPLOY_SUCCESS` after all health checks and wired `rollback` on `dormitory.service` failure; set `root:www-data` ownership and `UPLOADS_DIR=/opt/dormitory/uploads` on OCR service; added `.timeout 10000` on `sqlite3` backups; added `ALLOW_DANGEROUS_RESET=YES` env guard, interactive confirmation, and safe `find -delete` in `reset_test_env.sh`.
+- **`Components/LoopingBackgroundVideoView.swift` & `Components/InputFormatters.swift`**: Set `preventsDisplaySleepDuringVideoPlayback = false` and detached layer on `stop()`; transliterated Thai numerals (`๐`-`๙`) to ASCII and normalized `,` decimal separator to `.`.
+
+### 4. Automated Verification Results
+- Backend: `go vet ./...` PASS, `go test -count=1 ./...` PASS, `go test -count=1 -race ./handlers` PASS (0 data races)
+- Ops & OCR: `bash -n` PASS on both scripts, `python3 -m py_compile ocr-bot/app.py` PASS
+- iOS: `xcodebuild -project DormiNetX.xcodeproj -scheme DormiNetX -destination "generic/platform=iOS Simulator" build-for-testing CODE_SIGNING_ALLOWED=NO` PASS (0 errors, 0 Swift compiler warnings)

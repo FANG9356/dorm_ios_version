@@ -40,7 +40,7 @@ func GetTenantDB(adminID int) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create dorm_data directory: %w", err)
 	}
 
-	dbPath := fmt.Sprintf("./dorm_data/tenant_%d.db", adminID)
+	dbPath := fmt.Sprintf("./dorm_data/tenant_%d.db?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON", adminID)
 	newDB, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open tenant DB: %w", err)

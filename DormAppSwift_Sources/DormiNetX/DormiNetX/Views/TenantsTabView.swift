@@ -1073,7 +1073,7 @@ struct TenantFormSheet: View {
                     status = u.status ?? "กำลังพักอาศัย"
                     roomType = existingRoom(for: u.room_number ?? "")?.roomType ?? ""
                     if let dep = u.deposit {
-                        deposit = String(format: "%.0f", dep)
+                        deposit = PaymentAmounts.input(dep)
                     } else {
                         deposit = ""
                     }
@@ -1082,7 +1082,7 @@ struct TenantFormSheet: View {
                     paymentChannel = u.payment_channel ?? "bank_transfer"
                     installmentMonths = (u.installment_months ?? 0) > 0 ? "\(u.installment_months ?? 0)" : ""
                     if let installment = u.installment_amount {
-                        installmentAmount = String(format: "%.0f", installment)
+                        installmentAmount = PaymentAmounts.input(installment)
                     } else {
                         installmentAmount = ""
                     }

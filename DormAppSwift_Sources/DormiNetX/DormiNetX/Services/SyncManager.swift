@@ -453,7 +453,7 @@ class SyncManager: ObservableObject {
         let snapshot: SyncEnvelope
 
         if let backup = try? decoder().decode(LocalBackupEnvelope.self, from: data) {
-            guard backup.formatVersion == 2, (backup.snapshot.accountID == accountID || backup.snapshot.accountID > 0) else {
+            guard backup.formatVersion == 2, accountID > 0, backup.snapshot.accountID == accountID else {
                 throw SyncError.invalidBackup
             }
             try validateSnapshot(backup.snapshot)
@@ -463,7 +463,7 @@ class SyncManager: ObservableObject {
             snapshot = try decoder().decode(SyncEnvelope.self, from: data)
         }
 
-        guard snapshot.accountID == accountID || snapshot.accountID > 0 else { throw SyncError.invalidBackup }
+        guard accountID > 0, snapshot.accountID == accountID else { throw SyncError.invalidBackup }
         try validateSnapshot(snapshot)
         try outbox.remove(accountID: accountID)
         try applySnapshot(snapshot, modelContext: modelContext)
@@ -570,12 +570,12 @@ class SyncManager: ObservableObject {
             tenants: try modelContext.fetch(FetchDescriptor<DormUser>()).filter { !$0.isDeletedLocally }.map {
                 TenantSnapshot(id: $0.id, serverId: $0.serverId, prefix: $0.prefix, firstName: $0.firstName, lastName: $0.lastName, roomNumber: $0.roomNumber, status: $0.status, nationalID: $0.nationalID, phone: $0.phone, address: $0.address, moveInDate: $0.moveInDate, contractEndDate: $0.contractEndDate, deposit: $0.deposit, bookingStatus: $0.bookingStatus, bookingEndDate: $0.bookingEndDate, paymentMethod: $0.paymentMethod, paymentChannel: $0.paymentChannel, installmentMonths: $0.installmentMonths, installmentAmount: $0.installmentAmount, indefiniteContract: $0.indefiniteContract, bookingSlips: $0.bookingSlips, additionalAppliances: $0.additionalAppliances, additionalApplianceFee: $0.additionalApplianceFee, additionalDetails: $0.additionalDetails, lastUpdated: $0.lastUpdated)
             },
-            payments: {
-                let allPayments = (try? modelContext.fetch(FetchDescriptor<Payment>())) ?? []
+            payments: try {
+                let allPayments = try modelContext.fetch(FetchDescriptor<Payment>())
                 let active = allPayments.filter { !$0.isDeletedLocally }
                 var seen = [String: Payment]()
                 for p in active {
-                    let key = "\(p.userId):\(p.month):\(p.installmentPhase)"
+                    let key = p.userId > 0 ? "u:\(p.userId):\(p.month):\(p.installmentPhase)" : "r:\(p.roomNumber):\(p.month):\(p.installmentPhase)"
                     if let existing = seen[key] {
                         if p.lastUpdated > existing.lastUpdated {
                             seen[key] = p
@@ -684,7 +684,7 @@ class SyncManager: ObservableObject {
             try outbox.save(upload, accountID: accountID)
         }
         let snapshot = try decoder().decode(SyncEnvelope.self, from: upload.payload)
-        guard snapshot.accountID == accountID || snapshot.accountID > 0 else { throw SyncError.invalidBackup }
+        guard accountID > 0, snapshot.accountID == accountID else { throw SyncError.invalidBackup }
         let content = try contentSignature(snapshot)
         let payload = upload.payload
         state = .uploading
@@ -763,10 +763,10 @@ class SyncManager: ObservableObject {
         state = .applying
         message = onlyIfRecent ? "รับข้อมูลใหม่จากเครื่องอื่น" : "เขียนทับข้อมูลในเครื่อง"
         try applySnapshot(verifiedSnapshot, modelContext: modelContext)
-        await downloadMissingRemoteMedia(from: verifiedSnapshot)
         checkpoint.version = version
         try? outbox.remove(accountID: accountID)
         checkpoint.pending = false
+        await downloadMissingRemoteMedia(from: verifiedSnapshot)
         if !onlyIfRecent {
             message = version == currentVersion ? "ซ่อมข้อมูลในเครื่องจาก cloud แล้ว" : "ดึงข้อมูลล่าสุดแล้ว"
         }
@@ -823,13 +823,22 @@ class SyncManager: ObservableObject {
                 seenMergedPayments[key] = p
             }
         }
-        merged.payments = Array(seenMergedPayments.values)
         merged.paymentTransactions = mergeSnapshots(remote: remote.paymentTransactions ?? [],
                                                      local: local.paymentTransactions ?? [],
                                                      changed: Set(dirtyTransactions.map(\.id)), deleted: [])
         merged.financialReceipts = mergeSnapshots(remote: remote.financialReceipts ?? [],
                                                   local: local.financialReceipts ?? [],
                                                   changed: Set(dirtyReceipts.map(\.id)), deleted: [])
+        let txPaidByPaymentID = (merged.paymentTransactions ?? []).reduce(into: [UUID: Double]()) { acc, tx in
+            acc[tx.paymentID] = PaymentAmounts.sum([acc[tx.paymentID] ?? 0, tx.amount])
+        }
+        merged.payments = Array(seenMergedPayments.values).map { payment in
+            var copy = payment
+            if let txTotal = txPaidByPaymentID[copy.id], txTotal > copy.paidAmount {
+                copy.paidAmount = txTotal
+            }
+            return copy
+        }
         merged.maintenance = mergeSnapshots(remote: remote.maintenance, local: local.maintenance,
                                             changed: Set(mergeableDirtyMaintenance.filter { !$0.isDeletedLocally }.map(\.id)),
                                             deleted: Set(dirtyMaintenance.filter(\.isDeletedLocally).map(\.id)))
@@ -861,9 +870,9 @@ class SyncManager: ObservableObject {
         try verifyChecksum(payload: mergedPayload, checksum: response.checksum)
         state = .applying
         try applySnapshot(merged, modelContext: modelContext)
-        await downloadMissingRemoteMedia(from: merged)
         checkpoint.version = response.version
         try outbox.remove(accountID: accountID)
+        await downloadMissingRemoteMedia(from: merged)
         message = String(localized: "รวมข้อมูลในเครื่องกับ cloud แล้ว")
     }
 

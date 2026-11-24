@@ -227,7 +227,7 @@ struct BackupTabView: View {
                 let directory = try backupDirectory()
                 let data = try SyncManager.shared.exportLocalBackupData(modelContext: modelContext)
                 let fileURL = directory.appendingPathComponent("DormiNet_\(safeEmailSlug())_\(Self.fileStamp()).dorminetbackup")
-                try data.write(to: fileURL, options: .atomic)
+                try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
                 refreshBackupFiles()
                 showMessage("สร้างไฟล์สำรองไว้ในเครื่องเรียบร้อยแล้ว")
             } catch {
@@ -262,7 +262,7 @@ struct BackupTabView: View {
                 if shouldCopyIntoLocalFolder {
                     let destination = try backupDirectory().appendingPathComponent(url.lastPathComponent)
                     if !FileManager.default.fileExists(atPath: destination.path) {
-                        try data.write(to: destination, options: .atomic)
+                        try data.write(to: destination, options: [.atomic, .completeFileProtection])
                     }
                     refreshBackupFiles()
                 }
@@ -296,6 +296,8 @@ struct BackupTabView: View {
                 for item in rooms { modelContext.delete(item) }
                 for item in tenants { modelContext.delete(item) }
                 for item in payments { modelContext.delete(item) }
+                for item in try modelContext.fetch(FetchDescriptor<PaymentTransaction>()) { modelContext.delete(item) }
+                for item in try modelContext.fetch(FetchDescriptor<FinancialReceipt>()) { modelContext.delete(item) }
                 for item in maintenanceItems { modelContext.delete(item) }
                 for item in roomTypes { modelContext.delete(item) }
                 for item in logs { modelContext.delete(item) }
@@ -351,10 +353,13 @@ struct BackupTabView: View {
         guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
             throw URLError(.cannotCreateFile)
         }
-        let directory = documents
+        var directory = documents
             .appendingPathComponent("DormiNetBackups", isDirectory: true)
             .appendingPathComponent(safeEmailSlug(), isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? directory.setResourceValues(values)
         return directory
     }
 

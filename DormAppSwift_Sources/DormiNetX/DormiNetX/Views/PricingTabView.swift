@@ -15,6 +15,7 @@ struct PricingTabView: View {
     @State private var editingRoom: Room?
     @State private var roomToDelete: Room?
     @State private var searchText = ""
+    @State private var validationError: String?
 
     private var rooms: [Room] {
         allRooms.filter { !$0.isDeletedLocally }
@@ -87,7 +88,12 @@ struct PricingTabView: View {
         }
         .sheet(isPresented: $showCreateRoom) {
             PricingRoomEditor(roomTypes: roomTypes) { roomNumber, roomType in
-                let room = Room(roomNumber: roomNumber, roomType: roomType)
+                let normalized = clean(roomNumber)
+                if rooms.contains(where: { clean($0.roomNumber).caseInsensitiveCompare(normalized) == .orderedSame }) {
+                    validationError = "มีเลขห้อง \(normalized) อยู่ในระบบแล้ว"
+                    return
+                }
+                let room = Room(roomNumber: normalized, roomType: roomType)
                 room.ownerAccountID = UserDefaults.standard.integer(forKey: "adminID")
                 room.isDirty = true
                 room.lastUpdated = Date()
@@ -99,7 +105,9 @@ struct PricingTabView: View {
         }
         .sheet(item: $editingRoomType) { roomType in
             RoomTypeEditor(roomType: roomType) { updated in
-                roomType.name = updated.name
+                let oldName = clean(roomType.name)
+                let newName = clean(updated.name)
+                roomType.name = newName
                 roomType.price = updated.price
                 roomType.waterFee = updated.waterFee
                 roomType.electricFee = updated.electricFee
@@ -107,14 +115,26 @@ struct PricingTabView: View {
                 roomType.lateFee = updated.lateFee
                 roomType.lastUpdated = Date()
                 roomType.isDirty = true
-                modelContext.insert(LocalSystemLog(action: "แก้ไขประเภทห้อง", details: "\(roomType.name) ค่าเช่า \(roomType.price.formatted(.number.precision(.fractionLength(0)))) บาท"))
+                if oldName != newName {
+                    for room in rooms where clean(room.roomType) == oldName {
+                        room.roomType = newName
+                        room.isDirty = true
+                        room.lastUpdated = Date()
+                    }
+                }
+                modelContext.insert(LocalSystemLog(action: "แก้ไขประเภทห้อง", details: "\(roomType.name) ค่าเช่า \(roomType.price.formatted(.number.precision(.fractionLength(0...2)))) บาท"))
                 saveAndPush()
             }
             .iphoneSheetStyle()
         }
         .sheet(item: $editingRoom) { room in
             PricingRoomEditor(room: room, roomTypes: roomTypes) { roomNumber, roomType in
-                room.roomNumber = roomNumber
+                let normalized = clean(roomNumber)
+                if rooms.contains(where: { $0.id != room.id && clean($0.roomNumber).caseInsensitiveCompare(normalized) == .orderedSame }) {
+                    validationError = "มีเลขห้อง \(normalized) อยู่ในระบบแล้ว"
+                    return
+                }
+                room.roomNumber = normalized
                 room.roomType = roomType
                 room.isDirty = true
                 room.lastUpdated = Date()
@@ -122,6 +142,14 @@ struct PricingTabView: View {
                 saveAndPush()
             }
             .iphoneSheetStyle()
+        }
+        .alert("ไม่สามารถบันทึกได้", isPresented: Binding(
+            get: { validationError != nil },
+            set: { if !$0 { validationError = nil } }
+        )) {
+            Button("ตกลง", role: .cancel) { validationError = nil }
+        } message: {
+            Text(validationError ?? "")
         }
         .confirmationDialog("ลบประเภทห้องนี้หรือไม่", isPresented: roomTypeDeleteDialogBinding) {
             Button("ลบ \(roomTypeToDelete?.name ?? "")", role: .destructive) {
@@ -496,14 +524,20 @@ private struct RoomTypeEditor: View {
     @State private var water = ""
     @State private var electric = ""
     @State private var common = ""
+    @State private var late = ""
+
+    private static func formatFee(_ value: Double) -> String {
+        value.rounded() == value ? String(format: "%.0f", value) : String(format: "%.2f", value)
+    }
 
     init(roomType: RoomType? = nil, onSave: @escaping (RoomType) -> Void) {
         self.onSave = onSave
         _name = State(initialValue: roomType?.name ?? "")
-        _price = State(initialValue: roomType.map { String(format: "%.0f", $0.price) } ?? "")
-        _water = State(initialValue: roomType.map { String(format: "%.0f", $0.waterFee) } ?? "")
-        _electric = State(initialValue: roomType.map { String(format: "%.0f", $0.electricFee) } ?? "")
-        _common = State(initialValue: roomType.map { String(format: "%.0f", $0.commonFee) } ?? "")
+        _price = State(initialValue: roomType.map { Self.formatFee($0.price) } ?? "")
+        _water = State(initialValue: roomType.map { Self.formatFee($0.waterFee) } ?? "")
+        _electric = State(initialValue: roomType.map { Self.formatFee($0.electricFee) } ?? "")
+        _common = State(initialValue: roomType.map { Self.formatFee($0.commonFee) } ?? "")
+        _late = State(initialValue: roomType.map { Self.formatFee($0.lateFee) } ?? "")
     }
 
     var body: some View {
@@ -519,6 +553,7 @@ private struct RoomTypeEditor: View {
                     moneyInputRow("ค่าน้ำ", text: $water, note: "ใส่ 0 ถ้ายังไม่คิดรวมในประเภทห้อง")
                     moneyInputRow("ค่าไฟ", text: $electric, note: "ใส่ 0 ถ้าคิดตามมิเตอร์ภายหลัง")
                     moneyInputRow("ค่าส่วนกลาง", text: $common, note: "ค่าบริการประจำเดือนถ้ามี")
+                    moneyInputRow("ค่าปรับล่าช้า", text: $late, note: "ใส่ 0 ถ้ายังไม่คิดค่าปรับเริ่มต้น")
                 }
             }
             .navigationTitle("ประเภทห้อง")
@@ -533,6 +568,7 @@ private struct RoomTypeEditor: View {
                         item.waterFee = Double(water) ?? 0
                         item.electricFee = Double(electric) ?? 0
                         item.commonFee = Double(common) ?? 0
+                        item.lateFee = Double(late) ?? 0
                         item.isDirty = true
                         onSave(item)
                         dismiss()

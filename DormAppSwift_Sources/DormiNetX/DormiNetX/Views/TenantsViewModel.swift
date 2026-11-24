@@ -38,7 +38,23 @@ class TenantsViewModel: ObservableObject {
             }
         }
         
-        // Sort
+        // Sort (strict weak ordering via explicit rank + room tie-breaker)
+        let activeRank: (String?) -> Int = { status in
+            switch status {
+            case "กำลังพักอาศัย": return 0
+            case "จอง": return 1
+            case "ย้ายออกแล้ว": return 2
+            default: return 3
+            }
+        }
+        let inactiveRank: (String?) -> Int = { status in
+            switch status {
+            case "ย้ายออกแล้ว": return 0
+            case "จอง": return 1
+            case "กำลังพักอาศัย": return 2
+            default: return 3
+            }
+        }
         switch sortBy {
         case "room_asc":
             result.sort { ($0.room_number ?? "").localizedStandardCompare($1.room_number ?? "") == .orderedAscending }
@@ -46,13 +62,15 @@ class TenantsViewModel: ObservableObject {
             result.sort { ($0.room_number ?? "").localizedStandardCompare($1.room_number ?? "") == .orderedDescending }
         case "status_active":
             result.sort { a, b in
-                if a.status == b.status { return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending }
-                return a.status == "กำลังพักอาศัย"
+                let ra = activeRank(a.status), rb = activeRank(b.status)
+                if ra != rb { return ra < rb }
+                return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending
             }
         case "status_inactive":
             result.sort { a, b in
-                if a.status == b.status { return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending }
-                return a.status == "ย้ายออกแล้ว"
+                let ra = inactiveRank(a.status), rb = inactiveRank(b.status)
+                if ra != rb { return ra < rb }
+                return (a.room_number ?? "").localizedStandardCompare(b.room_number ?? "") == .orderedAscending
             }
         default:
             break
@@ -124,6 +142,17 @@ class TenantsViewModel: ObservableObject {
             do {
                 let localUsers = try modelContext.fetch(FetchDescriptor<DormUser>())
                 if let user = localUsers.first(where: { stableLocalUserID(for: $0) == id }) {
+                    let userPayments = (try modelContext.fetch(FetchDescriptor<Payment>())).filter {
+                        !$0.isDeletedLocally && ($0.userId == id || ($0.userId == 0 && $0.roomNumber == user.roomNumber))
+                    }
+                    let allTransactions = try modelContext.fetch(FetchDescriptor<PaymentTransaction>())
+                    let paymentIDs = Set(userPayments.map(\.id))
+                    let hasRecordedPayments = userPayments.contains { ($0.paidAmount ?? 0) > 0 || $0.paymentStatus == "paid" || $0.paymentStatus == "partial" }
+                        || allTransactions.contains { paymentIDs.contains($0.paymentID) }
+                    if hasRecordedPayments {
+                        self.errorMessage = "ไม่สามารถลบลูกบ้านที่มีประวัติการรับชำระเงินได้ กรุณาเปลี่ยนสถานะเป็นย้ายออกแทน"
+                        return false
+                    }
                     user.isDeletedLocally = true
                     user.isDirty = true
                     user.lastUpdated = Date()

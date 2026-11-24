@@ -7,6 +7,7 @@ struct SecurityTokenTabView: View {
     
     @State private var customCode: String = ""
     @State private var showCustomInput: Bool = false
+    @State private var isPasscodeRevealed: Bool = false
     @State private var errorMessage: String = ""
     @State private var showErrorAlert: Bool = false
     @FocusState private var isCustomInputFocused: Bool
@@ -64,13 +65,26 @@ struct SecurityTokenTabView: View {
                     if securityTokenEnabled {
                         GlassCard {
                             VStack(spacing: 20) {
-                                Text("รหัสที่ใช้อยู่ตอนนี้")
-                                    .font(.custom("SukhumvitSet-Bold", size: 15))
-                                    .foregroundColor(.secondary)
+                                HStack {
+                                    Text("รหัสที่ใช้อยู่ตอนนี้")
+                                        .font(.custom("SukhumvitSet-Bold", size: 15))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Button {
+                                        isPasscodeRevealed.toggle()
+                                    } label: {
+                                        Image(systemName: isPasscodeRevealed ? "eye.slash" : "eye")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.indigo)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(isPasscodeRevealed ? "ซ่อนรหัส" : "แสดงรหัส")
+                                }
                                 
                                 HStack(spacing: 8) {
                                     ForEach(0..<6, id: \.self) { index in
-                                        let char = index < securityPasscode.count ? String(Array(securityPasscode)[index]) : "-"
+                                        let hasChar = index < securityPasscode.count
+                                        let char = hasChar ? (isPasscodeRevealed ? String(Array(securityPasscode)[index]) : "•") : "-"
                                         Text(char)
                                             .font(.custom("SukhumvitSet-Bold", size: 24))
                                             .foregroundColor(.indigo)

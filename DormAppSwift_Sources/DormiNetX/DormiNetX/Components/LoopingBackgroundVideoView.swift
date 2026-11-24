@@ -37,6 +37,7 @@ final class LoopingVideoPlayerView: UIView {
         let item = AVPlayerItem(url: url)
         let queuePlayer = AVQueuePlayer()
         queuePlayer.isMuted = true
+        queuePlayer.preventsDisplaySleepDuringVideoPlayback = false
         queuePlayer.actionAtItemEnd = .none
 
         let playerLayer = layer as? AVPlayerLayer
@@ -50,6 +51,8 @@ final class LoopingVideoPlayerView: UIView {
 
     func stop() {
         player?.pause()
+        player?.removeAllItems()
+        (layer as? AVPlayerLayer)?.player = nil
         player = nil
         looper = nil
         currentURL = nil

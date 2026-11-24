@@ -20,21 +20,27 @@ struct BillsTabView: View {
         [
             (
                 "รอรับชำระ",
-                "รายการที่ยังต้องติดตาม",
+                "รายการที่ยังต้องติดตามหรือรอตรวจสลิป",
                 "clock.fill",
-                visiblePayments.filter { $0.paymentStatus == "pending" }
+                visiblePayments.filter { $0.paymentStatus == "pending" || $0.paymentStatus == "checking" }
             ),
             (
                 "ผ่อนชำระ",
                 "รายการที่รับบางส่วนหรืออยู่ในแผนผ่อน",
                 "circle.lefthalf.filled",
-                visiblePayments.filter { $0.paymentStatus == "partial" || $0.paymentPlan == "installment" }
+                visiblePayments.filter { ($0.paymentStatus == "partial" || $0.paymentPlan == "installment") && $0.paymentStatus != "voided" && $0.paymentStatus != "refunded" }
             ),
             (
                 "ชำระแล้ว",
                 "ประวัติรับเงินที่ปิดรายการแล้ว",
                 "checkmark.circle.fill",
                 visiblePayments.filter { $0.paymentStatus == "paid" && $0.paymentPlan != "installment" }
+            ),
+            (
+                "ยกเลิก / คืนเงิน",
+                "บิลที่ถูกยกเลิกหรือคืนเงินแล้ว",
+                "xmark.bin.fill",
+                visiblePayments.filter { $0.paymentStatus == "voided" || $0.paymentStatus == "refunded" }
             )
         ].map { section in
             (section.0, section.1, section.2, section.3.sorted { $0.lastUpdated > $1.lastUpdated })
@@ -148,6 +154,9 @@ struct BillsTabView: View {
         switch payment.paymentStatus {
         case "paid": status = String(localized: "ชำระแล้ว")
         case "partial": status = String(localized: "ชำระบางส่วน ผ่อนชำระ")
+        case "checking": status = String(localized: "รอตรวจสลิป")
+        case "voided": status = String(localized: "ยกเลิก")
+        case "refunded": status = String(localized: "คืนเงิน")
         default: status = String(localized: "รอชำระ")
         }
         let searchable = [
@@ -362,6 +371,9 @@ private struct BillRow: View {
         switch payment.paymentStatus {
         case "paid": return "ชำระแล้ว"
         case "partial": return "บางส่วน"
+        case "checking": return "รอตรวจ"
+        case "voided": return "ยกเลิก"
+        case "refunded": return "คืนเงิน"
         default: return "รอชำระ"
         }
     }
@@ -370,6 +382,8 @@ private struct BillRow: View {
         switch payment.paymentStatus {
         case "paid": return .green
         case "partial": return .blue
+        case "checking": return .yellow
+        case "voided", "refunded": return .red
         default: return .orange
         }
     }

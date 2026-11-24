@@ -2,7 +2,7 @@
 set -euo pipefail
 
 WORKSPACE_DIR="/home/fang/dorminet_workspace"
-archive_path="${WORKSPACE_DIR}/dorminet-flex-source.tar.gz"
+archive_path="${1:-${WORKSPACE_DIR}/dorminet-flex-source.tar.gz}"
 timestamp="$(date +%Y%m%d-%H%M%S)"
 build_dir="${WORKSPACE_DIR}/dorminet-flex-build-${timestamp}"
 backup_dir="${WORKSPACE_DIR}/backups/${timestamp}-pre-flex-ui"
@@ -30,12 +30,12 @@ new_sha="$(sha256sum server_debian | awk '{print $1}')"
 
 sudo cp -p "$live_binary" "$backup_dir/server_debian"
 if command -v sqlite3 >/dev/null 2>&1; then
-  sudo sqlite3 "$master_database" ".backup '$backup_dir/dormitory.db'"
+  sudo sqlite3 "$master_database" ".timeout 10000" ".backup '$backup_dir/dormitory.db'"
   if sudo test -d "$tenant_database_dir"; then
     sudo mkdir -p "$backup_dir/dorm_data"
     while IFS= read -r tenant_database; do
       tenant_name="$(basename "$tenant_database")"
-      sudo sqlite3 "$tenant_database" ".backup '$backup_dir/dorm_data/$tenant_name'"
+      sudo sqlite3 "$tenant_database" ".timeout 10000" ".backup '$backup_dir/dorm_data/$tenant_name'"
     done < <(sudo find "$tenant_database_dir" -maxdepth 1 -type f -name 'tenant_*.db' -print)
   fi
 else
@@ -108,6 +108,8 @@ User=www-data
 Group=www-data
 WorkingDirectory=/opt/dormitory/ocr-bot
 Environment="BACKEND_DIR=/opt/dormitory"
+Environment="UPLOADS_DIR=/opt/dormitory/uploads"
+EnvironmentFile=-/opt/dormitory/.env
 ExecStart=/opt/dormitory/ocr-bot/venv/bin/python app.py
 Restart=always
 
@@ -115,25 +117,20 @@ Restart=always
 WantedBy=multi-user.target
 EOF'
 
-sudo chown -R www-data:www-data /opt/dormitory/ocr-bot
+sudo chown -R root:www-data /opt/dormitory/ocr-bot
+sudo chmod -R u=rwX,g=rX,o= /opt/dormitory/ocr-bot
 sudo systemctl daemon-reload
 sudo systemctl enable dormitory-ocr.service
 sudo systemctl restart dormitory-ocr.service
 
-echo "DEPLOY_SUCCESS"
-echo "NEW_SHA=${new_sha}"
-echo "BACKUP_DIR=${backup_dir}"
-echo "OCR_BACKUP_DIR=${backup_dir}/ocr-bot"
-
 if ! sudo systemctl is-active dormitory.service >/dev/null 2>&1; then
-    echo "ERROR: dormitory.service is not active. Rolling back..."
-    # Call rollback logic here if it was a function, but since it's a script, we just exit with error for now or add rollback logic
-    # Actually, let's just fail loud so the user knows
+    echo "ERROR: dormitory.service is not active. Rolling back..." >&2
+    rollback
     exit 1
 fi
 
 if ! sudo systemctl is-active dormitory-ocr.service >/dev/null 2>&1; then
-    echo "ERROR: dormitory-ocr.service is not active. Rolling back OCR..."
+    echo "ERROR: dormitory-ocr.service is not active. Rolling back OCR..." >&2
     if sudo test -d "$backup_dir/ocr-bot"; then
         sudo rm -rf /opt/dormitory/ocr-bot
         sudo cp -a "$backup_dir/ocr-bot" /opt/dormitory/
@@ -145,6 +142,11 @@ if ! sudo systemctl is-active dormitory-ocr.service >/dev/null 2>&1; then
     sudo systemctl restart dormitory-ocr.service
     exit 1
 fi
+
+echo "DEPLOY_SUCCESS"
+echo "NEW_SHA=${new_sha}"
+echo "BACKUP_DIR=${backup_dir}"
+echo "OCR_BACKUP_DIR=${backup_dir}/ocr-bot"
 
 sudo systemctl is-active dormitory.service
 sudo systemctl is-active dormitory-ocr.service

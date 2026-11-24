@@ -483,7 +483,9 @@ private struct MaintenanceEditor: View {
                                 .font(.custom("SukhumvitSet-Medium", size: 15))
                         }
                         .tint(.indigo)
+                        .disabled(!canEditCost)
                         .onChange(of: hasCost) { _, newValue in
+                            guard canEditCost else { return }
                             if !newValue {
                                 cost = ""
                                 paymentMethod = ""

@@ -73,11 +73,6 @@ final class CredentialStore: ObservableObject {
                 defaults.removeObject(forKey: key)
             }
         }
-        // Older builds supplied this default without necessarily persisting it.
-        if !defaults.bool(forKey: "credentialsMigrated"), defaults.bool(forKey: "securityTokenEnabled"),
-           try secure.read("securityPasscode") == nil {
-            try secure.write(Data("123456".utf8), key: "securityPasscode")
-        }
         defaults.set(true, forKey: "credentialsMigrated")
     }
 
